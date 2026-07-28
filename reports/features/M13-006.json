@@ -1,0 +1,12 @@
+{
+  "feature_id": "M13-006",
+  "status": "passed",
+  "verified_at": "2026-07-28T09:08:32.460734+00:00",
+  "checks": [
+    {
+      "command": "pytest tests/test_storage.py -v",
+      "returncode": 0,
+      "output": "......                                                                   [100%]\n6 passed in 0.03s\n"
+    }
+  ]
+}

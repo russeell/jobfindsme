@@ -1,10 +1,10 @@
 # JobFindsMe Product And Architecture Specification
 
-> Status: v0.2.0-rc.3 release candidate
+> Status: v0.2.0-rc.4 release candidate
 >
 > Baseline: Agent-native, Local-first
 >
-> Updated: 2026-07-28
+> Updated: 2026-07-28 (RC4)
 
 ## 1. Product Goal
 

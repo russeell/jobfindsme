@@ -24,7 +24,7 @@ Agent + JobFindsMe：
 5. 记住你的收藏、忽略和已投递状态
 ```
 
-> 当前版本为 [`v0.2.0-rc.3`](https://github.com/russeell/jobfindsme/releases/tag/v0.2.0-rc.3)。它修复了安装包迁移、MCP 列表响应和首次使用流程，但仍是发布候选版。真实中文岗位匹配质量正在通过人工标注和连续使用验证。
+> 当前版本为 [`v0.2.0-rc.4`](https://github.com/russeell/jobfindsme/releases/tag/v0.2.0-rc.4)。它新增了迁移对账机制，使旧数据库能平滑升级到新版本。
 
 ## 为什么做 JobFindsMe
 
@@ -45,7 +45,7 @@ Agent + JobFindsMe：
 
 ```bash
 python3 -m pip install \
-  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.3"
+  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.4"
 jobfindsme doctor
 ```
 
@@ -202,7 +202,7 @@ JobFindsMe 不能保证第三方页面永远安全、岗位永远有效或推荐
 
 `v0.2.0-rc.3` 已通过：
 
-- 129 个自动化测试；
+- 132 个自动化测试；
 - Python 3.11、3.12 GitHub Actions；
 - Ruff 静态检查和格式检查；
 - 干净 wheel 安装与 `doctor` 检查；

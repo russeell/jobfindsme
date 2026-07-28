@@ -1029,11 +1029,36 @@
       "evidence_path": "reports/features/M13-005.json"
     },
     {
+      "id": "M13-006",
+      "title": "Migration reconciliation for upgraded databases",
+      "status": "done",
+      "blocked_by": [
+        "M13-005"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/storage.py",
+        "tests/test_storage.py",
+        "specs/feature_list.json",
+        "reports/features/M13-006.json"
+      ],
+      "acceptance": [
+        "Databases with pre-existing tables reconcile without re-running SQL.",
+        "Fresh installs create all tables and record every migration version.",
+        "Partial table state raises a clear MigrationConflict error.",
+        "Reconciliation does not modify existing data in pre-existing tables.",
+        "Schema migrations skip CREATE TABLE and CREATE INDEX that already exist."
+      ],
+      "checks": [
+        "pytest tests/test_storage.py -v"
+      ],
+      "evidence_path": "reports/features/M13-006.json"
+    },
+    {
       "id": "M14-001",
       "title": "Real Chinese labeled matching benchmark",
       "status": "ready",
       "blocked_by": [
-        "M13-005"
+        "M13-006"
       ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
@@ -1057,7 +1082,7 @@
       "title": "Personal field trial and supported Agent matrix",
       "status": "ready",
       "blocked_by": [
-        "M13-005"
+        "M13-006"
       ],
       "allowed_paths": [
         "README.md",

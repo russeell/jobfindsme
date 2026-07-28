@@ -1,7 +1,9 @@
 import sqlite3
 import stat
 
-from jobfindsme.storage import Database
+import pytest
+
+from jobfindsme.storage import Database, MigrationConflict
 
 
 def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> None:
@@ -30,6 +32,163 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0009_job_source_records",
     ]
     assert foreign_keys == 1
+
+
+def test_reconcile_when_tables_already_exist(tmp_path) -> None:
+    """A database with pre-existing tables should reconcile without re-running SQL."""
+    database = Database(tmp_path / "jobfindsme.db")
+
+    # Simulate an old DB: create the tables from 0001 by hand,
+    # then record a fake old migration name.
+    with database.connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE workspaces (
+                workspace_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE search_plans (
+                plan_id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                target_roles_json TEXT NOT NULL,
+                locations_json TEXT NOT NULL,
+                salary_min_k INTEGER,
+                salary_max_k INTEGER,
+                experience_min_years INTEGER,
+                experience_max_years INTEGER,
+                official_sources_only INTEGER NOT NULL DEFAULT 1,
+                exclusions_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id)
+                    ON DELETE CASCADE,
+                UNIQUE (workspace_id, name)
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE schema_migrations (
+                version TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO schema_migrations "
+            "(version, applied_at) "
+            "VALUES ('0001_old_name', datetime('now'))"
+        )
+
+    # Should reconcile without error
+    database.migrate()
+
+    with database.connect() as conn:
+        versions = {
+            row["version"]
+            for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
+        }
+    assert "0001_old_name" in versions
+    assert "0001_workspace" in versions
+    # Other migrations should also be applied (fresh tables)
+    assert "0002_profiles" in versions
+
+
+def test_partial_table_state_raises_conflict(tmp_path) -> None:
+    """If only some tables from a migration exist, raise MigrationConflict."""
+    database = Database(tmp_path / "jobfindsme.db")
+
+    # 0001_workspace creates workspaces + search_plans.
+    # Create only workspaces — not search_plans.
+    with database.connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE workspaces (
+                workspace_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE schema_migrations (
+                version TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
+            """
+        )
+
+    with pytest.raises(MigrationConflict) as exc:
+        database.migrate()
+    assert "0001_workspace" in str(exc.value)
+    assert "workspaces" in str(exc.value)
+    assert "search_plans" in str(exc.value)
+
+
+def test_reconcile_preserves_existing_data(tmp_path) -> None:
+    """Reconciliation should not touch existing data in pre-existing tables."""
+    database = Database(tmp_path / "jobfindsme.db")
+
+    with database.connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE workspaces (
+                workspace_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE search_plans (
+                plan_id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                target_roles_json TEXT NOT NULL,
+                locations_json TEXT NOT NULL,
+                salary_min_k INTEGER,
+                salary_max_k INTEGER,
+                experience_min_years INTEGER,
+                experience_max_years INTEGER,
+                official_sources_only INTEGER NOT NULL DEFAULT 1,
+                exclusions_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (workspace_id) REFERENCES workspaces(workspace_id)
+                    ON DELETE CASCADE,
+                UNIQUE (workspace_id, name)
+            )
+            """
+        )
+        conn.execute(
+            "INSERT INTO workspaces "
+            "(workspace_id, name, created_at) "
+            "VALUES ('ws-1', 'test', '2026-01-01')"
+        )
+        conn.execute(
+            """
+            CREATE TABLE schema_migrations (
+                version TEXT PRIMARY KEY,
+                applied_at TEXT NOT NULL
+            )
+            """
+        )
+
+    database.migrate()
+
+    with database.connect() as conn:
+        rows = conn.execute("SELECT workspace_id, name FROM workspaces").fetchall()
+    assert len(rows) == 1
+    assert rows[0]["workspace_id"] == "ws-1"
+    assert rows[0]["name"] == "test"
 
 
 def test_search_plan_requires_an_existing_workspace(tmp_path) -> None:
