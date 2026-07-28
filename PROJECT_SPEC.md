@@ -263,54 +263,82 @@ or:
 
 ## 11. Source Strategy
 
-First release source portfolio:
+### 11.1 中国招聘渠道的真实格局
 
-- single job URL;
-- CSV and JSON imports;
-- generic public ATS connectors for Greenhouse and Ashby;
-- one official career-site connector for the first validated market.
+国内企业招聘渠道并非以官网为主，而是分为三个层级：
 
-岗位来源分为四个接入等级：
+```
+第一层：企业官网为主（BAT/字节等大厂）
+  百度、腾讯、字节跳动、美团、滴滴、哔哩哔哩 —— 官网是主要招聘入口
+  → 策略：建立自动 Connector，实时抓取
 
-1. 企业招聘官网和公开 ATS：默认优先，直接建立 Connector。
-2. 招聘平台公开页面或官方开放接口：按平台条款、频率和字段许可接入。
-3. 用户主动提供的岗位 URL、CSV、JSON 或平台导出文件：本地解析。
-4. 需要登录的平台：未来仅考虑由用户主动授权的本地浏览器桥接，不上传账号凭据，
-   不代替用户绕过确认步骤。
+第二层：平台为主，官网为辅（绝大多数公司）
+  京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想……
+  以及几千家中小型互联网和 AI 创业公司
+  它们的官网要么没有招聘页，要么只是摆设，真正招人在 BOSS直聘/猎聘上
+  → 策略：接入主流招聘平台，一次性覆盖
 
-首个区域化来源必须无需登录、岗位详情页稳定、包含发布日期或可验证的新鲜度信号、
-提供明确投递链接，并有足够活跃岗位支持重复测试。
+第三层：外企中国岗位
+  Airbnb、Stripe、Shopify 等通过 Greenhouse/Ashby 发布全球岗位
+  → 策略：Greenhouse/Ashby 公开 API
+```
 
-当前区域化初始验证使用 Airwallex 官方招聘页及其公开 Ashby 看板中的中国岗位。
-该验证只证明一次完整接入链路，不等同于长期稳定性或中文匹配质量证明。
+综上，JobFindsMe 的来源体系必须是**两条腿走路**：
+- **官网 Connector**：大厂官网直接抓取（精确但覆盖窄）
+- **平台接入**：BOSS直聘/猎聘浏览器桥（覆盖广但需用户授权）
 
-Core 内置中国来源目录。具备维护中公开 Connector 的来源可自动订阅；华为、百度、
-腾讯、字节跳动等企业官网以及 BOSS直聘、猎聘、智联、前程无忧以官方实时搜索入口
-返回。链接入口和 Connector 必须明确区分，不能把“可打开”宣传成“已抓取”。
+### 11.2 官网 Connector（已实现）
 
-BOSS直聘、猎聘、智联招聘等招聘 App 不因产品定位而自动成为可抓取数据源。
-只有存在公开接口、公开页面、用户导出或合法授权链路时才接入。JobFindsMe 不保存
-招聘平台账号密码，不绕过登录、验证码、反爬限制、robots规则或平台条款。
+对以官网为主要招聘渠道的企业，建立自动 Connector：
 
-### 11.1 Agent Compatibility Strategy
+| 状态 | 公司 | 技术 |
+|------|------|------|
+| ✅ | 百度 | SSR 页面解析 |
+| ✅ | 腾讯 | Schema.org JSON-LD |
+| ✅ | 字节跳动 | Playwright SPA 渲染 |
+| ✅ | 美团 | Playwright SPA 渲染 |
+| ✅ | 滴滴 | Playwright SPA 渲染 |
+| ✅ | 哔哩哔哩 | Playwright SPA 渲染 |
+| ✅ | Airbnb 中国 | Greenhouse 公开 API |
+
+另有 29 家企业官网提供手动直达搜索链接，按关键词动态生成 URL。
+
+### 11.3 招聘平台接入（进行中）
+
+以下平台覆盖中国 90% 以上的招聘岗位：
+
+| 平台 | 覆盖 | 接入方式 | 状态 |
+|------|------|---------|------|
+| **BOSS直聘** | 几乎所有中国公司 | 用户授权浏览器桥 | 🔜 规划中 |
+| **猎聘** | 中高端岗位 | 用户授权浏览器桥 | 🔜 规划中 |
+| **拉勾** | 互联网行业 | 待调研 | 📋 |
+
+平台接入的核心原则：
+- 用户在自己的浏览器中登录，JobFindsMe 不接触凭据
+- 本地浏览器扩展/桥仅提取用户已看到的岗位信息
+- 不绕过登录、验证码、反爬限制或平台条款
+- 本质是”帮你整理你已经看到的信息”
+
+### 11.4 来源接入等级
+
+1. **自动 Connector**：企业官网有公开数据接口 → 直接抓取，用户零操作
+2. **浏览器桥**：平台需登录 → 用户授权后，本地扩展协助提取
+3. **直达链接**：无法自动接入 → 提供一键搜索链接，用户手动浏览
+4. **用户导入**：URL / CSV / JSON → 用户主动提供
+
+链接入口和 Connector 必须明确区分，不能把”可打开”宣传成”已抓取”。
+
+### 11.5 Agent Compatibility Strategy
 
 官方集成按以下顺序推进：
 
 ```text
-P0: Qwen Code、Codex、Claude Code
+P0: ZCode、Codex、Claude Code、Qwen Code
 P1: Cherry Studio、Cursor、Cline、Roo Code、OpenCode
 P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 ```
 
-每个客户端都必须经过相同场景：
-
-- 通过本地路径建立画像，但宿主模型不读取完整简历；
-- 从自然语言生成或选择 SearchPlan；
-- 搜索、查看和解释岗位；
-- 收藏、忽略和更新投递状态；
-- 导出数据；
-- 执行两阶段删除且不能跳过 Core 校验；
-- MCP故障时明确提示用户退回CLI。
+每个客户端都必须经过相同场景：本地画像（不读完整简历）、搜索配置、岗位匹配、状态管理、导出、两阶段删除、故障时退回 CLI。
 
 ## 12. Delivery Milestones
 
@@ -326,22 +354,15 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 10. Zero-ID onboarding and profile-grounded matching.
 11. Subscription-backed discovery monitoring and source health.
 12. Bounded MCP output, redirect-safe HTTP, and regional data contracts.
-13. Additional public ATS coverage for multinational China roles.
+13. Enterprise career-site connectors: Playwright-based connectors for
+    ByteDance, Meituan, Didi, Bilibili, plus Baidu SSR and Tencent JSON-LD.
 14. Real Chinese job matching evidence: 50+ labeled jobs across 3+ days of
-    real use, script-generated metrics (P@10, NDCG@10, FNR, valid-link rate),
-    and seven qualitative evidence items for interview storytelling.
-15. Personal field trial across at least two Agent hosts (ZCode + one other),
-    supported-Agent compatibility evidence, and a field-trial report that
-    separates observed facts from assumptions.
-
-Milestones 14 and 15 run in parallel: daily China-role use produces both the
-labeled evidence and the field-trial report. No academic benchmark threshold
-is set — metrics serve as internal baselines for continuous improvement.
-Qualitative evidence matters more than scores at this stage.
-
-A dedicated JobFindsMe Agent is considered only after at least three stable
-sources, repeat usage, real feedback, and a demonstrated limitation in existing
-agent hosts.
+    real use, script-generated metrics, and qualitative evidence.
+15. Personal field trial across at least two Agent hosts.
+16. **BOSS直聘浏览器桥**：用户授权本地浏览器扩展，合规提取平台岗位数据，
+    一次性覆盖中国 90% 以上企业。
+17. **猎聘浏览器桥**：同上，覆盖中高端岗位市场。
+18. Public release and community onboarding.
 
 ## 13. Definition Of Done
 
