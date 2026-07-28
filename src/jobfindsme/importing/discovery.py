@@ -77,6 +77,18 @@ class JobDiscoveryService:
                 source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
+        if source.kind is DiscoverySourceKind.BOSS_CDP:
+            from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
+
+            connector = BossZhipinConnector(
+                source.query or "AI",
+                policy=ConnectorPolicy(
+                    public_access=True,
+                    robots_allowed=True,
+                ),
+                source_name=source.source_name,
+            )
+            return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.GREENHOUSE:
             connector = GreenhouseConnector(
                 source.board_token or "",

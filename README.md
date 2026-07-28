@@ -201,6 +201,13 @@ jobfindsme install qwen     # Qwen Code
 
 请先通过 [Issue](https://github.com/russeell/jobfindsme/issues) 讨论。
 
+## 免责声明
+
+- JobFindsMe 是一个本地工具，帮助用户整理和匹配**用户自己有权访问**的岗位信息。
+- BOSS直聘 Connector 通过 Chrome DevTools Protocol 连接**用户自己的浏览器**，在用户已登录的会话中调用搜索接口。JobFindsMe 不保存、不传输、不接触用户的 BOSS 账号密码或 Cookie。
+- 使用本工具产生的任何后果（包括但不限于平台账号限制）由使用者自行承担。
+- 本项目仅供个人求职使用，禁止用于商业转售、大规模爬取或对目标平台造成负担的行为。
+
 ## License
 
 [MIT](LICENSE)

@@ -45,6 +45,11 @@ def recommended_connectors(
             query=query,
         ),
         DiscoverySource(
+            kind="boss_cdp",
+            source_name="BOSS直聘",
+            query=query,
+        ),
+        DiscoverySource(
             kind="greenhouse",
             source_name="Airbnb 中国",
             board_token="airbnb",
@@ -242,11 +247,14 @@ def source_links(
         ),
         # ── 招聘平台（用户自行浏览） ──
         SourceLink(
-            name="BOSS直聘",
+            name="BOSS直聘 (自动)",
             category="招聘平台",
             url=f"https://www.zhipin.com/web/geek/job?query={encoded}",
             access_mode="user_browser",
-            note="需在平台登录后查看",
+            note=(
+                "已接入 Chrome CDP 自动 Connector。"
+                "需本地 Chrome 开启远程调试并登录 BOSS。"
+            ),
         ),
         SourceLink(
             name="猎聘",

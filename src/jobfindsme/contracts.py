@@ -200,6 +200,7 @@ class DiscoverySourceKind(StrEnum):
     JSON_FILE = "json_file"
     CSV_FILE = "csv_file"
     SPA_PLAYWRIGHT = "spa_playwright"
+    BOSS_CDP = "boss_cdp"
 
 
 class DiscoverySource(StrictModel):
@@ -223,6 +224,7 @@ class DiscoverySource(StrictModel):
             DiscoverySourceKind.JSON_FILE: self.path,
             DiscoverySourceKind.CSV_FILE: self.path,
             DiscoverySourceKind.SPA_PLAYWRIGHT: self.site_key,
+            DiscoverySourceKind.BOSS_CDP: self.query,
         }[self.kind]
         if not required:
             raise ValueError(f"{self.kind} source is missing its locator")

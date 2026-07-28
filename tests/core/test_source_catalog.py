@@ -13,6 +13,7 @@ def test_china_search_gets_maintained_connector_without_ats_parameters() -> None
         "美团",
         "滴滴",
         "哔哩哔哩",
+        "BOSS直聘",
         "Airbnb 中国",
         "Airwallex",
     }
@@ -41,7 +42,7 @@ def test_catalog_links_official_careers_and_platform_live_search() -> None:
     assert {"蚂蚁集团招聘"} <= names
 
     # Recruitment platforms
-    assert {"BOSS直聘", "猎聘", "智联招聘", "前程无忧"} <= names
-    boss = next(link for link in links if link.name == "BOSS直聘")
+    assert {"BOSS直聘 (自动)", "猎聘", "智联招聘", "前程无忧"} <= names
+    boss = next(link for link in links if "BOSS" in link.name)
     assert "AI应用工程师" in unquote_plus(boss.url)
     assert boss.access_mode == "user_browser"
