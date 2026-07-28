@@ -6,6 +6,9 @@
 
 每天搜索完成后，打开 `data/eval/field_trial/day_0N.json`，对每个岗位填写以下字段：
 
+只有人工检查完成后，才把该条岗位的 `annotated` 改成 `true`。模板中的
+`relevance: 0` 只是占位值；`annotated: false` 的记录不会进入正式指标。
+
 ## 字段说明
 
 ### relevance（相关性）0-3
@@ -53,6 +56,20 @@
 - JD 描述与实际岗位不符
 - 来源数据质量问题
 
+## 每日运行信息
+
+除 Top 10 标签外，每天还要记录：
+
+- `source_attempts`：本次实际请求的来源；
+- `source_successes`：成功返回可解析结果的来源；
+- `source_failures`：失败来源及简短原因；
+- `duplicates_detected`：进入 Top 10 前被系统去掉的重复岗位数；
+- `time_to_first_results_seconds`：从发出需求到看到第一批结果的耗时；
+- `agent_host`：本次使用的 Agent，例如 `codex` 或 `claude-code`。
+
+`P@10` 和 `NDCG@10` 按天计算后做宏平均，避免只有第一天的数据进入指标。
+报告仅在至少 3 天、50 条人工标签且没有待标注项时标记为可对外引用。
+
 ## 每日标注文件位置
 
 ```
@@ -60,6 +77,30 @@ data/eval/field_trial/day_01.json  # 第 1 天
 data/eval/field_trial/day_02.json  # 第 2 天
 ...
 data/eval/field_trial/day_07.json  # 第 7 天
+```
+
+先把当天搜索结果保存为 JSON：
+
+```bash
+jobfindsme --output json jobs search \
+  --workspace WORKSPACE_ID \
+  --plan PLAN_ID \
+  --limit 10 > /tmp/jobfindsme-day-01.json
+```
+
+再生成待人工检查的当天模板：
+
+```bash
+python -m jobfindsme.evaluation.collect \
+  --jobs /tmp/jobfindsme-day-01.json \
+  --output data/eval/field_trial/day_01.json \
+  --day 1 \
+  --date 2026-07-28 \
+  --plan-id PLAN_ID \
+  --profile-hash PROFILE_HASH \
+  --source-attempt bytedance \
+  --source-success bytedance \
+  --agent-host codex
 ```
 
 ## 7 天完成后

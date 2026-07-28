@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from jobfindsme.contracts import StrictModel
 
@@ -30,13 +30,18 @@ class JobLabel(StrictModel):
     company: str
     location: str
 
+    annotated: bool = Field(
+        default=False,
+        description="True only after a human has reviewed this result.",
+    )
+
     # Core labels
     relevance: int = Field(
         ge=0,
         le=3,
         description="0=不相关 1=弱相关 2=相关 3=完美匹配",
     )
-    liveness: str = Field(
+    liveness: Literal["active", "stale", "closed", "unknown"] = Field(
         default="active",
         description="active | stale | closed",
     )
@@ -46,7 +51,7 @@ class JobLabel(StrictModel):
     )
     duplicate_of: str | None = Field(
         default=None,
-        description="case_id of a previously seen same-position posting.",
+        description="job_id of a previously seen same-position posting.",
     )
 
     # Error flags
@@ -68,9 +73,21 @@ class DailyLabels(StrictModel):
     profile_hash: str
     total_discovered: int
     total_after_filter: int
+    duplicates_detected: int = Field(default=0, ge=0)
+    source_attempts: tuple[str, ...] = ()
+    source_successes: tuple[str, ...] = ()
     labels: tuple[JobLabel, ...]
     source_failures: tuple[str, ...] = ()
+    time_to_first_results_seconds: float | None = Field(default=None, ge=0)
+    agent_host: str | None = None
     notes: str = ""
+
+    @model_validator(mode="after")
+    def validate_source_outcomes(self) -> Self:
+        unknown_successes = set(self.source_successes) - set(self.source_attempts)
+        if unknown_successes:
+            raise ValueError("source_successes must be included in source_attempts")
+        return self
 
 
 class LabeledDataset(StrictModel):
@@ -99,6 +116,13 @@ def new_daily_template(
     profile_hash: str,
     jobs: list[dict[str, Any]],
     source_failures: list[str] | None = None,
+    source_attempts: list[str] | None = None,
+    source_successes: list[str] | None = None,
+    duplicates_detected: int = 0,
+    total_discovered: int | None = None,
+    total_after_filter: int | None = None,
+    time_to_first_results_seconds: float | None = None,
+    agent_host: str | None = None,
 ) -> DailyLabels:
     """Create a blank daily labeling template from search results.
 
@@ -129,10 +153,19 @@ def new_daily_template(
         date=date,
         plan_id=plan_id,
         profile_hash=profile_hash,
-        total_discovered=len(jobs),
-        total_after_filter=len(jobs),
+        total_discovered=(
+            total_discovered if total_discovered is not None else len(jobs)
+        ),
+        total_after_filter=(
+            total_after_filter if total_after_filter is not None else len(jobs)
+        ),
+        duplicates_detected=duplicates_detected,
+        source_attempts=tuple(source_attempts or ()),
+        source_successes=tuple(source_successes or ()),
         labels=labels,
         source_failures=tuple(source_failures or ()),
+        time_to_first_results_seconds=time_to_first_results_seconds,
+        agent_host=agent_host,
     )
 
 

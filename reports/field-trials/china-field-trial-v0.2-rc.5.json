@@ -1,0 +1,62 @@
+{
+  "trial_id": "china-field-trial-v0.2-rc.5",
+  "release": "0.2.0-rc.5",
+  "status": "in_progress",
+  "scope": {
+    "market": "mainland_china",
+    "eligible_locations": [
+      "北京",
+      "上海",
+      "深圳",
+      "杭州",
+      "广州",
+      "成都",
+      "重庆",
+      "武汉",
+      "西安",
+      "南京",
+      "苏州"
+    ],
+    "target_roles": [
+      "AI应用工程师",
+      "大模型应用工程师",
+      "Agent工程师",
+      "RAG工程师"
+    ],
+    "exclude": [
+      "外包",
+      "驻场"
+    ],
+    "daily_top_k": 10
+  },
+  "required_hosts": {
+    "minimum": 2,
+    "required": [
+      "zcode"
+    ],
+    "one_of": [
+      "codex",
+      "claude-code",
+      "qwen-code"
+    ]
+  },
+  "metrics": [
+    "precision_at_10",
+    "ndcg_at_10",
+    "hard_filter_fnr",
+    "valid_link_rate",
+    "source_success_rate",
+    "duplicates_detected",
+    "duplicate_leaks",
+    "agent_workflow_success",
+    "time_to_first_results_seconds"
+  ],
+  "observed_days": [],
+  "claim_policy": [
+    "Only user-confirmed labels with annotated=true count as human annotations.",
+    "Only roles located in mainland China or explicitly serving the China market count.",
+    "Missing data remains null and is never inferred.",
+    "Source discovery evidence and synthetic regression results are reported separately from human relevance labels.",
+    "The trial is not complete before 3 cumulative days, 50 labels, and two supported Agent hosts."
+  ]
+}

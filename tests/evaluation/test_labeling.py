@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from jobfindsme.evaluation.labeling import (
     JobLabel,
     assemble_labeled_dataset,
@@ -75,6 +77,19 @@ def test_new_daily_template_creates_correct_structure() -> None:
     assert template.labels[0].job_id == "job-000"
     assert template.total_discovered == 8
     assert template.total_after_filter == 8
+
+
+def test_daily_template_rejects_success_for_unattempted_source() -> None:
+    with pytest.raises(ValueError, match="source_successes"):
+        new_daily_template(
+            day=1,
+            date="2026-07-28",
+            plan_id="plan-1",
+            profile_hash="abc123",
+            jobs=_sample_jobs(1),
+            source_attempts=["baidu"],
+            source_successes=["bytedance"],
+        )
 
 
 def test_daily_template_roundtrip(tmp_path) -> None:
@@ -176,6 +191,7 @@ def test_assemble_labeled_dataset(tmp_path) -> None:
         # Annotate
         data = json.loads(path.read_text())
         for lb in data["labels"]:
+            lb["annotated"] = True
             lb["relevance"] = 2
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -210,8 +226,12 @@ def test_evaluate_chinese_dataset(tmp_path) -> None:
 
         data = json.loads(path.read_text())
         for i, lb in enumerate(data["labels"]):
+            lb["annotated"] = True
             lb["relevance"] = 3 if i < 3 else 2
             lb["valid_link"] = i != 4
+        data["source_attempts"] = ["baidu", "bytedance"]
+        data["source_successes"] = ["baidu", "bytedance"] if day == 2 else ["baidu"]
+        data["duplicates_detected"] = day
         data["labels"][0]["duplicate_of"] = None
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -231,10 +251,78 @@ def test_evaluate_chinese_dataset(tmp_path) -> None:
     report = evaluate_chinese_dataset(dataset_path)
 
     assert report.total_labeled == 10
+    assert report.total_unlabeled == 0
     assert report.total_days == 2
     assert report.precision_at_10 == 1.0  # All >= 2
     assert report.ndcg_at_10 >= 0.9  # Good ordering
     assert report.hard_filter_fnr == 0.0
     assert report.valid_link_rate == 0.8  # 2 out of 10 invalid (one per day)
+    assert report.source_success_rate == 0.75
+    assert report.duplicates_detected == 3
+    assert report.duplicate_leaks == 0
+    assert report.ready_for_claim is False
     assert "boss" in report.source_failure_sources
     assert "M14 Chinese Benchmark" in report.summary()
+
+
+def test_chinese_metrics_macro_average_each_day(tmp_path) -> None:
+    """A poor second day must affect P@10 and NDCG@10."""
+    paths = []
+    for day, relevances in ((1, [3] * 10), (2, [0] * 10)):
+        template = new_daily_template(
+            day=day,
+            date=f"2026-07-{27 + day}",
+            plan_id="plan-1",
+            profile_hash="abc123",
+            jobs=_sample_jobs(10),
+        )
+        path = tmp_path / f"day_{day:02}.json"
+        write_daily_template(path, template)
+        data = json.loads(path.read_text())
+        for label, relevance in zip(data["labels"], relevances, strict=True):
+            label["annotated"] = True
+            label["relevance"] = relevance
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        paths.append(path)
+
+    dataset = assemble_labeled_dataset(
+        version="0.2.0",
+        provenance={"labeler": "test"},
+        day_paths=paths,
+    )
+    from jobfindsme.evaluation.labeling import write_labeled_dataset
+
+    dataset_path = tmp_path / "macro.json"
+    write_labeled_dataset(dataset_path, dataset)
+    report = evaluate_chinese_dataset(dataset_path)
+
+    assert report.precision_at_10 == 0.5
+    assert report.ndcg_at_10 == 0.5
+
+
+def test_unannotated_template_is_not_counted_as_human_evidence(tmp_path) -> None:
+    path = tmp_path / "day_01.json"
+    write_daily_template(
+        path,
+        new_daily_template(
+            day=1,
+            date="2026-07-28",
+            plan_id="plan-1",
+            profile_hash="abc123",
+            jobs=_sample_jobs(5),
+        ),
+    )
+    dataset = assemble_labeled_dataset(
+        version="0.2.0",
+        provenance={"labeler": "pending"},
+        day_paths=[path],
+    )
+    from jobfindsme.evaluation.labeling import write_labeled_dataset
+
+    dataset_path = tmp_path / "pending.json"
+    write_labeled_dataset(dataset_path, dataset)
+    report = evaluate_chinese_dataset(dataset_path)
+
+    assert report.total_labeled == 0
+    assert report.total_unlabeled == 5
+    assert report.ready_for_claim is False

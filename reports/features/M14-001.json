@@ -1,0 +1,16 @@
+{
+  "feature_id": "M14-001",
+  "status": "failed",
+  "verified_at": "2026-07-28T15:01:19.070802+00:00",
+  "changed_paths": [
+    "data/eval/ANNOTATION_GUIDE.md",
+    "reports/features/M14-001.json",
+    "reports/field-trials/china-field-trial-v0.2-rc.5.json",
+    "src/jobfindsme/evaluation/collect.py",
+    "src/jobfindsme/evaluation/labeling.py",
+    "src/jobfindsme/evaluation/runner.py",
+    "tests/evaluation/test_collect.py",
+    "tests/evaluation/test_labeling.py"
+  ],
+  "checks": []
+}

@@ -163,24 +163,32 @@ class ChineseBenchmarkReport(StrictModel):
     dataset_sha256: str
     generated_at: datetime
     total_labeled: int
+    total_unlabeled: int
     total_days: int
     precision_at_10: float = Field(ge=0, le=1)
     ndcg_at_10: float = Field(ge=0, le=1)
     hard_filter_fnr: float = Field(ge=0, le=1)
     valid_link_rate: float = Field(ge=0, le=1)
+    source_success_rate: float = Field(ge=0, le=1)
     source_failure_sources: tuple[str, ...]
-    duplicate_count: int = 0
+    duplicates_detected: int = 0
+    duplicate_leaks: int = 0
+    ready_for_claim: bool
     synthetic_metrics: EvaluationReport | None = None
 
     def summary(self) -> str:
         return (
             f"M14 Chinese Benchmark v{self.dataset_version}\n"
-            f"  Labeled: {self.total_labeled} jobs over {self.total_days} days\n"
+            f"  Labeled: {self.total_labeled} jobs over {self.total_days} days "
+            f"({self.total_unlabeled} pending)\n"
             f"  P@10:     {self.precision_at_10:.3f}\n"
             f"  NDCG@10:  {self.ndcg_at_10:.3f}\n"
             f"  FNR:      {self.hard_filter_fnr:.3f}\n"
             f"  ValidLink:{self.valid_link_rate:.3f}\n"
-            f"  Dupes:    {self.duplicate_count}\n"
+            f"  SourceOK: {self.source_success_rate:.3f}\n"
+            f"  Deduped:  {self.duplicates_detected}\n"
+            f"  DupLeaks: {self.duplicate_leaks}\n"
+            f"  Claimable:{self.ready_for_claim}\n"
             f"  SrcFail:  {', '.join(self.source_failure_sources) or 'none'}"
         )
 
@@ -192,23 +200,56 @@ def evaluate_chinese_dataset(path: str | Path) -> ChineseBenchmarkReport:
     data = json.loads(raw_bytes)
     dataset = LabeledDataset.model_validate(data)
 
-    all_labels = list(dataset.all_labels)
+    all_candidates = list(dataset.all_labels)
+    all_labels = [label for label in all_candidates if label.annotated]
     source_failures: set[str] = set()
+    source_attempts: set[tuple[int, str]] = set()
+    source_successes: set[tuple[int, str]] = set()
     for day in dataset.days:
         source_failures.update(day.source_failures)
+        source_attempts.update((day.day, source) for source in day.source_attempts)
+        source_successes.update((day.day, source) for source in day.source_successes)
 
-    duplicates = sum(1 for lb in all_labels if lb.duplicate_of is not None)
+    duplicate_leaks = sum(1 for label in all_labels if label.duplicate_of is not None)
+    duplicates_detected = sum(day.duplicates_detected for day in dataset.days)
+    evaluated_days = [
+        [label for label in day.labels if label.annotated] for day in dataset.days
+    ]
+    evaluated_days = [labels for labels in evaluated_days if labels]
+    precision_at_10 = (
+        sum(compute_precision_at_k(labels, 10) for labels in evaluated_days)
+        / len(evaluated_days)
+        if evaluated_days
+        else 0.0
+    )
+    ndcg_at_10 = (
+        sum(compute_ndcg_at_k(labels, 10) for labels in evaluated_days)
+        / len(evaluated_days)
+        if evaluated_days
+        else 0.0
+    )
+    source_success_rate = (
+        len(source_successes) / len(source_attempts) if source_attempts else 0.0
+    )
+    total_unlabeled = len(all_candidates) - len(all_labels)
+    ready_for_claim = (
+        len(all_labels) >= 50 and len(evaluated_days) >= 3 and total_unlabeled == 0
+    )
 
     return ChineseBenchmarkReport(
         dataset_version=dataset.dataset_version,
         dataset_sha256=hashlib.sha256(raw_bytes).hexdigest(),
         generated_at=datetime.now(UTC),
         total_labeled=len(all_labels),
+        total_unlabeled=total_unlabeled,
         total_days=len(dataset.days),
-        precision_at_10=compute_precision_at_k(all_labels, 10),
-        ndcg_at_10=compute_ndcg_at_k(all_labels, 10),
+        precision_at_10=precision_at_10,
+        ndcg_at_10=ndcg_at_10,
         hard_filter_fnr=compute_hard_filter_fnr(all_labels),
         valid_link_rate=compute_valid_link_rate(all_labels),
+        source_success_rate=source_success_rate,
         source_failure_sources=tuple(sorted(source_failures)),
-        duplicate_count=duplicates,
+        duplicates_detected=duplicates_detected,
+        duplicate_leaks=duplicate_leaks,
+        ready_for_claim=ready_for_claim,
     )
