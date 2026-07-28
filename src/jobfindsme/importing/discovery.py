@@ -3,12 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from jobfindsme.connectors import (
-    AshbyConnector,
-    BaiduCareerConnector,
     ConnectorPolicy,
-    GreenhouseConnector,
-    JsonLdCareerSiteConnector,
-    LeverConnector,
 )
 from jobfindsme.connectors.http import HttpTransport, UrllibTransport
 from jobfindsme.contracts import DiscoverySource, DiscoverySourceKind
@@ -43,41 +38,6 @@ class JobDiscoveryService:
         workspace_id: str,
         source: DiscoverySource,
     ) -> ImportSummary:
-        if source.kind is DiscoverySourceKind.ASHBY:
-            connector = AshbyConnector(
-                source.board_name or "",
-                transport=self.transport,
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.BAIDU_CAREER:
-            connector = BaiduCareerConnector(
-                source.query or "",
-                transport=self.transport,
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.SPA_PLAYWRIGHT:
-            from jobfindsme.connectors.playwright import PlaywrightSpaConnector
-
-            connector = PlaywrightSpaConnector(
-                source.site_key or "",
-                source.query or "AI",
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.BOSS_CDP:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
 
@@ -111,39 +71,6 @@ class JobDiscoveryService:
                 policy=ConnectorPolicy(
                     public_access=True,
                     robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.GREENHOUSE:
-            connector = GreenhouseConnector(
-                source.board_token or "",
-                transport=self.transport,
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.LEVER:
-            connector = LeverConnector(
-                source.board_token or "",
-                transport=self.transport,
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.CAREER_URL:
-            connector = JsonLdCareerSiteConnector(
-                source.url or "",
-                transport=self.transport,
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=source.robots_allowed,
                 ),
                 source_name=source.source_name,
             )

@@ -211,23 +211,17 @@ class JobState(StrictModel):
 
 
 class DiscoverySourceKind(StrEnum):
-    ASHBY = "ashby"
-    BAIDU_CAREER = "baidu_career"
-    GREENHOUSE = "greenhouse"
-    LEVER = "lever"
-    CAREER_URL = "career_url"
-    JSON_FILE = "json_file"
-    CSV_FILE = "csv_file"
-    SPA_PLAYWRIGHT = "spa_playwright"
     BOSS_CDP = "boss_cdp"
     LIEPIN_CDP = "liepin_cdp"
     ZHILIAN_CDP = "zhilian_cdp"
     LAGOU_CDP = "lagou_cdp"
+    JSON_FILE = "json_file"
+    CSV_FILE = "csv_file"
 
     @property
     def uses_browser(self) -> bool:
         return self in {
-            self.SPA_PLAYWRIGHT, self.BOSS_CDP,
+            self.BOSS_CDP,
             self.LIEPIN_CDP, self.ZHILIAN_CDP, self.LAGOU_CDP,
         }
 
@@ -246,23 +240,15 @@ class DiscoverySource(StrictModel):
     @model_validator(mode="after")
     def validate_kind_fields(self) -> Self:
         required = {
-            DiscoverySourceKind.ASHBY: self.board_name,
-            DiscoverySourceKind.BAIDU_CAREER: self.query,
-            DiscoverySourceKind.GREENHOUSE: self.board_token,
-            DiscoverySourceKind.LEVER: self.board_token,
-            DiscoverySourceKind.CAREER_URL: self.url,
-            DiscoverySourceKind.JSON_FILE: self.path,
-            DiscoverySourceKind.CSV_FILE: self.path,
-            DiscoverySourceKind.SPA_PLAYWRIGHT: self.site_key,
             DiscoverySourceKind.BOSS_CDP: self.query,
             DiscoverySourceKind.LIEPIN_CDP: self.query,
             DiscoverySourceKind.ZHILIAN_CDP: self.query,
             DiscoverySourceKind.LAGOU_CDP: self.query,
+            DiscoverySourceKind.JSON_FILE: self.path,
+            DiscoverySourceKind.CSV_FILE: self.path,
         }[self.kind]
         if not required:
             raise ValueError(f"{self.kind} source is missing its locator")
-        if self.kind is DiscoverySourceKind.CAREER_URL and not self.robots_allowed:
-            raise ValueError("career_url requires robots_allowed=true")
         return self
 
 

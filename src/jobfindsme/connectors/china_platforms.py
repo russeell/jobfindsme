@@ -190,7 +190,7 @@ _ZHILIAN_EXTRACT_JS = """
             var link = card.querySelector('a');
             results.push({
                 title: text.split(/\\s+/)[0] || text.slice(0, 50),
-                company: (text.match(/(.{2,20}?(?:有限公司|科技|集团|网络|软件|信息|数据|云计算|人工智能|机器人))/)) || [''])[0],
+                company: (text.match(/(.{2,20}?(?:有限公司|科技|集团|网络|软件|信息|数据|云计算|人工智能|机器人))/) || [''])[0],
                 salary: (text.match(/(\\d+[-~]\\d+[Kk])/) || [''])[0],
                 city: (text.match(/(北京|上海|深圳|广州|杭州|成都|武汉|南京|苏州|西安|重庆)/) || [''])[0],
                 url: link ? link.href : ''
@@ -262,7 +262,7 @@ _LAGOU_EXTRACT_JS = """
         if (title && title.length > 2 && title.length < 80) {
             results.push({
                 title: title,
-                company: (text.match(/(.{2,20}?(?:科技|有限公司|集团|网络|软件))/)) || [''])[0],
+                company: (text.match(/(.{2,20}?(?:科技|有限公司|集团|网络|软件))/) || [''])[0],
                 salary: (text.match(/(\\d+[-~]\\d+[kK])/) || [''])[0],
                 city: (text.match(/(北京|上海|深圳|广州|杭州|成都|武汉|南京)/) || [''])[0],
                 url: link ? link.href : ''

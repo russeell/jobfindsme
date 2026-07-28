@@ -54,7 +54,7 @@ def test_job_posting_requires_a_valid_salary_range() -> None:
             fingerprint="f" * 64,
             content_hash="c" * 64,
             source={
-                "source_kind": "career_site",
+                "source_kind": "boss_cdp",
                 "source_name": "官网",
                 "source_url": "https://example.com",
                 "fetched_at": datetime.now(UTC),
@@ -75,7 +75,7 @@ def test_job_classification_contracts_reject_unknown_values() -> None:
             fingerprint="f" * 64,
             content_hash="c" * 64,
             source={
-                "source_kind": "career_site",
+                "source_kind": "boss_cdp",
                 "source_name": "官网",
                 "source_url": "https://example.com",
                 "fetched_at": datetime.now(UTC),

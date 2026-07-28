@@ -23,7 +23,7 @@ def _sample_jobs(n: int = 8) -> list[dict]:
     return [
         {
             "job_id": f"job-{i:03}",
-            "source_name": "baidu" if i % 2 else "greenhouse",
+            "source_name": "baidu" if i % 2 else "boss_cdp",
             "apply_url": f"https://example.com/jobs/{i}",
             "title": "AI应用工程师" if i < 5 else "前端工程师",
             "company": f"公司{i}",

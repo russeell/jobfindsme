@@ -12,12 +12,15 @@ from jobfindsme.mcp.server import StdioMcpServer
 from jobfindsme.mcp.tools import ToolRegistry
 
 
-def _browser_binary_available() -> bool:
-    try:
-        from playwright.sync_api import sync_playwright
+import urllib.request
 
-        with sync_playwright() as playwright:
-            return Path(playwright.chromium.executable_path).is_file()
+
+def _cdp_port_reachable() -> bool:
+    """Check if Chrome DevTools Protocol is available on port 9222."""
+    try:
+        req = urllib.request.Request("http://127.0.0.1:9222/json/version")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.status == 200
     except Exception:
         return False
 
@@ -115,18 +118,18 @@ class Doctor:
     @staticmethod
     def _connectors() -> Diagnostic:
         try:
-            from jobfindsme.connectors import (
-                AshbyConnector,
-                BaiduCareerConnector,
-                GreenhouseConnector,
-                JsonLdCareerSiteConnector,
+            from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
+            from jobfindsme.connectors.china_platforms import (
+                LagouConnector,
+                LiepinConnector,
+                ZhilianConnector,
             )
 
             names = (
-                AshbyConnector.__name__,
-                BaiduCareerConnector.__name__,
-                GreenhouseConnector.__name__,
-                JsonLdCareerSiteConnector.__name__,
+                BossZhipinConnector.__name__,
+                LiepinConnector.__name__,
+                ZhilianConnector.__name__,
+                LagouConnector.__name__,
             )
         except ImportError as error:
             return Diagnostic(name="connectors", ok=False, message=str(error))
@@ -139,7 +142,6 @@ class Doctor:
     @staticmethod
     def _browser_connectors() -> Diagnostic:
         modules = {
-            "playwright": "playwright",
             "requests": "requests",
             "websocket-client": "websocket",
         }
@@ -153,28 +155,25 @@ class Doctor:
                 required=False,
                 message=(
                     f"optional unavailable: {', '.join(missing)}; install "
-                    '"jobfindsme[browser]" and Playwright Chromium'
+                    '"jobfindsme[browser]"'
                 ),
             )
-        if not _browser_binary_available():
+        cdp_available = _cdp_port_reachable()
+        if not cdp_available:
             return Diagnostic(
                 name="browser_connectors",
                 ok=False,
                 required=False,
                 message=(
-                    "optional packages are installed but no compatible browser "
-                    "was found; run 'python -m playwright install chromium'"
+                    "Chrome CDP (port 9222) not reachable — run "
+                    "'jobfindsme setup' to launch Chrome for BOSS/猎聘/智联/拉勾"
                 ),
             )
         return Diagnostic(
             name="browser_connectors",
             ok=True,
             required=False,
-            message=(
-                "optional Playwright Chromium is installed; browser sources "
-                "still require explicit per-search opt-in, and BOSS requires "
-                "an explicit local CDP session"
-            ),
+            message="Chrome CDP available on port 9222; platform search is ready",
         )
 
     @staticmethod

@@ -47,7 +47,7 @@ def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -
         lambda _name: object(),
     )
     monkeypatch.setattr(
-        "jobfindsme.doctor.service._browser_binary_available",
+        "jobfindsme.doctor.service._cdp_port_reachable",
         lambda: False,
     )
 
@@ -58,7 +58,7 @@ def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -
 
     assert report.ok is True
     assert browser.ok is False
-    assert "playwright install chromium" in browser.message
+    assert "jobfindsme setup" in browser.message
 
 
 def test_doctor_reports_insecure_data_directory_permissions(tmp_path) -> None:
