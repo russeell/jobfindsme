@@ -105,6 +105,7 @@
       ],
       "allowed_paths": [
         "src/jobfindsme/core/**",
+        "src/jobfindsme/doctor/**",
         "tests/core/**",
         "specs/feature_list.json",
         "reports/features/M1-002.json"
@@ -192,6 +193,7 @@
         "src/jobfindsme/contracts.py",
         "src/jobfindsme/core/**",
         "src/jobfindsme/connectors/**",
+        "src/jobfindsme/doctor/**",
         "src/jobfindsme/importing/**",
         "src/jobfindsme/matching/**",
         "src/jobfindsme/migrations/**",
@@ -736,8 +738,8 @@
         "PROJECT_SPEC.md",
         "pyproject.toml",
         "specs/feature_list.json",
-        "src/jobfindsme/**",
         "integrations/**",
+        "src/jobfindsme/**",
         "tests/**",
         "data/eval/**",
         "reports/**"
@@ -910,11 +912,71 @@
       "evidence_path": "reports/features/M13-003.json"
     },
     {
+      "id": "M13-004",
+      "title": "China recommendation quality gate and source catalog",
+      "status": "done",
+      "blocked_by": [
+        "M13-003"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "specs/feature_list.json",
+        "integrations/**",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/matching/**",
+        "src/jobfindsme/mcp/**",
+        "src/jobfindsme/profiles/**",
+        "src/jobfindsme/resources/**",
+        "src/jobfindsme/source_catalog.py",
+        "src/jobfindsme/source_subscriptions.py",
+        "src/jobfindsme/taxonomy.py",
+        "tests/**",
+        "data/fixtures/**",
+        "reports/field-trials/**",
+        "src/jobfindsme/doctor/service.py",
+        "reports/features/M13-004.json",
+        "reports/release/v0.2.0-rc.2.json"
+      ],
+      "acceptance": [
+        "Resume Parser V3 groups wrapped resume sections into skills, projects, experience, and education.",
+        "Location-only non-technical jobs cannot enter AI-role candidates.",
+        "Remote fetch supports gzip, bounded retries, and last-successful-snapshot fallback.",
+        "China searches receive maintained connectors and official company/platform search links without ATS parameters.",
+        "Baidu public social-job search returns real China AI candidates through a maintained Connector.",
+        "Profile import and review use bounded pagination instead of returning every fact."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ]
+      ],
+      "evidence_path": "reports/features/M13-004.json"
+    },
+    {
       "id": "M14-001",
       "title": "Real Chinese labeled matching benchmark",
       "status": "ready",
       "blocked_by": [
-        "M13-003"
+        "M13-004"
       ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
@@ -938,7 +1000,7 @@
       "title": "Personal field trial and supported Agent matrix",
       "status": "ready",
       "blocked_by": [
-        "M13-003"
+        "M13-004"
       ],
       "allowed_paths": [
         "README.md",

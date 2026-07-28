@@ -9,13 +9,15 @@ from jobfindsme.profiles.models import ResumeImportMode
 
 
 class SetupProfileInput(StrictModel):
-    action: Literal["import", "confirm"] = "import"
+    action: Literal["import", "review", "confirm"] = "import"
     workspace_id: str | None = None
     resume_path: str | None = None
     mode: ResumeImportMode = ResumeImportMode.FORGET_SOURCE
     profile_id: str | None = None
     accepted_fact_ids: tuple[str, ...] = ()
     corrections: dict[str, str] = Field(default_factory=dict)
+    offset: int = Field(default=0, ge=0)
+    limit: int = Field(default=12, ge=1, le=50)
 
     @model_validator(mode="after")
     def validate_action_fields(self) -> Self:
@@ -27,6 +29,8 @@ class SetupProfileInput(StrictModel):
             raise ValueError(
                 "profile_id and accepted_fact_ids are required for confirm"
             )
+        if self.action == "review" and not self.profile_id:
+            raise ValueError("profile_id is required for review")
         return self
 
 

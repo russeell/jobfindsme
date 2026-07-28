@@ -3,7 +3,7 @@
 Let an existing AI agent discover, match, and track jobs using local resume facts
 and public job sources.
 
-Current version: `v0.2.0-rc.1` release candidate.
+Current version: `v0.2.0-rc.2` release candidate.
 
 - Local-first SQLite workspace
 - Complete deterministic workflow without a model API

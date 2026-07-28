@@ -36,6 +36,15 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "Embedding": ("embedding", "嵌入模型"),
     "Reranker": ("reranker", "重排模型", "精排"),
     "Function Calling": ("function calling", "函数调用", "工具调用"),
+    "Pydantic": ("pydantic",),
+    "Tavily": ("tavily",),
+    "pytest": ("pytest",),
+    "RRF": ("rrf", "reciprocal rank fusion", "倒数排序融合"),
+    "BGE-M3": ("bge-m3", "bge m3"),
+    "OCR": ("ocr", "光学字符识别"),
+    "RAGAS": ("ragas",),
+    "DeepEval": ("deepeval",),
+    "SSE": ("sse", "server-sent events"),
 }
 
 ROLE_ALIASES: dict[str, tuple[str, ...]] = {
@@ -45,10 +54,43 @@ ROLE_ALIASES: dict[str, tuple[str, ...]] = {
         "llm应用工程师",
         "生成式ai工程师",
         "agent工程师",
+        "rag工程师",
+        "智能体工程师",
+        "ai engineer",
+        "llm engineer",
+        "generative ai engineer",
     ),
     "算法工程师": ("算法工程师", "机器学习工程师", "深度学习工程师"),
     "后端工程师": ("后端工程师", "服务端工程师", "backend engineer"),
 }
+
+TECHNICAL_ROLE_MARKERS = (
+    "工程师",
+    "开发",
+    "研发",
+    "架构师",
+    "算法",
+    "技术专家",
+    "engineer",
+    "developer",
+    "architect",
+    "scientist",
+)
+
+AI_ROLE_SIGNALS = (
+    "ai",
+    "人工智能",
+    "大模型",
+    "llm",
+    "rag",
+    "agent",
+    "智能体",
+    "生成式",
+    "aigc",
+    "机器学习",
+    "深度学习",
+    "nlp",
+)
 
 LOCATION_ALIASES: dict[str, tuple[str, ...]] = {
     "中国": ("china", "cn -"),
@@ -120,3 +162,25 @@ def expand_location_terms(locations: tuple[str, ...]) -> tuple[str, ...]:
             ):
                 expanded.extend(family)
     return tuple(dict.fromkeys(expanded))
+
+
+def is_target_role_candidate(
+    title: str,
+    description: str,
+    roles: tuple[str, ...],
+) -> bool:
+    """Reject location-only matches before ranking.
+
+    A candidate either names the requested role family in its title, or has a
+    technical title plus multiple AI signals across its title and description.
+    """
+
+    normalized_title = title.casefold()
+    role_terms = expand_role_terms(roles)
+    if any(term.casefold() in normalized_title for term in role_terms):
+        return True
+    if not any(marker in normalized_title for marker in TECHNICAL_ROLE_MARKERS):
+        return False
+    searchable = f"{title} {description}".casefold()
+    signals = {signal for signal in AI_ROLE_SIGNALS if signal in searchable}
+    return len(signals) >= 2

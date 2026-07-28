@@ -4,6 +4,7 @@ from pathlib import Path
 
 from jobfindsme.connectors import (
     AshbyConnector,
+    BaiduCareerConnector,
     ConnectorPolicy,
     GreenhouseConnector,
     JsonLdCareerSiteConnector,
@@ -44,6 +45,17 @@ class JobDiscoveryService:
         if source.kind is DiscoverySourceKind.ASHBY:
             connector = AshbyConnector(
                 source.board_name or "",
+                transport=self.transport,
+                policy=ConnectorPolicy(
+                    public_access=True,
+                    robots_allowed=True,
+                ),
+                source_name=source.source_name,
+            )
+            return self.imports.import_connector(workspace_id, connector)
+        if source.kind is DiscoverySourceKind.BAIDU_CAREER:
+            connector = BaiduCareerConnector(
+                source.query or "",
                 transport=self.transport,
                 policy=ConnectorPolicy(
                     public_access=True,

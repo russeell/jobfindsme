@@ -3,6 +3,7 @@ from pathlib import Path
 
 from jobfindsme.contracts import DiscoverySource
 from jobfindsme.core import JobFindsMeCore
+from jobfindsme.importing import JobDiscoveryService
 from jobfindsme.importing.parsers import parse_json
 
 
@@ -150,3 +151,50 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
     assert len(updated.sources) == 1
     assert cleared.sources == ()
     assert updated.plan.plan_id == configured.plan.plan_id
+
+
+def test_failed_refresh_returns_last_snapshot_as_degraded_cache(tmp_path) -> None:
+    class ToggleTransport:
+        failed = False
+
+        def get(self, _url: str) -> bytes:
+            if self.failed:
+                raise TimeoutError("timed out")
+            return """
+            {"jobs":[{
+              "id":"1",
+              "title":"AI应用工程师",
+              "content":"Python RAG Agent",
+              "location":{"name":"上海"},
+              "absolute_url":"https://example.com/jobs/1"
+            }]}
+            """.encode()
+
+    transport = ToggleTransport()
+    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core.discovery = JobDiscoveryService(core.job_imports, transport=transport)
+    configuration = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+        sources=(
+            DiscoverySource(
+                kind="greenhouse",
+                source_name="企业官网",
+                board_token="example",
+            ),
+        ),
+    )
+
+    first = core.search_jobs()
+    transport.failed = True
+    cached = core.search_jobs()
+    health = core.source_subscriptions.list(
+        workspace_id=configuration.workspace.workspace_id,
+        plan_id=configuration.plan.plan_id,
+    )[0]
+
+    assert first
+    assert cached
+    assert cached[0].job.source.liveness == "unknown"
+    assert health.health_status == "degraded"
+    assert "来源刷新失败" in cached[0].evidence.warnings[0]

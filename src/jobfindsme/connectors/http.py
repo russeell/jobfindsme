@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import gzip
 import ipaddress
 import socket
 import ssl
+import time
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlparse
@@ -52,9 +54,12 @@ def validate_public_http_url(
 
 @dataclass(frozen=True)
 class UrllibTransport:
-    timeout_seconds: float = 10
+    timeout_seconds: float = 20
     max_bytes: int = 15_000_000
+    max_decoded_bytes: int = 30_000_000
     max_redirects: int = 3
+    attempts: int = 2
+    retry_delay_seconds: float = 0.2
     require_https: bool = True
     same_host_redirects_only: bool = True
 
@@ -64,7 +69,25 @@ class UrllibTransport:
             resolve_dns=True,
             require_https=self.require_https,
         )
-        request = Request(url, headers={"User-Agent": "JobFindsMe/0.1"})
+        last_error: OSError | None = None
+        for attempt in range(self.attempts):
+            try:
+                return self._get_once(url)
+            except (TimeoutError, OSError) as error:
+                last_error = error
+                if attempt + 1 < self.attempts:
+                    time.sleep(self.retry_delay_seconds)
+        assert last_error is not None
+        raise last_error
+
+    def _get_once(self, url: str) -> bytes:
+        request = Request(
+            url,
+            headers={
+                "User-Agent": "JobFindsMe/0.2",
+                "Accept-Encoding": "gzip",
+            },
+        )
         tls_context = ssl.create_default_context(cafile=certifi.where())
         opener = build_opener(
             SafeRedirectHandler(
@@ -82,8 +105,13 @@ class UrllibTransport:
                 require_https=self.require_https,
             )
             data = response.read(self.max_bytes + 1)
+            encoding = response.headers.get("Content-Encoding", "").casefold()
         if len(data) > self.max_bytes:
             raise ValueError("source response exceeds configured size limit")
+        if encoding == "gzip":
+            data = gzip.decompress(data)
+        if len(data) > self.max_decoded_bytes:
+            raise ValueError("decoded source response exceeds configured size limit")
         return data
 
 
