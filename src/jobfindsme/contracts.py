@@ -174,6 +174,7 @@ class JobDetails(StrictModel):
     job: JobPosting
     source_records: tuple[JobSourceRecord, ...] = ()
     untrusted_external_content: bool = True
+    description_truncated: bool = False
 
 
 class JobStateKind(StrEnum):

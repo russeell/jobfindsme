@@ -181,7 +181,7 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
                         "id": "1",
                         "title": "AI应用工程师",
                         "company": "示例科技",
-                        "description": "外部JD内容 " * 100,
+                        "description": "外部JD内容 " * 5000,
                         "url": "https://example.com/jobs/1",
                     }
                 ],
@@ -203,6 +203,8 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
     assert summaries[0]["untrusted_external_content"] is True
     assert details["job"]["description"].startswith("外部JD内容")
     assert details["untrusted_external_content"] is True
+    assert len(details["job"]["description"]) == 20_000
+    assert details["description_truncated"] is True
 
 
 def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:

@@ -353,12 +353,16 @@ class JobFindsMeCore:
             workspace_id=workspace.workspace_id,
             job_id=job_id,
         )
+        description_truncated = len(job.description) > 20_000
+        if description_truncated:
+            job = job.model_copy(update={"description": job.description[:20_000]})
         return JobDetails(
             job=job,
             source_records=self.jobs.source_records(
                 workspace_id=workspace.workspace_id,
                 job_id=job_id,
             ),
+            description_truncated=description_truncated,
         )
 
     def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
