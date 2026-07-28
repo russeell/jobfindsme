@@ -24,6 +24,30 @@ def recommended_connectors(
             query="大模型 LLM",
         ),
         DiscoverySource(
+            kind="spa_playwright",
+            source_name="字节跳动",
+            site_key="bytedance",
+            query="AI",
+        ),
+        DiscoverySource(
+            kind="spa_playwright",
+            source_name="美团",
+            site_key="meituan",
+            query="AI",
+        ),
+        DiscoverySource(
+            kind="spa_playwright",
+            source_name="滴滴",
+            site_key="didi",
+            query="AI",
+        ),
+        DiscoverySource(
+            kind="spa_playwright",
+            source_name="哔哩哔哩",
+            site_key="bilibili",
+            query="AI",
+        ),
+        DiscoverySource(
             kind="greenhouse",
             source_name="Airbnb 中国",
             board_token="airbnb",
@@ -62,6 +86,34 @@ def source_links(
             note="已接入自动 Connector，岗位实时获取并匹配",
         ),
         SourceLink(
+            name="字节跳动招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url=f"https://jobs.bytedance.com/experienced/position?keywords={encoded}",
+            access_mode="official_link",
+            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
+            name="美团招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url=f"https://zhaopin.meituan.com/web/campus?keyword={encoded}",
+            access_mode="official_link",
+            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
+            name="滴滴招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url=f"https://talent.didiglobal.com/social?keyword={encoded}",
+            access_mode="official_link",
+            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
+            name="哔哩哔哩招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url=f"https://jobs.bilibili.com/social?keyword={encoded}",
+            access_mode="official_link",
+            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
             name="Airbnb 中国 (自动)",
             category="企业官网 · 自动发现",
             url="https://boards.greenhouse.io/airbnb",
@@ -69,12 +121,6 @@ def source_links(
             note="通过 Greenhouse 公开 API 自动获取中国区岗位",
         ),
         # ── 企业官网（手动浏览） ──
-        SourceLink(
-            name="字节跳动招聘",
-            category="企业官网 · 互联网大厂",
-            url=(f"https://jobs.bytedance.com/experienced/position?keywords={encoded}"),
-            access_mode="official_link",
-        ),
         SourceLink(
             name="阿里巴巴招聘",
             category="企业官网 · 互联网大厂",
@@ -87,12 +133,6 @@ def source_links(
             url="https://career.huawei.com/reccampportal/portal5/social-recruitment-ai.html",
             access_mode="official_link",
             note="AI 社会招聘专区",
-        ),
-        SourceLink(
-            name="美团招聘",
-            category="企业官网 · 互联网大厂",
-            url=f"https://zhaopin.meituan.com/web/campus?keyword={encoded}",
-            access_mode="official_link",
         ),
         SourceLink(
             name="京东招聘",
@@ -131,21 +171,9 @@ def source_links(
             access_mode="official_link",
         ),
         SourceLink(
-            name="滴滴招聘",
-            category="企业官网 · 知名企业",
-            url=f"https://talent.didiglobal.com/social?keyword={encoded}",
-            access_mode="official_link",
-        ),
-        SourceLink(
             name="携程招聘",
             category="企业官网 · 知名企业",
             url=f"https://job.ctrip.com/social-recruitment.html?keyword={encoded}",
-            access_mode="official_link",
-        ),
-        SourceLink(
-            name="哔哩哔哩招聘",
-            category="企业官网 · 知名企业",
-            url=f"https://jobs.bilibili.com/social?keyword={encoded}",
             access_mode="official_link",
         ),
         SourceLink(

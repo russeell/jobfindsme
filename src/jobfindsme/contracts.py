@@ -199,6 +199,7 @@ class DiscoverySourceKind(StrEnum):
     CAREER_URL = "career_url"
     JSON_FILE = "json_file"
     CSV_FILE = "csv_file"
+    SPA_PLAYWRIGHT = "spa_playwright"
 
 
 class DiscoverySource(StrictModel):
@@ -209,6 +210,7 @@ class DiscoverySource(StrictModel):
     url: str | None = None
     path: str | None = None
     query: str | None = None
+    site_key: str | None = None
     robots_allowed: bool = False
 
     @model_validator(mode="after")
@@ -220,6 +222,7 @@ class DiscoverySource(StrictModel):
             DiscoverySourceKind.CAREER_URL: self.url,
             DiscoverySourceKind.JSON_FILE: self.path,
             DiscoverySourceKind.CSV_FILE: self.path,
+            DiscoverySourceKind.SPA_PLAYWRIGHT: self.site_key,
         }[self.kind]
         if not required:
             raise ValueError(f"{self.kind} source is missing its locator")

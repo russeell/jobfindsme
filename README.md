@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/russeell/jobfindsme?include_prereleases)](https://github.com/russeell/jobfindsme/releases)
 [![License](https://img.shields.io/github/license/russeell/jobfindsme)](LICENSE)
 
-> 当前版本 **v0.2.0-rc.4** — 3 个自动 Connector + 28 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
+> 当前版本 **v0.2.0-rc.4** — 7 个自动 Connector + 28 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
 
 ---
 
@@ -39,6 +39,10 @@ Agent + JobFindsMe：
 |------|------|---------|
 | **百度** | 公开 SSR 页面解析 | AI、大模型、Agent 等 |
 | **腾讯** | Schema.org JSON-LD | 全岗位族 |
+| **字节跳动** | Playwright SPA 渲染 | 全岗位族 |
+| **美团** | Playwright SPA 渲染 | 全岗位族 |
+| **滴滴** | Playwright SPA 渲染 | 全岗位族 |
+| **哔哩哔哩** | Playwright SPA 渲染 | 全岗位族 |
 | **Airbnb 中国** | Greenhouse 公开 API | 含 AI Engineer 中国岗 |
 
 ### 直达搜索入口（一键打开官网搜索结果页）
