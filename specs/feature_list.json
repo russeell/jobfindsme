@@ -382,11 +382,12 @@
     {
       "id": "M6-001",
       "title": "Qwen Code, Codex and Claude Code integrations",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M5-001"
       ],
       "allowed_paths": [
+        "integrations/shared/**",
         "integrations/qwen/**",
         "integrations/codex/**",
         "integrations/claude/**",
@@ -398,12 +399,21 @@
         "Skills do not read complete resumes and use the seven MCP tools correctly.",
         "Skills ask only for missing constraints that change search results.",
         "Qwen Code, Codex and Claude Code pass the same integration scenarios."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/integrations/test_primary_hosts.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M6-001.json"
     },
     {
       "id": "M6-002",
       "title": "Mainstream Agent MCP compatibility matrix",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M6-001"
       ],

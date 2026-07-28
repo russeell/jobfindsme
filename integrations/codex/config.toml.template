@@ -1,0 +1,12 @@
+[mcp_servers.jobfindsme]
+command = "__PYTHON__"
+args = ["-m", "jobfindsme.mcp"]
+cwd = "__PROJECT_ROOT__"
+required = true
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+default_tools_approval_mode = "prompt"
+
+[mcp_servers.jobfindsme.env]
+PYTHONPATH = "__PROJECT_ROOT__/src"
+JOBFINDSME_DB_PATH = "__DATA_DIR__/jobfindsme.db"
