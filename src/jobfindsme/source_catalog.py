@@ -15,12 +15,22 @@ def recommended_connectors(
     return (
         DiscoverySource(
             kind="baidu_career",
-            source_name="百度招聘",
-            query="AI Agent RAG 大模型",
+            source_name="百度-AI应用工程师",
+            query="AI应用工程师 Agent",
+        ),
+        DiscoverySource(
+            kind="baidu_career",
+            source_name="百度-大模型",
+            query="大模型 LLM",
+        ),
+        DiscoverySource(
+            kind="greenhouse",
+            source_name="Airbnb 中国",
+            board_token="airbnb",
         ),
         DiscoverySource(
             kind="ashby",
-            source_name="Airwallex 官方招聘",
+            source_name="Airwallex",
             board_name="airwallex",
         ),
     )

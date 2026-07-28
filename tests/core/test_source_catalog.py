@@ -8,8 +8,10 @@ def test_china_search_gets_maintained_connector_without_ats_parameters() -> None
 
     assert sources
     assert {source.source_name for source in sources} == {
-        "百度招聘",
-        "Airwallex 官方招聘",
+        "百度-AI应用工程师",
+        "百度-大模型",
+        "Airbnb 中国",
+        "Airwallex",
     }
     assert next(source for source in sources if source.kind == "baidu_career").query
 

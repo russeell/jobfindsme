@@ -14,6 +14,13 @@ INITIAL_DATA = re.compile(
     re.DOTALL,
 )
 
+_JS_UNDEFINED = re.compile(r":\s*undefined\b")
+
+
+def _sanitize_js_json(raw: str) -> str:
+    """Replace JavaScript literals that are invalid in JSON."""
+    return _JS_UNDEFINED.sub(":null", raw)
+
 
 class BaiduCareerConnector:
     """Read the first server-rendered page of Baidu's public social job search."""
@@ -43,7 +50,8 @@ class BaiduCareerConnector:
         match = INITIAL_DATA.search(document)
         if match is None:
             raise ValueError("Baidu career page did not contain initial job data")
-        initial = json.loads(match.group(1))
+        raw = match.group(1).decode("utf-8", errors="replace")
+        initial = json.loads(_sanitize_js_json(raw))
         jobs = initial.get("listData", {}).get("listDetailData", [])
         return [
             self._record(item, source_url=url)
