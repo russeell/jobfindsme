@@ -78,3 +78,45 @@ def test_local_source_is_read_by_core_not_host_model(tmp_path) -> None:
     assert core.jobs.list(workspace.workspace_id)[0].source.source_url.startswith(
         "file:"
     )
+
+
+def test_successful_subscription_refresh_closes_missing_source_jobs(tmp_path) -> None:
+    class ChangingTransport:
+        def __init__(self) -> None:
+            self.jobs = [
+                {
+                    "id": 1,
+                    "title": "AI应用工程师",
+                    "content": "Python RAG",
+                    "absolute_url": "https://example.com/jobs/1",
+                }
+            ]
+
+        def get(self, _url: str) -> bytes:
+            return json.dumps({"jobs": self.jobs}).encode()
+
+    transport = ChangingTransport()
+    core = JobFindsMeCore(tmp_path / "discover.db")
+    core.discovery = JobDiscoveryService(core.job_imports, transport=transport)
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="greenhouse",
+                source_name="企业招聘官网",
+                board_token="example",
+            ),
+        ),
+    )
+
+    assert len(core.search_jobs()) == 1
+    transport.jobs = []
+    assert core.search_jobs() == []
+
+    stored = core.jobs.list(configured.workspace.workspace_id)
+    subscriptions = core.source_subscriptions.list(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+    )
+    assert stored[0].source.liveness == "closed"
+    assert subscriptions[0].health_status == "healthy"

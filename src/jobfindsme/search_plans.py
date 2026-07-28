@@ -101,6 +101,66 @@ class SearchPlanService:
             ).fetchall()
         return [self._from_row(row) for row in rows]
 
+    def update(
+        self,
+        *,
+        workspace_id: str,
+        plan_id: str,
+        name: str,
+        target_roles: Sequence[str],
+        locations: Sequence[str] = (),
+        salary_min_k: int | None = None,
+        salary_max_k: int | None = None,
+        experience_min_years: int | None = None,
+        experience_max_years: int | None = None,
+        official_sources_only: bool = True,
+        exclusions: Sequence[str] = (),
+    ) -> SearchPlan:
+        existing = self.get(workspace_id=workspace_id, plan_id=plan_id)
+        plan = SearchPlan(
+            plan_id=existing.plan_id,
+            workspace_id=existing.workspace_id,
+            name=name.strip(),
+            target_roles=tuple(
+                value.strip() for value in target_roles if value.strip()
+            ),
+            locations=tuple(value.strip() for value in locations if value.strip()),
+            salary_min_k=salary_min_k,
+            salary_max_k=salary_max_k,
+            experience_min_years=experience_min_years,
+            experience_max_years=experience_max_years,
+            official_sources_only=official_sources_only,
+            exclusions=tuple(value.strip() for value in exclusions if value.strip()),
+            created_at=existing.created_at,
+            updated_at=self.clock(),
+        )
+        with self.database.connect() as connection:
+            connection.execute(
+                """
+                UPDATE search_plans SET
+                    name = ?, target_roles_json = ?, locations_json = ?,
+                    salary_min_k = ?, salary_max_k = ?,
+                    experience_min_years = ?, experience_max_years = ?,
+                    official_sources_only = ?, exclusions_json = ?, updated_at = ?
+                WHERE workspace_id = ? AND plan_id = ?
+                """,
+                (
+                    plan.name,
+                    json.dumps(plan.target_roles, ensure_ascii=False),
+                    json.dumps(plan.locations, ensure_ascii=False),
+                    plan.salary_min_k,
+                    plan.salary_max_k,
+                    plan.experience_min_years,
+                    plan.experience_max_years,
+                    int(plan.official_sources_only),
+                    json.dumps(plan.exclusions, ensure_ascii=False),
+                    plan.updated_at.isoformat(),
+                    workspace_id,
+                    plan_id,
+                ),
+            )
+        return plan
+
     def get(self, *, workspace_id: str, plan_id: str) -> SearchPlan:
         with self.database.connect() as connection:
             row = connection.execute(

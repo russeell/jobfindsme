@@ -16,6 +16,7 @@ class GreenhouseConnector:
         *,
         transport: HttpTransport,
         policy: ConnectorPolicy,
+        source_name: str | None = None,
     ) -> None:
         if not policy.can_fetch:
             raise PermissionError("source policy does not allow fetching")
@@ -23,6 +24,7 @@ class GreenhouseConnector:
             raise ValueError("invalid Greenhouse board token")
         self.board_token = board_token
         self.transport = transport
+        self.source_name = source_name or f"greenhouse:{board_token}"
 
     def fetch(self) -> list[RawJobRecord]:
         url = (
@@ -34,7 +36,7 @@ class GreenhouseConnector:
         return [
             RawJobRecord(
                 source_kind=SourceKind.ATS,
-                source_name=f"greenhouse:{self.board_token}",
+                source_name=self.source_name,
                 source_url=url,
                 external_id=str(item["id"]),
                 payload=item,

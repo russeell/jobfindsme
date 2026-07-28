@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from jobfindsme.contracts import StrictModel
+from jobfindsme.contracts import ExportReceipt, StrictModel
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]
@@ -85,6 +85,28 @@ class PrivacyService:
             "job_state_events": [dict(row) for row in state_events],
             "profile_facts": [dict(row) for row in facts],
         }
+
+    def export_workspace_to_file(self, workspace_id: str) -> ExportReceipt:
+        payload = self.export_workspace(workspace_id)
+        exported_at = self.clock()
+        directory = self.database.path.parent / "exports"
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        destination = directory / (
+            f"jobfindsme-{workspace_id}-{exported_at:%Y%m%dT%H%M%S%fZ}.json"
+        )
+        content = (
+            json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n"
+        ).encode()
+        destination.write_bytes(content)
+        destination.chmod(0o600)
+        counts = {
+            key: len(value) for key, value in payload.items() if isinstance(value, list)
+        }
+        return ExportReceipt(
+            path=str(destination),
+            sha256=hashlib.sha256(content).hexdigest(),
+            record_counts=counts,
+        )
 
     def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
         self._validate_scope(scope)

@@ -66,6 +66,25 @@ class JobLiveness(StrEnum):
     UNKNOWN = "unknown"
 
 
+class SalaryPeriod(StrEnum):
+    MONTH = "month"
+    YEAR = "year"
+    DAY = "day"
+    HOUR = "hour"
+    UNKNOWN = "unknown"
+
+
+class SalaryDetails(StrictModel):
+    raw_text: str
+    currency: str | None = None
+    period: SalaryPeriod = SalaryPeriod.UNKNOWN
+    min_amount: int | None = Field(default=None, ge=0)
+    max_amount: int | None = Field(default=None, ge=0)
+    months_per_year: int | None = Field(default=None, ge=1, le=24)
+    normalized_annual_min: int | None = Field(default=None, ge=0)
+    normalized_annual_max: int | None = Field(default=None, ge=0)
+
+
 class SourceEvidence(StrictModel):
     source_kind: SourceKind
     source_name: str = Field(min_length=1, max_length=120)
@@ -84,6 +103,7 @@ class JobPosting(StrictModel):
     locations: tuple[str, ...] = ()
     salary_min_k: int | None = Field(default=None, ge=0, le=1000)
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
+    salary: SalaryDetails | None = None
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
     apply_url: str
@@ -113,12 +133,47 @@ class MatchEvidence(StrictModel):
     matched_terms: tuple[str, ...] = ()
     reasons: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
+    evidence_pairs: tuple[EvidencePair, ...] = ()
+    matched_profile_skills: tuple[str, ...] = ()
+    missing_job_skills: tuple[str, ...] = ()
+    missing_required_skills: tuple[str, ...] = ()
+
+
+class EvidencePair(StrictModel):
+    criterion: str
+    profile_evidence: str
+    job_evidence: str
 
 
 class JobMatch(StrictModel):
     job: JobPosting
     score: float = Field(ge=0, le=1)
     evidence: MatchEvidence
+
+
+class JobSummary(StrictModel):
+    job_id: str
+    title: str
+    company: str
+    locations: tuple[str, ...] = ()
+    salary: SalaryDetails | None = None
+    apply_url: str
+    source_name: str
+    liveness: JobLiveness
+    description_excerpt: str = Field(default="", max_length=400)
+    untrusted_external_content: bool = True
+
+
+class JobMatchSummary(StrictModel):
+    job: JobSummary
+    score: float = Field(ge=0, le=1)
+    evidence: MatchEvidence
+
+
+class JobDetails(StrictModel):
+    job: JobPosting
+    source_records: tuple[JobSourceRecord, ...] = ()
+    untrusted_external_content: bool = True
 
 
 class JobStateKind(StrEnum):
@@ -164,3 +219,47 @@ class DiscoverySource(StrictModel):
         if self.kind is DiscoverySourceKind.CAREER_URL and not self.robots_allowed:
             raise ValueError("career_url requires robots_allowed=true")
         return self
+
+
+class SourceHealth(StrEnum):
+    NEVER_CHECKED = "never_checked"
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+
+
+class SourceSubscription(StrictModel):
+    subscription_id: str
+    workspace_id: str
+    plan_id: str
+    source: DiscoverySource
+    enabled: bool = True
+    health_status: SourceHealth = SourceHealth.NEVER_CHECKED
+    last_checked_at: datetime | None = None
+    last_error: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class SearchConfiguration(StrictModel):
+    workspace: Workspace
+    plan: SearchPlan
+    sources: tuple[SourceSubscription, ...] = ()
+
+
+class JobSourceRecord(StrictModel):
+    record_id: str
+    workspace_id: str
+    job_id: str
+    source_name: str
+    external_id: str
+    source_url: str
+    apply_url: str
+    liveness: JobLiveness
+    observed_at: datetime
+
+
+class ExportReceipt(StrictModel):
+    path: str
+    sha256: str
+    record_counts: dict[str, int]

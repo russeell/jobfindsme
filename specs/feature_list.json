@@ -601,6 +601,174 @@
         ]
       ],
       "evidence_path": "reports/features/M10-001.json"
+    },
+    {
+      "id": "M11-001",
+      "title": "Zero-ID onboarding and active search configuration",
+      "status": "in_progress",
+      "blocked_by": [
+        "M10-001"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/context.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/mcp/**",
+        "src/jobfindsme/search_plans.py",
+        "src/jobfindsme/workspaces.py",
+        "src/jobfindsme/migrations/**",
+        "src/jobfindsme/resources/**",
+        "integrations/**",
+        "tests/**",
+        "reports/features/M11-001.json"
+      ],
+      "acceptance": [
+        "setup_profile works without a user-managed workspace ID.",
+        "configure_search creates or updates an active Search Plan and source subscriptions.",
+        "search_jobs works without a user-managed workspace or plan ID.",
+        "Explicit IDs remain available for advanced multi-workspace use."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core",
+          "tests/mcp",
+          "tests/test_workspaces.py",
+          "tests/test_search_plans.py",
+          "tests/test_storage.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M11-001.json"
+    },
+    {
+      "id": "M11-002",
+      "title": "Profile-grounded deterministic matching",
+      "status": "backlog",
+      "blocked_by": [
+        "M11-001"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/matching/**",
+        "src/jobfindsme/profiles/**",
+        "tests/core/**",
+        "tests/matching/**",
+        "tests/profiles/**",
+        "reports/features/M11-002.json"
+      ],
+      "acceptance": [
+        "Confirmed profile facts change ranking for otherwise identical Search Plans.",
+        "Match explanations link profile evidence to job evidence.",
+        "Missing required skills and experience gaps are explicit warnings.",
+        "Chinese role aliases and word or n-gram tokens have regression tests."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core",
+          "tests/matching",
+          "tests/profiles"
+        ]
+      ],
+      "evidence_path": "reports/features/M11-002.json"
+    },
+    {
+      "id": "M12-001",
+      "title": "Subscription-backed discovery monitoring",
+      "status": "backlog",
+      "blocked_by": [
+        "M11-002"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/monitoring/**",
+        "src/jobfindsme/monitor_configs.py",
+        "src/jobfindsme/migrations/**",
+        "tests/importing/**",
+        "tests/monitoring/**",
+        "tests/integration/**",
+        "tests/test_storage.py",
+        "reports/features/M12-001.json"
+      ],
+      "acceptance": [
+        "Search Plan source subscriptions persist connector configuration and health.",
+        "Every monitor run discovers before matching.",
+        "Missing source records can transition to closed only after a successful source refresh.",
+        "Notifications contain only newly matched jobs."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/importing",
+          "tests/monitoring",
+          "tests/integration",
+          "tests/test_storage.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M12-001.json"
+    },
+    {
+      "id": "M12-002",
+      "title": "Bounded MCP output and source security",
+      "status": "backlog",
+      "blocked_by": [
+        "M12-001"
+      ],
+      "allowed_paths": [
+        ".github/**",
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "specs/feature_list.json",
+        "src/jobfindsme/**",
+        "integrations/**",
+        "tests/**",
+        "data/eval/**",
+        "reports/**"
+      ],
+      "acceptance": [
+        "MCP list and search calls return bounded summaries instead of full descriptions.",
+        "Single-job details are explicit and marked as untrusted external content.",
+        "MCP export writes locally and returns metadata rather than private records.",
+        "Every HTTP redirect target is validated before a connection is made.",
+        "Salary and cross-source identity preserve raw evidence and normalized fields.",
+        "README describes actual capabilities and evidence without synthetic quality claims."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ]
+      ],
+      "evidence_path": "reports/features/M12-002.json"
     }
   ]
 }

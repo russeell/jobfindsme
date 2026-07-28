@@ -1,0 +1,39 @@
+{
+  "release": "0.2.0",
+  "implementation_status": "release_candidate",
+  "validation_date": "2026-07-28",
+  "closed_product_gaps": [
+    "zero-ID Agent onboarding",
+    "profile-grounded matching",
+    "subscription-backed discovery monitoring",
+    "bounded MCP output and local export receipts",
+    "redirect-safe HTTP policy",
+    "Chinese token, role alias, and salary normalization",
+    "cross-source identity and liveness aggregation"
+  ],
+  "automated_validation": {
+    "pytest": {
+      "passed": 113,
+      "failed": 0
+    },
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "clean_environment_install": "passed",
+    "installed_package_doctor": "passed",
+    "installed_package_mcp_tools": 9,
+    "codex_install_uninstall": "passed",
+    "wheel_sha256": "2784a8af77b30486cae9b9717fe2f78c865c44115d729eb301487dacef28c6de"
+  },
+  "field_validation": {
+    "real_public_source_initial_flow": "passed_on_v0.1_snapshot",
+    "china_official_source_connector": "not_completed",
+    "real_chinese_labeled_evaluation_set": "not_completed",
+    "one_week_personal_use": "not_completed",
+    "officially_supported_agent_clients": []
+  },
+  "release_policy": [
+    "V0.2 is not labeled product-ready until regional source and personal-use validation pass.",
+    "Synthetic regression results are not matching-quality claims.",
+    "Contract-tested Agent clients are not official support claims."
+  ]
+}

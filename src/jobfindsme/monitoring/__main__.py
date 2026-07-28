@@ -14,7 +14,7 @@ def main() -> None:
     notifier = FeishuNotifier.from_env()
     results = LocalMonitorRunner(core.database).run_due(
         now=datetime.now(UTC),
-        search=lambda workspace_id, plan_id: core.match_jobs(
+        search=lambda workspace_id, plan_id: core.search_jobs(
             workspace_id=workspace_id,
             plan_id=plan_id,
         ),

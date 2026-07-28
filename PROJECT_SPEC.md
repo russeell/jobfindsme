@@ -1,6 +1,6 @@
 # JobFindsMe Product And Architecture Specification
 
-> Status: executable product baseline
+> Status: v0.2 product-closure baseline
 >
 > Baseline: Agent-native, Local-first
 >
@@ -19,9 +19,9 @@ JobFindsMe 面向技术求职者和 AI 工具用户。用户可以提供本地�
 
 > 面向技术求职者和 AI 工具用户的本地优先职位发现与跟踪引擎。
 
-## 2. V0.1 Scope
+## 2. V0.2 Scope
 
-V0.1 must provide:
+V0.2 must provide:
 
 - a local Workspace with one confirmed candidate profile;
 - multiple Search Plans sharing confirmed profile facts;
@@ -37,8 +37,13 @@ V0.1 must provide:
 - reproducible offline evaluation;
 - optional local scheduling and Feishu summaries after the interactive flow is
   proven.
+- zero-ID first use: Core resolves a default Workspace and active Search Plan;
+- confirmed profile facts participate in every match score and explanation;
+- Search Plans persist source subscriptions used by interactive and scheduled runs;
+- MCP returns bounded summaries by default and treats job content as untrusted data;
+- salary keeps raw text and normalized annual values without inventing missing data.
 
-V0.1 explicitly excludes:
+V0.2 explicitly excludes:
 
 - a public Web application, accounts, cloud database, or multi-tenancy;
 - automatic applications or bypassing login and anti-bot controls;
@@ -139,7 +144,7 @@ Workspace
 `- MonitorRuns and JobStateEvents
 ```
 
-The V0.1 implementation is local-only, but every personal record carries a
+The V0.2 implementation is local-only, but every personal record carries a
 `workspace_id` so ownership is explicit and future migration does not require
 rewriting the domain.
 
@@ -211,12 +216,15 @@ Every enhancement needs an offline baseline and a measurable gain.
 
 ## 10. MCP Surface
 
-V0.1 exposes seven high-level tools:
+The MCP surface exposes high-level user capabilities. Tool count is not a product
+constraint:
 
 ```text
 setup_profile
+configure_search
 search_jobs
 get_jobs
+get_job_details
 update_job_state
 configure_monitor
 export_local_data
@@ -225,6 +233,16 @@ delete_local_data
 
 Discovery, normalization, deduplication, ranking, and evidence construction are
 internal Core steps, not separate tools the host must orchestrate.
+
+`workspace_id` and `plan_id` are optional adapter-level escape hatches. Normal
+users never manage them: the Core creates a default Workspace and remembers the
+active Search Plan. `configure_search` creates or updates that plan and persists
+its source subscriptions.
+
+`search_jobs` and `get_jobs` return bounded `JobSummary` records. Full external
+job descriptions are untrusted content and are returned only by an explicit,
+single-job `get_job_details` call. `export_local_data` writes a local file and
+returns only its path, hash, and record counts.
 
 `delete_local_data` accepts either:
 
@@ -297,6 +315,9 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 7. Initial real official-source validation.
 8. Local scheduler and signed Feishu summaries.
 9. Release hardening and clean-environment package validation.
+10. Zero-ID onboarding and profile-grounded matching.
+11. Subscription-backed discovery monitoring and source health.
+12. Bounded MCP output, redirect-safe HTTP, and regional data contracts.
 
 A dedicated JobFindsMe Agent is considered only after at least three stable
 sources, repeat usage, real feedback, and a demonstrated limitation in existing

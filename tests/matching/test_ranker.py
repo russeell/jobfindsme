@@ -6,6 +6,8 @@ from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import SearchPlan, SourceKind
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.matching.tokenizer import tokenize
+from jobfindsme.profiles.models import FactStatus, FactType, ProfileFact, ProfileSummary
 
 NOW = datetime(2026, 7, 28, tzinfo=UTC)
 
@@ -92,3 +94,85 @@ def test_unknown_salary_is_retained_with_warning() -> None:
     )[0]
 
     assert "岗位未公开薪资" in match.evidence.warnings
+
+
+def test_confirmed_profile_skills_change_ranking_and_keep_evidence() -> None:
+    profile = ProfileSummary(
+        profile_id="profile-1",
+        workspace_id="workspace-1",
+        facts=(
+            ProfileFact(
+                fact_id="fact-1",
+                fact_type=FactType.SKILL,
+                value="Python",
+                evidence_snippet="使用 Python 构建 RAG 服务",
+                evidence_start=0,
+                evidence_end=6,
+                status=FactStatus.CONFIRMED,
+            ),
+            ProfileFact(
+                fact_id="fact-2",
+                fact_type=FactType.SKILL,
+                value="RAG",
+                evidence_snippet="负责 RAG 检索链路",
+                evidence_start=7,
+                evidence_end=10,
+                status=FactStatus.CONFIRMED,
+            ),
+        ),
+    )
+    jobs = [
+        job("java", description="Java Spring 云原生平台，1-3年，25-40K"),
+        job("python", description="Python RAG Agent，1-3年，25-40K"),
+    ]
+
+    matches = DeterministicMatcher().match(plan(), jobs, profile=profile)
+
+    assert [item.job.external_id for item in matches] == ["python", "java"]
+    assert matches[0].evidence.matched_profile_skills == ("Python", "RAG")
+    assert {pair.criterion for pair in matches[0].evidence.evidence_pairs} == {
+        "Python",
+        "RAG",
+    }
+    assert "Java" in matches[1].evidence.missing_job_skills
+
+
+def test_chinese_tokenizer_keeps_words_and_ngrams() -> None:
+    tokens = tokenize("大模型应用工程师")
+
+    assert "大模型应用工程师" in tokens
+    assert "应用工程师" not in tokens
+    assert "应用" in tokens
+    assert "工程师" in tokens
+
+
+def test_required_skill_gap_is_explicit() -> None:
+    profile = ProfileSummary(
+        profile_id="profile-1",
+        workspace_id="workspace-1",
+        facts=(
+            ProfileFact(
+                fact_id="fact-1",
+                fact_type=FactType.SKILL,
+                value="Python",
+                evidence_snippet="Python",
+                evidence_start=0,
+                evidence_end=6,
+                status=FactStatus.CONFIRMED,
+            ),
+        ),
+    )
+
+    match = DeterministicMatcher().match(
+        plan(),
+        [
+            job(
+                "required",
+                description="任职要求：熟悉 Python，必须掌握 Kubernetes",
+            )
+        ],
+        profile=profile,
+    )[0]
+
+    assert match.evidence.missing_required_skills == ("Kubernetes",)
+    assert any("必备技能缺口" in item for item in match.evidence.warnings)

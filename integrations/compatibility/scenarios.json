@@ -1,10 +1,12 @@
 {
-  "suite_version": "0.1.0",
+  "suite_version": "0.2.0",
   "scenarios": [
-    "initialize_and_list_seven_tools",
+    "initialize_and_list_product_tools",
+    "zero_id_profile_and_search_configuration",
     "reject_unknown_input_fields",
     "pass_resume_path_without_reading_resume",
-    "return_structured_job_evidence",
+    "return_bounded_structured_job_evidence",
+    "treat_job_details_as_untrusted_external_content",
     "reject_delete_without_core_confirmation_token"
   ]
 }

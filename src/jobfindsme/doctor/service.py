@@ -82,7 +82,7 @@ class Doctor:
             count = len(response["result"]["tools"])
         except Exception as error:
             return Diagnostic(name="mcp", ok=False, message=str(error))
-        return Diagnostic(name="mcp", ok=count == 7, message=f"{count} tools")
+        return Diagnostic(name="mcp", ok=count == 9, message=f"{count} tools")
 
     @staticmethod
     def _connectors() -> Diagnostic:

@@ -232,6 +232,28 @@ class ResumeProfileService:
             facts=profile.facts,
         )
 
+    def latest_confirmed_summary(
+        self,
+        *,
+        workspace_id: str,
+    ) -> ProfileSummary | None:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT profile_id FROM candidate_profiles
+                WHERE workspace_id = ? AND status = 'confirmed'
+                ORDER BY confirmed_at DESC, created_at DESC
+                LIMIT 1
+                """,
+                (workspace_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self.confirmed_summary(
+            workspace_id=workspace_id,
+            profile_id=row["profile_id"],
+        )
+
     def load_document(
         self,
         *,

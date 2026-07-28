@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -14,11 +15,12 @@ class Database:
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA journal_mode = WAL")
+        self._secure_sqlite_files()
         try:
             yield connection
             connection.commit()
@@ -27,6 +29,16 @@ class Database:
             raise
         finally:
             connection.close()
+            self._secure_sqlite_files()
+
+    def _secure_sqlite_files(self) -> None:
+        for path in (
+            self.path,
+            Path(f"{self.path}-wal"),
+            Path(f"{self.path}-shm"),
+        ):
+            if path.exists():
+                os.chmod(path, 0o600)
 
     def migrate(self) -> None:
         migrations_dir = Path(__file__).with_name("migrations")

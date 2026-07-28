@@ -24,14 +24,15 @@ def raw_job(**overrides: object) -> RawJobRecord:
         "published_at": "2026-07-27T00:00:00Z",
     }
     payload.update(overrides.pop("payload", {}))
-    return RawJobRecord(
-        source_kind=SourceKind.CAREER_SITE,
-        source_name="星河科技官网",
-        source_url="https://careers.example.com",
-        external_id="1",
-        payload=payload,
-        **overrides,
-    )
+    values: dict[str, object] = {
+        "source_kind": SourceKind.CAREER_SITE,
+        "source_name": "星河科技官网",
+        "source_url": "https://careers.example.com",
+        "external_id": "1",
+        "payload": payload,
+    }
+    values.update(overrides)
+    return RawJobRecord(**values)
 
 
 def test_csv_and_json_import_produce_raw_records() -> None:
@@ -59,6 +60,27 @@ def test_normalization_preserves_source_liveness_and_structured_ranges() -> None
     assert (job.experience_min_years, job.experience_max_years) == (1, 3)
     assert job.source.liveness == JobLiveness.ACTIVE
     assert job.source.source_url == "https://careers.example.com"
+    assert job.salary is not None
+    assert job.salary.raw_text == "20-35K"
+    assert job.salary.normalized_annual_min == 240_000
+
+
+def test_chinese_salary_keeps_raw_period_and_annual_normalization() -> None:
+    monthly = normalize_job(
+        raw_job(payload={"description": "薪资20-30K·13薪"}),
+        fetched_at=NOW,
+    )
+    annual = normalize_job(
+        raw_job(payload={"description": "薪资30-45万/年"}),
+        fetched_at=NOW,
+    )
+
+    assert monthly.salary is not None
+    assert monthly.salary.months_per_year == 13
+    assert monthly.salary.normalized_annual_max == 390_000
+    assert annual.salary is not None
+    assert annual.salary.period == "year"
+    assert annual.salary.normalized_annual_min == 300_000
 
 
 def test_old_and_closed_jobs_are_not_reported_as_active() -> None:
@@ -101,3 +123,62 @@ def test_import_deduplicates_and_versions_only_content_changes(tmp_path) -> None
             "SELECT count(*) FROM job_versions"
         ).fetchone()[0]
     assert version_count == 2
+
+
+def test_cross_source_duplicate_keeps_two_source_records(tmp_path) -> None:
+    database = Database(tmp_path / "jobs.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create("test")
+    repository = JobRepository(database)
+    service = JobImportService(repository)
+    second = raw_job(
+        source_name="聚合来源",
+        source_url="https://jobs.example.net",
+        external_id="other-42",
+        payload={"url": "https://jobs.example.net/apply/42"},
+    )
+
+    service.import_records(
+        workspace.workspace_id,
+        [raw_job(), second],
+        fetched_at=NOW,
+    )
+
+    jobs = repository.list(workspace.workspace_id)
+    records = repository.source_records(
+        workspace_id=workspace.workspace_id,
+        job_id=jobs[0].job_id,
+    )
+    assert len(jobs) == 1
+    assert {record.source_name for record in records} == {
+        "星河科技官网",
+        "聚合来源",
+    }
+
+    repository.mark_missing_closed(
+        workspace_id=workspace.workspace_id,
+        source_name="星河科技官网",
+        observed_job_ids=set(),
+        observed_at=NOW,
+    )
+    assert (
+        repository.get(
+            workspace_id=workspace.workspace_id,
+            job_id=jobs[0].job_id,
+        ).source.liveness
+        == JobLiveness.ACTIVE
+    )
+
+    repository.mark_missing_closed(
+        workspace_id=workspace.workspace_id,
+        source_name="聚合来源",
+        observed_job_ids=set(),
+        observed_at=NOW,
+    )
+    assert (
+        repository.get(
+            workspace_id=workspace.workspace_id,
+            job_id=jobs[0].job_id,
+        ).source.liveness
+        == JobLiveness.CLOSED
+    )

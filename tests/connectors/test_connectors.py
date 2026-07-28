@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.request import Request
 
 import pytest
 
@@ -9,7 +10,11 @@ from jobfindsme.connectors import (
     GreenhouseConnector,
     JsonLdCareerSiteConnector,
 )
-from jobfindsme.connectors.http import UnsafeSourceError, validate_public_http_url
+from jobfindsme.connectors.http import (
+    SafeRedirectHandler,
+    UnsafeSourceError,
+    validate_public_http_url,
+)
 from jobfindsme.contracts import SourceKind
 
 FIXTURES = Path(__file__).parents[2] / "data" / "fixtures"
@@ -88,3 +93,18 @@ def test_connector_refuses_unapproved_source_policy() -> None:
 def test_url_validation_blocks_local_or_credentialed_sources(url: str) -> None:
     with pytest.raises(UnsafeSourceError):
         validate_public_http_url(url)
+
+
+def test_redirect_target_is_validated_before_following() -> None:
+    handler = SafeRedirectHandler(max_redirects=3, require_https=True)
+    request = Request("https://public.example/jobs")
+
+    with pytest.raises(UnsafeSourceError):
+        handler.redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "http://127.0.0.1/private",
+        )

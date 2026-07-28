@@ -7,12 +7,25 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jobfindsme.connectors.base import RawJobRecord
-from jobfindsme.contracts import JobLiveness, JobPosting, SourceEvidence
+from jobfindsme.contracts import (
+    JobLiveness,
+    JobPosting,
+    SalaryDetails,
+    SalaryPeriod,
+    SourceEvidence,
+)
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _SPACE_RE = re.compile(r"\s+")
 _YEAR_RE = re.compile(r"(\d+)\s*(?:[-~到至]\s*(\d+))?\s*年")
 _SALARY_RE = re.compile(r"(\d+)\s*[-~到至]\s*(\d+)\s*[kK]")
+_MONTHLY_SALARY_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*[kK]"
+    r"(?:\s*[·xX*]\s*(\d{1,2})\s*薪)?"
+)
+_ANNUAL_WAN_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*万\s*/?\s*年"
+)
 
 
 def _text(value: Any) -> str:
@@ -97,12 +110,13 @@ def normalize_job(
         liveness = JobLiveness.UNKNOWN
 
     combined = f"{title} {description}"
-    salary = _SALARY_RE.search(combined)
+    salary_match = _SALARY_RE.search(combined)
+    salary_details = _parse_salary(payload, combined)
     experience = _YEAR_RE.search(combined)
     salary_min = int(payload["salary_min_k"]) if payload.get("salary_min_k") else None
     salary_max = int(payload["salary_max_k"]) if payload.get("salary_max_k") else None
-    if salary and salary_min is None and salary_max is None:
-        salary_min, salary_max = map(int, salary.groups())
+    if salary_match and salary_min is None and salary_max is None:
+        salary_min, salary_max = map(int, salary_match.groups())
     experience_min = (
         int(payload["experience_min_years"])
         if payload.get("experience_min_years") is not None
@@ -122,7 +136,6 @@ def normalize_job(
             company.casefold(),
             title.casefold(),
             "|".join(locations).casefold(),
-            apply_url,
         ]
     )
     content_input = "|".join(
@@ -139,6 +152,7 @@ def normalize_job(
         locations=locations,
         salary_min_k=salary_min,
         salary_max_k=salary_max,
+        salary=salary_details,
         experience_min_years=experience_min,
         experience_max_years=experience_max,
         apply_url=apply_url or raw.source_url,
@@ -153,3 +167,50 @@ def normalize_job(
             liveness=liveness,
         ),
     )
+
+
+def _parse_salary(payload: dict[str, Any], text: str) -> SalaryDetails | None:
+    raw_value = payload.get("raw_salary_text") or payload.get("salary")
+    raw_text = _text(raw_value)
+    search_text = raw_text or text
+
+    monthly = _MONTHLY_SALARY_RE.search(search_text)
+    if monthly:
+        minimum = int(float(monthly.group(1)) * 1000)
+        maximum = int(float(monthly.group(2)) * 1000)
+        months = int(monthly.group(3) or 12)
+        return SalaryDetails(
+            raw_text=monthly.group(0),
+            currency=str(payload.get("currency") or "CNY").upper(),
+            period=SalaryPeriod.MONTH,
+            min_amount=minimum,
+            max_amount=maximum,
+            months_per_year=months,
+            normalized_annual_min=minimum * months,
+            normalized_annual_max=maximum * months,
+        )
+
+    annual = _ANNUAL_WAN_RE.search(search_text)
+    if annual:
+        minimum = int(float(annual.group(1)) * 10_000)
+        maximum = int(float(annual.group(2)) * 10_000)
+        return SalaryDetails(
+            raw_text=annual.group(0),
+            currency=str(payload.get("currency") or "CNY").upper(),
+            period=SalaryPeriod.YEAR,
+            min_amount=minimum,
+            max_amount=maximum,
+            normalized_annual_min=minimum,
+            normalized_annual_max=maximum,
+        )
+
+    if raw_text:
+        return SalaryDetails(
+            raw_text=raw_text,
+            currency=(
+                str(payload["currency"]).upper() if payload.get("currency") else None
+            ),
+        )
+    if "面议" in text:
+        return SalaryDetails(raw_text="面议")
+    return None

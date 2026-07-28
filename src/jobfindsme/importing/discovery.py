@@ -48,6 +48,7 @@ class JobDiscoveryService:
                     public_access=True,
                     robots_allowed=True,
                 ),
+                source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.CAREER_URL:
