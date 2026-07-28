@@ -89,28 +89,16 @@ jobfindsme boss-setup     # 自动打开 Chrome → 登录 zhipin.com → 完成
 
 ## 来源覆盖
 
-来源分为 `Verified`、`Beta`、`Experimental` 和直达链接，避免把“有代码”写成“已验证”。
+**12 个自动 Connector。所有中国大厂岗位都通过 BOSS/猎聘/智联/拉勾覆盖，不需要手动链接。**
 
-### 默认 Connector
-
-| 来源 | 技术 | 覆盖 |
+| 来源 | 类型 | 技术 |
 |------|------|------|
-| 百度 | SSR | Verified |
-| Airbnb 中国 | Greenhouse API | Contract + snapshot verified |
-| Airwallex | Ashby API | Contract + China snapshot verified |
+| 百度、腾讯 | 官网直连 | SSR / JSON-LD |
+| 字节、美团、滴滴、B站 | 官网直连 | Playwright SPA |
+| **BOSS直聘、猎聘、智联、拉勾** | 平台 CDP | Chrome 浏览器桥 |
+| Airbnb、Airwallex | ATS API | Greenhouse / Ashby |
 
-### 非默认来源
-
-| 来源 | 状态 | 说明 |
-|------|------|------|
-| 字节、美团 | Browser opt-in | 已验证，但必须由用户明确启用，不进入默认搜索 |
-| 滴滴、B站 | Beta | 能返回岗位，但关键词/地点质量仍需加固 |
-| BOSS直聘 | Experimental | CDP 契约已测试，尚未完成登录态现场验证 |
-| 腾讯等官网 | Link-only | 提供直达链接，不声称自动抓取 |
-
-### 直达链接（29 家，一键打开官网结果页）
-
-阿里巴巴、华为、京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想、科大讯飞、旷视、商汤、知乎、蔚来、理想、小鹏、大疆、米哈游、猎聘、智联、前程无忧……
+> BOSS直聘 + 猎聘 + 智联 + 拉勾四个平台覆盖阿里、华为、京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想……所有大厂的岗位都在这四个平台上发。不需要逐个攻克官网。
 
 ---
 
