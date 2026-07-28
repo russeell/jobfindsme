@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jobfindsme"
 version = "0.2.0rc5"
-description = "让岗位来找你——本地优先、Agent 原生的职位发现与跟踪引擎，支持 ZCode/Codex/Claude Code 等 MCP 客户端"
+description = "🔥 让岗位来找你——一句话搜百度/腾讯/字节等8个源头，简历留本地，每条推荐有据可查"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
