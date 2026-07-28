@@ -89,6 +89,31 @@ class JobDiscoveryService:
                 source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
+        if source.kind in {
+            DiscoverySourceKind.LIEPIN_CDP,
+            DiscoverySourceKind.ZHILIAN_CDP,
+            DiscoverySourceKind.LAGOU_CDP,
+        }:
+            from jobfindsme.connectors.china_platforms import (
+                LagouConnector,
+                LiepinConnector,
+                ZhilianConnector,
+            )
+
+            connector_cls = {
+                DiscoverySourceKind.LIEPIN_CDP: LiepinConnector,
+                DiscoverySourceKind.ZHILIAN_CDP: ZhilianConnector,
+                DiscoverySourceKind.LAGOU_CDP: LagouConnector,
+            }[source.kind]
+            connector = connector_cls(
+                source.query or "AI",
+                policy=ConnectorPolicy(
+                    public_access=True,
+                    robots_allowed=True,
+                ),
+                source_name=source.source_name,
+            )
+            return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.GREENHOUSE:
             connector = GreenhouseConnector(
                 source.board_token or "",

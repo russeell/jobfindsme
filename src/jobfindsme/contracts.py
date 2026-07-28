@@ -219,10 +219,16 @@ class DiscoverySourceKind(StrEnum):
     CSV_FILE = "csv_file"
     SPA_PLAYWRIGHT = "spa_playwright"
     BOSS_CDP = "boss_cdp"
+    LIEPIN_CDP = "liepin_cdp"
+    ZHILIAN_CDP = "zhilian_cdp"
+    LAGOU_CDP = "lagou_cdp"
 
     @property
     def uses_browser(self) -> bool:
-        return self in {self.SPA_PLAYWRIGHT, self.BOSS_CDP}
+        return self in {
+            self.SPA_PLAYWRIGHT, self.BOSS_CDP,
+            self.LIEPIN_CDP, self.ZHILIAN_CDP, self.LAGOU_CDP,
+        }
 
 
 class DiscoverySource(StrictModel):
@@ -247,6 +253,9 @@ class DiscoverySource(StrictModel):
             DiscoverySourceKind.CSV_FILE: self.path,
             DiscoverySourceKind.SPA_PLAYWRIGHT: self.site_key,
             DiscoverySourceKind.BOSS_CDP: self.query,
+            DiscoverySourceKind.LIEPIN_CDP: self.query,
+            DiscoverySourceKind.ZHILIAN_CDP: self.query,
+            DiscoverySourceKind.LAGOU_CDP: self.query,
         }[self.kind]
         if not required:
             raise ValueError(f"{self.kind} source is missing its locator")

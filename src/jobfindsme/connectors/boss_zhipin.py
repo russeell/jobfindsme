@@ -316,11 +316,12 @@ BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
 
 
 def setup_boss_chrome() -> dict:
-    """Launch an isolated Chrome profile for BOSS login.
+    """Launch an isolated Chrome profile for platform login.
 
-    Opens zhipin.com in a dedicated Chrome window. The user logs in once;
-    the session persists in ~/.jobfindsme/chrome-profile and is reused
-    automatically by all subsequent BOSS searches.
+    Opens BOSS直聘 + 猎聘 + 智联招聘 + 拉勾 in a dedicated Chrome window.
+    The user logs into each platform once; the session persists in
+    ~/.jobfindsme/chrome-profile and is reused automatically by all
+    subsequent CDP searches.
 
     Returns a status dict with 'ok' and 'message'.
     """
@@ -344,13 +345,16 @@ def setup_boss_chrome() -> dict:
             "message": "未找到 Chrome。请安装 Google Chrome 后重试。",
         }
 
+    # Open all four platforms in separate tabs
+    platforms = [
+        "https://www.zhipin.com",
+        "https://www.liepin.com",
+        "https://www.zhaopin.com",
+        "https://www.lagou.com",
+    ]
     subprocess.Popen(
-        [
-            chrome,
-            f"--remote-debugging-port={DEFAULT_CDP_PORT}",
-            f"--user-data-dir={profile}",
-            BOSS_ORIGIN,
-        ],
+        [chrome, f"--remote-debugging-port={DEFAULT_CDP_PORT}",
+         f"--user-data-dir={profile}"] + platforms,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -359,7 +363,11 @@ def setup_boss_chrome() -> dict:
         "ok": True,
         "message": (
             f"Chrome 已启动（端口 {DEFAULT_CDP_PORT}）。\n"
-            "请在打开的窗口里登录 zhipin.com。\n"
+            "请在打开的窗口里登录以下平台：\n"
+            "  • zhipin.com（BOSS直聘）\n"
+            "  • liepin.com（猎聘）\n"
+            "  • zhaopin.com（智联招聘）\n"
+            "  • lagou.com（拉勾）\n\n"
             "登录态将保存在本地，以后搜索自动生效，无需重复操作。\n"
             f"Profile: {profile}"
         ),
