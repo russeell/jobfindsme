@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import stat
 import sys
+from importlib.util import find_spec
 from pathlib import Path
 
 from jobfindsme.contracts import StrictModel
@@ -15,6 +16,7 @@ class Diagnostic(StrictModel):
     name: str
     ok: bool
     message: str
+    required: bool = True
 
 
 class DoctorReport(StrictModel):
@@ -33,10 +35,11 @@ class Doctor:
             self._permissions(),
             self._mcp(),
             self._connectors(),
+            self._browser_connectors(),
             self._secrets(),
         )
         return DoctorReport(
-            ok=all(item.ok for item in diagnostics),
+            ok=all(item.ok or not item.required for item in diagnostics),
             diagnostics=diagnostics,
         )
 
@@ -106,6 +109,36 @@ class Doctor:
             name="connectors",
             ok=True,
             message=f"ready: {', '.join(names)}",
+        )
+
+    @staticmethod
+    def _browser_connectors() -> Diagnostic:
+        modules = {
+            "playwright": "playwright",
+            "requests": "requests",
+            "websocket-client": "websocket",
+        }
+        missing = [
+            label for label, module in modules.items() if find_spec(module) is None
+        ]
+        if missing:
+            return Diagnostic(
+                name="browser_connectors",
+                ok=False,
+                required=False,
+                message=(
+                    f"optional unavailable: {', '.join(missing)}; install "
+                    '"jobfindsme[browser]" and Playwright Chromium'
+                ),
+            )
+        return Diagnostic(
+            name="browser_connectors",
+            ok=True,
+            required=False,
+            message=(
+                "optional packages ready; run "
+                "'python -m playwright install chromium' if Chromium is missing"
+            ),
         )
 
     @staticmethod

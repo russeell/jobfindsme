@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+from jobfindsme.connectors.base import RawJobRecord
+from jobfindsme.contracts import SourceKind
 from jobfindsme.core import JobFindsMeCore
 from jobfindsme.importing import DiscoverySource, JobDiscoveryService
 
@@ -164,3 +166,57 @@ def test_successful_subscription_refresh_closes_missing_source_jobs(tmp_path) ->
     )
     assert stored[0].source.liveness == "closed"
     assert subscriptions[0].health_status == "healthy"
+
+
+def test_spa_failure_returns_cached_jobs_and_marks_source_degraded(
+    tmp_path, monkeypatch
+) -> None:
+    core = JobFindsMeCore(tmp_path / "spa-cache.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+        sources=(
+            DiscoverySource(
+                kind="spa_playwright",
+                source_name="字节跳动",
+                site_key="bytedance",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    core.job_imports.import_records(
+        configured.workspace.workspace_id,
+        [
+            RawJobRecord(
+                source_kind=SourceKind.CAREER_SITE,
+                source_name="字节跳动",
+                source_url="https://jobs.bytedance.com/experienced/position",
+                external_id="cached-byte-1",
+                payload={
+                    "title": "AI应用工程师",
+                    "company": "字节跳动",
+                    "description": "Python Agent RAG",
+                    "location": "上海",
+                    "apply_url": "https://jobs.bytedance.com/job/cached-byte-1",
+                },
+            )
+        ],
+    )
+
+    def fail_fetch(_self):
+        raise TimeoutError("browser timeout")
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.playwright.PlaywrightSpaConnector.fetch",
+        fail_fetch,
+    )
+
+    matches = core.search_jobs()
+    subscriptions = core.source_subscriptions.list(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+    )
+
+    assert [item.job.external_id for item in matches] == ["cached-byte-1"]
+    assert subscriptions[0].health_status == "degraded"
+    assert "browser timeout" in (subscriptions[0].last_error or "")

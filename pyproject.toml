@@ -16,6 +16,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+browser = [
+  "playwright>=1.50,<2",
+  "requests>=2.32,<3",
+  "websocket-client>=1.8,<2",
+]
 dev = [
   "pytest>=8,<10",
   "ruff>=0.12,<1",

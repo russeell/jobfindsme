@@ -1,0 +1,41 @@
+{
+  "feature_id": "M16-001",
+  "status": "passed",
+  "verified_at": "2026-07-28T14:38:34.371561+00:00",
+  "changed_paths": [
+    "pyproject.toml",
+    "reports/field-trials/spa-2026-07-28.json",
+    "src/jobfindsme/connectors/playwright.py",
+    "src/jobfindsme/doctor/service.py",
+    "tests/connectors/test_playwright_connector.py",
+    "tests/doctor/test_doctor.py",
+    "tests/importing/test_discovery.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/connectors/test_playwright_connector.py",
+        "tests/importing/test_discovery.py",
+        "tests/core/test_source_catalog.py",
+        "tests/doctor"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 18 items\n\ntests/connectors/test_playwright_connector.py ........                   [ 44%]\ntests/importing/test_discovery.py .....                                  [ 72%]\ntests/core/test_source_catalog.py ..                                     [ 83%]\ntests/doctor/test_doctor.py ...                                          [100%]\n\n============================== 18 passed in 0.23s ==============================\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "check",
+        "src/jobfindsme/connectors/playwright.py",
+        "src/jobfindsme/doctor",
+        "tests/connectors/test_playwright_connector.py",
+        "tests/doctor"
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    }
+  ]
+}

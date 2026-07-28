@@ -15,9 +15,29 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
         "permissions",
         "mcp",
         "connectors",
+        "browser_connectors",
         "secrets",
     }
     assert all(item.message for item in report.diagnostics)
+
+
+def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setattr(
+        "jobfindsme.doctor.service.find_spec",
+        lambda _name: None,
+    )
+
+    report = Doctor(tmp_path / "private" / "jobfindsme.db").run()
+    browser = next(
+        item for item in report.diagnostics if item.name == "browser_connectors"
+    )
+
+    assert report.ok is True
+    assert browser.ok is False
+    assert browser.required is False
+    assert "jobfindsme[browser]" in browser.message
 
 
 def test_doctor_reports_insecure_data_directory_permissions(tmp_path) -> None:

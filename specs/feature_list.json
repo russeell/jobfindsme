@@ -1111,7 +1111,7 @@
     {
       "id": "M16-001",
       "title": "SPA Connector hardening and browser diagnostics",
-      "status": "in_progress",
+      "status": "done",
       "blocked_by": [
         "M13-006"
       ],

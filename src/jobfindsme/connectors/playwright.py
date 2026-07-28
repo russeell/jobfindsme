@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
+from urllib.parse import quote_plus
 
 from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
 from jobfindsme.contracts import SourceKind
@@ -27,6 +28,68 @@ class SpaSiteConfig:
     location_field: str = "location"
     description_field: str = "description"
     company_name: str = ""
+
+
+class SpaBrowser(Protocol):
+    """Small browser boundary that keeps source mapping deterministic in tests."""
+
+    def collect(self, config: SpaSiteConfig, url: str) -> list[dict[str, Any]]: ...
+
+
+class PlaywrightBrowser:
+    """Collect matching JSON responses from one rendered career page."""
+
+    def collect(self, config: SpaSiteConfig, url: str) -> list[dict[str, Any]]:
+        try:
+            from playwright.sync_api import Error as PlaywrightError
+            from playwright.sync_api import sync_playwright
+        except ImportError as exc:
+            raise RuntimeError(
+                'Playwright is unavailable. Install "jobfindsme[browser]" and run '
+                "python -m playwright install chromium."
+            ) from exc
+
+        collected: list[dict[str, Any]] = []
+        with sync_playwright() as playwright:
+            try:
+                browser = playwright.chromium.launch(headless=True)
+            except PlaywrightError:
+                try:
+                    browser = playwright.chromium.launch(
+                        channel="chrome",
+                        headless=True,
+                    )
+                except PlaywrightError as chrome_error:
+                    raise RuntimeError(
+                        "No Playwright Chromium or system Chrome is available. "
+                        "Run 'python -m playwright install chromium'."
+                    ) from chrome_error
+            try:
+                page = browser.new_page()
+
+                def on_response(response: Any) -> None:
+                    if response.status != 200:
+                        return
+                    if not re.search(config.api_url_pattern, response.url):
+                        return
+                    content_type = response.headers.get("content-type", "")
+                    if "json" not in content_type:
+                        return
+                    try:
+                        body = response.json()
+                    except Exception:
+                        return
+                    collected.extend(_extract_job_list(body, config.job_list_key))
+
+                page.on("response", on_response)
+                # Some career SPAs keep the document lifecycle open while loading
+                # analytics. "commit" is enough because the useful contract is the
+                # intercepted JSON response, not a fully settled visual page.
+                page.goto(url, timeout=30_000, wait_until="commit")
+                page.wait_for_timeout(8_000)
+            finally:
+                browser.close()
+        return collected
 
 
 # ── Site registry ────────────────────────────────────────────────────────────
@@ -97,6 +160,7 @@ class PlaywrightSpaConnector:
         *,
         policy: ConnectorPolicy,
         source_name: str | None = None,
+        browser: SpaBrowser | None = None,
     ) -> None:
         if not policy.can_fetch:
             raise PermissionError("source policy does not allow fetching")
@@ -108,51 +172,25 @@ class PlaywrightSpaConnector:
         if not self.keyword or len(self.keyword) > 100:
             raise ValueError("invalid keyword")
         self.source_name = source_name or config.source_name
+        self.browser = browser or PlaywrightBrowser()
 
     def fetch(self) -> list[RawJobRecord]:
-        """Launch headless browser and extract job records."""
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError as exc:
-            raise RuntimeError(
-                "playwright not installed. Run: pip install playwright && "
-                "python -m playwright install chromium"
-            ) from exc
-
+        """Render one source and convert unique response entries into records."""
         cfg = self.config
-        url = cfg.search_url_template.format(keyword=self.keyword, location="")
-
-        with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=True)
-            page = browser.new_page()
-            collected: list[dict[str, Any]] = []
-
-            def on_response(resp):
-                if resp.status != 200:
-                    return
-                if not re.search(cfg.api_url_pattern, resp.url):
-                    return
-                ct = resp.headers.get("content-type", "")
-                if "json" not in ct:
-                    return
-                try:
-                    body = resp.json()
-                except Exception:
-                    return
-                jobs = _extract_job_list(body, cfg.job_list_key)
-                if jobs:
-                    collected.extend(jobs)
-
-            page.on("response", on_response)
-            page.goto(url, timeout=30000, wait_until="domcontentloaded")
-            page.wait_for_timeout(8000)
-            browser.close()
-
-        return [
-            self._to_record(job, url)
-            for job in collected
-            if isinstance(job, dict) and job.get(cfg.external_id_field)
-        ]
+        url = cfg.search_url_template.format(
+            keyword=quote_plus(self.keyword),
+            location="",
+        )
+        collected = self.browser.collect(cfg, url)
+        records: list[RawJobRecord] = []
+        seen_ids: set[str] = set()
+        for job in collected:
+            external_id = str(job.get(cfg.external_id_field, "")).strip()
+            if not external_id or external_id in seen_ids:
+                continue
+            seen_ids.add(external_id)
+            records.append(self._to_record(job, url))
+        return records
 
     def _to_record(self, job: dict[str, Any], source_url: str) -> RawJobRecord:
         cfg = self.config
@@ -188,8 +226,15 @@ class PlaywrightSpaConnector:
         )
 
 
-def _extract_job_list(body: Any, key: str) -> list[dict[str, Any]]:
+def _extract_job_list(
+    body: Any,
+    key: str,
+    *,
+    _depth: int = 0,
+) -> list[dict[str, Any]]:
     """Walk a JSON response to find the job list at any nesting level."""
+    if _depth > 5:
+        return []
     if isinstance(body, list):
         return [item for item in body if isinstance(item, dict)]
 
@@ -201,12 +246,13 @@ def _extract_job_list(body: Any, key: str) -> list[dict[str, Any]]:
     if isinstance(jobs, list):
         return [item for item in jobs if isinstance(item, dict)]
 
-    # Check nested under common wrapper keys
+    # Check nested under common wrapper keys. Real SPA APIs often use more
+    # than one wrapper, for example data.result.job_post_list.
     for wrapper in ("data", "result", "content"):
         inner = body.get(wrapper)
         if isinstance(inner, dict):
-            jobs = inner.get(key)
-            if isinstance(jobs, list):
-                return [item for item in jobs if isinstance(item, dict)]
+            jobs = _extract_job_list(inner, key, _depth=_depth + 1)
+            if jobs:
+                return jobs
 
     return []
