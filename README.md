@@ -1,6 +1,8 @@
 # JobFindsMe
 
-**让你已经在使用的 AI Agent，根据本地简历，从 28 个企业官网和招聘平台中发现、筛选并追踪真正值得投递的岗位。**
+> **厌倦了在不同招聘 App 之间来回切换？让岗位来找你。**
+
+**把你已经在用的 AI Agent 变成求职引擎。说一句话，JobFindsMe 同时搜索百度、腾讯、字节跳动、美团、滴滴、哔哩哔哩等 7 个企业官网，根据你的简历自动匹配，告诉你为什么合适，给你投递链接。**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -8,13 +10,15 @@
 [![Release](https://img.shields.io/github/v/release/russeell/jobfindsme?include_prereleases)](https://github.com/russeell/jobfindsme/releases)
 [![License](https://img.shields.io/github/license/russeell/jobfindsme)](LICENSE)
 
-> 当前版本 **v0.2.0-rc.4** — 7 个自动 Connector + 28 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
+> 当前版本 **v0.2.0-rc.4** — 7 个自动 Connector + 22 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
 
 ---
 
 ## 一句话
 
-**JobFindsMe 不是招聘网站，而是你的求职引擎。** 简历留在本地，岗位来自官方来源，匹配有据可查，投递由你决定。
+**不是你去追岗位，是岗位来找你。** JobFindsMe 同时搜索 7 个企业官网，匹配你的简历，告诉你为什么合适——在一个 Agent 对话里完成。
+
+> 核心理念：**让用户以最快的速度，从最多的高质量来源中，找到真正匹配的岗位。** 不追求花哨功能，只追求「搜得全、匹配准、投得快」。
 
 ```text
 你（在 ZCode / Codex / Claude Code 中）：

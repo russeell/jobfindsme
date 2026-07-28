@@ -1,6 +1,8 @@
 # JobFindsMe
 
-**Let the AI agent you already use discover, filter, and track jobs from 28+ official Chinese career sources — with your resume staying local.**
+> **Tired of switching between job apps? Let jobs find you.**
+
+**Turn the AI agent you already use into a job search engine. One sentence, and JobFindsMe searches 7 company career sites simultaneously — Baidu, Tencent, ByteDance, Meituan, Didi, Bilibili, Airbnb China — matches against your resume, and tells you why each job fits.**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
