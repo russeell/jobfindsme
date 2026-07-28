@@ -264,6 +264,12 @@ a formal full-time role. Human-facing job lists use one stable block per job:
 The text view is for scanning. Structured MCP output retains the job ID, score,
 evidence, typed classifications, and URL for subsequent Agent actions.
 
+Browser-backed sources are never part of implicit discovery. Default searches
+use HTTP/ATS connectors only. SPA Playwright and BOSS CDP sources require an
+explicit per-search opt-in; persisted legacy subscriptions do not override this
+runtime safety boundary. Playwright uses its managed Chromium and never falls
+back to the user's everyday Google Chrome application.
+
 `delete_local_data` accepts either:
 
 ```json

@@ -244,6 +244,7 @@ class JobFindsMeCore:
         plan_id: str | None = None,
         sources: tuple[DiscoverySource, ...] = (),
         limit: int = 20,
+        allow_browser_sources: bool = False,
     ) -> list[JobMatch]:
         context = self.context.resolve(
             workspace_id=workspace_id,
@@ -257,6 +258,10 @@ class JobFindsMeCore:
                 plan_id=context.plan.plan_id,
             )
         )
+        if not allow_browser_sources:
+            effective_sources = tuple(
+                source for source in effective_sources if not source.kind.uses_browser
+            )
         if effective_sources:
             self._discover_sources(
                 workspace_id=context.workspace.workspace_id,

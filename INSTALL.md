@@ -9,7 +9,7 @@ JobFindsMe for the current user.
 
 ```bash
 python3 -m pip install \
-  "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 ```
 
 2. **Run doctor to verify:**
@@ -49,5 +49,8 @@ Tell the user to restart their agent. After restart, they can say:
   Qwen Code, Kimi Code, TRAE, TRAE CN, Qoder, and WorkBuddy.
 - An installer target is not an official compatibility claim. See the
   field-tested compatibility report for verified hosts.
+- Browser-backed sources are optional and never run during default searches.
+  Install `jobfindsme[browser]` and Playwright Chromium only when the user
+  explicitly enables a browser source.
 - BOSS is experimental and is not enabled by default. It requires a dedicated,
   logged-in Chrome profile with local remote debugging.

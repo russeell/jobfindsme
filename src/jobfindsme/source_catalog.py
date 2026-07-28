@@ -21,18 +21,6 @@ def recommended_connectors(
             query=query,
         ),
         DiscoverySource(
-            kind="spa_playwright",
-            source_name="字节跳动",
-            site_key="bytedance",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="spa_playwright",
-            source_name="美团",
-            site_key="meituan",
-            query=query,
-        ),
-        DiscoverySource(
             kind="greenhouse",
             source_name="Airbnb 中国",
             board_token="airbnb",
@@ -71,18 +59,18 @@ def source_links(
             note="尚未接入自动 Connector",
         ),
         SourceLink(
-            name="字节跳动招聘 (自动)",
-            category="企业官网 · 自动发现",
+            name="字节跳动招聘 (浏览器可选)",
+            category="企业官网 · 浏览器 Connector",
             url=f"https://jobs.bytedance.com/experienced/position?keywords={encoded}",
             access_mode="official_link",
-            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+            note="Playwright Connector 已接入，仅在用户明确启用时运行",
         ),
         SourceLink(
-            name="美团招聘 (自动)",
-            category="企业官网 · 自动发现",
+            name="美团招聘 (浏览器可选)",
+            category="企业官网 · 浏览器 Connector",
             url=f"https://zhaopin.meituan.com/web/campus?keyword={encoded}",
             access_mode="official_link",
-            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+            note="Playwright Connector 已接入，仅在用户明确启用时运行",
         ),
         SourceLink(
             name="滴滴招聘 (Beta)",

@@ -9,11 +9,10 @@ def test_china_search_gets_maintained_connector_without_ats_parameters() -> None
     assert sources
     assert {source.source_name for source in sources} == {
         "百度招聘",
-        "字节跳动",
-        "美团",
         "Airbnb 中国",
         "Airwallex",
     }
+    assert all(not source.kind.uses_browser for source in sources)
     assert next(source for source in sources if source.kind == "baidu_career").query
     assert all(source.source_name != "BOSS直聘" for source in sources)
 
@@ -24,8 +23,8 @@ def test_catalog_links_official_careers_and_platform_live_search() -> None:
 
     # Verified defaults and explicitly classified non-default sources
     assert "腾讯招聘" in names
-    assert "字节跳动招聘 (自动)" in names
-    assert "美团招聘 (自动)" in names
+    assert "字节跳动招聘 (浏览器可选)" in names
+    assert "美团招聘 (浏览器可选)" in names
     assert "滴滴招聘 (Beta)" in names
     assert "哔哩哔哩招聘 (Beta)" in names
     assert "Airbnb 中国 (自动)" in names

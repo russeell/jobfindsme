@@ -211,7 +211,7 @@ def test_spa_failure_returns_cached_jobs_and_marks_source_degraded(
         fail_fetch,
     )
 
-    matches = core.search_jobs()
+    matches = core.search_jobs(allow_browser_sources=True)
     subscriptions = core.source_subscriptions.list(
         workspace_id=configured.workspace.workspace_id,
         plan_id=configured.plan.plan_id,
@@ -266,7 +266,7 @@ def test_boss_failure_returns_cached_jobs_and_marks_source_degraded(
         fail_fetch,
     )
 
-    matches = core.search_jobs()
+    matches = core.search_jobs(allow_browser_sources=True)
     subscriptions = core.source_subscriptions.list(
         workspace_id=configured.workspace.workspace_id,
         plan_id=configured.plan.plan_id,
@@ -275,3 +275,35 @@ def test_boss_failure_returns_cached_jobs_and_marks_source_degraded(
     assert [item.job.external_id for item in matches] == ["cached-boss-1"]
     assert subscriptions[0].health_status == "degraded"
     assert "login required" in (subscriptions[0].last_error or "")
+
+
+def test_persisted_browser_source_is_not_launched_without_runtime_opt_in(
+    tmp_path, monkeypatch
+) -> None:
+    core = JobFindsMeCore(tmp_path / "browser-safe.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="spa_playwright",
+                source_name="字节跳动",
+                site_key="bytedance",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+
+    def unexpected_fetch(_self):
+        raise AssertionError("browser connector must not launch")
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.playwright.PlaywrightSpaConnector.fetch",
+        unexpected_fetch,
+    )
+
+    assert core.search_jobs() == []
+    subscription = core.source_subscriptions.list(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+    )[0]
+    assert subscription.health_status == "never_checked"

@@ -25,7 +25,7 @@ The agent handles install, MCP config, and Skill setup automatically. Then start
 **Or manually:**
 
 ```bash
-pip install "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
 jobfindsme install zcode    # or codex / claude / qwen
 ```
@@ -37,6 +37,9 @@ Use JobFindsMe to find AI Engineer roles in Shanghai, based on my resume.
 ```
 
 No workspace IDs or plan IDs needed — Core handles everything.
+
+Default searches never launch Chrome. Browser-backed sources run only after
+explicit opt-in and installation of `jobfindsme[browser]`.
 
 Jobs use one stable format. Recruitment track and employment type are separate:
 
@@ -65,9 +68,9 @@ Sources are classified as verified, beta, experimental, or link-only.
 | Source | Method | Coverage |
 |--------|--------|----------|
 | Baidu | SSR | Verified |
-| ByteDance, Meituan | Playwright SPA | Verified; browser extra required |
 | Airbnb China | Greenhouse API | Contract and snapshot verified |
 | Airwallex | Ashby API | Contract and China snapshot verified |
+| ByteDance, Meituan | Playwright SPA | Verified, explicit opt-in only |
 | Didi, Bilibili | Playwright SPA | Beta; query quality incomplete |
 | BOSS Zhipin | Chrome CDP bridge | Experimental; explicit opt-in |
 | Tencent and other sites | Direct links | Not described as auto-fetched |
@@ -83,7 +86,7 @@ Your agent (ZCode / Codex / Claude Code)
   JobFindsMe MCP Server (local stdio)
       │
       ├── Baidu SSR ────────────→ Baidu jobs
-      ├── Playwright SPA ───────→ ByteDance/Meituan
+      ├── Playwright SPA ───────→ ByteDance/Meituan (explicit opt-in)
       ├── Greenhouse/Ashby ─────→ China roles at global companies
       ├── Beta connectors ──────→ Didi/Bilibili (opt-in)
       └── BOSS CDP bridge ──────→ Experimental (opt-in)

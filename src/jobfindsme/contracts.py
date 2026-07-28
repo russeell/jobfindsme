@@ -220,6 +220,10 @@ class DiscoverySourceKind(StrEnum):
     SPA_PLAYWRIGHT = "spa_playwright"
     BOSS_CDP = "boss_cdp"
 
+    @property
+    def uses_browser(self) -> bool:
+        return self in {self.SPA_PLAYWRIGHT, self.BOSS_CDP}
+
 
 class DiscoverySource(StrictModel):
     kind: DiscoverySourceKind

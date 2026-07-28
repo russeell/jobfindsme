@@ -54,17 +54,12 @@ class PlaywrightBrowser:
         with sync_playwright() as playwright:
             try:
                 browser = playwright.chromium.launch(headless=True)
-            except PlaywrightError:
-                try:
-                    browser = playwright.chromium.launch(
-                        channel="chrome",
-                        headless=True,
-                    )
-                except PlaywrightError as chrome_error:
-                    raise RuntimeError(
-                        "No Playwright Chromium or system Chrome is available. "
-                        "Run 'python -m playwright install chromium'."
-                    ) from chrome_error
+            except PlaywrightError as error:
+                raise RuntimeError(
+                    "Playwright Chromium is unavailable or failed to start. "
+                    "Run 'python -m playwright install chromium'. JobFindsMe "
+                    "will not fall back to your system Google Chrome."
+                ) from error
             try:
                 page = browser.new_page()
 

@@ -7,6 +7,7 @@ import pytest
 from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.playwright import (
     SITE_REGISTRY,
+    PlaywrightBrowser,
     PlaywrightSpaConnector,
     SpaSiteConfig,
     _extract_job_list,
@@ -182,3 +183,12 @@ def test_unknown_site_and_disallowed_policy_are_rejected() -> None:
             "AI",
             policy=ConnectorPolicy(public_access=True, robots_allowed=False),
         )
+
+
+def test_playwright_browser_never_falls_back_to_system_chrome() -> None:
+    import inspect
+
+    source = inspect.getsource(PlaywrightBrowser.collect)
+
+    assert 'channel="chrome"' not in source
+    assert "system Google Chrome" in source

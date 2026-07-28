@@ -18,6 +18,7 @@
       "allowed_paths": [
         "README.md",
         "PROJECT_SPEC.md",
+        "INSTALL.md",
         "AGENTS.md",
         "specs/feature_list.json"
       ],
@@ -1119,6 +1120,7 @@
         "pyproject.toml",
         "src/jobfindsme/connectors/playwright.py",
         "src/jobfindsme/doctor/**",
+        "src/jobfindsme/doctor/**",
         "tests/connectors/test_playwright_connector.py",
         "tests/core/test_source_catalog.py",
         "tests/doctor/**",
@@ -1304,6 +1306,7 @@
         "tests/test_contracts.py",
         "tests/cli/**",
         "tests/mcp/**",
+        "tests/doctor/**",
         "tests/importing/**",
         "tests/connectors/**",
         "reports/features/M20-001.json"
@@ -1341,6 +1344,66 @@
         ]
       ],
       "evidence_path": "reports/features/M20-001.json"
+    },
+    {
+      "id": "M21-001",
+      "title": "Browser connector crash containment",
+      "status": "done",
+      "blocked_by": [
+        "M20-001"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "INSTALL.md",
+        "README.md",
+        "README.en.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/source_catalog.py",
+        "src/jobfindsme/connectors/playwright.py",
+        "src/jobfindsme/doctor/**",
+        "src/jobfindsme/mcp/schemas.py",
+        "src/jobfindsme/mcp/tools.py",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "tests/core/**",
+        "tests/connectors/**",
+        "tests/importing/**",
+        "tests/mcp/**",
+        "reports/features/M21-001.json"
+      ],
+      "acceptance": [
+        "Default source discovery never launches Playwright, Chrome, or a CDP browser session.",
+        "Previously persisted browser source subscriptions are skipped unless the current search explicitly enables browser sources.",
+        "Playwright does not fall back to the user's system Google Chrome when its managed Chromium is unavailable.",
+        "Browser sources remain available through explicit opt-in and preserve cached-result degradation behavior.",
+        "README and source catalog clearly separate default HTTP sources from opt-in browser sources.",
+        "Regression tests prove default searches cannot call SPA or BOSS browser connectors."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core",
+          "tests/connectors",
+          "tests/importing",
+          "tests/mcp"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ]
+      ],
+      "evidence_path": "reports/features/M21-001.json"
     }
   ]
 }

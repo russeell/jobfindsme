@@ -181,6 +181,7 @@ class ToolRegistry:
                 plan_id=request.plan_id,
                 sources=request.sources,
                 limit=request.limit,
+                allow_browser_sources=request.allow_browser_sources,
             )
             summaries = {
                 item.job_id: item

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import stat
 import sys
 from importlib.util import find_spec
@@ -14,22 +13,6 @@ from jobfindsme.mcp.tools import ToolRegistry
 
 
 def _browser_binary_available() -> bool:
-    system_browsers = (
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-    )
-    if any(Path(path).is_file() for path in system_browsers):
-        return True
-    if any(
-        shutil.which(command)
-        for command in (
-            "google-chrome",
-            "chromium",
-            "chromium-browser",
-            "microsoft-edge",
-        )
-    ):
-        return True
     try:
         from playwright.sync_api import sync_playwright
 
@@ -173,8 +156,9 @@ class Doctor:
             ok=True,
             required=False,
             message=(
-                "optional packages and a compatible browser are ready; "
-                "BOSS additionally requires an explicit local CDP session"
+                "optional Playwright Chromium is installed; browser sources "
+                "still require explicit per-search opt-in, and BOSS requires "
+                "an explicit local CDP session"
             ),
         )
 

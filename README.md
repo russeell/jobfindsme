@@ -27,7 +27,7 @@ Agent 会读取安装指南，自动执行安装、配置 MCP、安装 Skill。
 **或者手动安装：**
 
 ```bash
-pip install "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
 jobfindsme install zcode     # ZCode
 jobfindsme install codex     # Codex
@@ -47,6 +47,9 @@ jobfindsme install workbuddy # WorkBuddy
 ```
 
 不需要提供任何 ID 或参数——Core 自动处理一切。
+
+默认搜索不会启动 Chrome。字节、美团和 BOSS 等浏览器来源只有在用户明确
+启用并安装 `jobfindsme[browser]` 后才会运行。
 
 岗位始终按固定格式返回，校招/社招和实习/正式分别标注：
 
@@ -81,7 +84,6 @@ jobfindsme install workbuddy # WorkBuddy
 | 来源 | 技术 | 覆盖 |
 |------|------|------|
 | 百度 | SSR | Verified |
-| 字节、美团 | Playwright SPA | Verified，需 `browser` 扩展 |
 | Airbnb 中国 | Greenhouse API | Contract + snapshot verified |
 | Airwallex | Ashby API | Contract + China snapshot verified |
 
@@ -89,6 +91,7 @@ jobfindsme install workbuddy # WorkBuddy
 
 | 来源 | 状态 | 说明 |
 |------|------|------|
+| 字节、美团 | Browser opt-in | 已验证，但必须由用户明确启用，不进入默认搜索 |
 | 滴滴、B站 | Beta | 能返回岗位，但关键词/地点质量仍需加固 |
 | BOSS直聘 | Experimental | CDP 契约已测试，尚未完成登录态现场验证 |
 | 腾讯等官网 | Link-only | 提供直达链接，不声称自动抓取 |
@@ -111,7 +114,7 @@ jobfindsme install workbuddy # WorkBuddy
   JobFindsMe MCP Server（本地）
       │
       ├── 百度 SSR 解析 ────────→ 百度岗位
-      ├── Playwright 渲染 ───────→ 字节/美团
+      ├── Playwright 渲染 ───────→ 字节/美团（明确启用）
       ├── Greenhouse/Ashby API ──→ 外企中国岗
       ├── Beta Connector ────────→ 滴滴/B站（显式启用）
       └── BOSS CDP 桥 ───────────→ Experimental（显式启用）
