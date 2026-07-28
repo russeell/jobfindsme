@@ -21,7 +21,7 @@
     "installed_workspace_init": "passed",
     "installed_package_doctor": "passed",
     "installed_mcp_empty_result": "passed",
-    "wheel_sha256": "ba152f556de63c364e44f8de4b06e7494a0159af246e4707a0f5f744fc9e4021"
+    "github_ci_python_3_11_3_12": "passed"
   },
   "claim_boundary": [
     "The fast profile path accepts parser output automatically; review remains available.",
