@@ -214,6 +214,7 @@ class DiscoverySourceKind(StrEnum):
     ASHBY = "ashby"
     BAIDU_CAREER = "baidu_career"
     GREENHOUSE = "greenhouse"
+    LEVER = "lever"
     CAREER_URL = "career_url"
     JSON_FILE = "json_file"
     CSV_FILE = "csv_file"
@@ -248,6 +249,7 @@ class DiscoverySource(StrictModel):
             DiscoverySourceKind.ASHBY: self.board_name,
             DiscoverySourceKind.BAIDU_CAREER: self.query,
             DiscoverySourceKind.GREENHOUSE: self.board_token,
+            DiscoverySourceKind.LEVER: self.board_token,
             DiscoverySourceKind.CAREER_URL: self.url,
             DiscoverySourceKind.JSON_FILE: self.path,
             DiscoverySourceKind.CSV_FILE: self.path,

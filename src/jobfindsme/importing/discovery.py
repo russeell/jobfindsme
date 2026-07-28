@@ -8,6 +8,7 @@ from jobfindsme.connectors import (
     ConnectorPolicy,
     GreenhouseConnector,
     JsonLdCareerSiteConnector,
+    LeverConnector,
 )
 from jobfindsme.connectors.http import HttpTransport, UrllibTransport
 from jobfindsme.contracts import DiscoverySource, DiscoverySourceKind
@@ -116,6 +117,17 @@ class JobDiscoveryService:
             return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.GREENHOUSE:
             connector = GreenhouseConnector(
+                source.board_token or "",
+                transport=self.transport,
+                policy=ConnectorPolicy(
+                    public_access=True,
+                    robots_allowed=True,
+                ),
+                source_name=source.source_name,
+            )
+            return self.imports.import_connector(workspace_id, connector)
+        if source.kind is DiscoverySourceKind.LEVER:
+            connector = LeverConnector(
                 source.board_token or "",
                 transport=self.transport,
                 policy=ConnectorPolicy(

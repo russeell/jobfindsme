@@ -3,6 +3,7 @@ from jobfindsme.connectors.baidu import BaiduCareerConnector
 from jobfindsme.connectors.base import Connector, ConnectorPolicy, RawJobRecord
 from jobfindsme.connectors.career_site import JsonLdCareerSiteConnector
 from jobfindsme.connectors.greenhouse import GreenhouseConnector
+from jobfindsme.connectors.lever import LeverConnector
 
 __all__ = [
     "AshbyConnector",
@@ -11,5 +12,6 @@ __all__ = [
     "ConnectorPolicy",
     "GreenhouseConnector",
     "JsonLdCareerSiteConnector",
+    "LeverConnector",
     "RawJobRecord",
 ]
