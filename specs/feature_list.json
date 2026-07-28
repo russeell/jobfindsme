@@ -647,7 +647,7 @@
     {
       "id": "M11-002",
       "title": "Profile-grounded deterministic matching",
-      "status": "backlog",
+      "status": "done",
       "blocked_by": [
         "M11-001"
       ],
