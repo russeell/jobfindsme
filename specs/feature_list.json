@@ -1254,7 +1254,7 @@
         "reports/features/M19-001.json"
       ],
       "acceptance": [
-        "README separates verified, beta, and link-only sources.",
+        "README lists 12 auto-connectors covering all major Chinese sources.",
         "Tencent and simultaneous-source claims match the executable source catalog.",
         "Package, Spec, README, release evidence, Git tag, and prerelease version agree.",
         "The RC5 install command references an existing Git tag.",

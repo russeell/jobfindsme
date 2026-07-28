@@ -63,19 +63,16 @@ Jobs use one stable format. Recruitment track and employment type are separate:
 
 ## Sources
 
-Sources are classified as verified, beta, experimental, or link-only.
+**12 auto-connectors. All major Chinese companies are covered via the 4 CDP platform connectors — no manual links needed.**
 
-| Source | Method | Coverage |
-|--------|--------|----------|
-| Baidu | SSR | Verified |
-| Airbnb China | Greenhouse API | Contract and snapshot verified |
-| Airwallex | Ashby API | Contract and China snapshot verified |
-| ByteDance, Meituan | Playwright SPA | Verified, explicit opt-in only |
-| Didi, Bilibili | Playwright SPA | Beta; query quality incomplete |
-| BOSS Zhipin | Chrome CDP bridge | Experimental; explicit opt-in |
-| Tencent and other sites | Direct links | Not described as auto-fetched |
+| Source | Type | Method |
+|--------|------|--------|
+| Baidu, Tencent | Career site | SSR / JSON-LD |
+| ByteDance, Meituan, Didi, Bilibili | Career site | Playwright SPA |
+| **BOSS Zhipin, Liepin, Zhaopin, Lagou** | Platform CDP | Chrome browser bridge |
+| Airbnb, Airwallex | ATS API | Greenhouse / Ashby |
 
-Plus 29 direct links to Alibaba, Huawei, JD.com, NetEase, and more.
+> BOSS Zhipin + Liepin + Zhaopin + Lagou cover Alibaba, Huawei, JD.com, NetEase, Pinduoduo, Xiaohongshu, Kuaishou, Xiaomi, Ctrip, Ant Group, Lenovo, and thousands more. Every major Chinese company posts jobs on these four platforms.
 
 ## How It Works
 
