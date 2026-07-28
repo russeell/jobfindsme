@@ -192,15 +192,52 @@ def source_links(
             access_mode="official_link",
         ),
         SourceLink(
-            name="蔚来招聘",
-            category="企业官网 · 知名企业",
-            url=f"https://nio.cn/careers/social?keyword={encoded}",
-            access_mode="official_link",
-        ),
-        SourceLink(
             name="商汤科技招聘",
             category="企业官网 · 知名企业",
             url=f"https://www.sensetime.com/cn/join-list?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        # ── AI & 新势力企业 ──
+        SourceLink(
+            name="科大讯飞招聘",
+            category="企业官网 · AI企业",
+            url=f"https://www.iflytek.com/career/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="旷视科技招聘",
+            category="企业官网 · AI企业",
+            url="https://www.megvii.com/career/",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="知乎招聘",
+            category="企业官网 · AI企业",
+            url="https://www.zhihu.com/careers",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="米哈游招聘",
+            category="企业官网 · AI企业",
+            url=f"https://campus.mihoyo.com/?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="理想汽车招聘",
+            category="企业官网 · AI企业",
+            url=f"https://www.lixiang.com/careers?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="小鹏汽车招聘",
+            category="企业官网 · AI企业",
+            url=f"https://careers.xiaopeng.com/?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="蔚来招聘",
+            category="企业官网 · AI企业",
+            url=f"https://www.nio.cn/careers?keyword={encoded}",
             access_mode="official_link",
         ),
         # ── 招聘平台（用户自行浏览） ──
