@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "servers": {
+      "jobfindsme": {
+        "type": "stdio",
+        "command": "__PYTHON__",
+        "args": ["-m", "jobfindsme.mcp"],
+        "env": {
+          "PYTHONPATH": "__PROJECT_ROOT__/src",
+          "JOBFINDSME_DB_PATH": "__DATA_DIR__/jobfindsme.db"
+        }
+      }
+    }
+  }
+}

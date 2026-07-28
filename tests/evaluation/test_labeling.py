@@ -1,0 +1,240 @@
+"""Tests for labeling models and Chinese benchmark evaluation."""
+
+import json
+
+from jobfindsme.evaluation.labeling import (
+    JobLabel,
+    assemble_labeled_dataset,
+    compute_hard_filter_fnr,
+    compute_ndcg_at_k,
+    compute_precision_at_k,
+    compute_valid_link_rate,
+    new_daily_template,
+    write_daily_template,
+)
+from jobfindsme.evaluation.runner import evaluate_chinese_dataset
+
+# ── Fixtures ─────────────────────────────────────────────────────────────────
+
+
+def _sample_jobs(n: int = 8) -> list[dict]:
+    return [
+        {
+            "job_id": f"job-{i:03}",
+            "source_name": "baidu" if i % 2 else "greenhouse",
+            "apply_url": f"https://example.com/jobs/{i}",
+            "title": "AI应用工程师" if i < 5 else "前端工程师",
+            "company": f"公司{i}",
+            "location": "杭州" if i < 4 else "北京",
+        }
+        for i in range(n)
+    ]
+
+
+def _make_labels(
+    relevance: list[int],
+    hard_filter: list[int] | None = None,
+    valid_link: list[int] | None = None,
+) -> tuple[JobLabel, ...]:
+    labels = []
+    for i, rel in enumerate(relevance):
+        labels.append(
+            JobLabel(
+                rank=i + 1,
+                job_id=f"job-{i:03}",
+                source_name="test",
+                apply_url=f"https://example.com/{i}",
+                title=f"岗位{i}",
+                company=f"公司{i}",
+                location="杭州",
+                relevance=rel,
+                hard_filter_error=bool(hard_filter[i]) if hard_filter else False,
+                valid_link=bool(valid_link[i]) if valid_link else True,
+            )
+        )
+    return tuple(labels)
+
+
+# ── Daily template ───────────────────────────────────────────────────────────
+
+
+def test_new_daily_template_creates_correct_structure() -> None:
+    jobs = _sample_jobs(8)
+    template = new_daily_template(
+        day=1,
+        date="2026-07-28",
+        plan_id="plan-1",
+        profile_hash="abc123",
+        jobs=jobs,
+    )
+
+    assert template.day == 1
+    assert len(template.labels) == 8
+    assert template.labels[0].rank == 1
+    assert template.labels[7].rank == 8
+    assert template.labels[0].job_id == "job-000"
+    assert template.total_discovered == 8
+    assert template.total_after_filter == 8
+
+
+def test_daily_template_roundtrip(tmp_path) -> None:
+    jobs = _sample_jobs(5)
+    template = new_daily_template(
+        day=1,
+        date="2026-07-28",
+        plan_id="plan-1",
+        profile_hash="abc123",
+        jobs=jobs,
+    )
+    path = tmp_path / "day_01.json"
+    write_daily_template(path, template)
+
+    # Modify manually (simulating human annotation)
+    data = json.loads(path.read_text())
+    data["labels"][0]["relevance"] = 3
+    data["labels"][1]["relevance"] = 2
+    data["labels"][0]["valid_link"] = True
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+    # Read back
+    from jobfindsme.evaluation.labeling import read_daily_labels
+
+    loaded = read_daily_labels(path)
+    assert loaded.labels[0].relevance == 3
+    assert loaded.labels[1].relevance == 2
+
+
+# ── Metrics ──────────────────────────────────────────────────────────────────
+
+
+def test_precision_at_k_all_relevant() -> None:
+    labels = list(_make_labels([3, 3, 2, 2, 2, 1, 1, 0, 0, 0]))
+    assert compute_precision_at_k(labels, 5) == 1.0  # All >= 2
+    assert compute_precision_at_k(labels, 10) == 0.5  # 5 out of 10 >= 2
+
+
+def test_precision_at_k_none_relevant() -> None:
+    labels = list(_make_labels([0, 0, 0, 0, 0]))
+    assert compute_precision_at_k(labels, 5) == 0.0
+
+
+def test_ndcg_at_k_perfect_ordering() -> None:
+    """Perfectly ordered (descending relevance)."""
+    labels = list(_make_labels([3, 3, 2, 2, 1, 1, 0, 0]))
+    ndcg = compute_ndcg_at_k(labels, 8)
+    assert ndcg == 1.0
+
+
+def test_ndcg_at_k_poor_ordering() -> None:
+    """Poor ordering: low relevance first."""
+    labels = list(_make_labels([0, 0, 1, 1, 2, 2, 3, 3]))
+    ndcg = compute_ndcg_at_k(labels, 8)
+    assert ndcg < 0.7  # Well below perfect
+
+
+def test_ndcg_at_k_empty() -> None:
+    assert compute_ndcg_at_k([], 10) == 0.0
+
+
+def test_hard_filter_fnr() -> None:
+    labels = list(
+        _make_labels(
+            [2, 2, 2, 2, 1],
+            hard_filter=[0, 0, 1, 0, 0],
+        )
+    )
+    assert compute_hard_filter_fnr(labels) == 0.2
+
+
+def test_valid_link_rate() -> None:
+    labels = list(
+        _make_labels(
+            [2, 2, 2, 2, 2],
+            valid_link=[1, 1, 0, 1, 1],
+        )
+    )
+    assert compute_valid_link_rate(labels) == 0.8
+
+
+# ── Dataset assembly ─────────────────────────────────────────────────────────
+
+
+def test_assemble_labeled_dataset(tmp_path) -> None:
+    # Create two daily label files
+    for day in (1, 2):
+        jobs = _sample_jobs(5)
+        template = new_daily_template(
+            day=day,
+            date=f"2026-07-2{day}",
+            plan_id="plan-1",
+            profile_hash="abc123",
+            jobs=jobs,
+        )
+        path = tmp_path / f"day_0{day}.json"
+        write_daily_template(path, template)
+
+        # Annotate
+        data = json.loads(path.read_text())
+        for lb in data["labels"]:
+            lb["relevance"] = 2
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+    dataset = assemble_labeled_dataset(
+        version="0.2.0",
+        provenance={"labeler": "test", "date_range": "2026-07-21 to 2026-07-27"},
+        day_paths=[tmp_path / "day_01.json", tmp_path / "day_02.json"],
+    )
+
+    assert dataset.dataset_version == "0.2.0"
+    assert len(dataset.days) == 2
+    assert len(dataset.all_labels) == 10
+
+
+# ── Chinese benchmark evaluation ─────────────────────────────────────────────
+
+
+def test_evaluate_chinese_dataset(tmp_path) -> None:
+    # Build a complete labeled dataset
+    for day in (1, 2):
+        jobs = _sample_jobs(5)
+        template = new_daily_template(
+            day=day,
+            date=f"2026-07-2{day}",
+            plan_id="plan-1",
+            profile_hash="abc123",
+            jobs=jobs,
+            source_failures=["boss"] if day == 1 else [],
+        )
+        path = tmp_path / f"day_0{day}.json"
+        write_daily_template(path, template)
+
+        data = json.loads(path.read_text())
+        for i, lb in enumerate(data["labels"]):
+            lb["relevance"] = 3 if i < 3 else 2
+            lb["valid_link"] = i != 4
+        data["labels"][0]["duplicate_of"] = None
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+
+    # Assemble
+    dataset = assemble_labeled_dataset(
+        version="0.2.0",
+        provenance={"labeler": "test"},
+        day_paths=[tmp_path / "day_01.json", tmp_path / "day_02.json"],
+    )
+
+    from jobfindsme.evaluation.labeling import write_labeled_dataset
+
+    dataset_path = tmp_path / "labeled.json"
+    write_labeled_dataset(dataset_path, dataset)
+
+    # Evaluate
+    report = evaluate_chinese_dataset(dataset_path)
+
+    assert report.total_labeled == 10
+    assert report.total_days == 2
+    assert report.precision_at_10 == 1.0  # All >= 2
+    assert report.ndcg_at_10 >= 0.9  # Good ordering
+    assert report.hard_filter_fnr == 0.0
+    assert report.valid_link_rate == 0.8  # 2 out of 10 invalid (one per day)
+    assert "boss" in report.source_failure_sources
+    assert "M14 Chinese Benchmark" in report.summary()

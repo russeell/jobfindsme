@@ -22,7 +22,7 @@ class InstallResult(StrictModel):
 
 
 class HostInstaller:
-    HOSTS = {"codex", "claude", "qwen"}
+    HOSTS = {"codex", "claude", "qwen", "zcode"}
 
     def __init__(
         self,
@@ -96,6 +96,21 @@ class HostInstaller:
                 existing.rstrip() + self._codex_block() + "\n",
                 encoding="utf-8",
             )
+        elif host == "zcode":
+            document = (
+                json.loads(config_path.read_text()) if config_path.exists() else {}
+            )
+            mcp = document.setdefault("mcp", {})
+            servers = mcp.setdefault("servers", {})
+            if "jobfindsme" in servers and not replace:
+                if backup:
+                    backup.unlink()
+                raise FileExistsError("ZCode jobfindsme MCP config already exists")
+            servers["jobfindsme"] = self._json_server(host)
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
         else:
             document = (
                 json.loads(config_path.read_text()) if config_path.exists() else {}
@@ -133,14 +148,13 @@ class HostInstaller:
 
     def _json_server(self, host: str) -> dict[str, object]:
         server: dict[str, object] = {
+            "type": "stdio",
             "command": self.python,
             "args": ["-m", "jobfindsme.mcp"],
             "env": {
                 "JOBFINDSME_DB_PATH": str(self.data_dir / "jobfindsme.db"),
             },
         }
-        if host == "claude":
-            server["type"] = "stdio"
         return server
 
     def _paths(self, host: str) -> tuple[Path, Path]:
@@ -153,6 +167,11 @@ class HostInstaller:
             return (
                 self.home / ".claude.json",
                 self.home / ".claude" / "skills" / "jobfindsme" / "SKILL.md",
+            )
+        if host == "zcode":
+            return (
+                self.home / ".zcode" / "cli" / "config.json",
+                self.home / ".zcode" / "skills" / "jobfindsme" / "SKILL.md",
             )
         return (
             self.home / ".qwen" / "settings.json",

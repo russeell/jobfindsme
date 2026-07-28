@@ -15,6 +15,13 @@ from jobfindsme.contracts import (
     SourceKind,
     StrictModel,
 )
+from jobfindsme.evaluation.labeling import (
+    LabeledDataset,
+    compute_hard_filter_fnr,
+    compute_ndcg_at_k,
+    compute_precision_at_k,
+    compute_valid_link_rate,
+)
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching import DeterministicMatcher
 
@@ -146,4 +153,62 @@ def evaluate_dataset(path: str | Path) -> EvaluationReport:
         overall_accuracy=overall,
         gate_passed=all(metric.accuracy >= 0.95 for metric in metrics.values()),
         failed_case_ids=tuple(failures),
+    )
+
+
+class ChineseBenchmarkReport(StrictModel):
+    """Metrics for a real Chinese labeled dataset (M14-001)."""
+
+    dataset_version: str
+    dataset_sha256: str
+    generated_at: datetime
+    total_labeled: int
+    total_days: int
+    precision_at_10: float = Field(ge=0, le=1)
+    ndcg_at_10: float = Field(ge=0, le=1)
+    hard_filter_fnr: float = Field(ge=0, le=1)
+    valid_link_rate: float = Field(ge=0, le=1)
+    source_failure_sources: tuple[str, ...]
+    duplicate_count: int = 0
+    synthetic_metrics: EvaluationReport | None = None
+
+    def summary(self) -> str:
+        return (
+            f"M14 Chinese Benchmark v{self.dataset_version}\n"
+            f"  Labeled: {self.total_labeled} jobs over {self.total_days} days\n"
+            f"  P@10:     {self.precision_at_10:.3f}\n"
+            f"  NDCG@10:  {self.ndcg_at_10:.3f}\n"
+            f"  FNR:      {self.hard_filter_fnr:.3f}\n"
+            f"  ValidLink:{self.valid_link_rate:.3f}\n"
+            f"  Dupes:    {self.duplicate_count}\n"
+            f"  SrcFail:  {', '.join(self.source_failure_sources) or 'none'}"
+        )
+
+
+def evaluate_chinese_dataset(path: str | Path) -> ChineseBenchmarkReport:
+    """Evaluate a real Chinese labeled dataset."""
+    dataset_path = Path(path)
+    raw_bytes = dataset_path.read_bytes()
+    data = json.loads(raw_bytes)
+    dataset = LabeledDataset.model_validate(data)
+
+    all_labels = list(dataset.all_labels)
+    source_failures: set[str] = set()
+    for day in dataset.days:
+        source_failures.update(day.source_failures)
+
+    duplicates = sum(1 for lb in all_labels if lb.duplicate_of is not None)
+
+    return ChineseBenchmarkReport(
+        dataset_version=dataset.dataset_version,
+        dataset_sha256=hashlib.sha256(raw_bytes).hexdigest(),
+        generated_at=datetime.now(UTC),
+        total_labeled=len(all_labels),
+        total_days=len(dataset.days),
+        precision_at_10=compute_precision_at_k(all_labels, 10),
+        ndcg_at_10=compute_ndcg_at_k(all_labels, 10),
+        hard_filter_fnr=compute_hard_filter_fnr(all_labels),
+        valid_link_rate=compute_valid_link_rate(all_labels),
+        source_failure_sources=tuple(sorted(source_failures)),
+        duplicate_count=duplicates,
     )

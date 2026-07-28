@@ -1,0 +1,225 @@
+"""Chinese labeled benchmark and daily field-trial annotation tools.
+
+M14-001 requires a human-labeled Chinese dataset covering relevance,
+duplicates, liveness, links, and hard-filter errors.
+
+M15-001 requires daily Top-10 labels collected during a 7-day field trial.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+from pydantic import Field
+
+from jobfindsme.contracts import StrictModel
+
+# ── Label models ────────────────────────────────────────────────────────────
+
+
+class JobLabel(StrictModel):
+    """One human-labeled job from a search result."""
+
+    rank: int = Field(ge=1, le=10)
+    job_id: str
+    source_name: str
+    apply_url: str
+    title: str
+    company: str
+    location: str
+
+    # Core labels
+    relevance: int = Field(
+        ge=0,
+        le=3,
+        description="0=不相关 1=弱相关 2=相关 3=完美匹配",
+    )
+    liveness: str = Field(
+        default="active",
+        description="active | stale | closed",
+    )
+    valid_link: bool = Field(
+        default=True,
+        description="Whether apply_url loads a real job posting page.",
+    )
+    duplicate_of: str | None = Field(
+        default=None,
+        description="case_id of a previously seen same-position posting.",
+    )
+
+    # Error flags
+    hard_filter_error: bool = Field(
+        default=False,
+        description="Should have been filtered by hard constraints but wasn't.",
+    )
+    hard_filter_reason: str = ""
+
+    notes: str = ""
+
+
+class DailyLabels(StrictModel):
+    """One day of labeled Top-10 results."""
+
+    day: int = Field(ge=1, le=7)
+    date: str
+    plan_id: str
+    profile_hash: str
+    total_discovered: int
+    total_after_filter: int
+    labels: tuple[JobLabel, ...]
+    source_failures: tuple[str, ...] = ()
+    notes: str = ""
+
+
+class LabeledDataset(StrictModel):
+    """A versioned, human-labeled Chinese job matching dataset."""
+
+    dataset_version: str
+    dataset_type: str = "real_chinese_labeled"
+    provenance: dict[str, Any]
+    days: tuple[DailyLabels, ...]
+
+    @property
+    def all_labels(self) -> tuple[JobLabel, ...]:
+        result: list[JobLabel] = []
+        for day in self.days:
+            result.extend(day.labels)
+        return tuple(result)
+
+
+# ── Daily labeling collector ─────────────────────────────────────────────────
+
+
+def new_daily_template(
+    day: int,
+    date: str,
+    plan_id: str,
+    profile_hash: str,
+    jobs: list[dict[str, Any]],
+    source_failures: list[str] | None = None,
+) -> DailyLabels:
+    """Create a blank daily labeling template from search results.
+
+    Args:
+        day: Trial day number (1-7).
+        date: ISO date string.
+        plan_id: Search Plan id used for this run.
+        profile_hash: SHA256 of the profile facts used.
+        jobs: Top-10 job results, each with job_id, source_name, apply_url,
+              title, company, location.
+        source_failures: Source names that failed during discovery.
+    """
+    labels = tuple(
+        JobLabel(
+            rank=index + 1,
+            job_id=job["job_id"],
+            source_name=job["source_name"],
+            apply_url=job.get("apply_url", ""),
+            title=job.get("title", ""),
+            company=job.get("company", ""),
+            location=job.get("location", ""),
+            relevance=0,
+        )
+        for index, job in enumerate(jobs[:10])
+    )
+    return DailyLabels(
+        day=day,
+        date=date,
+        plan_id=plan_id,
+        profile_hash=profile_hash,
+        total_discovered=len(jobs),
+        total_after_filter=len(jobs),
+        labels=labels,
+        source_failures=tuple(source_failures or ()),
+    )
+
+
+def write_daily_template(path: str | Path, template: DailyLabels) -> None:
+    """Write a daily labeling template to disk for manual annotation."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(
+            template.model_dump(mode="json"),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def read_daily_labels(path: str | Path) -> DailyLabels:
+    """Read manually filled daily labels from disk."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return DailyLabels.model_validate(data)
+
+
+def assemble_labeled_dataset(
+    version: str,
+    provenance: dict[str, Any],
+    day_paths: list[str | Path],
+) -> LabeledDataset:
+    """Combine individual daily label files into a versioned dataset."""
+    days = tuple(read_daily_labels(p) for p in day_paths)
+    return LabeledDataset(
+        dataset_version=version,
+        provenance=provenance,
+        days=days,
+    )
+
+
+def write_labeled_dataset(path: str | Path, dataset: LabeledDataset) -> None:
+    """Write a labeled dataset to disk."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    raw = dataset.model_dump_json(indent=2, exclude_none=True) + "\n"
+    target.write_text(raw, encoding="utf-8")
+
+
+# ── Metrics helpers shared by runner ─────────────────────────────────────────
+
+
+def compute_precision_at_k(labels: list[JobLabel], k: int = 10) -> float:
+    """Precision@K: fraction of top-K jobs labeled relevant (>=2)."""
+    top = labels[:k]
+    if not top:
+        return 0.0
+    return sum(1 for lb in top if lb.relevance >= 2) / len(top)
+
+
+def compute_ndcg_at_k(labels: list[JobLabel], k: int = 10) -> float:
+    """NDCG@K using relevance 0-3 as gain (linear)."""
+    import math
+
+    top = labels[:k]
+    if not top:
+        return 0.0
+
+    def dcg(items: list[JobLabel]) -> float:
+        total = 0.0
+        for i, lb in enumerate(items):
+            gain = lb.relevance  # 0–3
+            total += gain / math.log2(i + 2)  # i+2 because i is 0-indexed
+        return total
+
+    actual_dcg = dcg(top)
+    ideal = sorted(top, key=lambda lb: lb.relevance, reverse=True)
+    ideal_dcg = dcg(ideal)
+    return actual_dcg / ideal_dcg if ideal_dcg else 0.0
+
+
+def compute_hard_filter_fnr(labels: list[JobLabel]) -> float:
+    """Hard-filter false-negative rate: fraction that should have been filtered."""
+    if not labels:
+        return 0.0
+    return sum(1 for lb in labels if lb.hard_filter_error) / len(labels)
+
+
+def compute_valid_link_rate(labels: list[JobLabel]) -> float:
+    """Fraction of jobs whose apply_url points to a live posting."""
+    if not labels:
+        return 0.0
+    return sum(1 for lb in labels if lb.valid_link) / len(labels)
