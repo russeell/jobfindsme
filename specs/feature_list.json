@@ -825,12 +825,15 @@
     {
       "id": "M13-002",
       "title": "China official-career source validation",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M13-001"
       ],
       "allowed_paths": [
+        "README.md",
+        "README.en.md",
         "PROJECT_SPEC.md",
+        "pyproject.toml",
         "specs/feature_list.json",
         "src/jobfindsme/connectors/**",
         "src/jobfindsme/importing/**",
@@ -838,6 +841,7 @@
         "tests/integration/**",
         "data/fixtures/**",
         "reports/field-trials/**",
+        "reports/release/v0.2.0.json",
         "reports/features/M13-002.json"
       ],
       "acceptance": [
@@ -852,6 +856,7 @@
           "-m",
           "pytest",
           "tests/connectors",
+          "tests/importing",
           "tests/integration"
         ]
       ],
@@ -860,7 +865,7 @@
     {
       "id": "M14-001",
       "title": "Real Chinese labeled matching benchmark",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M13-002"
       ],

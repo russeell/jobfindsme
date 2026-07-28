@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import ssl
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, Request, build_opener
+
+import certifi
 
 
 class UnsafeSourceError(ValueError):
@@ -50,7 +53,7 @@ def validate_public_http_url(
 @dataclass(frozen=True)
 class UrllibTransport:
     timeout_seconds: float = 10
-    max_bytes: int = 5_000_000
+    max_bytes: int = 15_000_000
     max_redirects: int = 3
     require_https: bool = True
     same_host_redirects_only: bool = True
@@ -62,12 +65,14 @@ class UrllibTransport:
             require_https=self.require_https,
         )
         request = Request(url, headers={"User-Agent": "JobFindsMe/0.1"})
+        tls_context = ssl.create_default_context(cafile=certifi.where())
         opener = build_opener(
             SafeRedirectHandler(
                 max_redirects=self.max_redirects,
                 require_https=self.require_https,
                 same_host_only=self.same_host_redirects_only,
-            )
+            ),
+            HTTPSHandler(context=tls_context),
         )
         with opener.open(request, timeout=self.timeout_seconds) as response:
             final_url = response.geturl()

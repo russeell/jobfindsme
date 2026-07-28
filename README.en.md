@@ -36,6 +36,7 @@ active context automatically.
 |---|---|
 | Public Greenhouse Job Board API | Available |
 | Public Ashby Job Postings API | Available |
+| Airwallex public board with China roles | Initial snapshot validated |
 | Single-job Schema.org `JobPosting` page | Available |
 | User-provided CSV / JSON | Available |
 | Sources requiring login, CAPTCHA, or anti-bot bypass | Unsupported |

@@ -10,11 +10,12 @@
     "redirect-safe HTTP policy",
     "Chinese token, role alias, and salary normalization",
     "cross-source identity and liveness aggregation",
-    "Ashby public job-board connector contract"
+    "Ashby public job-board connector contract",
+    "initial Airwallex China-role source validation"
   ],
   "automated_validation": {
     "pytest": {
-      "passed": 116,
+      "passed": 118,
       "failed": 0
     },
     "ruff_check": "passed",
@@ -23,11 +24,11 @@
     "installed_package_doctor": "passed",
     "installed_package_mcp_tools": 9,
     "codex_install_uninstall": "passed",
-    "wheel_sha256": "7b4ec6cbf9a08c46c97ca8a4b8599aefe2e6a4cea3516f2aad503ad321b90e45"
+    "wheel_sha256": "ab9751af16a138552ee989340bc977c2da810eec6bd9ba799ad000aeddef31de"
   },
   "field_validation": {
     "real_public_source_initial_flow": "passed_on_v0.1_snapshot",
-    "china_official_source_connector": "not_completed",
+    "china_official_source_connector": "airwallex_china_roles_initial_snapshot_validated",
     "real_chinese_labeled_evaluation_set": "not_completed",
     "one_week_personal_use": "not_completed",
     "officially_supported_agent_clients": []
