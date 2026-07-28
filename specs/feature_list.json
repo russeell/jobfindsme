@@ -1233,7 +1233,7 @@
     {
       "id": "M19-001",
       "title": "RC5 release truth and documentation alignment",
-      "status": "backlog",
+      "status": "in_progress",
       "blocked_by": [
         "M18-001"
       ],
