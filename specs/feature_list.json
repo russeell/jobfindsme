@@ -972,11 +972,68 @@
       "evidence_path": "reports/features/M13-004.json"
     },
     {
+      "id": "M13-005",
+      "title": "Installed-package and two-call first-use recovery",
+      "status": "done",
+      "blocked_by": [
+        "M13-004"
+      ],
+      "allowed_paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "specs/feature_list.json",
+        "scripts/smoke_installed_package.sh",
+        "integrations/**",
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/mcp/**",
+        "src/jobfindsme/resources/**",
+        "tests/cli/test_cli.py",
+        "tests/integration/test_agent_first_use.py",
+        "tests/integrations/test_primary_hosts.py",
+        "tests/mcp/**",
+        "reports/features/M13-005.json",
+        "reports/release/v0.2.0-rc.3.json"
+      ],
+      "acceptance": [
+        "The built wheel contains every ordered SQL migration and initializes all required tables.",
+        "CI installs the built wheel and completes workspace, doctor, and MCP empty-result smoke checks.",
+        "Every successful MCP tool result uses an object-valued structuredContent payload.",
+        "The default Agent path auto-confirms parsed facts, configures maintained sources, and searches in one user turn.",
+        "Users are not asked for Workspace, Plan, ATS, board, or career connector internals."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        [
+          "bash",
+          "scripts/smoke_installed_package.sh"
+        ]
+      ],
+      "evidence_path": "reports/features/M13-005.json"
+    },
+    {
       "id": "M14-001",
       "title": "Real Chinese labeled matching benchmark",
       "status": "ready",
       "blocked_by": [
-        "M13-004"
+        "M13-005"
       ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
@@ -1000,7 +1057,7 @@
       "title": "Personal field trial and supported Agent matrix",
       "status": "ready",
       "blocked_by": [
-        "M13-004"
+        "M13-005"
       ],
       "allowed_paths": [
         "README.md",

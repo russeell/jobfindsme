@@ -1,6 +1,6 @@
 # JobFindsMe Product And Architecture Specification
 
-> Status: v0.2.0-rc.1 release candidate
+> Status: v0.2.0-rc.3 release candidate
 >
 > Baseline: Agent-native, Local-first
 >
@@ -23,9 +23,9 @@ JobFindsMe 面向技术求职者和 AI 工具用户。用户可以提供本地�
 
 V0.2 must provide:
 
-- a local Workspace with one confirmed candidate profile;
-- multiple Search Plans sharing confirmed profile facts;
-- local resume parsing with evidence and explicit corrections;
+- a local Workspace with one accepted candidate profile;
+- multiple Search Plans sharing accepted profile facts;
+- local resume parsing with an automatic fast path and optional review;
 - Schema.org `JobPosting` URL、CSV、JSON、公开 ATS 和企业官方招聘站
   Connector；
 - normalization, versioning, deduplication, freshness, and liveness checks;
@@ -38,7 +38,7 @@ V0.2 must provide:
 - optional local scheduling and Feishu summaries after the interactive flow is
   proven.
 - zero-ID first use: Core resolves a default Workspace and active Search Plan;
-- confirmed profile facts participate in every match score and explanation;
+- accepted profile facts participate in every match score and explanation;
 - Search Plans persist source subscriptions used by interactive and scheduled runs;
 - MCP returns bounded summaries by default and treats job content as untrusted data;
 - salary keeps raw text and normalized annual values without inventing missing data.
@@ -69,7 +69,7 @@ this repository.
    authorization, and execution.
 3. Every adapter calls the same Core and contains no business rules.
 4. No API key means the complete deterministic workflow still works.
-5. Resume content stays local by default and is minimized after confirmation.
+5. Resume content stays local by default and is minimized after parsing.
 6. Metrics come from versioned evaluation scripts.
 7. Security cannot depend on a host agent or MCP client's optional behavior.
 
@@ -90,8 +90,8 @@ If an agent sandbox cannot access the resume path:
 
 ```text
 jobfindsme profile import /path/to/resume.pdf
--> confirm the local profile
--> the agent reads only the confirmed summary
+-> facts are accepted locally by default
+-> the agent continues from the minimal summary
 ```
 
 ## 5. Architecture
@@ -165,14 +165,15 @@ The Skill must instruct the host:
 
 Import modes:
 
-- `reference`: read the source path, retain its hash and confirmed facts;
+- `reference`: read the source path, retain its hash and accepted facts;
 - `managed`: copy the original into a private local directory with consent;
 - `forget-source`: remove temporary text and managed source after profile
   confirmation.
 
-The default workflow parses locally, extracts evidence-grounded facts, asks the
-user to confirm them, removes temporary full text, and retains only the hash,
-confirmed facts, and minimum evidence snippets.
+The default workflow parses locally, accepts evidence-grounded facts for the
+first search, removes temporary full text, and retains only the hash, accepted
+facts, and minimum evidence snippets. Users can request paginated review and
+correction before or after the first search.
 
 API keys and notification credentials belong in the operating-system keychain
 or an equivalent secret store, never in `config.toml`, logs, or Git.

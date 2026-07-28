@@ -61,7 +61,14 @@ def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
     assert [response["id"] for response in responses] == [1, 2, 3]
     assert responses[0]["result"]["protocolVersion"] == "2025-11-25"
     assert len(responses[1]["result"]["tools"]) == 9
-    assert responses[2]["result"]["structuredContent"] == []
+    assert responses[2]["result"]["structuredContent"] == {
+        "jobs": [],
+        "count": 0,
+        "offset": 0,
+        "limit": 20,
+        "next_offset": None,
+    }
+    assert isinstance(responses[2]["result"]["structuredContent"], dict)
 
 
 def test_unknown_rpc_method_returns_json_rpc_error(tmp_path) -> None:
