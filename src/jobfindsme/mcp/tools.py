@@ -116,6 +116,7 @@ class ToolRegistry:
     def _dispatch(self, name: str, request: BaseModel) -> Any:
         values = request.model_dump()
         if name == "setup_profile":
+            include_facts = True
             if values["action"] == "confirm":
                 profile = self.core.confirm_profile(
                     workspace_id=values["workspace_id"],
@@ -139,10 +140,18 @@ class ToolRegistry:
                     source_path=values["resume_path"],
                     mode=values["mode"],
                 )
+                if values["auto_confirm"]:
+                    profile = self.core.confirm_profile(
+                        workspace_id=values["workspace_id"],
+                        profile_id=profile.profile_id,
+                        accepted_fact_ids=[fact.fact_id for fact in profile.facts],
+                    )
+                    include_facts = False
             return _profile_page(
                 profile,
                 offset=values["offset"],
                 limit=values["limit"],
+                include_facts=include_facts,
             )
         if name == "configure_search":
             assert isinstance(request, ConfigureSearchInput)
@@ -175,7 +184,7 @@ class ToolRegistry:
                     limit=request.limit,
                 )
             }
-            return [
+            jobs = [
                 {
                     "job": summaries[match.job.job_id],
                     "score": match.score,
@@ -183,8 +192,19 @@ class ToolRegistry:
                 }
                 for match in matches
             ]
+            return {"jobs": jobs, "count": len(jobs)}
         if name == "get_jobs":
-            return self.core.list_job_summaries(**values)
+            jobs = self.core.list_job_summaries(**values)
+            next_offset = (
+                values["offset"] + len(jobs) if len(jobs) == values["limit"] else None
+            )
+            return {
+                "jobs": jobs,
+                "count": len(jobs),
+                "offset": values["offset"],
+                "limit": values["limit"],
+                "next_offset": next_offset,
+            }
         if name == "get_job_details":
             return self.core.get_job_details(**values)
         if name == "update_job_state":
@@ -243,14 +263,15 @@ def _profile_page(
     *,
     offset: int,
     limit: int,
+    include_facts: bool = True,
 ) -> dict[str, Any]:
     facts = tuple(profile.facts)
-    selected = facts[offset : offset + limit]
+    selected = facts[offset : offset + limit] if include_facts else ()
     counts = {
         fact_type.value: sum(fact.fact_type is fact_type for fact in facts)
         for fact_type in FactType
     }
-    next_offset = offset + len(selected)
+    next_offset = offset + len(selected) if include_facts else 0
     return {
         "profile_id": profile.profile_id,
         "status": getattr(profile, "status", "confirmed"),
@@ -259,6 +280,7 @@ def _profile_page(
         "facts": selected,
         "next_offset": next_offset if next_offset < len(facts) else None,
         "total_facts": len(facts),
+        "review_available": bool(facts),
     }
 
 

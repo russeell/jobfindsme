@@ -61,6 +61,7 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     assert configured["isError"] is False
     assert configured["structuredContent"]["plan"]["target_roles"] == ["AI应用工程师"]
     assert searched["isError"] is False
+    assert searched["structuredContent"] == {"jobs": [], "count": 0}
     assert core.list_workspaces()
 
 
@@ -147,6 +148,7 @@ def test_setup_profile_supports_import_and_confirmation_in_one_tool(
             "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
+            "auto_confirm": False,
         },
     )
     profile = imported["structuredContent"]
@@ -182,6 +184,7 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
             "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
+            "auto_confirm": False,
             "limit": 2,
         },
     )["structuredContent"]
@@ -200,6 +203,27 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
     assert imported["total_facts"] >= 6
     assert reviewed["facts"]
     assert "fact_counts" in imported
+
+
+def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) -> None:
+    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    registry = ToolRegistry(core)
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG", encoding="utf-8")
+
+    result = registry.call(
+        "setup_profile",
+        {"action": "import", "resume_path": str(resume)},
+    )
+
+    profile = result["structuredContent"]
+    assert result["isError"] is False
+    assert profile["status"] == "confirmed"
+    assert profile["facts"] == []
+    assert profile["total_facts"] >= 2
+    assert profile["fact_counts"]["skill"] >= 2
+    assert profile["next_offset"] == 0
+    assert profile["review_available"] is True
 
 
 def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
@@ -225,7 +249,8 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
         ),
     )
 
-    summaries = registry.call("get_jobs", {"limit": 1})["structuredContent"]
+    page = registry.call("get_jobs", {"limit": 1})["structuredContent"]
+    summaries = page["jobs"]
     job_id = summaries[0]["job_id"]
     details = registry.call(
         "get_job_details",
@@ -239,6 +264,10 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
     assert details["untrusted_external_content"] is True
     assert len(details["job"]["description"]) == 20_000
     assert details["description_truncated"] is True
+    assert page["count"] == 1
+    assert page["offset"] == 0
+    assert page["limit"] == 1
+    assert page["next_offset"] == 1
 
 
 def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:

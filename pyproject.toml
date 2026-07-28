@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jobfindsme"
-version = "0.2.0rc2"
+version = "0.2.0rc3"
 description = "Agent-native, local-first job discovery and tracking engine"
 readme = "README.md"
 license = "MIT"
@@ -33,7 +33,10 @@ Issues = "https://github.com/russeell/jobfindsme/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-jobfindsme = ["resources/**/*.md"]
+jobfindsme = [
+  "migrations/*.sql",
+  "resources/**/*.md",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -13,6 +13,7 @@ class SetupProfileInput(StrictModel):
     workspace_id: str | None = None
     resume_path: str | None = None
     mode: ResumeImportMode = ResumeImportMode.FORGET_SOURCE
+    auto_confirm: bool = True
     profile_id: str | None = None
     accepted_fact_ids: tuple[str, ...] = ()
     corrections: dict[str, str] = Field(default_factory=dict)

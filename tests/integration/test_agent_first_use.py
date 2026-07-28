@@ -52,13 +52,7 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         action="import",
         resume_path=str(resume),
     )
-    call(
-        registry,
-        "setup_profile",
-        action="confirm",
-        profile_id=profile["profile_id"],
-        accepted_fact_ids=[fact["fact_id"] for fact in profile["facts"]],
-    )
+    assert profile["status"] == "confirmed"
     call(
         registry,
         "configure_search",
@@ -72,8 +66,10 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
             }
         ],
     )
-    matches = call(registry, "search_jobs")
+    search_result = call(registry, "search_jobs")
+    matches = search_result["jobs"]
 
+    assert search_result["count"] == 2
     assert matches[0]["job"]["company"] == "甲公司"
     assert matches[0]["evidence"]["matched_profile_skills"] == [
         "FastAPI",

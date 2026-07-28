@@ -1,0 +1,32 @@
+{
+  "release": "0.2.0-rc.3",
+  "implementation_status": "release_candidate",
+  "validation_date": "2026-07-28",
+  "closed_product_gaps": [
+    "SQL migrations included in built wheel",
+    "installed-package workspace and database smoke test",
+    "object-valued MCP search_jobs and get_jobs structuredContent",
+    "default auto-confirmed profile fast path",
+    "bounded automatic profile response",
+    "Agent workflow without connector-internal questions"
+  ],
+  "automated_validation": {
+    "pytest": {
+      "passed": 129,
+      "failed": 0
+    },
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "clean_wheel_install": "passed",
+    "installed_workspace_init": "passed",
+    "installed_package_doctor": "passed",
+    "installed_mcp_empty_result": "passed",
+    "wheel_sha256": "ba152f556de63c364e44f8de4b06e7494a0159af246e4707a0f5f744fc9e4021"
+  },
+  "claim_boundary": [
+    "The fast profile path accepts parser output automatically; review remains available.",
+    "BOSS Zhipin, Lagou, Maimai, and other login-bound platforms are not automatic connectors.",
+    "Official platform links are not described as scraped or API-backed results.",
+    "Real Chinese recommendation quality still requires M14/M15 human evidence."
+  ]
+}

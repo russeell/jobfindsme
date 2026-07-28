@@ -44,12 +44,17 @@ def build_parser() -> argparse.ArgumentParser:
     profile = groups.add_parser("profile")
     profile_actions = profile.add_subparsers(dest="action", required=True)
     profile_import = profile_actions.add_parser("import")
-    _workspace_argument(profile_import)
+    profile_import.add_argument("--workspace")
     profile_import.add_argument("path", type=Path)
     profile_import.add_argument(
         "--mode",
         choices=tuple(ResumeImportMode),
         default=ResumeImportMode.FORGET_SOURCE,
+    )
+    profile_import.add_argument(
+        "--review",
+        action="store_true",
+        help="keep parsed facts in draft state instead of accepting them",
     )
     profile_review = profile_actions.add_parser("review")
     _workspace_argument(profile_review)
@@ -174,10 +179,17 @@ def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
         return core.list_workspaces()
     if args.group == "profile":
         if args.action == "import":
-            return core.import_resume(
+            profile = core.import_resume(
                 workspace_id=args.workspace,
                 source_path=args.path,
                 mode=ResumeImportMode(args.mode),
+            )
+            if args.review:
+                return profile
+            return core.confirm_profile(
+                workspace_id=args.workspace,
+                profile_id=profile.profile_id,
+                accepted_fact_ids=[fact.fact_id for fact in profile.facts],
             )
         if args.action == "review":
             return core.profiles.load_review(
