@@ -52,5 +52,7 @@ Tell the user to restart their agent. After restart, they can say:
 - Browser-backed sources are optional and never run during default searches.
   Install `jobfindsme[browser]` and Playwright Chromium only when the user
   explicitly enables a browser source.
-- BOSS is experimental and is not enabled by default. It requires a dedicated,
-  logged-in Chrome profile with local remote debugging.
+- BOSS is experimental and not enabled by default. To use it:
+  1. Start Chrome with remote debugging: `open -a "Google Chrome" --args --remote-debugging-port=9222`
+  2. Open zhipin.com in that Chrome and log in.
+  3. The BOSS connector will then work automatically during searches.

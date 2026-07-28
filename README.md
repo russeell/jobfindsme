@@ -48,8 +48,18 @@ jobfindsme install workbuddy # WorkBuddy
 
 不需要提供任何 ID 或参数——Core 自动处理一切。
 
-默认搜索不会启动 Chrome。字节、美团和 BOSS 等浏览器来源只有在用户明确
-启用并安装 `jobfindsme[browser]` 后才会运行。
+默认搜索不会启动 Chrome。字节、美团和 BOSS 等浏览器来源需显式启用。
+
+**启用 BOSS 直聘：**
+
+```bash
+# 1. 以调试模式启动 Chrome（只需一次）
+open -a "Google Chrome" --args --remote-debugging-port=9222
+
+# 2. 在 Chrome 中打开 zhipin.com 登录
+
+# 3. 在 Agent 中正常搜索，BOSS 岗位自动出现
+```
 
 岗位始终按固定格式返回，校招/社招和实习/正式分别标注：
 

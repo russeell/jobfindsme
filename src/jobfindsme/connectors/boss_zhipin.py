@@ -105,8 +105,11 @@ class _CDPSession:
             )
         except Exception as exc:
             raise BossConnectorError(
-                f"Cannot connect to Chrome CDP on 127.0.0.1:{port}. "
-                "Start a dedicated Chrome profile with remote debugging enabled."
+                f"无法连接 Chrome 调试端口 127.0.0.1:{port}。\n"
+                "请先开启 Chrome 远程调试：\n"
+                "  macOS: open -a 'Google Chrome' --args --remote-debugging-port=9222\n"
+                "  Linux: google-chrome --remote-debugging-port=9222\n"
+                f"然后在 Chrome 中打开 {BOSS_ORIGIN} 登录。"
             ) from exc
         self._message_id = 0
 

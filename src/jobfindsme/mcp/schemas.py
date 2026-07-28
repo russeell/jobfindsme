@@ -39,7 +39,7 @@ class SearchJobsInput(StrictModel):
     workspace_id: str | None = None
     plan_id: str | None = None
     sources: tuple[DiscoverySource, ...] = ()
-    allow_browser_sources: bool = False
+    allow_browser_sources: bool = True
     limit: int = Field(default=20, ge=1, le=100)
 
 
