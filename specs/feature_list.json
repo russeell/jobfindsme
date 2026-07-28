@@ -1,0 +1,294 @@
+{
+  "schema_version": "1.0",
+  "project": "JobFindsMe",
+  "product_baseline": "agent-native-local-first",
+  "status_values": [
+    "backlog",
+    "ready",
+    "in_progress",
+    "done",
+    "blocked"
+  ],
+  "features": [
+    {
+      "id": "M0-001",
+      "title": "Product and architecture baseline",
+      "status": "done",
+      "blocked_by": [],
+      "allowed_paths": [
+        "README.md",
+        "PROJECT_SPEC.md",
+        "AGENTS.md",
+        "specs/feature_list.json"
+      ],
+      "acceptance": [
+        "V0.1 is explicitly agent-native and local-first.",
+        "Public Web SaaS and a custom agent runtime are out of scope.",
+        "Resume and deletion safety are enforced by Core boundaries."
+      ]
+    },
+    {
+      "id": "M1-001",
+      "title": "Local Workspace and multiple Search Plans",
+      "status": "done",
+      "blocked_by": [
+        "M0-001"
+      ],
+      "allowed_paths": [
+        "pyproject.toml",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/storage.py",
+        "src/jobfindsme/workspaces.py",
+        "src/jobfindsme/search_plans.py",
+        "src/jobfindsme/migrations/**",
+        "tests/test_contracts.py",
+        "tests/test_storage.py",
+        "tests/test_workspaces.py",
+        "tests/test_search_plans.py",
+        "specs/feature_list.json",
+        "reports/features/M1-001.json"
+      ],
+      "acceptance": [
+        "Every personal record belongs to an explicit workspace.",
+        "One workspace can store multiple isolated Search Plans.",
+        "SQLite migrations are repeatable and foreign keys are enforced.",
+        "Workspace isolation and deletion scope have automated tests."
+      ],
+      "checks": [
+        "pytest tests/test_contracts.py tests/test_storage.py tests/test_workspaces.py tests/test_search_plans.py"
+      ]
+    },
+    {
+      "id": "M1-002",
+      "title": "Core API independent from FastAPI",
+      "status": "done",
+      "blocked_by": [
+        "M1-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/core/**",
+        "tests/core/**",
+        "specs/feature_list.json",
+        "reports/features/M1-002.json"
+      ],
+      "acceptance": [
+        "Core imports no FastAPI, MCP SDK, agent SDK, or UI package.",
+        "Core services expose typed use-case methods.",
+        "Adapters can be replaced without changing domain behavior."
+      ]
+    },
+    {
+      "id": "M1-003",
+      "title": "CLI adapter foundation",
+      "status": "done",
+      "blocked_by": [
+        "M1-002"
+      ],
+      "allowed_paths": [
+        "pyproject.toml",
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/__main__.py",
+        "tests/cli/**",
+        "specs/feature_list.json",
+        "reports/features/M1-003.json"
+      ],
+      "acceptance": [
+        "CLI calls Core directly without FastAPI.",
+        "CLI can create a Workspace and multiple Search Plans.",
+        "CLI output is machine-readable JSON."
+      ]
+    },
+    {
+      "id": "M2-001",
+      "title": "Local resume lifecycle and confirmed profile",
+      "status": "ready",
+      "blocked_by": [
+        "M1-003"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/profiles/**",
+        "src/jobfindsme/secrets/**",
+        "tests/profiles/**",
+        "tests/security/**",
+        "specs/feature_list.json",
+        "reports/features/M2-001.json"
+      ],
+      "acceptance": [
+        "The host agent does not need to read the complete resume.",
+        "Reference, managed, and forget-source modes are implemented.",
+        "Only confirmed facts and minimum evidence are returned to adapters.",
+        "Temporary full text and sources follow the selected retention policy."
+      ]
+    },
+    {
+      "id": "M3-001",
+      "title": "Official-source discovery and deterministic matching",
+      "status": "backlog",
+      "blocked_by": [
+        "M2-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/matching/**",
+        "tests/connectors/**",
+        "tests/importing/**",
+        "tests/matching/**",
+        "data/fixtures/**",
+        "specs/feature_list.json",
+        "reports/features/M3-001.json"
+      ],
+      "acceptance": [
+        "URL, CSV, JSON, one public ATS, and one Chinese official site are covered.",
+        "Normalization, deduplication, freshness, filters, and ranking need no model.",
+        "Every result retains source, liveness, and match evidence."
+      ]
+    },
+    {
+      "id": "M3-002",
+      "title": "Offline evaluation and release gates",
+      "status": "backlog",
+      "blocked_by": [
+        "M3-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/evaluation/**",
+        "tests/evaluation/**",
+        "data/eval/**",
+        "reports/evaluation/**",
+        "specs/feature_list.json",
+        "reports/features/M3-002.json"
+      ],
+      "acceptance": [
+        "A versioned 100 to 300 case dataset covers matching, freshness, and deduplication.",
+        "All product quality claims are generated by scripts.",
+        "Bad cases become regression tests."
+      ]
+    },
+    {
+      "id": "M4-001",
+      "title": "Product-grade CLI adapter",
+      "status": "backlog",
+      "blocked_by": [
+        "M3-002"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/__main__.py",
+        "tests/cli/**",
+        "tests/integration/**",
+        "specs/feature_list.json",
+        "reports/features/M4-001.json"
+      ],
+      "acceptance": [
+        "CLI completes profile, plan, search, state, export, and deletion workflows.",
+        "CLI calls Core directly and supports Markdown and JSON output.",
+        "CLI remains the fallback when MCP or host path access fails."
+      ]
+    },
+    {
+      "id": "M5-001",
+      "title": "Local stdio MCP server",
+      "status": "backlog",
+      "blocked_by": [
+        "M4-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/mcp/**",
+        "tests/mcp/**",
+        "specs/feature_list.json",
+        "reports/features/M5-001.json"
+      ],
+      "acceptance": [
+        "Seven high-level tools use strict schemas and call Core.",
+        "MCP contains no matching or persistence rules.",
+        "Deletion requires Core-enforced preview and confirm phases.",
+        "Malicious or approval-free clients cannot bypass safety."
+      ]
+    },
+    {
+      "id": "M6-001",
+      "title": "Codex and Claude Code skills",
+      "status": "backlog",
+      "blocked_by": [
+        "M5-001"
+      ],
+      "allowed_paths": [
+        "integrations/codex/**",
+        "integrations/claude/**",
+        "tests/integrations/**",
+        "specs/feature_list.json",
+        "reports/features/M6-001.json"
+      ],
+      "acceptance": [
+        "Skills do not read complete resumes and use the seven MCP tools correctly.",
+        "Skills ask only for missing constraints that change search results.",
+        "At least two host agents pass the same integration scenarios."
+      ]
+    },
+    {
+      "id": "M7-001",
+      "title": "One-command install and doctor",
+      "status": "backlog",
+      "blocked_by": [
+        "M6-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/installer/**",
+        "src/jobfindsme/doctor/**",
+        "tests/installer/**",
+        "tests/doctor/**",
+        "specs/feature_list.json",
+        "reports/features/M7-001.json"
+      ],
+      "acceptance": [
+        "Codex and Claude installations require one explicit command.",
+        "Existing host configuration is backed up and never silently overwritten.",
+        "Doctor diagnoses database, permissions, MCP, connectors, and secret storage."
+      ]
+    },
+    {
+      "id": "M8-001",
+      "title": "Real official-site field validation",
+      "status": "backlog",
+      "blocked_by": [
+        "M7-001"
+      ],
+      "allowed_paths": [
+        "data/fixtures/**",
+        "data/eval/**",
+        "tests/integration/**",
+        "reports/field-trials/**",
+        "specs/feature_list.json",
+        "reports/features/M8-001.json"
+      ],
+      "acceptance": [
+        "The complete flow is used against real official career-site jobs.",
+        "One to two weeks of personal use produces search runs, feedback, and bad cases.",
+        "No product claim is made without field or evaluation evidence."
+      ]
+    },
+    {
+      "id": "M9-001",
+      "title": "Local scheduler and Feishu summaries",
+      "status": "backlog",
+      "blocked_by": [
+        "M8-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/monitoring/**",
+        "src/jobfindsme/notifications/**",
+        "tests/monitoring/**",
+        "tests/notifications/**",
+        "integrations/schedulers/**",
+        "specs/feature_list.json",
+        "reports/features/M9-001.json"
+      ],
+      "acceptance": [
+        "Monitoring runs only with explicit consent and documented online requirements.",
+        "Runs are idempotent and recover safely after missed schedules.",
+        "Feishu summaries are signed, bounded, pausable, and revocable."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "feature_id": "M1-001",
+  "status": "passed",
+  "verified_at": "2026-07-28",
+  "checks": {
+    "pytest": "10 passed",
+    "ruff_check": "passed",
+    "ruff_format": "passed",
+    "json_validation": "passed",
+    "diff_check": "passed"
+  },
+  "evidence": [
+    "Every SearchPlan carries an explicit workspace_id.",
+    "A Workspace can own multiple Search Plans.",
+    "Cross-workspace plan reads are rejected.",
+    "SQLite foreign keys and cascade deletion are covered by tests.",
+    "Migrations are repeatable."
+  ]
+}
