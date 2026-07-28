@@ -10,7 +10,7 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**JobFindsMe** 是一个标准 MCP Server，让你的 AI Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、ZCode 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
+**JobFindsMe** 是一个标准 MCP Server，让你的 AI Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
 
 - 🔍 **一站式搜索** — 同时搜 BOSS直聘、猎聘、前程无忧、智联、拉勾
 - 📄 **本地简历匹配** — 简历不出本地，AI 自动解析技能/经验/学历
@@ -22,60 +22,55 @@
 
 ## 快速开始
 
-JobFindsMe 是一个标准 **MCP Server**，适配所有 MCP 兼容的 Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、ZCode……）。
+JobFindsMe 是一个标准 **MCP Server**，适配所有 MCP 兼容的 Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode……）。
 
-### 1. 安装
-
-```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
-```
-
-### 2. 配置 MCP
-
-**方式 A：输出 JSON 自己粘贴（推荐，适用所有 Agent）**
-
-```bash
-jobfindsme config
-```
-
-输出类似：
-
-```json
-{
-  "mcpServers": {
-    "jobfindsme": {
-      "command": "/path/to/python",
-      "args": ["-m", "jobfindsme.mcp"]
-    }
-  }
-}
-```
-
-粘贴到任意 Agent 的 MCP 配置文件，或用 `--path` 直接写入：
-
-```bash
-jobfindsme install --path ~/.your-agent/mcp.json
-```
-
-**方式 B：快捷安装（已知 Agent）**
-
-```bash
-jobfindsme install claude    # Claude Code
-jobfindsme install codex     # Codex
-# Hermes / OpenClaw / Qoder / … 用 jobfindsme install --path
-jobfindsme install kimi      # Kimi Code
-jobfindsme install trae      # TRAE
-jobfindsme install zcode     # ZCode
-# ... 其他 Agent 用方式 A
-```
-
-**方式 C：让 Agent 帮你装**
+### 1. 安装（最简单：跟 Agent 说一句话）
 
 ```
 帮我安装 JobFindsMe：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-### 3. 重启 Agent，然后搜索
+Agent 会自动完成安装、配置 MCP、安装 Skill。
+
+### 2. 重启 Agent，然后搜索
+
+```
+用 JobFindsMe，根据 ~/Documents/resume.pdf，
+找上海和杭州的 AI 应用工程师岗位。
+```
+
+不需要提供任何 ID 或参数——Core 自动处理一切。
+
+---
+
+### 手动安装（可选）
+
+如果 Agent 无法自动安装，或你需要更精细的控制。
+
+**安装 Python 包：**
+
+```bash
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+```
+
+**配置 MCP — 推荐输出 JSON 自行粘贴（适用所有 Agent）：**
+
+```bash
+jobfindsme config          # 输出标准 MCP JSON → 粘贴到任意 Agent 配置
+jobfindsme install --path ~/.your-agent/mcp.json  # 或直接写入
+```
+
+**快捷安装：**
+
+```bash
+jobfindsme install claude    # Claude Code
+jobfindsme install codex     # Codex
+jobfindsme install kimi      # Kimi Code
+jobfindsme install trae      # TRAE
+jobfindsme install zcode     # ZCode
+jobfindsme install workbuddy # WorkBuddy
+# Hermes / OpenClaw / Qoder → jobfindsme install --path
+```
 
 ```
 用 JobFindsMe，根据 ~/Documents/resume.pdf，
@@ -186,7 +181,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 你说一句话
       │
       ▼
-  Agent（Claude Code / Codex / ZCode / …）
+  Agent（Claude Code / Codex / WorkBuddy / ZCode / …）
       │
       ▼
   JobFindsMe MCP Server（本地）
