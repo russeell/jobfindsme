@@ -7,36 +7,44 @@ def recommended_connectors(
     locations: tuple[str, ...],
     roles: tuple[str, ...] = (),
 ) -> tuple[DiscoverySource, ...]:
-    """Return every maintained auto-connector — browser sources included.
+    """Return auto-connectors ordered by coverage priority.
 
-    Browser-backed sources (Playwright, CDP) will be skipped gracefully
-    when no browser is available; the caller should set allow_browser_sources
-    to True when Chrome is running (via ``jobfindsme setup``).
+    Priority: 四大招聘平台（覆盖全行业）> 国内大厂官网（直达）> SSR 官网（免浏览器）
+
+    CDP / Playwright sources require Chrome; they are skipped gracefully
+    when no browser is available. Set allow_browser_sources=True when
+    Chrome is running (via ``jobfindsme setup``).
     """
 
     if not _targets_china(locations):
         return ()
     query = " ".join(roles[:3]) if roles else "AI 大模型 Agent"
-    # ── Non-browser sources (always safe) ──────────────────────────
-    always = (
+
+    # Tier 1: 四大招聘平台 — 覆盖阿里/华为/京东/网易/拼多多/小红书/快手/小米等全部大厂
+    platforms = (
         DiscoverySource(
-            kind="baidu_career",
-            source_name="百度招聘",
+            kind="boss_cdp",
+            source_name="BOSS直聘",
             query=query,
         ),
         DiscoverySource(
-            kind="greenhouse",
-            source_name="Airbnb 中国",
-            board_token="airbnb",
+            kind="liepin_cdp",
+            source_name="猎聘",
+            query=query,
         ),
         DiscoverySource(
-            kind="ashby",
-            source_name="Airwallex",
-            board_name="airwallex",
+            kind="zhilian_cdp",
+            source_name="智联招聘",
+            query=query,
+        ),
+        DiscoverySource(
+            kind="lagou_cdp",
+            source_name="拉勾",
+            query=query,
         ),
     )
-    # ── SPA / Playwright sources (headless Chromium) ───────────────
-    spa = (
+    # Tier 2: 国内互联网大厂官网直达
+    companies = (
         DiscoverySource(
             kind="spa_playwright",
             source_name="字节跳动",
@@ -61,31 +69,13 @@ def recommended_connectors(
             site_key="bilibili",
             query=query,
         ),
-    )
-    # ── CDP platform sources (user's logged-in Chrome) ─────────────
-    cdp = (
         DiscoverySource(
-            kind="boss_cdp",
-            source_name="BOSS直聘",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="liepin_cdp",
-            source_name="猎聘",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="zhilian_cdp",
-            source_name="智联招聘",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="lagou_cdp",
-            source_name="拉勾",
+            kind="baidu_career",
+            source_name="百度招聘",
             query=query,
         ),
     )
-    return always + spa + cdp
+    return platforms + companies
 
 
 def source_links(

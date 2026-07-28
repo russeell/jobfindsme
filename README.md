@@ -130,16 +130,15 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 
 ## 来源覆盖
 
-**12 个自动 Connector。所有中国大厂岗位都通过 BOSS/猎聘/智联/拉勾覆盖，不需要手动链接。**
+**优先级：四大招聘平台（覆盖全行业）→ 国内大厂官网（直达）**
 
-| 来源 | 类型 | 技术 |
-|------|------|------|
-| 百度、腾讯 | 官网直连 | SSR / JSON-LD |
-| 字节、美团、滴滴、B站 | 官网直连 | Playwright SPA |
-| **BOSS直聘、猎聘、智联、拉勾** | 平台 CDP | Chrome 浏览器桥 |
-| Airbnb、Airwallex | ATS API | Greenhouse / Ashby |
+| 层级 | 来源 | 技术 | 说明 |
+|------|------|------|------|
+| 🥇 | **BOSS直聘、猎聘、智联、拉勾** | Chrome CDP | 覆盖阿里/华为/京东/网易/拼多多/小红书/快手/小米等全部大厂 |
+| 🥈 | 字节、美团、滴滴、B站 | Playwright SPA | 大厂官网直达 |
+| 🥈 | 百度 | SSR 解析 | 官网直达 |
 
-> BOSS直聘 + 猎聘 + 智联 + 拉勾四个平台覆盖阿里、华为、京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想……所有大厂的岗位都在这四个平台上发。不需要逐个攻克官网。
+> 四大招聘平台一个搜索覆盖中国几乎所有互联网公司。不需要逐家攻克官网。
 
 ---
 
@@ -154,10 +153,9 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
       ▼
   JobFindsMe MCP Server（本地）
       │
-      ├── 百度 SSR 解析 ────────→ 百度岗位
-      ├── Playwright 渲染 ───────→ 字节/美团（明确启用）
-      ├── Greenhouse/Ashby API ──→ 外企中国岗
-      ├── Beta Connector ────────→ 滴滴/B站（显式启用）
+  ├── 百度 SSR 解析 ────────→ 百度岗位
+  ├── Playwright 渲染 ───────→ 字节/美团/滴滴/B站
+  ├── Chrome CDP ────────────→ BOSS/猎聘/智联/拉勾
       └── BOSS CDP 桥 ───────────→ Experimental（显式启用）
       │
       ▼
