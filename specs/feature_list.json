@@ -1107,6 +1107,176 @@
         "The field-trial report distinguishes observed facts from assumptions, and synthetic scores from real labels."
       ],
       "evidence_path": "reports/features/M15-001.json"
+    },
+    {
+      "id": "M16-001",
+      "title": "SPA Connector hardening and browser diagnostics",
+      "status": "in_progress",
+      "blocked_by": [
+        "M13-006"
+      ],
+      "allowed_paths": [
+        "pyproject.toml",
+        "src/jobfindsme/connectors/playwright.py",
+        "src/jobfindsme/doctor/**",
+        "tests/connectors/test_playwright_connector.py",
+        "tests/core/test_source_catalog.py",
+        "tests/doctor/**",
+        "tests/importing/test_discovery.py",
+        "specs/feature_list.json",
+        "reports/features/M16-001.json",
+        "reports/field-trials/spa-*.json"
+      ],
+      "acceptance": [
+        "SPA browser behavior is dependency-injected and contract-tested without live network access.",
+        "ByteDance, Meituan, Didi, and Bilibili payload variants normalize into valid job records.",
+        "Browser failures preserve cached jobs and update source health instead of breaking the search.",
+        "The browser extra installs declared Playwright, requests, and websocket dependencies.",
+        "Doctor distinguishes optional browser readiness from required Core readiness.",
+        "Every source advertised as verified has a dated live field-trial report."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors/test_playwright_connector.py",
+          "tests/importing/test_discovery.py",
+          "tests/core/test_source_catalog.py",
+          "tests/doctor"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/connectors/playwright.py",
+          "src/jobfindsme/doctor",
+          "tests/connectors/test_playwright_connector.py",
+          "tests/doctor"
+        ]
+      ],
+      "evidence_path": "reports/features/M16-001.json"
+    },
+    {
+      "id": "M17-001",
+      "title": "BOSS CDP browser bridge hardening",
+      "status": "backlog",
+      "blocked_by": [
+        "M16-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/connectors/boss_zhipin.py",
+        "tests/connectors/test_boss_zhipin.py",
+        "tests/importing/test_discovery.py",
+        "specs/feature_list.json",
+        "reports/features/M17-001.json",
+        "reports/field-trials/boss-*.json"
+      ],
+      "acceptance": [
+        "The CDP bridge navigates to a BOSS origin before invoking the same-origin search endpoint.",
+        "CDP target and WebSocket resources are closed on success and failure.",
+        "API, authentication, protocol, and empty-result behavior are distinguishable.",
+        "BOSS payload mapping and discovery fallback have deterministic automated tests.",
+        "BOSS is advertised as verified only after a dated logged-in field trial."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors/test_boss_zhipin.py",
+          "tests/importing/test_discovery.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/connectors/boss_zhipin.py",
+          "tests/connectors/test_boss_zhipin.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M17-001.json"
+    },
+    {
+      "id": "M18-001",
+      "title": "Schema-aware migration reconciliation",
+      "status": "backlog",
+      "blocked_by": [
+        "M17-001"
+      ],
+      "allowed_paths": [
+        "src/jobfindsme/storage.py",
+        "tests/test_storage.py",
+        "specs/feature_list.json",
+        "reports/features/M18-001.json"
+      ],
+      "acceptance": [
+        "Migration reconciliation validates required columns before recording a version.",
+        "Missing indexes are created when existing tables have a compatible schema.",
+        "Same-name tables with incompatible schemas raise a clear MigrationConflict.",
+        "Fresh install, compatible upgrade, incompatible upgrade, and repeat execution are tested."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/storage.py",
+          "tests/test_storage.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M18-001.json"
+    },
+    {
+      "id": "M19-001",
+      "title": "RC5 release truth and documentation alignment",
+      "status": "backlog",
+      "blocked_by": [
+        "M18-001"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "INSTALL.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "specs/feature_list.json",
+        "reports/release/v0.2.0-rc.5.json",
+        "reports/features/M19-001.json"
+      ],
+      "acceptance": [
+        "README separates verified, beta, and link-only sources.",
+        "Tencent and simultaneous-source claims match the executable source catalog.",
+        "Package, Spec, README, release evidence, Git tag, and prerelease version agree.",
+        "The RC5 install command references an existing Git tag.",
+        "M14 and M15 remain open until real Chinese recommendation evidence is complete."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        [
+          "bash",
+          "scripts/smoke_installed_package.sh"
+        ]
+      ],
+      "evidence_path": "reports/features/M19-001.json"
     }
   ]
 }
