@@ -10,6 +10,7 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
 
     assert report.ok is True
     assert {item.name for item in report.diagnostics} == {
+        "version",
         "python",
         "database",
         "permissions",

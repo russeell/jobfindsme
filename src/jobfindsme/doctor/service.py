@@ -40,6 +40,7 @@ class Doctor:
 
     def run(self) -> DoctorReport:
         diagnostics = (
+            self._version(),
             self._python(),
             self._database(),
             self._permissions(),
@@ -51,6 +52,20 @@ class Doctor:
         return DoctorReport(
             ok=all(item.ok or not item.required for item in diagnostics),
             diagnostics=diagnostics,
+        )
+
+    @staticmethod
+    def _version() -> Diagnostic:
+        try:
+            from importlib.metadata import version
+
+            v = version("jobfindsme")
+        except Exception:
+            v = "unknown"
+        return Diagnostic(
+            name="version",
+            ok=True,
+            message=f"jobfindsme {v}  |  更新: jobfindsme self-update",
         )
 
     @staticmethod

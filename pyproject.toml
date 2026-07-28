@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jobfindsme"
 version = "0.2.0rc5"
-description = "Agent-native, local-first job discovery and tracking engine"
+description = "让岗位来找你——本地优先、Agent 原生的职位发现与跟踪引擎，支持 ZCode/Codex/Claude Code 等 MCP 客户端"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"

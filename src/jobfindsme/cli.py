@@ -34,6 +34,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobfindsme")
     parser.add_argument("--db", type=Path, default=default_database_path())
     parser.add_argument("--output", choices=("json", "markdown"), default="json")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"jobfindsme {_version()}",
+    )
     groups = parser.add_subparsers(dest="group", required=True)
 
     workspace = groups.add_parser("workspace")
@@ -121,11 +126,53 @@ def build_parser() -> argparse.ArgumentParser:
 
     for action in ("install", "upgrade", "uninstall"):
         host_action = groups.add_parser(action)
-        host_action.add_argument("host", choices=("codex", "claude", "qwen"))
+        host_action.add_argument(
+            "host",
+            choices=(
+                "codex",
+                "claude",
+                "qwen",
+                "zcode",
+                "kimi",
+                "trae",
+                "trae-cn",
+                "qoder",
+                "workbuddy",
+            ),
+        )
         host_action.add_argument("--home", type=Path)
 
     groups.add_parser("doctor")
+    groups.add_parser("self-update")
     return parser
+
+
+def _version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("jobfindsme")
+    except Exception:
+        return "unknown"
+
+
+def _self_update() -> dict:
+    import subprocess
+
+    result = subprocess.run(
+        [
+            "pip",
+            "install",
+            "--upgrade",
+            "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return {
+        "ok": result.returncode == 0,
+        "output": (result.stdout + result.stderr).strip(),
+    }
 
 
 def _serializable(value: Any) -> Any:
@@ -269,6 +316,10 @@ def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
 
 def run(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.group == "self-update":
+        result = _self_update()
+        _emit(result, args.output)
+        return 0 if result["ok"] else 1
     if args.group in {"install", "upgrade", "uninstall"}:
         installer = HostInstaller(home=args.home)
         result = getattr(installer, args.group)(args.host)

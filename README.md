@@ -48,6 +48,13 @@ jobfindsme install workbuddy # WorkBuddy
 
 不需要提供任何 ID 或参数——Core 自动处理一切。
 
+**更新到最新版：**
+
+```bash
+jobfindsme self-update     # 升级
+jobfindsme --version       # 查看版本
+jobfindsme doctor          # 诊断（含版本 + Chrome 状态）
+
 默认搜索不会启动 Chrome。字节、美团和 BOSS 等浏览器来源需显式启用。
 
 **启用 BOSS 直聘：**
