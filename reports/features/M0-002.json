@@ -1,0 +1,40 @@
+{
+  "feature_id": "M0-002",
+  "status": "passed",
+  "verified_at": "2026-07-28T03:09:23.258369+00:00",
+  "changed_paths": [
+    "AGENTS.md",
+    "PROJECT_SPEC.md",
+    "README.md",
+    "reports/features/M0-002.json",
+    "scripts/__init__.py",
+    "scripts/check_feature.py",
+    "scripts/feature_harness.py",
+    "scripts/next_feature.py",
+    "scripts/update_feature_status.py",
+    "specs/feature_list.json",
+    "tests/harness/test_feature_harness.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/harness"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 6 items\n\ntests/harness/test_feature_harness.py ......                             [100%]\n\n============================== 6 passed in 0.01s ===============================\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "check",
+        "scripts",
+        "tests/harness"
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    }
+  ]
+}

@@ -8,18 +8,16 @@
 
 ## 1. Product Goal
 
-JobFindsMe 首先服务中国的技术求职者和 AI 工具用户。用户可以提供本地简历，
-也可以只用自然语言描述求职目标，由现有 AI Agent 调用 JobFindsMe，在合规、
-授权和来源可访问的范围内，从企业招聘官网、公开 ATS、招聘平台公开接口及用户
-主动导入的数据中发现、匹配和跟踪仍在招聘的岗位。
+JobFindsMe 面向技术求职者和 AI 工具用户。用户可以提供本地简历，也可以只用
+自然语言描述求职目标，由现有 AI Agent 调用 JobFindsMe，从支持的职位来源中
+发现、匹配和跟踪仍在招聘的岗位。
 
 产品不以抓取页数、模型调用数或 Agent 步数作为成功标准，而以用户是否更快发现、
 打开、收藏和投递真正合适的岗位作为标准。
 
 一句话定位：
 
-> 面向中国技术求职者和 AI 工具用户的本地优先职位发现与跟踪引擎，让现有
-> AI Agent 根据本地简历或描述，找到真正值得投递的岗位。
+> 面向技术求职者和 AI 工具用户的本地优先职位发现与跟踪引擎。
 
 ## 2. V0.1 Scope
 
@@ -28,7 +26,7 @@ V0.1 must provide:
 - a local Workspace with one confirmed candidate profile;
 - multiple Search Plans sharing confirmed profile facts;
 - local resume parsing with evidence and explicit corrections;
-- URL、CSV、JSON、公开 ATS 和一个中国企业官方招聘站 Connector；
+- URL、CSV、JSON、公开 ATS 和企业官方招聘站 Connector；
 - normalization, versioning, deduplication, freshness, and liveness checks;
 - deterministic hard filters, BM25, rule ranking, and match evidence;
 - job states and feedback history;
@@ -50,8 +48,7 @@ V0.1 explicitly excludes:
 The existing Web implementation is an archived prototype, not a dependency of
 this repository.
 
-“兼容所有知名 Agent”是协议和测试目标，不是未经验证的宣传。满足以下条件的
-客户端才进入官方支持列表：
+满足以下条件的客户端才进入官方支持列表：
 
 - 能启动或连接本地 MCP Server；
 - 支持当前严格 JSON Schema；
@@ -95,7 +92,7 @@ jobfindsme profile import /path/to/resume.pdf
 
 ```mermaid
 flowchart TB
-    U["中国技术求职者 / AI 工具用户"] --> H["Qwen Code / Codex / Claude Code / MCP Host"]
+    U["技术求职者 / AI 工具用户"] --> H["Qwen Code / Codex / Claude Code / MCP Host"]
     H --> S["Host Skill"]
     S --> MCP["stdio MCP Adapter"]
 
@@ -251,7 +248,7 @@ First release source portfolio:
 - single job URL;
 - CSV and JSON imports;
 - one generic public ATS connector;
-- one Chinese company official-career-site connector.
+- one official career-site connector for the first validated market.
 
 岗位来源分为四个接入等级：
 
@@ -261,8 +258,8 @@ First release source portfolio:
 4. 需要登录的平台：未来仅考虑由用户主动授权的本地浏览器桥接，不上传账号凭据，
    不代替用户绕过确认步骤。
 
-第一版中国专用来源必须无需登录、岗位详情页稳定、包含发布日期或可验证的新鲜度
-信号、提供明确投递链接，并有足够活跃岗位支持重复测试。
+首个区域化来源必须无需登录、岗位详情页稳定、包含发布日期或可验证的新鲜度信号、
+提供明确投递链接，并有足够活跃岗位支持重复测试。
 
 BOSS直聘、猎聘、智联招聘等招聘 App 不因产品定位而自动成为可抓取数据源。
 只有存在公开接口、公开页面、用户导出或合法授权链路时才接入。JobFindsMe 不保存

@@ -11,3 +11,11 @@
 7. Destructive operations require Core-enforced preview and confirm phases.
 8. Every completed feature needs automated tests and machine-readable evidence.
 9. Do not mark work done when tests are skipped, mocked away, or unverified.
+
+## Feature Loop
+
+```bash
+python3 -m scripts.next_feature
+python3 -m scripts.check_feature <FEATURE_ID>
+python3 -m scripts.update_feature_status <FEATURE_ID> done
+```

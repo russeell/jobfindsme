@@ -23,10 +23,47 @@
       ],
       "acceptance": [
         "V0.1 is explicitly agent-native and local-first.",
-        "The first target users are Chinese technical job seekers and AI tool users.",
+        "The product targets technical job seekers and AI tool users.",
         "Public Web SaaS and a custom agent runtime are out of scope.",
         "Resume and deletion safety are enforced by Core boundaries."
       ]
+    },
+    {
+      "id": "M0-002",
+      "title": "Executable Spec and Loop Harness",
+      "status": "done",
+      "blocked_by": [
+        "M0-001"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "PROJECT_SPEC.md",
+        "AGENTS.md",
+        "specs/feature_list.json",
+        "scripts/**",
+        "tests/harness/**",
+        "reports/features/M0-002.json"
+      ],
+      "acceptance": [
+        "The next executable feature is selected from status and dependencies.",
+        "Feature checks enforce allowed paths and declared commands.",
+        "Done status requires passing machine-readable evidence."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/harness"
+        ],
+        [
+          "ruff",
+          "check",
+          "scripts",
+          "tests/harness"
+        ]
+      ],
+      "evidence_path": "reports/features/M0-002.json"
     },
     {
       "id": "M1-001",
@@ -140,7 +177,7 @@
         "reports/features/M3-001.json"
       ],
       "acceptance": [
-        "URL, CSV, JSON, one public ATS, and one Chinese official career site are covered.",
+        "URL, CSV, JSON, one public ATS, and one official career site are covered.",
         "Recruitment platform data is used only through public, exported, or explicitly authorized paths.",
         "No connector bypasses login, CAPTCHA, anti-bot controls, robots policy, or platform terms.",
         "Normalization, deduplication, freshness, filters, and ranking need no model.",
