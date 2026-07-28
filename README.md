@@ -1,80 +1,82 @@
 # JobFindsMe
 
-Agent-native, local-first job discovery and tracking.
+让现有 AI Agent 根据本地简历，从公开招聘来源发现、匹配并持续跟踪岗位。
 
-JobFindsMe lets existing AI agents work with local resume facts, public or
-user-provided job sources, deterministic matching, job states, and optional
-monitoring. The core workflow needs no model API.
+当前版本：`v0.2.0-rc.1` 发布候选。
 
-## Install
+- 本地优先：简历、收藏和投递状态保存在本机 SQLite
+- 无模型依赖：不配置 API Key 也能完成完整确定性流程
+- Agent 原生：支持 Codex、Claude Code、Qwen Code 和 MCP 客户端
+- 证据匹配：每条技能理由同时关联简历证据和 JD 证据
+- 持续发现：定时刷新已订阅来源，只推送新增匹配岗位
+
+[English](README.en.md)
+
+## 安装
 
 ```bash
 python3 -m pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git"
 jobfindsme doctor
+jobfindsme install codex  # 或 claude / qwen
 ```
 
-Connect one host:
+重启 Agent，然后直接说：
 
-```bash
-jobfindsme install codex
-jobfindsme install claude
-jobfindsme install qwen
+```text
+使用 JobFindsMe，根据 ~/Documents/resume.pdf
+帮我找上海的 AI 应用工程师岗位，优先企业官网，排除外包和驻场。
 ```
 
-Restart the host, then ask it to use JobFindsMe. The bundled Skill tells the
-agent to pass a resume path to the local Core instead of reading the complete
-resume into model context.
+首次使用时，Agent 会让本地 Core 解析简历、请你确认事实并配置搜索。
+用户不需要创建或管理 Workspace ID、Plan ID。
 
-## CLI
+## 工作流
 
-```bash
-jobfindsme workspace init --name "My search"
-
-jobfindsme plan add \
-  --workspace <workspace_id> \
-  --name "AI application engineer" \
-  --role "AI application engineer" \
-  --city "Shanghai"
-
-jobfindsme jobs import \
-  --workspace <workspace_id> \
-  exported-jobs.json
-
-jobfindsme jobs search \
-  --workspace <workspace_id> \
-  --plan <plan_id>
+```text
+本地简历路径
+-> 本地解析与事实确认
+-> 搜索条件与官方来源订阅
+-> 发现、标准化、跨来源去重
+-> 硬条件过滤与画像证据匹配
+-> 岗位摘要、官方投递链接
+-> 收藏 / 忽略 / 已投递
+-> 可选定时刷新与飞书通知
 ```
 
-The MCP `search_jobs` tool can also discover from an explicit Greenhouse board,
-public Schema.org `JobPosting` page, or local CSV/JSON file before matching.
+## 当前来源
 
-## Data And Safety
+| 来源 | 状态 |
+|---|---|
+| Greenhouse 公开 Job Board API | 可用 |
+| Ashby 公开 Job Postings API | 可用 |
+| Airwallex 中国岗位公开看板 | 已完成初始快照验证 |
+| 单岗位 Schema.org `JobPosting` 页面 | 可用 |
+| 用户提供的 CSV / JSON | 可用 |
+| 需要登录、验证码或绕过反爬的平台 | 不支持 |
 
-- SQLite data stays under `~/.jobfindsme/` by default.
-- Resume imports retain confirmed facts and minimum evidence, not complete text.
-- Destructive deletion requires preview and a short-lived confirmation token.
-- Recruitment sources must be public, exported by the user, or explicitly
-  authorized. JobFindsMe does not bypass login, CAPTCHA, robots policy, or
-  platform terms.
+Web 页面、自动投递和云端账户系统不属于当前版本。
 
-## Status
+## 隐私与安全
 
-- 120-case synthetic regression dataset with machine-generated reports
-- Initial end-to-end validation against a captured public official-source feed
-- Compatibility candidates are not marked officially supported until a named
-  client version passes a real field test
+- Agent 不应读取完整简历，只把本地路径交给 JobFindsMe。
+- 岗位描述属于不可信外部数据，默认只返回短摘要。
+- 完整 JD 需要显式查询单个岗位。
+- 数据导出写入本地文件，Agent 只收到路径、Hash 和记录数量。
+- 删除必须经过预览和短期确认令牌两步。
+- HTTP 来源逐跳校验重定向，禁止本地、私网和凭据 URL。
 
-See [`PROJECT_SPEC.md`](PROJECT_SPEC.md) for scope and architecture.
+## 开发状态
 
-## Development
+自动测试验证 Core、CLI、MCP、安装器、监控、隐私和安全边界。
+合成数据只用于回归，不代表真实岗位匹配质量。真实来源兼容性与长期稳定性
+以 [`reports/`](reports/) 中的验证记录为准。
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
 python3 -m pip install -e ".[dev]"
-pytest
+python3 -m pytest
 ruff check .
 ruff format --check .
 ```
 
-Licensed under the MIT License.
+产品边界和架构见 [`PROJECT_SPEC.md`](PROJECT_SPEC.md)。
+项目采用 [MIT License](LICENSE)。

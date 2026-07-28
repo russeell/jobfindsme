@@ -1,4 +1,5 @@
 import sqlite3
+import stat
 
 from jobfindsme.storage import Database
 
@@ -25,6 +26,8 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0005_monitor_config",
         "0006_monitor_runs",
         "0007_job_state_events",
+        "0008_active_context_and_sources",
+        "0009_job_source_records",
     ]
     assert foreign_keys == 1
 
@@ -52,3 +55,15 @@ def test_search_plan_requires_an_existing_workspace(tmp_path) -> None:
             pass
         else:
             raise AssertionError("foreign key violation should fail")
+
+
+def test_database_directory_and_files_are_private_by_default(tmp_path) -> None:
+    database = Database(tmp_path / "private" / "jobfindsme.db")
+
+    with database.connect() as connection:
+        connection.execute("CREATE TABLE privacy_probe (value TEXT)")
+
+    directory_mode = stat.S_IMODE(database.path.parent.stat().st_mode)
+    database_mode = stat.S_IMODE(database.path.stat().st_mode)
+    assert directory_mode == 0o700
+    assert database_mode == 0o600

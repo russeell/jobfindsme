@@ -53,6 +53,50 @@ def test_search_jobs_discovers_explicit_source_before_matching(tmp_path) -> None
     assert [item.job.external_id for item in matches] == ["1"]
 
 
+def test_ashby_source_uses_public_board_name(tmp_path) -> None:
+    class AshbyTransport:
+        def get(self, url: str) -> bytes:
+            assert url.endswith("example?includeCompensation=true")
+            return json.dumps(
+                {
+                    "apiVersion": "1",
+                    "jobs": [
+                        {
+                            "title": "RAG 工程师",
+                            "location": "上海",
+                            "descriptionPlain": "Python RAG Agent",
+                            "publishedAt": "2026-07-20T08:00:00+00:00",
+                            "jobUrl": "https://jobs.ashbyhq.com/example/rag",
+                            "applyUrl": "https://jobs.ashbyhq.com/example/rag/apply",
+                            "isListed": True,
+                        }
+                    ],
+                }
+            ).encode()
+
+    core = JobFindsMeCore(tmp_path / "ashby.db")
+    core.discovery = JobDiscoveryService(
+        core.job_imports,
+        transport=AshbyTransport(),
+    )
+    configured = core.configure_search(
+        target_roles=["RAG 工程师"],
+        locations=["上海"],
+        sources=(
+            DiscoverySource(
+                kind="ashby",
+                source_name="示例公司",
+                board_name="example",
+            ),
+        ),
+    )
+
+    matches = core.search_jobs()
+
+    assert [item.job.external_id for item in matches] == ["rag"]
+    assert configured.sources[0].source.board_name == "example"
+
+
 def test_local_source_is_read_by_core_not_host_model(tmp_path) -> None:
     source = tmp_path / "jobs.json"
     source.write_text(
@@ -78,3 +122,45 @@ def test_local_source_is_read_by_core_not_host_model(tmp_path) -> None:
     assert core.jobs.list(workspace.workspace_id)[0].source.source_url.startswith(
         "file:"
     )
+
+
+def test_successful_subscription_refresh_closes_missing_source_jobs(tmp_path) -> None:
+    class ChangingTransport:
+        def __init__(self) -> None:
+            self.jobs = [
+                {
+                    "id": 1,
+                    "title": "AI应用工程师",
+                    "content": "Python RAG",
+                    "absolute_url": "https://example.com/jobs/1",
+                }
+            ]
+
+        def get(self, _url: str) -> bytes:
+            return json.dumps({"jobs": self.jobs}).encode()
+
+    transport = ChangingTransport()
+    core = JobFindsMeCore(tmp_path / "discover.db")
+    core.discovery = JobDiscoveryService(core.job_imports, transport=transport)
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="greenhouse",
+                source_name="企业招聘官网",
+                board_token="example",
+            ),
+        ),
+    )
+
+    assert len(core.search_jobs()) == 1
+    transport.jobs = []
+    assert core.search_jobs() == []
+
+    stored = core.jobs.list(configured.workspace.workspace_id)
+    subscriptions = core.source_subscriptions.list(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+    )
+    assert stored[0].source.liveness == "closed"
+    assert subscriptions[0].health_status == "healthy"

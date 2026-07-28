@@ -41,13 +41,11 @@ class JobImportService:
         fetched_at: datetime | None = None,
     ) -> ImportSummary:
         raw_records = list(records)
+        normalized = [normalize_job(raw, fetched_at=fetched_at) for raw in raw_records]
         unique: dict[str, JobPosting] = {}
-        for raw in raw_records:
-            job = normalize_job(raw, fetched_at=fetched_at)
+        for job in normalized:
             unique[job.fingerprint] = job
-        versions = sum(
-            self.repository.upsert(workspace_id, job) for job in unique.values()
-        )
+        versions = sum(self.repository.upsert(workspace_id, job) for job in normalized)
         return ImportSummary(
             discovered=len(raw_records),
             unique=len(unique),

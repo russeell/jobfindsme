@@ -39,10 +39,11 @@ def test_all_candidate_clients_use_the_same_stdio_command() -> None:
 def test_shared_suite_covers_protocol_privacy_and_deletion() -> None:
     scenarios = load(COMPATIBILITY / "scenarios.json")["scenarios"]
 
-    assert len(scenarios) == 5
+    assert len(scenarios) == 7
     assert any("resume_path" in item for item in scenarios)
     assert any("delete" in item for item in scenarios)
-    assert any("seven_tools" in item for item in scenarios)
+    assert any("product_tools" in item for item in scenarios)
+    assert any("untrusted" in item for item in scenarios)
 
 
 def test_no_client_is_claimed_supported_before_a_real_field_test() -> None:

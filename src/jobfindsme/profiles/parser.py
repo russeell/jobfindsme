@@ -4,17 +4,12 @@ import re
 from dataclasses import dataclass
 
 from jobfindsme.profiles.models import FactType
+from jobfindsme.taxonomy import SKILL_ALIASES
 
 SKILLS = {
-    "python": "Python",
-    "fastapi": "FastAPI",
-    "pytorch": "PyTorch",
-    "langgraph": "LangGraph",
-    "mcp": "MCP",
-    "rag": "RAG",
-    "bm25": "BM25",
-    "docker": "Docker",
-    "vllm": "vLLM",
+    alias.casefold(): canonical
+    for canonical, aliases in SKILL_ALIASES.items()
+    for alias in (canonical, *aliases)
 }
 
 SECTIONS = {
@@ -38,7 +33,7 @@ class ParsedFact:
 
 
 class DeterministicResumeParser:
-    version = "deterministic-resume-v1"
+    version = "deterministic-resume-v2"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)

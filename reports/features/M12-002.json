@@ -1,0 +1,41 @@
+{
+  "feature_id": "M12-002",
+  "status": "passed",
+  "verified_at": "2026-07-28T05:13:42.112046+00:00",
+  "changed_paths": [
+    "src/jobfindsme/contracts.py",
+    "src/jobfindsme/core/app.py",
+    "src/jobfindsme/mcp/server.py",
+    "tests/mcp/test_tools.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\ntestpaths: tests\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 113 items\n\ntests/cli/test_cli.py .                                                  [  0%]\ntests/connectors/test_connectors.py ........                             [  7%]\ntests/core/test_app.py ......                                            [ 13%]\ntests/core/test_privacy.py ...                                           [ 15%]\ntests/doctor/test_doctor.py ..                                           [ 17%]\ntests/evaluation/test_evaluation.py ...                                  [ 20%]\ntests/harness/test_feature_harness.py ......                             [ 25%]\ntests/importing/test_discovery.py ...                                    [ 28%]\ntests/importing/test_importing.py ......                                 [ 33%]\ntests/installer/test_installer.py .........                              [ 41%]\ntests/integration/test_agent_first_use.py .                              [ 42%]\ntests/integration/test_cli_workflow.py ..                                [ 44%]\ntests/integration/test_real_source_snapshot.py ..                        [ 46%]\ntests/integrations/test_compatibility_matrix.py ...                      [ 48%]\ntests/integrations/test_packaged_skill.py .                              [ 49%]\ntests/integrations/test_primary_hosts.py ...                             [ 52%]\ntests/matching/test_ranker.py ......                                     [ 57%]\ntests/mcp/test_stdio_server.py ..                                        [ 59%]\ntests/mcp/test_tools.py .........                                        [ 67%]\ntests/monitoring/test_monitoring.py .....                                [ 71%]\ntests/notifications/test_feishu.py ....                                  [ 75%]\ntests/profiles/test_extractor.py ......                                  [ 80%]\ntests/profiles/test_parser.py .                                          [ 81%]\ntests/profiles/test_service.py .......                                   [ 87%]\ntests/security/test_resume_privacy.py ..                                 [ 89%]\ntests/test_contracts.py ....                                             [ 92%]\ntests/test_search_plans.py ...                                           [ 95%]\ntests/test_storage.py ...                                                [ 98%]\ntests/test_workspaces.py ..                                              [100%]\n\n============================= 113 passed in 0.71s ==============================\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "check",
+        "."
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "returncode": 0,
+      "output": "89 files already formatted\n"
+    }
+  ]
+}

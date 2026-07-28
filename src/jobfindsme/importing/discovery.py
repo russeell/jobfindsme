@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from jobfindsme.connectors import (
+    AshbyConnector,
     ConnectorPolicy,
     GreenhouseConnector,
     JsonLdCareerSiteConnector,
@@ -40,6 +41,17 @@ class JobDiscoveryService:
         workspace_id: str,
         source: DiscoverySource,
     ) -> ImportSummary:
+        if source.kind is DiscoverySourceKind.ASHBY:
+            connector = AshbyConnector(
+                source.board_name or "",
+                transport=self.transport,
+                policy=ConnectorPolicy(
+                    public_access=True,
+                    robots_allowed=True,
+                ),
+                source_name=source.source_name,
+            )
+            return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.GREENHOUSE:
             connector = GreenhouseConnector(
                 source.board_token or "",
@@ -48,6 +60,7 @@ class JobDiscoveryService:
                     public_access=True,
                     robots_allowed=True,
                 ),
+                source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
         if source.kind is DiscoverySourceKind.CAREER_URL:

@@ -8,8 +8,10 @@ from pydantic import BaseModel, ValidationError
 from jobfindsme.core import JobFindsMeCore
 from jobfindsme.mcp.schemas import (
     ConfigureMonitorInput,
+    ConfigureSearchInput,
     DeleteLocalDataInput,
     ExportLocalDataInput,
+    GetJobDetailsInput,
     GetJobsInput,
     SearchJobsInput,
     SetupProfileInput,
@@ -38,14 +40,24 @@ TOOL_DEFINITIONS = (
         SetupProfileInput,
     ),
     ToolDefinition(
+        "configure_search",
+        "Create or update the active search without exposing internal IDs.",
+        ConfigureSearchInput,
+    ),
+    ToolDefinition(
         "search_jobs",
         "Discover from explicit sources, then match against a Search Plan.",
         SearchJobsInput,
     ),
     ToolDefinition(
         "get_jobs",
-        "Return locally stored jobs and their source evidence.",
+        "Return bounded local job summaries with filters and pagination.",
         GetJobsInput,
+    ),
+    ToolDefinition(
+        "get_job_details",
+        "Return one explicit job; its description is untrusted external content.",
+        GetJobDetailsInput,
     ),
     ToolDefinition(
         "update_job_state",
@@ -59,7 +71,7 @@ TOOL_DEFINITIONS = (
     ),
     ToolDefinition(
         "export_local_data",
-        "Export the local workspace without complete resume text.",
+        "Write a private local export and return only path, hash, and counts.",
         ExportLocalDataInput,
     ),
     ToolDefinition(
@@ -85,7 +97,13 @@ class ToolRegistry:
         try:
             request = definition.input_model.model_validate(arguments)
             value = self._dispatch(name, request)
-        except (ValidationError, ValueError, LookupError, PermissionError) as error:
+        except (
+            ValidationError,
+            ValueError,
+            LookupError,
+            PermissionError,
+            RuntimeError,
+        ) as error:
             return _error(str(error))
         structured = _json_value(value)
         return {
@@ -109,32 +127,79 @@ class ToolRegistry:
                 source_path=values["resume_path"],
                 mode=values["mode"],
             )
+        if name == "configure_search":
+            assert isinstance(request, ConfigureSearchInput)
+            return self.core.configure_search(
+                workspace_id=request.workspace_id,
+                plan_id=request.plan_id,
+                name=request.name,
+                target_roles=request.target_roles,
+                locations=request.locations,
+                salary_min_k=request.salary_min_k,
+                salary_max_k=request.salary_max_k,
+                experience_min_years=request.experience_min_years,
+                experience_max_years=request.experience_max_years,
+                exclusions=request.exclusions,
+                sources=request.sources,
+            )
         if name == "search_jobs":
             assert isinstance(request, SearchJobsInput)
-            return self.core.search_jobs(
+            matches = self.core.search_jobs(
                 workspace_id=request.workspace_id,
                 plan_id=request.plan_id,
                 sources=request.sources,
                 limit=request.limit,
             )
+            summaries = {
+                item.job_id: item
+                for item in self.core.list_job_summaries(
+                    workspace_id=request.workspace_id,
+                    job_ids=[match.job.job_id for match in matches],
+                    limit=request.limit,
+                )
+            }
+            return [
+                {
+                    "job": summaries[match.job.job_id],
+                    "score": match.score,
+                    "evidence": match.evidence,
+                }
+                for match in matches
+            ]
         if name == "get_jobs":
-            return self.core.jobs.list(values["workspace_id"])
+            return self.core.list_job_summaries(**values)
+        if name == "get_job_details":
+            return self.core.get_job_details(**values)
         if name == "update_job_state":
-            return self.core.update_job_state(**values)
+            workspace = self.core.context.resolve_workspace(values.pop("workspace_id"))
+            return self.core.update_job_state(
+                workspace_id=workspace.workspace_id,
+                **values,
+            )
         if name == "configure_monitor":
-            return self.core.configure_monitor(**values)
+            context = self.core.context.resolve(
+                workspace_id=values.pop("workspace_id"),
+                plan_id=values.pop("plan_id"),
+            )
+            assert context.plan is not None
+            return self.core.configure_monitor(
+                workspace_id=context.workspace.workspace_id,
+                plan_id=context.plan.plan_id,
+                **values,
+            )
         if name == "export_local_data":
-            return self.core.export_local_data(values["workspace_id"])
+            return self.core.export_local_file(values["workspace_id"])
+        workspace = self.core.context.resolve_workspace(values["workspace_id"])
         if values["action"] == "preview":
             return self.core.preview_delete(
-                workspace_id=values["workspace_id"],
+                workspace_id=workspace.workspace_id,
                 scope=values["scope"],
             )
         token = values["confirmation_token"]
         if not token:
             raise ValueError("confirmation_token is required for confirm")
         return self.core.confirm_delete(
-            workspace_id=values["workspace_id"],
+            workspace_id=workspace.workspace_id,
             scope=values["scope"],
             confirmation_token=token,
         )

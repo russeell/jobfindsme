@@ -1,0 +1,57 @@
+{
+  "trial_id": "china-seven-day-v0.2-rc.1",
+  "release": "0.2.0-rc.1",
+  "status": "ready",
+  "scope": {
+    "market": "China",
+    "eligible_locations": [
+      "北京",
+      "上海",
+      "深圳",
+      "杭州",
+      "广州",
+      "成都",
+      "重庆",
+      "武汉",
+      "西安",
+      "南京",
+      "苏州"
+    ],
+    "target_roles": [
+      "AI应用工程师",
+      "大模型应用工程师",
+      "Agent工程师",
+      "RAG工程师"
+    ],
+    "exclude": [
+      "外包",
+      "驻场"
+    ],
+    "daily_top_k": 10
+  },
+  "metrics": [
+    "worth_opening_at_10",
+    "missed_or_misranked_jobs",
+    "duplicate_jobs",
+    "invalid_links",
+    "source_failures",
+    "hard_filter_false_negatives",
+    "agent_workflow_success",
+    "time_to_first_results_seconds"
+  ],
+  "days": [
+    {"day": 1, "date": null, "status": "pending"},
+    {"day": 2, "date": null, "status": "pending"},
+    {"day": 3, "date": null, "status": "pending"},
+    {"day": 4, "date": null, "status": "pending"},
+    {"day": 5, "date": null, "status": "pending"},
+    {"day": 6, "date": null, "status": "pending"},
+    {"day": 7, "date": null, "status": "pending"}
+  ],
+  "claim_policy": [
+    "Only user-confirmed labels count as human annotations.",
+    "Only observed China-role results count toward trial metrics.",
+    "Missing data remains null and is never inferred.",
+    "Prompt-injection controls are described as exposure reduction, not complete isolation."
+  ]
+}
