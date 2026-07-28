@@ -148,7 +148,9 @@ class JobFindsMeCore:
             workspace_id=context.workspace.workspace_id,
             plan_id=plan.plan_id,
         ):
-            selected_sources = recommended_connectors(tuple(locations))
+            selected_sources = recommended_connectors(
+                tuple(locations), tuple(target_roles)
+            )
         subscriptions = (
             self.source_subscriptions.replace(
                 workspace_id=context.workspace.workspace_id,

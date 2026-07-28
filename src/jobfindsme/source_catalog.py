@@ -7,45 +7,42 @@ from jobfindsme.contracts import DiscoverySource, SourceLink
 
 def recommended_connectors(
     locations: tuple[str, ...],
+    roles: tuple[str, ...] = (),
 ) -> tuple[DiscoverySource, ...]:
     """Return only sources with a maintained public connector contract."""
 
     if not _targets_china(locations):
         return ()
+    query = " ".join(roles[:3]) if roles else "AI 大模型 Agent"
     return (
         DiscoverySource(
             kind="baidu_career",
-            source_name="百度-AI应用工程师",
-            query="AI应用工程师 Agent",
-        ),
-        DiscoverySource(
-            kind="baidu_career",
-            source_name="百度-大模型",
-            query="大模型 LLM",
+            source_name="百度招聘",
+            query=query,
         ),
         DiscoverySource(
             kind="spa_playwright",
             source_name="字节跳动",
             site_key="bytedance",
-            query="AI",
+            query=query,
         ),
         DiscoverySource(
             kind="spa_playwright",
             source_name="美团",
             site_key="meituan",
-            query="AI",
+            query=query,
         ),
         DiscoverySource(
             kind="spa_playwright",
             source_name="滴滴",
             site_key="didi",
-            query="AI",
+            query=query,
         ),
         DiscoverySource(
             kind="spa_playwright",
             source_name="哔哩哔哩",
             site_key="bilibili",
-            query="AI",
+            query=query,
         ),
         DiscoverySource(
             kind="greenhouse",

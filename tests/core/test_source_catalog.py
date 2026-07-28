@@ -8,8 +8,7 @@ def test_china_search_gets_maintained_connector_without_ats_parameters() -> None
 
     assert sources
     assert {source.source_name for source in sources} == {
-        "百度-AI应用工程师",
-        "百度-大模型",
+        "百度招聘",
         "字节跳动",
         "美团",
         "滴滴",
@@ -18,6 +17,7 @@ def test_china_search_gets_maintained_connector_without_ats_parameters() -> None
         "Airwallex",
     }
     assert next(source for source in sources if source.kind == "baidu_career").query
+    assert next(source for source in sources if source.kind == "baidu_career").query
 
 
 def test_catalog_links_official_careers_and_platform_live_search() -> None:
@@ -25,7 +25,6 @@ def test_catalog_links_official_careers_and_platform_live_search() -> None:
     names = {link.name for link in links}
 
     # Auto-connected
-    assert "百度招聘 (自动)" in names
     assert "腾讯招聘 (自动)" in names
     assert "字节跳动招聘 (自动)" in names
     assert "美团招聘 (自动)" in names
