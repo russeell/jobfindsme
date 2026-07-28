@@ -315,10 +315,10 @@ class BossZhipinConnector:
 BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
 
 PLATFORM_LOGIN_URLS = {
-    "boss": ("https://www.zhipin.com/web/user/?ka=header-login", "BOSS直聘"),
+    "boss": ("https://www.zhipin.com/web/user/", "BOSS直聘"),
     "liepin": ("https://www.liepin.com/login/", "猎聘"),
-    "zhilian": ("https://passport.zhaopin.com/login", "智联招聘"),
-    "lagou": ("https://passport.lagou.com/login/login.html", "拉勾"),
+    "zhilian": ("https://www.zhaopin.com", "智联招聘"),
+    "lagou": ("https://www.lagou.com", "拉勾"),
 }
 
 
@@ -368,6 +368,12 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     subprocess.Popen(
         [chrome, f"--remote-debugging-port={DEFAULT_CDP_PORT}",
          f"--user-data-dir={profile}"] + urls,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    # Bring Chrome to foreground on macOS
+    subprocess.run(
+        ["open", "-a", "Google Chrome"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
