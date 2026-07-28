@@ -15,7 +15,9 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         ).fetchall()
         foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
 
-    assert [row["version"] for row in versions] == ["0001_workspace"]
+    applied_versions = [row["version"] for row in versions]
+    assert applied_versions == sorted(set(applied_versions))
+    assert applied_versions == ["0001_workspace", "0002_profiles"]
     assert foreign_keys == 1
 
 

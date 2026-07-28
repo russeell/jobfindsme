@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from jobfindsme.contracts import SearchPlan, Workspace
+from jobfindsme.profiles.models import (
+    CandidateProfile,
+    ProfileSummary,
+    ResumeImportMode,
+)
+from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.search_plans import SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
@@ -17,6 +23,7 @@ class JobFindsMeCore:
         self.database.migrate()
         self.workspaces = WorkspaceService(self.database)
         self.search_plans = SearchPlanService(self.database)
+        self.profiles = ResumeProfileService(self.database)
 
     def create_workspace(self, name: str = "My Job Search") -> Workspace:
         return self.workspaces.create(name)
@@ -51,3 +58,31 @@ class JobFindsMeCore:
 
     def list_search_plans(self, workspace_id: str) -> list[SearchPlan]:
         return self.search_plans.list(workspace_id)
+
+    def import_resume(
+        self,
+        *,
+        workspace_id: str,
+        source_path: str | Path,
+        mode: ResumeImportMode = ResumeImportMode.FORGET_SOURCE,
+    ) -> CandidateProfile:
+        return self.profiles.import_resume(
+            workspace_id=workspace_id,
+            source_path=source_path,
+            mode=mode,
+        )
+
+    def confirm_profile(
+        self,
+        *,
+        workspace_id: str,
+        profile_id: str,
+        accepted_fact_ids: Sequence[str],
+        corrections: Mapping[str, str] | None = None,
+    ) -> ProfileSummary:
+        return self.profiles.confirm_profile(
+            workspace_id=workspace_id,
+            profile_id=profile_id,
+            accepted_fact_ids=accepted_fact_ids,
+            corrections=corrections,
+        )
