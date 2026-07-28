@@ -44,60 +44,165 @@ def source_links(
 
     query = " ".join((*roles, *locations)).strip() or "AI 工程师"
     encoded = quote_plus(query)
+
     return (
+        # ── 有自动 Connector 的企业 ──
+        SourceLink(
+            name="百度招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url=f"https://talent.baidu.com/jobs/social-list?search={encoded}",
+            access_mode="official_link",
+            note="已接入自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
+            name="腾讯招聘 (自动)",
+            category="企业官网 · 自动发现",
+            url="https://careers.tencent.com/zh-cn/search.html",
+            access_mode="official_link",
+            note="已接入自动 Connector，岗位实时获取并匹配",
+        ),
+        SourceLink(
+            name="Airbnb 中国 (自动)",
+            category="企业官网 · 自动发现",
+            url="https://boards.greenhouse.io/airbnb",
+            access_mode="official_link",
+            note="通过 Greenhouse 公开 API 自动获取中国区岗位",
+        ),
+        # ── 企业官网（手动浏览） ──
+        SourceLink(
+            name="字节跳动招聘",
+            category="企业官网 · 互联网大厂",
+            url=(f"https://jobs.bytedance.com/experienced/position?keywords={encoded}"),
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="阿里巴巴招聘",
+            category="企业官网 · 互联网大厂",
+            url=f"https://talent.alibaba.com/off-campus/?search={encoded}",
+            access_mode="official_link",
+        ),
         SourceLink(
             name="华为招聘",
-            category="企业官网",
-            url="https://career.huawei.com/reccampportal/portal5/"
-            "social-recruitment-ai.html",
+            category="企业官网 · 互联网大厂",
+            url="https://career.huawei.com/reccampportal/portal5/social-recruitment-ai.html",
             access_mode="official_link",
             note="AI 社会招聘专区",
         ),
         SourceLink(
-            name="百度招聘",
-            category="企业官网",
-            url=f"https://talent.baidu.com/jobs/list?search={encoded}",
+            name="美团招聘",
+            category="企业官网 · 互联网大厂",
+            url=f"https://zhaopin.meituan.com/web/campus?keyword={encoded}",
             access_mode="official_link",
         ),
         SourceLink(
-            name="腾讯招聘",
-            category="企业官网",
-            url="https://careers.tencent.com/zh-cn/search.html",
+            name="京东招聘",
+            category="企业官网 · 互联网大厂",
+            url=f"https://zhaopin.jd.com/web/jobs?keyword={encoded}",
             access_mode="official_link",
         ),
         SourceLink(
-            name="字节跳动招聘",
-            category="企业官网",
-            url=f"https://jobs.bytedance.com/experienced/position?keywords={encoded}",
+            name="网易招聘",
+            category="企业官网 · 互联网大厂",
+            url=f"https://hr.163.com/job-list.html?keyword={encoded}",
             access_mode="official_link",
         ),
+        SourceLink(
+            name="拼多多招聘",
+            category="企业官网 · 互联网大厂",
+            url=f"https://careers.pinduoduo.com/jobs?search={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="小红书招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://job.xiaohongshu.com/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="快手招聘",
+            category="企业官网 · 知名企业",
+            url=(f"https://zhaopin.kuaishou.cn/recruit/social?searchKey={encoded}"),
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="小米招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://zhaopin.xiaomi.com/?keywords={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="滴滴招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://talent.didiglobal.com/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="携程招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://job.ctrip.com/social-recruitment.html?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="哔哩哔哩招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://jobs.bilibili.com/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="蚂蚁集团招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://talent.antgroup.com/position?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="联想招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://talent.lenovo.com.cn/search?key={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="大疆招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://we.dji.com/zh-CN/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="蔚来招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://nio.cn/careers/social?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        SourceLink(
+            name="商汤科技招聘",
+            category="企业官网 · 知名企业",
+            url=f"https://www.sensetime.com/cn/join-list?keyword={encoded}",
+            access_mode="official_link",
+        ),
+        # ── 招聘平台（用户自行浏览） ──
         SourceLink(
             name="BOSS直聘",
             category="招聘平台",
             url=f"https://www.zhipin.com/web/geek/job?query={encoded}",
             access_mode="user_browser",
-            note="需要用户在官方平台完成登录与查看",
+            note="需在平台登录后查看",
         ),
         SourceLink(
             name="猎聘",
             category="招聘平台",
             url=f"https://www.liepin.com/zhaopin/?key={encoded}",
             access_mode="user_browser",
-            note="不通过未授权接口抓取",
         ),
         SourceLink(
             name="智联招聘",
             category="招聘平台",
             url=f"https://sou.zhaopin.com/?kw={encoded}",
             access_mode="user_browser",
-            note="不通过未授权接口抓取",
         ),
         SourceLink(
             name="前程无忧",
             category="招聘平台",
             url=f"https://we.51job.com/pc/search?keyword={encoded}",
             access_mode="user_browser",
-            note="不通过未授权接口抓取",
         ),
     )
 

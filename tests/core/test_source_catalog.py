@@ -20,7 +20,20 @@ def test_catalog_links_official_careers_and_platform_live_search() -> None:
     links = source_links(("AI应用工程师",), ("上海",))
     names = {link.name for link in links}
 
-    assert {"华为招聘", "百度招聘", "腾讯招聘", "字节跳动招聘"} <= names
+    # Auto-connected
+    assert "百度招聘 (自动)" in names
+    assert "腾讯招聘 (自动)" in names
+    assert "Airbnb 中国 (自动)" in names
+
+    # Big tech career sites
+    assert {"字节跳动招聘", "阿里巴巴招聘", "华为招聘", "美团招聘"} <= names
+    assert {"京东招聘", "网易招聘", "拼多多招聘"} <= names
+
+    # Known tech
+    assert {"小红书招聘", "快手招聘", "小米招聘", "滴滴招聘"} <= names
+    assert {"哔哩哔哩招聘", "蚂蚁集团招聘"} <= names
+
+    # Recruitment platforms
     assert {"BOSS直聘", "猎聘", "智联招聘", "前程无忧"} <= names
     boss = next(link for link in links if link.name == "BOSS直聘")
     assert "AI应用工程师" in unquote_plus(boss.url)
