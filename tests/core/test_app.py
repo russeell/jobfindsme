@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 from jobfindsme.core import JobFindsMeCore
+from jobfindsme.importing.parsers import parse_json
 
 
 def test_core_composes_workspace_and_plan_use_cases(tmp_path) -> None:
@@ -36,3 +37,35 @@ def test_core_does_not_import_adapter_frameworks() -> None:
             if isinstance(node, ast.ImportFrom) and node.module
         )
         assert imports.isdisjoint(forbidden), path
+
+
+def test_core_matches_imported_jobs_without_an_adapter_framework(tmp_path) -> None:
+    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    workspace = core.create_workspace("求职")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="杭州AI",
+        target_roles=["AI应用工程师"],
+        locations=["杭州"],
+    )
+    records = parse_json(
+        """
+        [{
+          "id": "1",
+          "title": "AI应用工程师",
+          "company": "示例科技",
+          "location": "杭州",
+          "description": "Python RAG Agent",
+          "url": "https://example.com/jobs/1"
+        }]
+        """,
+        source_name="fixture",
+    )
+    core.job_imports.import_records(workspace.workspace_id, records)
+
+    matches = core.match_jobs(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+    )
+
+    assert [match.job.external_id for match in matches] == ["1"]

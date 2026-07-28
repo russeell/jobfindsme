@@ -1,0 +1,66 @@
+{
+  "feature_id": "M3-001",
+  "status": "passed",
+  "verified_at": "2026-07-28T03:25:09.032272+00:00",
+  "changed_paths": [
+    "data/fixtures/greenhouse_jobs.json",
+    "data/fixtures/official_career_job.html",
+    "reports/features/M3-001.json",
+    "specs/feature_list.json",
+    "src/jobfindsme/connectors/__init__.py",
+    "src/jobfindsme/connectors/base.py",
+    "src/jobfindsme/connectors/career_site.py",
+    "src/jobfindsme/connectors/greenhouse.py",
+    "src/jobfindsme/connectors/http.py",
+    "src/jobfindsme/contracts.py",
+    "src/jobfindsme/core/app.py",
+    "src/jobfindsme/importing/__init__.py",
+    "src/jobfindsme/importing/normalizer.py",
+    "src/jobfindsme/importing/parsers.py",
+    "src/jobfindsme/importing/repository.py",
+    "src/jobfindsme/importing/service.py",
+    "src/jobfindsme/matching/__init__.py",
+    "src/jobfindsme/matching/ranker.py",
+    "src/jobfindsme/matching/tokenizer.py",
+    "src/jobfindsme/migrations/0003_jobs.sql",
+    "tests/connectors/test_connectors.py",
+    "tests/core/test_app.py",
+    "tests/importing/test_importing.py",
+    "tests/matching/test_ranker.py",
+    "tests/test_contracts.py",
+    "tests/test_storage.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/connectors",
+        "tests/importing",
+        "tests/matching",
+        "tests/core",
+        "tests/test_contracts.py",
+        "tests/test_storage.py"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 23 items\n\ntests/connectors/test_connectors.py .......                              [ 30%]\ntests/importing/test_importing.py ....                                   [ 47%]\ntests/matching/test_ranker.py ...                                        [ 60%]\ntests/core/test_app.py ...                                               [ 73%]\ntests/test_contracts.py ....                                             [ 91%]\ntests/test_storage.py ..                                                 [100%]\n\n============================== 23 passed in 0.10s ==============================\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "check",
+        "src/jobfindsme/connectors",
+        "src/jobfindsme/importing",
+        "src/jobfindsme/matching",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core",
+        "tests/connectors",
+        "tests/importing",
+        "tests/matching"
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    }
+  ]
+}

@@ -184,17 +184,23 @@
     {
       "id": "M3-001",
       "title": "Official-source discovery and deterministic matching",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M2-001"
       ],
       "allowed_paths": [
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
         "src/jobfindsme/connectors/**",
         "src/jobfindsme/importing/**",
         "src/jobfindsme/matching/**",
+        "src/jobfindsme/migrations/**",
+        "tests/core/**",
         "tests/connectors/**",
         "tests/importing/**",
         "tests/matching/**",
+        "tests/test_contracts.py",
+        "tests/test_storage.py",
         "data/fixtures/**",
         "specs/feature_list.json",
         "reports/features/M3-001.json"
@@ -205,12 +211,38 @@
         "No connector bypasses login, CAPTCHA, anti-bot controls, robots policy, or platform terms.",
         "Normalization, deduplication, freshness, filters, and ranking need no model.",
         "Every result retains source, liveness, and match evidence."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors",
+          "tests/importing",
+          "tests/matching",
+          "tests/core",
+          "tests/test_contracts.py",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/connectors",
+          "src/jobfindsme/importing",
+          "src/jobfindsme/matching",
+          "src/jobfindsme/contracts.py",
+          "src/jobfindsme/core",
+          "tests/connectors",
+          "tests/importing",
+          "tests/matching"
+        ]
+      ],
+      "evidence_path": "reports/features/M3-001.json"
     },
     {
       "id": "M3-002",
       "title": "Offline evaluation and release gates",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M3-001"
       ],

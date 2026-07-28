@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from jobfindsme.contracts import SearchPlan, Workspace
+from jobfindsme.contracts import JobMatch, SearchPlan, Workspace
+from jobfindsme.importing.repository import JobRepository
+from jobfindsme.importing.service import JobImportService
+from jobfindsme.matching import DeterministicMatcher
 from jobfindsme.profiles.models import (
     CandidateProfile,
     ProfileSummary,
@@ -24,6 +27,9 @@ class JobFindsMeCore:
         self.workspaces = WorkspaceService(self.database)
         self.search_plans = SearchPlanService(self.database)
         self.profiles = ResumeProfileService(self.database)
+        self.jobs = JobRepository(self.database)
+        self.job_imports = JobImportService(self.jobs)
+        self.matcher = DeterministicMatcher()
 
     def create_workspace(self, name: str = "My Job Search") -> Workspace:
         return self.workspaces.create(name)
@@ -86,3 +92,12 @@ class JobFindsMeCore:
             accepted_fact_ids=accepted_fact_ids,
             corrections=corrections,
         )
+
+    def match_jobs(
+        self, *, workspace_id: str, plan_id: str, limit: int = 20
+    ) -> list[JobMatch]:
+        plan = self.search_plans.get(
+            workspace_id=workspace_id,
+            plan_id=plan_id,
+        )
+        return self.matcher.match(plan, self.jobs.list(workspace_id), limit=limit)
