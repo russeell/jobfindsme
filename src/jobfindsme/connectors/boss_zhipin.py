@@ -308,3 +308,59 @@ class BossZhipinConnector:
                 "welfare": item.get("welfare", ""),
             },
         )
+
+
+# ── Chrome profile management ────────────────────────────────────────────────
+
+BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
+
+
+def setup_boss_chrome() -> dict:
+    """Launch an isolated Chrome profile for BOSS login.
+
+    Opens zhipin.com in a dedicated Chrome window. The user logs in once;
+    the session persists in ~/.jobfindsme/chrome-profile and is reused
+    automatically by all subsequent BOSS searches.
+
+    Returns a status dict with 'ok' and 'message'.
+    """
+    import subprocess
+    from pathlib import Path
+
+    profile = Path(BOSS_PROFILE_DIR).expanduser()
+    profile.mkdir(parents=True, exist_ok=True)
+
+    chrome_paths = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+    ]
+
+    chrome = next((p for p in chrome_paths if Path(p).exists()), None)
+    if not chrome:
+        return {
+            "ok": False,
+            "message": "未找到 Chrome。请安装 Google Chrome 后重试。",
+        }
+
+    subprocess.Popen(
+        [
+            chrome,
+            f"--remote-debugging-port={DEFAULT_CDP_PORT}",
+            f"--user-data-dir={profile}",
+            BOSS_ORIGIN,
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    return {
+        "ok": True,
+        "message": (
+            f"Chrome 已启动（端口 {DEFAULT_CDP_PORT}）。\n"
+            "请在打开的窗口里登录 zhipin.com。\n"
+            "登录态将保存在本地，以后搜索自动生效，无需重复操作。\n"
+            f"Profile: {profile}"
+        ),
+    }

@@ -57,15 +57,10 @@ jobfindsme doctor          # 诊断（含版本 + Chrome 状态）
 
 默认搜索不会启动 Chrome。字节、美团和 BOSS 等浏览器来源需显式启用。
 
-**启用 BOSS 直聘：**
+**启用 BOSS 直聘（一次操作，永久生效）：**
 
 ```bash
-# 1. 以调试模式启动 Chrome（只需一次）
-open -a "Google Chrome" --args --remote-debugging-port=9222
-
-# 2. 在 Chrome 中打开 zhipin.com 登录
-
-# 3. 在 Agent 中正常搜索，BOSS 岗位自动出现
+jobfindsme boss-setup     # 自动打开 Chrome → 登录 zhipin.com → 完成
 ```
 
 岗位始终按固定格式返回，校招/社招和实习/正式分别标注：

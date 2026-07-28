@@ -144,6 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     groups.add_parser("doctor")
     groups.add_parser("self-update")
+    groups.add_parser("boss-setup")
     return parser
 
 
@@ -319,6 +320,12 @@ def run(argv: Sequence[str] | None = None) -> int:
     if args.group == "self-update":
         result = _self_update()
         _emit(result, args.output)
+        return 0 if result["ok"] else 1
+    if args.group == "boss-setup":
+        from jobfindsme.connectors.boss_zhipin import setup_boss_chrome
+
+        result = setup_boss_chrome()
+        _emit(result, "markdown")
         return 0 if result["ok"] else 1
     if args.group in {"install", "upgrade", "uninstall"}:
         installer = HostInstaller(home=args.home)
