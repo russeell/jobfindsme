@@ -1198,7 +1198,7 @@
     {
       "id": "M18-001",
       "title": "Schema-aware migration reconciliation",
-      "status": "in_progress",
+      "status": "done",
       "blocked_by": [
         "M17-001"
       ],

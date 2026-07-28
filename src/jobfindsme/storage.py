@@ -72,6 +72,56 @@ class Database:
         ).fetchone()
         return row is not None
 
+    @staticmethod
+    def _column_signatures(
+        connection: sqlite3.Connection,
+        table_name: str,
+    ) -> dict[str, tuple[str, bool, int]]:
+        rows = connection.execute(f'PRAGMA table_info("{table_name}")').fetchall()
+        return {
+            row["name"]: (
+                str(row["type"]).upper(),
+                bool(row["notnull"]),
+                int(row["pk"]),
+            )
+            for row in rows
+        }
+
+    def _validate_compatible_schema(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        migration: str,
+        sql: str,
+        table_names: set[str],
+    ) -> None:
+        reference = sqlite3.connect(":memory:")
+        reference.row_factory = sqlite3.Row
+        try:
+            reference.executescript(sql)
+            for table_name in table_names:
+                expected = self._column_signatures(reference, table_name)
+                actual = self._column_signatures(connection, table_name)
+                missing = sorted(set(expected) - set(actual))
+                incompatible = sorted(
+                    name
+                    for name in expected.keys() & actual.keys()
+                    if expected[name] != actual[name]
+                )
+                if missing or incompatible:
+                    details = []
+                    if missing:
+                        details.append(f"missing columns {missing}")
+                    if incompatible:
+                        details.append(f"incompatible columns {incompatible}")
+                    raise MigrationConflict(
+                        f"Migration {migration} cannot reconcile table "
+                        f"{table_name}: {', '.join(details)}. Restore from a "
+                        "backup or migrate the old schema explicitly."
+                    )
+        finally:
+            reference.close()
+
     def _execute_sql_safely(self, connection: sqlite3.Connection, sql: str) -> None:
         """Execute migration SQL, skipping CREATE TABLE/INDEX that already exist."""
         for statement in _split_sql_statements(sql):
@@ -127,8 +177,17 @@ class Database:
                 if table_names:
                     existing = self._existing_tables(connection, table_names)
                     if existing == table_names:
-                        # All tables exist – previously applied under a
-                        # different migration name. Reconcile without re-running.
+                        # A previous release may have used another migration
+                        # version name. Table names alone are not enough: verify
+                        # required columns before recording the new version.
+                        self._validate_compatible_schema(
+                            connection,
+                            migration=path.stem,
+                            sql=sql,
+                            table_names=table_names,
+                        )
+                        # Re-run safely so missing explicit indexes are restored.
+                        self._execute_sql_safely(connection, sql)
                         connection.execute(
                             "INSERT INTO schema_migrations "
                             "(version, applied_at) "

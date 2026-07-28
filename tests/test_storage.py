@@ -94,10 +94,15 @@ def test_reconcile_when_tables_already_exist(tmp_path) -> None:
             row["version"]
             for row in conn.execute("SELECT version FROM schema_migrations").fetchall()
         }
+        index = conn.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='index' AND name='idx_search_plans_workspace'"
+        ).fetchone()
     assert "0001_old_name" in versions
     assert "0001_workspace" in versions
     # Other migrations should also be applied (fresh tables)
     assert "0002_profiles" in versions
+    assert index is not None
 
 
 def test_partial_table_state_raises_conflict(tmp_path) -> None:
@@ -189,6 +194,44 @@ def test_reconcile_preserves_existing_data(tmp_path) -> None:
     assert len(rows) == 1
     assert rows[0]["workspace_id"] == "ws-1"
     assert rows[0]["name"] == "test"
+
+
+def test_same_table_names_with_missing_columns_raise_conflict(tmp_path) -> None:
+    database = Database(tmp_path / "jobfindsme.db")
+
+    with database.connect() as conn:
+        conn.execute(
+            """
+            CREATE TABLE workspaces (
+                workspace_id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE search_plans (
+                plan_id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                target_roles_json TEXT NOT NULL,
+                locations_json TEXT NOT NULL,
+                exclusions_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+
+    with pytest.raises(MigrationConflict) as exc:
+        database.migrate()
+
+    message = str(exc.value)
+    assert "0001_workspace" in message
+    assert "search_plans" in message
+    assert "missing columns" in message
+    assert "official_sources_only" in message
 
 
 def test_search_plan_requires_an_existing_workspace(tmp_path) -> None:
