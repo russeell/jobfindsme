@@ -367,6 +367,8 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
 
     subprocess.Popen(
         [chrome, f"--remote-debugging-port={DEFAULT_CDP_PORT}",
+         "--remote-allow-origins=*",
+         "--disable-gpu",
          f"--user-data-dir={profile}"] + urls,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
