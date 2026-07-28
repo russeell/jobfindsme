@@ -3,10 +3,18 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
-from jobfindsme.contracts import JobMatch, SearchPlan, Workspace
+from jobfindsme.contracts import (
+    JobMatch,
+    JobState,
+    JobStateKind,
+    SearchPlan,
+    Workspace,
+)
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
+from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
 from jobfindsme.profiles.models import (
     CandidateProfile,
     ProfileSummary,
@@ -30,6 +38,8 @@ class JobFindsMeCore:
         self.jobs = JobRepository(self.database)
         self.job_imports = JobImportService(self.jobs)
         self.matcher = DeterministicMatcher()
+        self.job_states = JobStateService(self.database)
+        self.privacy = PrivacyService(self.database)
 
     def create_workspace(self, name: str = "My Job Search") -> Workspace:
         return self.workspaces.create(name)
@@ -101,3 +111,43 @@ class JobFindsMeCore:
             plan_id=plan_id,
         )
         return self.matcher.match(plan, self.jobs.list(workspace_id), limit=limit)
+
+    def update_job_state(
+        self,
+        *,
+        workspace_id: str,
+        job_id: str,
+        state: JobStateKind,
+        note: str = "",
+    ) -> JobState:
+        return self.job_states.set(
+            workspace_id=workspace_id,
+            job_id=job_id,
+            state=state,
+            note=note,
+        )
+
+    def list_job_states(self, workspace_id: str) -> list[JobState]:
+        return self.job_states.list(workspace_id)
+
+    def export_local_data(self, workspace_id: str) -> dict[str, object]:
+        return self.privacy.export_workspace(workspace_id)
+
+    def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
+        return self.privacy.preview_delete(
+            workspace_id=workspace_id,
+            scope=scope,
+        )
+
+    def confirm_delete(
+        self,
+        *,
+        workspace_id: str,
+        scope: str,
+        confirmation_token: str,
+    ) -> DeletionResult:
+        return self.privacy.confirm_delete(
+            workspace_id=workspace_id,
+            scope=scope,
+            confirmation_token=confirmation_token,
+        )

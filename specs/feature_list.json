@@ -289,15 +289,22 @@
     {
       "id": "M4-001",
       "title": "Product-grade CLI adapter",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M3-002"
       ],
       "allowed_paths": [
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
         "src/jobfindsme/cli.py",
         "src/jobfindsme/__main__.py",
+        "src/jobfindsme/job_states.py",
+        "src/jobfindsme/privacy.py",
+        "src/jobfindsme/migrations/**",
         "tests/cli/**",
+        "tests/core/**",
         "tests/integration/**",
+        "tests/test_storage.py",
         "specs/feature_list.json",
         "reports/features/M4-001.json"
       ],
@@ -305,12 +312,34 @@
         "CLI completes profile, plan, search, state, export, and deletion workflows.",
         "CLI calls Core directly and supports Markdown and JSON output.",
         "CLI remains the fallback when MCP or host path access fails."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/cli",
+          "tests/integration",
+          "tests/core",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/cli.py",
+          "src/jobfindsme/core",
+          "src/jobfindsme/job_states.py",
+          "src/jobfindsme/privacy.py",
+          "tests/cli",
+          "tests/integration"
+        ]
+      ],
+      "evidence_path": "reports/features/M4-001.json"
     },
     {
       "id": "M5-001",
       "title": "Local stdio MCP server",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M4-001"
       ],

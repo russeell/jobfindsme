@@ -119,3 +119,18 @@ class JobMatch(StrictModel):
     job: JobPosting
     score: float = Field(ge=0, le=1)
     evidence: MatchEvidence
+
+
+class JobStateKind(StrEnum):
+    DISCOVERED = "discovered"
+    SAVED = "saved"
+    APPLIED = "applied"
+    REJECTED = "rejected"
+
+
+class JobState(StrictModel):
+    workspace_id: str
+    job_id: str
+    state: JobStateKind
+    note: str = Field(default="", max_length=1000)
+    updated_at: datetime

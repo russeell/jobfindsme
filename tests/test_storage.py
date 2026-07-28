@@ -21,6 +21,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0001_workspace",
         "0002_profiles",
         "0003_jobs",
+        "0004_user_workflows",
     ]
     assert foreign_keys == 1
 

@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+import pytest
+
+from jobfindsme.core import JobFindsMeCore
+
+
+def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> None:
+    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    workspace = core.create_workspace("private")
+    preview = core.preview_delete(
+        workspace_id=workspace.workspace_id,
+        scope="workspace",
+    )
+
+    with pytest.raises(PermissionError):
+        core.confirm_delete(
+            workspace_id=workspace.workspace_id,
+            scope="workspace",
+            confirmation_token="wrong-token",
+        )
+
+    result = core.confirm_delete(
+        workspace_id=workspace.workspace_id,
+        scope="workspace",
+        confirmation_token=preview.confirmation_token,
+    )
+
+    assert result.deleted is True
+    assert core.list_workspaces() == []
+    with core.database.connect() as connection:
+        audit = connection.execute(
+            "SELECT workspace_hash, scope FROM deletion_audit"
+        ).fetchone()
+        tokens = connection.execute("SELECT count(*) FROM deletion_tokens").fetchone()[
+            0
+        ]
+    assert workspace.workspace_id not in audit["workspace_hash"]
+    assert audit["scope"] == "workspace"
+    assert tokens == 0
+
+
+def test_export_contains_structured_data_but_no_complete_resume(tmp_path) -> None:
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG\n项目：求职助手", encoding="utf-8")
+    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    workspace = core.create_workspace("private")
+    core.import_resume(
+        workspace_id=workspace.workspace_id,
+        source_path=resume,
+    )
+
+    exported = core.export_local_data(workspace.workspace_id)
+
+    assert exported["profile_facts"]
+    assert "技能：Python、RAG\n项目：求职助手" not in str(exported)
