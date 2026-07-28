@@ -88,11 +88,13 @@ class Doctor:
     def _connectors() -> Diagnostic:
         try:
             from jobfindsme.connectors import (
+                AshbyConnector,
                 GreenhouseConnector,
                 JsonLdCareerSiteConnector,
             )
 
             names = (
+                AshbyConnector.__name__,
                 GreenhouseConnector.__name__,
                 JsonLdCareerSiteConnector.__name__,
             )

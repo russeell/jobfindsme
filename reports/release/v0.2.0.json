@@ -9,11 +9,12 @@
     "bounded MCP output and local export receipts",
     "redirect-safe HTTP policy",
     "Chinese token, role alias, and salary normalization",
-    "cross-source identity and liveness aggregation"
+    "cross-source identity and liveness aggregation",
+    "Ashby public job-board connector contract"
   ],
   "automated_validation": {
     "pytest": {
-      "passed": 113,
+      "passed": 116,
       "failed": 0
     },
     "ruff_check": "passed",
@@ -22,7 +23,7 @@
     "installed_package_doctor": "passed",
     "installed_package_mcp_tools": 9,
     "codex_install_uninstall": "passed",
-    "wheel_sha256": "2784a8af77b30486cae9b9717fe2f78c865c44115d729eb301487dacef28c6de"
+    "wheel_sha256": "7b4ec6cbf9a08c46c97ca8a4b8599aefe2e6a4cea3516f2aad503ad321b90e45"
   },
   "field_validation": {
     "real_public_source_initial_flow": "passed_on_v0.1_snapshot",

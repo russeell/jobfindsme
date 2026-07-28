@@ -173,6 +173,49 @@ def _parse_salary(payload: dict[str, Any], text: str) -> SalaryDetails | None:
     raw_value = payload.get("raw_salary_text") or payload.get("salary")
     raw_text = _text(raw_value)
     search_text = raw_text or text
+    structured_period = payload.get("salary_period")
+    structured_min = payload.get("salary_min_amount")
+    structured_max = payload.get("salary_max_amount")
+
+    if structured_period and (structured_min is not None or structured_max is not None):
+        period = SalaryPeriod(str(structured_period))
+        minimum = int(structured_min) if structured_min is not None else None
+        maximum = int(structured_max) if structured_max is not None else None
+        monthly_match = _MONTHLY_SALARY_RE.search(raw_text)
+        months = (
+            int(monthly_match.group(3) or 12)
+            if period is SalaryPeriod.MONTH and monthly_match
+            else 12
+            if period is SalaryPeriod.MONTH
+            else None
+        )
+        annual_factor = (
+            months
+            if period is SalaryPeriod.MONTH
+            else 1
+            if period is SalaryPeriod.YEAR
+            else None
+        )
+        return SalaryDetails(
+            raw_text=raw_text or f"{minimum or ''}-{maximum or ''}",
+            currency=(
+                str(payload["currency"]).upper() if payload.get("currency") else None
+            ),
+            period=period,
+            min_amount=minimum,
+            max_amount=maximum,
+            months_per_year=months,
+            normalized_annual_min=(
+                minimum * annual_factor
+                if minimum is not None and annual_factor is not None
+                else None
+            ),
+            normalized_annual_max=(
+                maximum * annual_factor
+                if maximum is not None and annual_factor is not None
+                else None
+            ),
+        )
 
     monthly = _MONTHLY_SALARY_RE.search(search_text)
     if monthly:

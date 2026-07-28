@@ -46,6 +46,7 @@ jobfindsme install codex  # 或 claude / qwen
 | 来源 | 状态 |
 |---|---|
 | Greenhouse 公开 Job Board API | 可用 |
+| Ashby 公开 Job Postings API | 可用 |
 | 单岗位 Schema.org `JobPosting` 页面 | 可用 |
 | 用户提供的 CSV / JSON | 可用 |
 | 需要登录、验证码或绕过反爬的平台 | 不支持 |

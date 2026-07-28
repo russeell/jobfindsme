@@ -266,7 +266,7 @@ First release source portfolio:
 
 - single job URL;
 - CSV and JSON imports;
-- one generic public ATS connector;
+- generic public ATS connectors for Greenhouse and Ashby;
 - one official career-site connector for the first validated market.
 
 岗位来源分为四个接入等级：
@@ -318,6 +318,9 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 10. Zero-ID onboarding and profile-grounded matching.
 11. Subscription-backed discovery monitoring and source health.
 12. Bounded MCP output, redirect-safe HTTP, and regional data contracts.
+13. Additional public ATS coverage for multinational China roles.
+14. A stable China official-career connector and a labeled Chinese benchmark.
+15. One-week personal field trial and supported-Agent compatibility evidence.
 
 A dedicated JobFindsMe Agent is considered only after at least three stable
 sources, repeat usage, real feedback, and a demonstrated limitation in existing

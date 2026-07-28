@@ -769,6 +769,144 @@
         ]
       ],
       "evidence_path": "reports/features/M12-002.json"
+    },
+    {
+      "id": "M13-001",
+      "title": "Ashby public job-board connector",
+      "status": "done",
+      "blocked_by": [
+        "M12-002"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/doctor/**",
+        "tests/connectors/**",
+        "tests/importing/**",
+        "tests/doctor/**",
+        "data/fixtures/ashby_jobs.json",
+        "reports/features/M13-001.json",
+        "reports/release/v0.2.0.json"
+      ],
+      "acceptance": [
+        "Ashby's documented public job-board API is supported without credentials.",
+        "Only listed jobs are imported and source evidence is retained.",
+        "Locations, published time, plain description, apply URL, and salary evidence are normalized.",
+        "The connector is contract-tested without claiming live regional validation."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors",
+          "tests/importing",
+          "tests/doctor",
+          "tests/test_contracts.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/connectors",
+          "src/jobfindsme/importing",
+          "src/jobfindsme/contracts.py",
+          "src/jobfindsme/doctor",
+          "tests/connectors",
+          "tests/importing"
+        ]
+      ],
+      "evidence_path": "reports/features/M13-001.json"
+    },
+    {
+      "id": "M13-002",
+      "title": "China official-career source validation",
+      "status": "ready",
+      "blocked_by": [
+        "M13-001"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/importing/**",
+        "tests/connectors/**",
+        "tests/integration/**",
+        "data/fixtures/**",
+        "reports/field-trials/**",
+        "reports/features/M13-002.json"
+      ],
+      "acceptance": [
+        "At least one stable public China enterprise career source is validated without login or anti-bot bypass.",
+        "The validation fixture preserves provenance and a retrieval date.",
+        "Active, closed, changed, and duplicate job behavior is covered.",
+        "The field-trial report distinguishes observed facts from assumptions."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors",
+          "tests/integration"
+        ]
+      ],
+      "evidence_path": "reports/features/M13-002.json"
+    },
+    {
+      "id": "M14-001",
+      "title": "Real Chinese labeled matching benchmark",
+      "status": "backlog",
+      "blocked_by": [
+        "M13-002"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/evaluation/**",
+        "tests/evaluation/**",
+        "data/eval/**",
+        "reports/evaluation/**",
+        "reports/features/M14-001.json"
+      ],
+      "acceptance": [
+        "A human-labeled Chinese dataset covers relevance, duplicates, liveness, links, and hard-filter errors.",
+        "Precision@10, NDCG@10, hard-filter false-negative rate, and valid-link rate are script-generated.",
+        "Dataset provenance and annotation guidance are versioned.",
+        "Synthetic regression metrics are reported separately."
+      ],
+      "evidence_path": "reports/features/M14-001.json"
+    },
+    {
+      "id": "M15-001",
+      "title": "Personal field trial and supported Agent matrix",
+      "status": "backlog",
+      "blocked_by": [
+        "M14-001"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "integrations/**",
+        "tests/integrations/**",
+        "reports/field-trials/**",
+        "reports/compatibility/**",
+        "reports/features/M15-001.json",
+        "reports/release/**"
+      ],
+      "acceptance": [
+        "The owner uses the same profile and Search Plan for at least seven consecutive days.",
+        "Source failures, duplicates, invalid links, and ranking bad cases are recorded.",
+        "Each officially supported Agent completes the same privacy and workflow scenarios.",
+        "Only observed field metrics appear in release and README claims."
+      ],
+      "evidence_path": "reports/features/M15-001.json"
     }
   ]
 }

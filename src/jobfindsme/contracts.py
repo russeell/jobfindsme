@@ -193,6 +193,7 @@ class JobState(StrictModel):
 
 
 class DiscoverySourceKind(StrEnum):
+    ASHBY = "ashby"
     GREENHOUSE = "greenhouse"
     CAREER_URL = "career_url"
     JSON_FILE = "json_file"
@@ -203,6 +204,7 @@ class DiscoverySource(StrictModel):
     kind: DiscoverySourceKind
     source_name: str
     board_token: str | None = None
+    board_name: str | None = None
     url: str | None = None
     path: str | None = None
     robots_allowed: bool = False
@@ -210,6 +212,7 @@ class DiscoverySource(StrictModel):
     @model_validator(mode="after")
     def validate_kind_fields(self) -> Self:
         required = {
+            DiscoverySourceKind.ASHBY: self.board_name,
             DiscoverySourceKind.GREENHOUSE: self.board_token,
             DiscoverySourceKind.CAREER_URL: self.url,
             DiscoverySourceKind.JSON_FILE: self.path,
