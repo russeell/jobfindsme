@@ -5,10 +5,15 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/jobfindsme-wheel-smoke.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT
 
+build_options=()
+if python -c "import setuptools.build_meta" >/dev/null 2>&1; then
+  build_options+=(--no-build-isolation)
+fi
+
 python -m pip wheel \
   "$root" \
   --no-deps \
-  --no-build-isolation \
+  "${build_options[@]}" \
   --wheel-dir "$temporary/dist"
 
 wheel="$(find "$temporary/dist" -name '*.whl' -print -quit)"
