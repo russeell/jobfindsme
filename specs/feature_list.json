@@ -23,6 +23,7 @@
       ],
       "acceptance": [
         "V0.1 is explicitly agent-native and local-first.",
+        "The first target users are Chinese technical job seekers and AI tool users.",
         "Public Web SaaS and a custom agent runtime are out of scope.",
         "Resume and deletion safety are enforced by Core boundaries."
       ]
@@ -139,7 +140,9 @@
         "reports/features/M3-001.json"
       ],
       "acceptance": [
-        "URL, CSV, JSON, one public ATS, and one Chinese official site are covered.",
+        "URL, CSV, JSON, one public ATS, and one Chinese official career site are covered.",
+        "Recruitment platform data is used only through public, exported, or explicitly authorized paths.",
+        "No connector bypasses login, CAPTCHA, anti-bot controls, robots policy, or platform terms.",
         "Normalization, deduplication, freshness, filters, and ranking need no model.",
         "Every result retains source, liveness, and match evidence."
       ]
@@ -208,12 +211,13 @@
     },
     {
       "id": "M6-001",
-      "title": "Codex and Claude Code skills",
+      "title": "Qwen Code, Codex and Claude Code integrations",
       "status": "backlog",
       "blocked_by": [
         "M5-001"
       ],
       "allowed_paths": [
+        "integrations/qwen/**",
         "integrations/codex/**",
         "integrations/claude/**",
         "tests/integrations/**",
@@ -223,7 +227,27 @@
       "acceptance": [
         "Skills do not read complete resumes and use the seven MCP tools correctly.",
         "Skills ask only for missing constraints that change search results.",
-        "At least two host agents pass the same integration scenarios."
+        "Qwen Code, Codex and Claude Code pass the same integration scenarios."
+      ]
+    },
+    {
+      "id": "M6-002",
+      "title": "Mainstream Agent MCP compatibility matrix",
+      "status": "backlog",
+      "blocked_by": [
+        "M6-001"
+      ],
+      "allowed_paths": [
+        "integrations/compatibility/**",
+        "tests/integrations/**",
+        "reports/compatibility/**",
+        "specs/feature_list.json",
+        "reports/features/M6-002.json"
+      ],
+      "acceptance": [
+        "Only tested clients are listed as officially supported.",
+        "Cherry Studio, Cursor, Cline, Roo Code and OpenCode are evaluated against one shared scenario suite.",
+        "Unsupported schema, approval and transport behavior is documented without platform-specific business logic."
       ]
     },
     {
@@ -231,7 +255,7 @@
       "title": "One-command install and doctor",
       "status": "backlog",
       "blocked_by": [
-        "M6-001"
+        "M6-002"
       ],
       "allowed_paths": [
         "src/jobfindsme/installer/**",
@@ -242,7 +266,7 @@
         "reports/features/M7-001.json"
       ],
       "acceptance": [
-        "Codex and Claude installations require one explicit command.",
+        "Qwen Code, Codex and Claude Code installations require one explicit command each.",
         "Existing host configuration is backed up and never silently overwritten.",
         "Doctor diagnoses database, permissions, MCP, connectors, and secret storage."
       ]

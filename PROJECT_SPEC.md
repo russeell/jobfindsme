@@ -8,11 +8,18 @@
 
 ## 1. Product Goal
 
-JobFindsMe helps a job seeker use an existing agent to discover, match, and
-track currently open jobs from official sources with minimal time and input.
+JobFindsMe 首先服务中国的技术求职者和 AI 工具用户。用户可以提供本地简历，
+也可以只用自然语言描述求职目标，由现有 AI Agent 调用 JobFindsMe，在合规、
+授权和来源可访问的范围内，从企业招聘官网、公开 ATS、招聘平台公开接口及用户
+主动导入的数据中发现、匹配和跟踪仍在招聘的岗位。
 
-Success is measured by qualified jobs the user chooses to open, save, or apply
-to, not by the number of scraped pages, model calls, or agent steps.
+产品不以抓取页数、模型调用数或 Agent 步数作为成功标准，而以用户是否更快发现、
+打开、收藏和投递真正合适的岗位作为标准。
+
+一句话定位：
+
+> 面向中国技术求职者和 AI 工具用户的本地优先职位发现与跟踪引擎，让现有
+> AI Agent 根据本地简历或描述，找到真正值得投递的岗位。
 
 ## 2. V0.1 Scope
 
@@ -21,11 +28,12 @@ V0.1 must provide:
 - a local Workspace with one confirmed candidate profile;
 - multiple Search Plans sharing confirmed profile facts;
 - local resume parsing with evidence and explicit corrections;
-- URL, CSV, JSON, public ATS, and one Chinese official-site connector;
+- URL、CSV、JSON、公开 ATS 和一个中国企业官方招聘站 Connector；
 - normalization, versioning, deduplication, freshness, and liveness checks;
 - deterministic hard filters, BM25, rule ranking, and match evidence;
 - job states and feedback history;
-- CLI, local stdio MCP, Codex Skill, and Claude Code Skill;
+- CLI、本地 `stdio` MCP，以及 Qwen Code、Codex、Claude Code 首批集成；
+- 一份经过真实测试的主流 Agent 兼容矩阵；
 - installer, upgrade, uninstall, and doctor commands;
 - reproducible offline evaluation;
 - optional local scheduling and Feishu summaries after the interactive flow is
@@ -41,6 +49,15 @@ V0.1 explicitly excludes:
 
 The existing Web implementation is an archived prototype, not a dependency of
 this repository.
+
+“兼容所有知名 Agent”是协议和测试目标，不是未经验证的宣传。满足以下条件的
+客户端才进入官方支持列表：
+
+- 能启动或连接本地 MCP Server；
+- 支持当前严格 JSON Schema；
+- 能正确展示结构化岗位和错误结果；
+- 能执行敏感工具的交互流程；
+- 通过同一套端到端兼容测试。
 
 ## 3. Product Principles
 
@@ -78,7 +95,7 @@ jobfindsme profile import /path/to/resume.pdf
 
 ```mermaid
 flowchart TB
-    U["User"] --> H["Codex / Claude Code / MCP Host"]
+    U["中国技术求职者 / AI 工具用户"] --> H["Qwen Code / Codex / Claude Code / MCP Host"]
     H --> S["Host Skill"]
     S --> MCP["stdio MCP Adapter"]
 
@@ -236,10 +253,40 @@ First release source portfolio:
 - one generic public ATS connector;
 - one Chinese company official-career-site connector.
 
-The Chinese source must require no login, have stable detail pages, expose an
-official apply URL, and provide enough active jobs for repeatable validation.
-JobFindsMe does not bypass authentication, CAPTCHA, robots controls, or platform
-terms.
+岗位来源分为四个接入等级：
+
+1. 企业招聘官网和公开 ATS：默认优先，直接建立 Connector。
+2. 招聘平台公开页面或官方开放接口：按平台条款、频率和字段许可接入。
+3. 用户主动提供的岗位 URL、CSV、JSON 或平台导出文件：本地解析。
+4. 需要登录的平台：未来仅考虑由用户主动授权的本地浏览器桥接，不上传账号凭据，
+   不代替用户绕过确认步骤。
+
+第一版中国专用来源必须无需登录、岗位详情页稳定、包含发布日期或可验证的新鲜度
+信号、提供明确投递链接，并有足够活跃岗位支持重复测试。
+
+BOSS直聘、猎聘、智联招聘等招聘 App 不因产品定位而自动成为可抓取数据源。
+只有存在公开接口、公开页面、用户导出或合法授权链路时才接入。JobFindsMe 不保存
+招聘平台账号密码，不绕过登录、验证码、反爬限制、robots规则或平台条款。
+
+### 11.1 Agent Compatibility Strategy
+
+官方集成按以下顺序推进：
+
+```text
+P0: Qwen Code、Codex、Claude Code
+P1: Cherry Studio、Cursor、Cline、Roo Code、OpenCode
+P2: 其他符合 MCP stdio 与工具 Schema 的客户端
+```
+
+每个客户端都必须经过相同场景：
+
+- 通过本地路径建立画像，但宿主模型不读取完整简历；
+- 从自然语言生成或选择 SearchPlan；
+- 搜索、查看和解释岗位；
+- 收藏、忽略和更新投递状态；
+- 导出数据；
+- 执行两阶段删除且不能跳过 Core 校验；
+- MCP故障时明确提示用户退回CLI。
 
 ## 12. Delivery Milestones
 
@@ -248,7 +295,7 @@ terms.
 3. Core API independent from FastAPI.
 4. Product-grade CLI adapter.
 5. Local stdio MCP Server.
-6. Codex and Claude Code Skills.
+6. Qwen Code、Codex、Claude Code integrations and compatibility suite.
 7. One-command install, upgrade, uninstall, and doctor.
 8. End-to-end validation with real official career-site jobs.
 9. Local scheduler and Feishu summaries.
