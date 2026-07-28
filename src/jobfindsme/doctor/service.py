@@ -89,12 +89,14 @@ class Doctor:
         try:
             from jobfindsme.connectors import (
                 AshbyConnector,
+                BaiduCareerConnector,
                 GreenhouseConnector,
                 JsonLdCareerSiteConnector,
             )
 
             names = (
                 AshbyConnector.__name__,
+                BaiduCareerConnector.__name__,
                 GreenhouseConnector.__name__,
                 JsonLdCareerSiteConnector.__name__,
             )

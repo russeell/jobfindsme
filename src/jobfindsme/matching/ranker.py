@@ -19,6 +19,7 @@ from jobfindsme.taxonomy import (
     expand_role_terms,
     extract_required_skills,
     extract_skills,
+    is_target_role_candidate,
 )
 
 
@@ -73,6 +74,24 @@ class DeterministicMatcher:
         )
         if any(term.casefold() in searchable for term in plan.exclusions):
             return False
+        if not is_target_role_candidate(
+            job.title,
+            job.description,
+            plan.target_roles,
+        ):
+            return False
+        if plan.experience_max_years is not None and plan.experience_max_years <= 3:
+            senior_markers = (
+                "资深",
+                "高级",
+                "专家",
+                "senior",
+                "staff",
+                "principal",
+                "lead",
+            )
+            if any(marker in job.title.casefold() for marker in senior_markers):
+                return False
         location_terms = expand_location_terms(plan.locations)
         if location_terms and not any(
             location.casefold() in searchable for location in location_terms
@@ -160,7 +179,7 @@ class DeterministicMatcher:
         )
         warnings = []
         if job.source.liveness == JobLiveness.UNKNOWN:
-            warnings.append("岗位缺少可验证的发布日期")
+            warnings.append("来源刷新失败或岗位缺少有效性验证")
         if job.salary_min_k is None:
             warnings.append("岗位未公开薪资")
         if profile_skill_evidence and missing_job_skills:

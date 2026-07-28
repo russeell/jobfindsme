@@ -98,9 +98,16 @@ class SourceSubscriptionService:
         subscription: SourceSubscription,
         *,
         error: str | None,
+        degraded: bool = False,
     ) -> None:
         now = datetime.now(UTC)
-        health = SourceHealth.HEALTHY if error is None else SourceHealth.FAILED
+        health = (
+            SourceHealth.DEGRADED
+            if degraded
+            else SourceHealth.HEALTHY
+            if error is None
+            else SourceHealth.FAILED
+        )
         with self.database.connect() as connection:
             connection.execute(
                 """

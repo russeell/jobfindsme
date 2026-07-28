@@ -30,6 +30,7 @@ from jobfindsme.profiles.models import (
 )
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.search_plans import SearchPlanService
+from jobfindsme.source_catalog import recommended_connectors, source_links
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
@@ -142,13 +143,19 @@ class JobFindsMeCore:
                 workspace_id=context.workspace.workspace_id,
                 plan_id=plan.plan_id,
             )
+        selected_sources = sources
+        if sources is None and not self.source_subscriptions.list(
+            workspace_id=context.workspace.workspace_id,
+            plan_id=plan.plan_id,
+        ):
+            selected_sources = recommended_connectors(tuple(locations))
         subscriptions = (
             self.source_subscriptions.replace(
                 workspace_id=context.workspace.workspace_id,
                 plan_id=plan.plan_id,
-                sources=sources,
+                sources=selected_sources,
             )
-            if sources is not None
+            if selected_sources is not None
             else self.source_subscriptions.list(
                 workspace_id=context.workspace.workspace_id,
                 plan_id=plan.plan_id,
@@ -158,6 +165,7 @@ class JobFindsMeCore:
             workspace=context.workspace,
             plan=plan,
             sources=subscriptions,
+            source_links=source_links(tuple(target_roles), tuple(locations)),
         )
 
     def list_search_plans(self, workspace_id: str) -> list[SearchPlan]:
@@ -191,6 +199,18 @@ class JobFindsMeCore:
             profile_id=profile_id,
             accepted_fact_ids=accepted_fact_ids,
             corrections=corrections,
+        )
+
+    def review_profile(
+        self,
+        *,
+        profile_id: str,
+        workspace_id: str | None = None,
+    ) -> CandidateProfile:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.profiles.load_review(
+            workspace_id=workspace.workspace_id,
+            profile_id=profile_id,
         )
 
     def match_jobs(
@@ -261,8 +281,6 @@ class JobFindsMeCore:
                 plan_id=plan_id,
             )
         }
-        failures: list[str] = []
-        successful = 0
         for source in sources:
             subscription = subscriptions.get((source.kind, source.source_name))
             try:
@@ -270,7 +288,6 @@ class JobFindsMeCore:
                     workspace_id=workspace_id,
                     sources=(source,),
                 )[0]
-                successful += 1
                 self.jobs.mark_missing_closed(
                     workspace_id=workspace_id,
                     source_name=source.source_name,
@@ -283,14 +300,24 @@ class JobFindsMeCore:
                         error=None,
                     )
             except Exception as error:
-                failures.append(f"{source.source_name}: {error}")
+                cached = self.jobs.has_source_jobs(
+                    workspace_id=workspace_id,
+                    source_name=source.source_name,
+                )
+                if cached:
+                    self.jobs.mark_source_unknown(
+                        workspace_id=workspace_id,
+                        source_name=source.source_name,
+                        observed_at=datetime.now(UTC),
+                    )
                 if subscription:
                     self.source_subscriptions.record_result(
                         subscription,
                         error=str(error),
+                        degraded=cached,
                     )
-        if sources and successful == 0:
-            raise RuntimeError("all job sources failed: " + "; ".join(failures))
+        # Source health stores the failure details. Search still returns the local
+        # snapshot (or an empty result) so one network outage does not break Agent use.
 
     def update_job_state(
         self,

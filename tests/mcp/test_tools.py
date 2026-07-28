@@ -168,6 +168,40 @@ def test_setup_profile_supports_import_and_confirmation_in_one_tool(
     )
 
 
+def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> None:
+    _, workspace, _, registry = make_registry(tmp_path)
+    resume = tmp_path / "resume.txt"
+    resume.write_text(
+        "技能：" + "、".join(["Python", "RAG", "Agent", "MCP", "Docker", "Redis"]),
+        encoding="utf-8",
+    )
+
+    imported = registry.call(
+        "setup_profile",
+        {
+            "action": "import",
+            "workspace_id": workspace.workspace_id,
+            "resume_path": str(resume),
+            "limit": 2,
+        },
+    )["structuredContent"]
+    reviewed = registry.call(
+        "setup_profile",
+        {
+            "action": "review",
+            "workspace_id": workspace.workspace_id,
+            "profile_id": imported["profile_id"],
+            "offset": imported["next_offset"],
+            "limit": 2,
+        },
+    )["structuredContent"]
+
+    assert len(imported["facts"]) == 2
+    assert imported["total_facts"] >= 6
+    assert reviewed["facts"]
+    assert "fact_counts" in imported
+
+
 def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json

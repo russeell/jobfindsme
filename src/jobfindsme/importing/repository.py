@@ -107,6 +107,73 @@ class JobRepository:
             JobPosting.model_validate(json.loads(row["payload_json"])) for row in rows
         ]
 
+    def has_source_jobs(self, *, workspace_id: str, source_name: str) -> bool:
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT 1 FROM jobs
+                WHERE workspace_id = ? AND source_name = ?
+                  AND liveness != 'closed'
+                LIMIT 1
+                """,
+                (workspace_id, source_name),
+            ).fetchone()
+        return row is not None
+
+    def mark_source_unknown(
+        self,
+        *,
+        workspace_id: str,
+        source_name: str,
+        observed_at: datetime,
+    ) -> int:
+        """Keep the last successful snapshot available after a refresh failure."""
+
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT job_id, payload_json FROM jobs
+                WHERE workspace_id = ? AND source_name = ?
+                  AND liveness != 'closed'
+                """,
+                (workspace_id, source_name),
+            ).fetchall()
+            for row in rows:
+                job = JobPosting.model_validate_json(row["payload_json"])
+                updated = job.model_copy(
+                    update={
+                        "source": job.source.model_copy(
+                            update={"liveness": JobLiveness.UNKNOWN}
+                        )
+                    }
+                )
+                connection.execute(
+                    """
+                    UPDATE jobs SET payload_json = ?, liveness = ?
+                    WHERE workspace_id = ? AND job_id = ?
+                    """,
+                    (
+                        updated.model_dump_json(),
+                        JobLiveness.UNKNOWN,
+                        workspace_id,
+                        job.job_id,
+                    ),
+                )
+                connection.execute(
+                    """
+                    UPDATE job_source_records SET liveness = ?, observed_at = ?
+                    WHERE workspace_id = ? AND source_name = ? AND job_id = ?
+                    """,
+                    (
+                        JobLiveness.UNKNOWN,
+                        observed_at.isoformat(),
+                        workspace_id,
+                        source_name,
+                        job.job_id,
+                    ),
+                )
+        return len(rows)
+
     def get(self, *, workspace_id: str, job_id: str) -> JobPosting:
         with self.database.connect() as connection:
             row = connection.execute(

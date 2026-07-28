@@ -17,6 +17,7 @@ from jobfindsme.mcp.schemas import (
     SetupProfileInput,
     UpdateJobStateInput,
 )
+from jobfindsme.profiles.models import CandidateProfile, FactType
 
 
 @dataclass(frozen=True)
@@ -116,16 +117,32 @@ class ToolRegistry:
         values = request.model_dump()
         if name == "setup_profile":
             if values["action"] == "confirm":
-                return self.core.confirm_profile(
+                profile = self.core.confirm_profile(
                     workspace_id=values["workspace_id"],
                     profile_id=values["profile_id"],
                     accepted_fact_ids=values["accepted_fact_ids"],
                     corrections=values["corrections"],
                 )
-            return self.core.import_resume(
-                workspace_id=values["workspace_id"],
-                source_path=values["resume_path"],
-                mode=values["mode"],
+                return _profile_page(
+                    profile,
+                    offset=values["offset"],
+                    limit=values["limit"],
+                )
+            if values["action"] == "review":
+                profile = self.core.review_profile(
+                    workspace_id=values["workspace_id"],
+                    profile_id=values["profile_id"],
+                )
+            else:
+                profile = self.core.import_resume(
+                    workspace_id=values["workspace_id"],
+                    source_path=values["resume_path"],
+                    mode=values["mode"],
+                )
+            return _profile_page(
+                profile,
+                offset=values["offset"],
+                limit=values["limit"],
             )
         if name == "configure_search":
             assert isinstance(request, ConfigureSearchInput)
@@ -219,6 +236,30 @@ def _compact_json(value: Any) -> str:
     import json
 
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _profile_page(
+    profile: CandidateProfile | Any,
+    *,
+    offset: int,
+    limit: int,
+) -> dict[str, Any]:
+    facts = tuple(profile.facts)
+    selected = facts[offset : offset + limit]
+    counts = {
+        fact_type.value: sum(fact.fact_type is fact_type for fact in facts)
+        for fact_type in FactType
+    }
+    next_offset = offset + len(selected)
+    return {
+        "profile_id": profile.profile_id,
+        "status": getattr(profile, "status", "confirmed"),
+        "parser_version": getattr(profile, "parser_version", None),
+        "fact_counts": counts,
+        "facts": selected,
+        "next_offset": next_offset if next_offset < len(facts) else None,
+        "total_facts": len(facts),
+    }
 
 
 def _error(message: str) -> dict[str, Any]:

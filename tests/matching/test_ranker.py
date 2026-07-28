@@ -86,6 +86,32 @@ def test_chinese_city_filter_matches_english_china_source_location() -> None:
     assert "工作地点符合搜索计划" in matches[0].evidence.reasons
 
 
+def test_location_only_non_technical_job_never_enters_candidates() -> None:
+    jobs = [
+        job("account", title="Account Manager", location="上海"),
+        job("ai", title="AI应用工程师", location="上海"),
+    ]
+
+    matches = DeterministicMatcher().match(
+        plan(locations=("上海",), salary_min_k=None),
+        jobs,
+    )
+
+    assert [match.job.external_id for match in matches] == ["ai"]
+
+
+def test_entry_level_plan_rejects_senior_title_without_structured_years() -> None:
+    matches = DeterministicMatcher().match(
+        plan(experience_max_years=3, salary_min_k=None),
+        [
+            job("senior", title="资深 AI 研发效能架构师"),
+            job("regular", title="AI Agent应用工程师"),
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["regular"]
+
+
 def test_exact_title_ranks_above_partial_description_match() -> None:
     jobs = [
         job("exact"),

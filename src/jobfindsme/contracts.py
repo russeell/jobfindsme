@@ -194,6 +194,7 @@ class JobState(StrictModel):
 
 class DiscoverySourceKind(StrEnum):
     ASHBY = "ashby"
+    BAIDU_CAREER = "baidu_career"
     GREENHOUSE = "greenhouse"
     CAREER_URL = "career_url"
     JSON_FILE = "json_file"
@@ -207,12 +208,14 @@ class DiscoverySource(StrictModel):
     board_name: str | None = None
     url: str | None = None
     path: str | None = None
+    query: str | None = None
     robots_allowed: bool = False
 
     @model_validator(mode="after")
     def validate_kind_fields(self) -> Self:
         required = {
             DiscoverySourceKind.ASHBY: self.board_name,
+            DiscoverySourceKind.BAIDU_CAREER: self.query,
             DiscoverySourceKind.GREENHOUSE: self.board_token,
             DiscoverySourceKind.CAREER_URL: self.url,
             DiscoverySourceKind.JSON_FILE: self.path,
@@ -245,10 +248,19 @@ class SourceSubscription(StrictModel):
     updated_at: datetime
 
 
+class SourceLink(StrictModel):
+    name: str
+    category: str
+    url: str
+    access_mode: str
+    note: str = ""
+
+
 class SearchConfiguration(StrictModel):
     workspace: Workspace
     plan: SearchPlan
     sources: tuple[SourceSubscription, ...] = ()
+    source_links: tuple[SourceLink, ...] = ()
 
 
 class JobSourceRecord(StrictModel):

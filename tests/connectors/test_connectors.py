@@ -7,6 +7,7 @@ import pytest
 
 from jobfindsme.connectors import (
     AshbyConnector,
+    BaiduCareerConnector,
     ConnectorPolicy,
     GreenhouseConnector,
     JsonLdCareerSiteConnector,
@@ -112,6 +113,26 @@ def test_ashby_annual_salary_is_not_treated_as_monthly() -> None:
     assert salary.period == "year"
     assert salary.normalized_annual_min == 81_000
     assert salary.normalized_annual_max == 87_000
+
+
+def test_baidu_reads_server_rendered_public_social_jobs() -> None:
+    transport = FixtureTransport(FIXTURES / "baidu_career_jobs.html")
+    connector = BaiduCareerConnector(
+        "AI Agent",
+        transport=transport,
+        policy=public_policy(),
+    )
+
+    records = connector.fetch()
+
+    assert len(records) == 1
+    assert records[0].external_id == "baidu-job-1"
+    assert records[0].payload["company"] == "百度"
+    assert records[0].payload["location"] == "北京市,上海市"
+    assert records[0].payload["apply_url"].endswith("/SOCIAL/baidu-job-1")
+    assert transport.requested_urls == [
+        "https://talent.baidu.com/jobs/social-list?search=AI+Agent"
+    ]
 
 
 def test_official_site_reads_schema_org_job_posting() -> None:
