@@ -17,6 +17,7 @@ from jobfindsme.mcp.schemas import (
     SetupProfileInput,
     UpdateJobStateInput,
 )
+from jobfindsme.presentation import format_job_list
 from jobfindsme.profiles.models import CandidateProfile, FactType
 
 
@@ -107,8 +108,13 @@ class ToolRegistry:
         ) as error:
             return _error(str(error))
         structured = _json_value(value)
+        text = (
+            format_job_list(value["jobs"])
+            if name in {"search_jobs", "get_jobs"}
+            else _compact_json(structured)
+        )
         return {
-            "content": [{"type": "text", "text": _compact_json(structured)}],
+            "content": [{"type": "text", "text": text}],
             "structuredContent": structured,
             "isError": False,
         }

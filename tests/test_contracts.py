@@ -3,7 +3,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from jobfindsme.contracts import JobPosting, SearchPlan
+from jobfindsme.contracts import (
+    EmploymentType,
+    JobPosting,
+    RecruitmentTrack,
+    SearchPlan,
+)
 
 
 def make_plan(**overrides: object) -> SearchPlan:
@@ -55,3 +60,26 @@ def test_job_posting_requires_a_valid_salary_range() -> None:
                 "fetched_at": datetime.now(UTC),
             },
         )
+
+
+def test_job_classification_contracts_reject_unknown_values() -> None:
+    with pytest.raises(ValidationError):
+        JobPosting(
+            job_id="job-1",
+            external_id="1",
+            title="AI工程师",
+            company="示例",
+            recruitment_track="experienced-hire",
+            employment_type=EmploymentType.FULL_TIME,
+            apply_url="https://example.com/jobs/1",
+            fingerprint="f" * 64,
+            content_hash="c" * 64,
+            source={
+                "source_kind": "career_site",
+                "source_name": "官网",
+                "source_url": "https://example.com",
+                "fetched_at": datetime.now(UTC),
+            },
+        )
+
+    assert RecruitmentTrack.CAMPUS.value == "campus"

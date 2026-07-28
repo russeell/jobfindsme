@@ -2,6 +2,7 @@ import json
 
 from jobfindsme.cli import run
 from jobfindsme.core import JobFindsMeCore
+from jobfindsme.importing.parsers import parse_json
 
 
 def test_cli_workspace_and_plan_flow(tmp_path, capsys) -> None:
@@ -86,3 +87,86 @@ def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(
     assert profile["facts"]
     core = JobFindsMeCore(database)
     assert core.profiles.latest_confirmed_summary(workspace_id=profile["workspace_id"])
+
+
+def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> None:
+    database = tmp_path / "jobfindsme.db"
+    core = JobFindsMeCore(database)
+    workspace = core.create_workspace("CLI")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="AI",
+        target_roles=["AI应用工程师"],
+    )
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "社会招聘，全职正式岗位",
+                        "location": "杭州",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    assert (
+        run(
+            [
+                "--db",
+                str(database),
+                "--output",
+                "markdown",
+                "jobs",
+                "search",
+                "--workspace",
+                workspace.workspace_id,
+                "--plan",
+                plan.plan_id,
+            ]
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert output.startswith("1. AI应用工程师｜示例科技｜杭州｜社招｜正式｜匹配度 ")
+    assert output.endswith("   投递链接：https://example.com/jobs/1\n")
+
+
+def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> None:
+    database = tmp_path / "jobfindsme.db"
+    core = JobFindsMeCore(database)
+    workspace = core.create_workspace("CLI")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="AI",
+        target_roles=["AI应用工程师"],
+    )
+
+    assert (
+        run(
+            [
+                "--db",
+                str(database),
+                "--output",
+                "markdown",
+                "jobs",
+                "search",
+                "--workspace",
+                workspace.workspace_id,
+                "--plan",
+                plan.plan_id,
+            ]
+        )
+        == 0
+    )
+
+    assert capsys.readouterr().out == "未找到符合条件的岗位。\n"

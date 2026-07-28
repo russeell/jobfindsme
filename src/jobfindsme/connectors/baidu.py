@@ -84,5 +84,6 @@ class BaiduCareerConnector:
                 "url": detail_url,
                 "apply_url": detail_url,
                 "experience": item.get("workYears") or "",
+                "recruitment_track": "social",
             },
         )

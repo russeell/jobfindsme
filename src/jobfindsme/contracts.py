@@ -74,6 +74,20 @@ class SalaryPeriod(StrEnum):
     UNKNOWN = "unknown"
 
 
+class RecruitmentTrack(StrEnum):
+    CAMPUS = "campus"
+    SOCIAL = "social"
+    UNKNOWN = "unknown"
+
+
+class EmploymentType(StrEnum):
+    INTERNSHIP = "internship"
+    FULL_TIME = "full_time"
+    PART_TIME = "part_time"
+    CONTRACT = "contract"
+    UNKNOWN = "unknown"
+
+
 class SalaryDetails(StrictModel):
     raw_text: str
     currency: str | None = None
@@ -106,6 +120,8 @@ class JobPosting(StrictModel):
     salary: SalaryDetails | None = None
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
+    recruitment_track: RecruitmentTrack = RecruitmentTrack.UNKNOWN
+    employment_type: EmploymentType = EmploymentType.UNKNOWN
     apply_url: str
     fingerprint: str = Field(min_length=16, max_length=128)
     content_hash: str = Field(min_length=16, max_length=128)
@@ -157,6 +173,8 @@ class JobSummary(StrictModel):
     company: str
     locations: tuple[str, ...] = ()
     salary: SalaryDetails | None = None
+    recruitment_track: RecruitmentTrack = RecruitmentTrack.UNKNOWN
+    employment_type: EmploymentType = EmploymentType.UNKNOWN
     apply_url: str
     source_name: str
     liveness: JobLiveness

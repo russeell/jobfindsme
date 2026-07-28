@@ -242,6 +242,8 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
                         "title": "AI应用工程师",
                         "company": "示例科技",
                         "description": "外部JD内容 " * 5000,
+                        "recruitment_track": "social",
+                        "employment_type": "full_time",
                         "url": "https://example.com/jobs/1",
                     }
                 ],
@@ -262,6 +264,8 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
     assert len(summaries[0]["description_excerpt"]) <= 400
     assert "description" not in summaries[0]
     assert summaries[0]["untrusted_external_content"] is True
+    assert summaries[0]["recruitment_track"] == "social"
+    assert summaries[0]["employment_type"] == "full_time"
     assert details["job"]["description"].startswith("外部JD内容")
     assert details["untrusted_external_content"] is True
     assert len(details["job"]["description"]) == 20_000
@@ -270,6 +274,44 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
     assert page["offset"] == 0
     assert page["limit"] == 1
     assert page["next_offset"] == 1
+    assert (
+        page["jobs"][0]["apply_url"]
+        in registry.call("get_jobs", {"limit": 1})["content"][0]["text"]
+    )
+
+
+def test_job_list_text_has_stable_classification_and_link_format(tmp_path) -> None:
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "intern-1",
+                        "title": "大模型应用工程师实习生",
+                        "company": "示例科技",
+                        "description": "校园招聘实习岗位",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/intern-1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("get_jobs", {"limit": 1})
+    text = result["content"][0]["text"]
+
+    assert text == (
+        "1. 大模型应用工程师实习生｜示例科技｜上海｜校招｜实习\n"
+        "   投递链接：https://example.com/jobs/intern-1"
+    )
+    assert result["structuredContent"]["jobs"][0]["job_id"]
 
 
 def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:

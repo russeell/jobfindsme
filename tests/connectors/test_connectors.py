@@ -130,6 +130,7 @@ def test_baidu_reads_server_rendered_public_social_jobs() -> None:
     assert records[0].payload["company"] == "百度"
     assert records[0].payload["location"] == "北京市,上海市"
     assert records[0].payload["apply_url"].endswith("/SOCIAL/baidu-job-1")
+    assert records[0].payload["recruitment_track"] == "social"
     assert transport.requested_urls == [
         "https://talent.baidu.com/jobs/social-list?search=AI+Agent"
     ]

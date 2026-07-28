@@ -28,6 +28,7 @@ class SpaSiteConfig:
     location_field: str = "location"
     description_field: str = "description"
     company_name: str = ""
+    recruitment_track: str = "unknown"
 
 
 class SpaBrowser(Protocol):
@@ -108,6 +109,7 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         location_field="city_info",
         description_field="description",
         company_name="字节跳动",
+        recruitment_track="social",
     ),
     "meituan": SpaSiteConfig(
         source_name="美团",
@@ -121,6 +123,7 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         location_field="cityList",
         description_field="desc",
         company_name="美团",
+        recruitment_track="campus",
     ),
     "didi": SpaSiteConfig(
         source_name="滴滴",
@@ -132,6 +135,7 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         location_field="workArea",
         description_field="jobDuty",
         company_name="滴滴",
+        recruitment_track="social",
     ),
     "bilibili": SpaSiteConfig(
         source_name="哔哩哔哩",
@@ -143,6 +147,7 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         location_field="cityName",
         description_field="description",
         company_name="哔哩哔哩",
+        recruitment_track="social",
     ),
 }
 
@@ -222,6 +227,7 @@ class PlaywrightSpaConnector:
                 "location": location,
                 "url": source_url,
                 "apply_url": source_url,
+                "recruitment_track": cfg.recruitment_track,
             },
         )
 

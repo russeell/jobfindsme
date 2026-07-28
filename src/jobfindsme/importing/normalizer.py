@@ -8,8 +8,10 @@ from typing import Any
 
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
+    EmploymentType,
     JobLiveness,
     JobPosting,
+    RecruitmentTrack,
     SalaryDetails,
     SalaryPeriod,
     SourceEvidence,
@@ -26,6 +28,13 @@ _MONTHLY_SALARY_RE = re.compile(
 _ANNUAL_WAN_RE = re.compile(
     r"(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*万\s*/?\s*年"
 )
+
+_CAMPUS_TERMS = ("校招", "校园招聘", "应届", "毕业生", "campus", "new grad", "graduate")
+_SOCIAL_TERMS = ("社招", "社会招聘", "experienced", "social recruitment")
+_INTERNSHIP_TERMS = ("实习", "internship", "intern")
+_FULL_TIME_TERMS = ("正式岗", "正式岗位", "全职", "full-time", "full time", "fulltime")
+_PART_TIME_TERMS = ("兼职", "part-time", "part time")
+_CONTRACT_TERMS = ("合同工", "劳务合同", "contractor", "contract")
 
 
 def _text(value: Any) -> str:
@@ -131,6 +140,9 @@ def normalize_job(
         experience_min = int(experience.group(1))
         experience_max = int(experience.group(2) or experience.group(1))
 
+    recruitment_track = _recruitment_track(payload, title, description, raw.source_url)
+    employment_type = _employment_type(payload, title, description)
+
     fingerprint_input = "|".join(
         [
             company.casefold(),
@@ -139,7 +151,14 @@ def normalize_job(
         ]
     )
     content_input = "|".join(
-        [fingerprint_input, description, str(salary_min), str(salary_max)]
+        [
+            fingerprint_input,
+            description,
+            str(salary_min),
+            str(salary_max),
+            recruitment_track,
+            employment_type,
+        ]
     )
     fingerprint = hashlib.sha256(fingerprint_input.encode()).hexdigest()
     content_hash = hashlib.sha256(content_input.encode()).hexdigest()
@@ -155,6 +174,8 @@ def normalize_job(
         salary=salary_details,
         experience_min_years=experience_min,
         experience_max_years=experience_max,
+        recruitment_track=recruitment_track,
+        employment_type=employment_type,
         apply_url=apply_url or raw.source_url,
         fingerprint=fingerprint,
         content_hash=content_hash,
@@ -167,6 +188,97 @@ def normalize_job(
             liveness=liveness,
         ),
     )
+
+
+def _recruitment_track(
+    payload: dict[str, Any],
+    title: str,
+    description: str,
+    source_url: str,
+) -> RecruitmentTrack:
+    explicit = _text(
+        payload.get("recruitment_track") or payload.get("recruitment_type")
+    ).casefold()
+    aliases = {
+        "campus": RecruitmentTrack.CAMPUS,
+        "校招": RecruitmentTrack.CAMPUS,
+        "校园招聘": RecruitmentTrack.CAMPUS,
+        "social": RecruitmentTrack.SOCIAL,
+        "社招": RecruitmentTrack.SOCIAL,
+        "社会招聘": RecruitmentTrack.SOCIAL,
+        "experienced": RecruitmentTrack.SOCIAL,
+    }
+    if explicit in aliases:
+        return aliases[explicit]
+
+    content = f"{title} {description}".casefold()
+    if any(term in content for term in _CAMPUS_TERMS):
+        return RecruitmentTrack.CAMPUS
+    if any(term in content for term in _SOCIAL_TERMS):
+        return RecruitmentTrack.SOCIAL
+
+    source = source_url.casefold()
+    if any(term in source for term in ("campus", "school", "graduate")):
+        return RecruitmentTrack.CAMPUS
+    if any(term in source for term in ("social", "experienced")):
+        return RecruitmentTrack.SOCIAL
+    return RecruitmentTrack.UNKNOWN
+
+
+def _employment_type(
+    payload: dict[str, Any],
+    title: str,
+    description: str,
+) -> EmploymentType:
+    explicit = _text(
+        payload.get("employment_type")
+        or payload.get("employmentType")
+        or payload.get("job_type")
+    ).casefold()
+    aliases = {
+        "intern": EmploymentType.INTERNSHIP,
+        "internship": EmploymentType.INTERNSHIP,
+        "实习": EmploymentType.INTERNSHIP,
+        "fulltime": EmploymentType.FULL_TIME,
+        "full_time": EmploymentType.FULL_TIME,
+        "full-time": EmploymentType.FULL_TIME,
+        "full time": EmploymentType.FULL_TIME,
+        "全职": EmploymentType.FULL_TIME,
+        "正式": EmploymentType.FULL_TIME,
+        "parttime": EmploymentType.PART_TIME,
+        "part_time": EmploymentType.PART_TIME,
+        "part-time": EmploymentType.PART_TIME,
+        "兼职": EmploymentType.PART_TIME,
+        "contract": EmploymentType.CONTRACT,
+        "contractor": EmploymentType.CONTRACT,
+        "合同": EmploymentType.CONTRACT,
+    }
+    if explicit in aliases:
+        return aliases[explicit]
+
+    title_text = title.casefold()
+    if any(term in title_text for term in _INTERNSHIP_TERMS):
+        return EmploymentType.INTERNSHIP
+    if any(term in title_text for term in _PART_TIME_TERMS):
+        return EmploymentType.PART_TIME
+    if any(term in title_text for term in _CONTRACT_TERMS):
+        return EmploymentType.CONTRACT
+    if any(term in title_text for term in _FULL_TIME_TERMS):
+        return EmploymentType.FULL_TIME
+
+    description_text = description.casefold()
+    if any(term in description_text for term in ("实习岗位", "internship position")):
+        return EmploymentType.INTERNSHIP
+    if any(term in description_text for term in ("兼职岗位", "part-time position")):
+        return EmploymentType.PART_TIME
+    if any(term in description_text for term in ("合同岗位", "contract position")):
+        return EmploymentType.CONTRACT
+    if any(
+        term in description_text
+        for term in ("正式岗位", "全职岗位", "full-time position")
+    ):
+        return EmploymentType.FULL_TIME
+    return EmploymentType.UNKNOWN
 
 
 def _parse_salary(payload: dict[str, Any], text: str) -> SalaryDetails | None:

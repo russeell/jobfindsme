@@ -48,6 +48,16 @@ jobfindsme install workbuddy # WorkBuddy
 
 不需要提供任何 ID 或参数——Core 自动处理一切。
 
+岗位始终按固定格式返回，校招/社招和实习/正式分别标注：
+
+```text
+1. AI应用工程师｜示例科技｜上海｜社招｜正式｜匹配度 86%
+   投递链接：https://careers.example.com/jobs/123
+
+2. 大模型应用工程师实习生｜示例科技｜北京｜校招｜实习｜匹配度 81%
+   投递链接：https://careers.example.com/jobs/456
+```
+
 ---
 
 ## 为什么不用招聘 App？

@@ -121,6 +121,28 @@ def test_duplicate_api_responses_do_not_duplicate_jobs() -> None:
     assert len(connector.fetch()) == 1
 
 
+def test_spa_sources_expose_recruitment_track() -> None:
+    bytedance = PlaywrightSpaConnector(
+        "bytedance",
+        "AI",
+        policy=public_policy(),
+        browser=FixtureBrowser(
+            [{"id": "1", "title": "AI工程师", "city_info": {"name": "上海"}}]
+        ),
+    ).fetch()[0]
+    meituan = PlaywrightSpaConnector(
+        "meituan",
+        "AI",
+        policy=public_policy(),
+        browser=FixtureBrowser(
+            [{"jobUnionId": "2", "name": "AI实习生", "cityList": ["北京"]}]
+        ),
+    ).fetch()[0]
+
+    assert bytedance.payload["recruitment_track"] == "social"
+    assert meituan.payload["recruitment_track"] == "campus"
+
+
 def test_nested_response_job_list_is_extracted() -> None:
     body = {"data": {"result": {"job_post_list": [{"id": "1"}]}}}
 

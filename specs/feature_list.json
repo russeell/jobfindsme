@@ -1281,6 +1281,66 @@
         ]
       ],
       "evidence_path": "reports/features/M19-001.json"
+    },
+    {
+      "id": "M20-001",
+      "title": "Stable job classification and list presentation",
+      "status": "done",
+      "blocked_by": [
+        "M19-001"
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/presentation.py",
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/mcp/tools.py",
+        "src/jobfindsme/importing/normalizer.py",
+        "src/jobfindsme/connectors/**",
+        "tests/test_contracts.py",
+        "tests/cli/**",
+        "tests/mcp/**",
+        "tests/importing/**",
+        "tests/connectors/**",
+        "reports/features/M20-001.json"
+      ],
+      "acceptance": [
+        "Recruitment track (campus/social/unknown) and employment type (internship/full-time/part-time/contract/unknown) are independent typed fields.",
+        "Explicit source data wins over conservative text inference; unknown values are never presented as formal full-time roles.",
+        "Job summaries always include both classification fields and the official apply URL.",
+        "MCP text output uses one stable, human-readable block per job with the apply URL immediately after the job line.",
+        "MCP structuredContent remains machine-readable and retains job IDs, evidence, scores, classifications, and URLs.",
+        "CLI markdown output uses the same stable job presentation.",
+        "Connector, normalization, Core, MCP, and CLI regression tests cover campus/social and internship/full-time examples."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/test_contracts.py",
+          "tests/importing",
+          "tests/connectors",
+          "tests/mcp",
+          "tests/cli"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ]
+      ],
+      "evidence_path": "reports/features/M20-001.json"
     }
   ]
 }

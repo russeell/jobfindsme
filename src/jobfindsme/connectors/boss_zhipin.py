@@ -298,6 +298,7 @@ class BossZhipinConnector:
                 "apply_url": item.get("job_link", source_url),
                 "boss_name": item.get("boss_name", ""),
                 "boss_active": item.get("boss_active", ""),
+                "recruitment_track": "social",
                 "company_scale": item.get("company_scale", ""),
                 "company_stage": item.get("company_stage", ""),
                 "company_industry": item.get("company_industry", ""),

@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from jobfindsme.connectors.base import RawJobRecord
-from jobfindsme.contracts import JobLiveness, SourceKind
+from jobfindsme.contracts import (
+    EmploymentType,
+    JobLiveness,
+    RecruitmentTrack,
+    SourceKind,
+)
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.importing.repository import JobRepository
@@ -63,6 +68,70 @@ def test_normalization_preserves_source_liveness_and_structured_ranges() -> None
     assert job.salary is not None
     assert job.salary.raw_text == "20-35K"
     assert job.salary.normalized_annual_min == 240_000
+    assert job.recruitment_track is RecruitmentTrack.UNKNOWN
+    assert job.employment_type is EmploymentType.UNKNOWN
+
+
+def test_normalization_keeps_recruitment_and_employment_dimensions_separate() -> None:
+    campus_intern = normalize_job(
+        raw_job(
+            payload={
+                "title": "大模型应用工程师实习生",
+                "description": "2027届校园招聘，实习岗位",
+                "recruitment_track": "campus",
+            }
+        ),
+        fetched_at=NOW,
+    )
+    social_full_time = normalize_job(
+        raw_job(
+            payload={
+                "title": "AI应用工程师",
+                "description": "社会招聘，全职正式岗位",
+                "recruitment_track": "social",
+                "employment_type": "FullTime",
+            }
+        ),
+        fetched_at=NOW,
+    )
+
+    assert campus_intern.recruitment_track is RecruitmentTrack.CAMPUS
+    assert campus_intern.employment_type is EmploymentType.INTERNSHIP
+    assert social_full_time.recruitment_track is RecruitmentTrack.SOCIAL
+    assert social_full_time.employment_type is EmploymentType.FULL_TIME
+
+
+def test_unknown_job_is_not_assumed_to_be_social_or_full_time() -> None:
+    job = normalize_job(
+        raw_job(payload={"title": "AI应用工程师", "description": "负责RAG系统"}),
+        fetched_at=NOW,
+    )
+
+    assert job.recruitment_track is RecruitmentTrack.UNKNOWN
+    assert job.employment_type is EmploymentType.UNKNOWN
+
+
+def test_schema_org_employment_type_is_normalized() -> None:
+    job = normalize_job(
+        raw_job(payload={"employmentType": "FULL_TIME"}),
+        fetched_at=NOW,
+    )
+
+    assert job.employment_type is EmploymentType.FULL_TIME
+
+
+def test_technical_contract_word_does_not_mean_contract_employment() -> None:
+    job = normalize_job(
+        raw_job(
+            payload={
+                "title": "AI应用工程师",
+                "description": "负责 API contract 与 Pydantic schema 设计",
+            }
+        ),
+        fetched_at=NOW,
+    )
+
+    assert job.employment_type is EmploymentType.UNKNOWN
 
 
 def test_chinese_salary_keeps_raw_period_and_annual_normalization() -> None:

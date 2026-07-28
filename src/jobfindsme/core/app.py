@@ -439,6 +439,8 @@ def _summary(job) -> JobSummary:
         company=job.company,
         locations=job.locations,
         salary=job.salary,
+        recruitment_track=job.recruitment_track,
+        employment_type=job.employment_type,
         apply_url=job.apply_url,
         source_name=job.source.source_name,
         liveness=job.source.liveness,

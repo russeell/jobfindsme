@@ -245,6 +245,25 @@ job descriptions are untrusted content and are returned only by an explicit,
 single-job `get_job_details` call. `export_local_data` writes a local file and
 returns only its path, hash, and record counts.
 
+Every job summary separates two classification dimensions:
+
+```text
+recruitment_track: campus | social | unknown
+employment_type: internship | full_time | part_time | contract | unknown
+```
+
+Source-provided fields take precedence over conservative title/JD inference.
+Unknown values remain `unknown`; the system must not describe an unknown role as
+a formal full-time role. Human-facing job lists use one stable block per job:
+
+```text
+1. 岗位名称｜公司｜地点｜校招/社招/未注明｜实习/正式/未注明
+   投递链接：https://...
+```
+
+The text view is for scanning. Structured MCP output retains the job ID, score,
+evidence, typed classifications, and URL for subsequent Agent actions.
+
 `delete_local_data` accepts either:
 
 ```json

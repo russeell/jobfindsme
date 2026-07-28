@@ -38,6 +38,16 @@ Use JobFindsMe to find AI Engineer roles in Shanghai, based on my resume.
 
 No workspace IDs or plan IDs needed — Core handles everything.
 
+Jobs use one stable format. Recruitment track and employment type are separate:
+
+```text
+1. AI Application Engineer｜Example Tech｜Shanghai｜社招｜正式｜匹配度 86%
+   投递链接：https://careers.example.com/jobs/123
+
+2. LLM Engineer Intern｜Example Tech｜Beijing｜校招｜实习｜匹配度 81%
+   投递链接：https://careers.example.com/jobs/456
+```
+
 ## Why Not Job Apps?
 
 | | Job Apps | JobFindsMe |

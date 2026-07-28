@@ -15,6 +15,7 @@ from jobfindsme.core import JobFindsMeCore
 from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.installer import HostInstaller
+from jobfindsme.presentation import format_job_list
 from jobfindsme.profiles.models import ResumeImportMode
 
 
@@ -164,10 +165,13 @@ def _markdown(value: Any) -> str:
     return str(value)
 
 
-def _emit(value: Any, output: str) -> None:
+def _emit(value: Any, output: str, *, job_list: bool = False) -> None:
     serializable = _serializable(value)
     if output == "markdown":
-        print(_markdown(serializable))
+        if job_list:
+            print(format_job_list(value))
+        else:
+            print(_markdown(serializable))
     else:
         print(json.dumps(serializable, ensure_ascii=False))
 
@@ -270,7 +274,11 @@ def run(argv: Sequence[str] | None = None) -> int:
         result = getattr(installer, args.group)(args.host)
     else:
         result = _execute(JobFindsMeCore(args.db), args)
-    _emit(result, args.output)
+    _emit(
+        result,
+        args.output,
+        job_list=args.group == "jobs" and args.action == "search",
+    )
     return 0
 
 
