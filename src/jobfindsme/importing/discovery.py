@@ -54,10 +54,12 @@ class JobDiscoveryService:
             DiscoverySourceKind.LIEPIN_CDP,
             DiscoverySourceKind.ZHILIAN_CDP,
             DiscoverySourceKind.LAGOU_CDP,
+            DiscoverySourceKind.WUYOU_CDP,
         }:
             from jobfindsme.connectors.china_platforms import (
                 LagouConnector,
                 LiepinConnector,
+                WuyouConnector,
                 ZhilianConnector,
             )
 
@@ -65,6 +67,7 @@ class JobDiscoveryService:
                 DiscoverySourceKind.LIEPIN_CDP: LiepinConnector,
                 DiscoverySourceKind.ZHILIAN_CDP: ZhilianConnector,
                 DiscoverySourceKind.LAGOU_CDP: LagouConnector,
+                DiscoverySourceKind.WUYOU_CDP: WuyouConnector,
             }[source.kind]
             connector = connector_cls(
                 source.query or "AI",

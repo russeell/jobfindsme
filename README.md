@@ -134,10 +134,11 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 
 | 来源 | 技术 | 说明 |
 |------|------|------|
-| **BOSS直聘** | Chrome CDP | 岗位最多，明文薪资 |
-| **猎聘** | Chrome CDP | 中高端岗位，外企中国岗 |
-| **智联招聘** | Chrome CDP | 传统行业 + IT |
-| **拉勾** | Chrome CDP | 互联网专注 |
+| **BOSS直聘** | Chrome CDP | 岗位最多，明文薪资（需登录） |
+| **猎聘** | Chrome CDP | 中高端岗位，外企中国岗（免登录） |
+| **前程无忧** | Chrome CDP | 传统行业+IT，覆盖广（免登录） |
+| **智联招聘** | Chrome CDP | 传统行业 + IT（免登录） |
+| **拉勾** | Chrome CDP | 互联网专注（免登录） |
 
 > 搜一次 = 搜全行业。不需要逐家攻克官网。
 

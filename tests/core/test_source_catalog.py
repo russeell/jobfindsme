@@ -6,9 +6,9 @@ def test_china_search_gets_default_connectors() -> None:
 
     assert sources
     names = {source.source_name for source in sources}
-    # Four platforms cover all Chinese companies
-    assert names == {"BOSS直聘", "猎聘", "智联招聘", "拉勾"}
-    assert len(sources) == 4
+    # Five platforms cover all Chinese companies
+    assert names == {"BOSS直聘", "猎聘", "智联招聘", "拉勾", "前程无忧"}
+    assert len(sources) == 5
     # All are CDP (browser-backed)
     assert all(source.kind.uses_browser for source in sources)
 

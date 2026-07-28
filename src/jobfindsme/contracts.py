@@ -215,6 +215,7 @@ class DiscoverySourceKind(StrEnum):
     LIEPIN_CDP = "liepin_cdp"
     ZHILIAN_CDP = "zhilian_cdp"
     LAGOU_CDP = "lagou_cdp"
+    WUYOU_CDP = "wuyou_cdp"
     JSON_FILE = "json_file"
     CSV_FILE = "csv_file"
 
@@ -223,6 +224,7 @@ class DiscoverySourceKind(StrEnum):
         return self in {
             self.BOSS_CDP,
             self.LIEPIN_CDP, self.ZHILIAN_CDP, self.LAGOU_CDP,
+            self.WUYOU_CDP,
         }
 
 
@@ -244,6 +246,7 @@ class DiscoverySource(StrictModel):
             DiscoverySourceKind.LIEPIN_CDP: self.query,
             DiscoverySourceKind.ZHILIAN_CDP: self.query,
             DiscoverySourceKind.LAGOU_CDP: self.query,
+            DiscoverySourceKind.WUYOU_CDP: self.query,
             DiscoverySourceKind.JSON_FILE: self.path,
             DiscoverySourceKind.CSV_FILE: self.path,
         }[self.kind]

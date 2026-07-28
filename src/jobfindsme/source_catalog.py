@@ -39,6 +39,11 @@ def recommended_connectors(
             source_name="拉勾",
             query=query,
         ),
+        DiscoverySource(
+            kind="wuyou_cdp",
+            source_name="前程无忧",
+            query=query,
+        ),
     )
 
 

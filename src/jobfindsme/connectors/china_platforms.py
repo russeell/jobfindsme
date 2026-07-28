@@ -322,3 +322,83 @@ class LagouConnector:
             for item in items
             if item.get("title")
         ]
+
+
+# ── 前程无忧 (51job) ─────────────────────────────────────────────────────────
+
+_WUYOU_EXTRACT_JS = """  # noqa: E501
+(function(){
+    var results = [];
+    var items = document.querySelectorAll('.joblist-item');
+    items.forEach(function(item) {
+        var titleEl = item.querySelector('.jname');
+        var companyEl = item.querySelector('.cname');
+        var salaryEl = item.querySelector('[class*="sal"]');
+        var locationEl = item.querySelector('[class*="location"], [class*="area"], [class*="city"]');
+        var linkEl = item.querySelector('a');
+        results.push({
+            title: titleEl ? titleEl.textContent.trim() : '',
+            company: companyEl ? companyEl.textContent.trim() : '',
+            salary: salaryEl ? salaryEl.textContent.trim() : '',
+            city: locationEl ? locationEl.textContent.trim() : '',
+            url: linkEl ? linkEl.href : ''
+        });
+    });
+    return JSON.stringify(results);
+})()
+"""
+
+_WUYOU_CITY_CODES = {
+    "北京": "010000", "上海": "020000", "深圳": "040000",
+    "广州": "030200", "杭州": "080200", "成都": "090200",
+    "武汉": "180200", "南京": "070200", "苏州": "070300",
+}
+
+
+class WuyouConnector:
+    """Discover jobs from 前程无忧 (51job) via Chrome CDP + DOM extraction."""
+
+    def __init__(
+        self,
+        keyword: str,
+        city: str = "",
+        *,
+        policy: ConnectorPolicy,
+        source_name: str = "前程无忧",
+        cdp_port: int = DEFAULT_CDP_PORT,
+    ) -> None:
+        if not policy.can_fetch:
+            raise PermissionError("source policy does not allow fetching")
+        self.keyword = keyword.strip()
+        self.city = city.strip()
+        self.source_name = source_name
+        self.cdp_port = cdp_port
+
+    def fetch(self) -> list[RawJobRecord]:
+        city_code = _WUYOU_CITY_CODES.get(self.city, "000000")
+        url = (
+            "https://we.51job.com/pc/search"
+            f"?keyword={self.keyword}&location={city_code}"
+        )
+        items = _cdp_fetch(
+            url, _WUYOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000
+        )
+        return [
+            RawJobRecord(
+                source_kind=SourceKind.CAREER_SITE,
+                source_name=self.source_name,
+                source_url=url,
+                external_id=item.get("url", "") or item.get("title", ""),
+                payload={
+                    "title": item.get("title", ""),
+                    "company": item.get("company", ""),
+                    "description": "",
+                    "location": item.get("city", ""),
+                    "salary": item.get("salary", ""),
+                    "url": item.get("url", ""),
+                    "apply_url": item.get("url", ""),
+                },
+            )
+            for item in items
+            if item.get("title")
+        ]

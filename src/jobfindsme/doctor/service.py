@@ -122,6 +122,7 @@ class Doctor:
             from jobfindsme.connectors.china_platforms import (
                 LagouConnector,
                 LiepinConnector,
+                WuyouConnector,
                 ZhilianConnector,
             )
 
@@ -130,6 +131,7 @@ class Doctor:
                 LiepinConnector.__name__,
                 ZhilianConnector.__name__,
                 LagouConnector.__name__,
+                WuyouConnector.__name__,
             )
         except ImportError as error:
             return Diagnostic(name="connectors", ok=False, message=str(error))
