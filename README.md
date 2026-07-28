@@ -100,7 +100,7 @@ jobfindsme doctor          # 诊断（含版本 + Chrome 状态）
 **启用平台搜索（一次操作）：**
 
 ```bash
-jobfindsme setup              # 打开 BOSS+猎聘+智联+拉勾 四个平台登录
+jobfindsme setup              # 打开 BOSS+猎聘+前程无忧+智联+拉勾 五个平台登录
 jobfindsme setup --platform boss liepin  # 只开部分平台
 ```
 
@@ -130,7 +130,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 
 ## 来源覆盖
 
-**四个平台，全行业覆盖。** 腾讯、阿里、字节、拼多多、小米、网易、美团、携程、百度、京东、快手、蚂蚁、小红书、米哈游、B站、滴滴、SHEIN、华为、知乎……所有中国公司的岗位都在这四个平台上。
+**五个平台，覆盖主流招聘渠道。** 腾讯、阿里、字节、拼多多、小米、网易、美团、携程、百度、京东、快手、蚂蚁、小红书、米哈游、B站、滴滴、SHEIN、华为、知乎……绝大部分中国互联网公司的岗位都能在这些平台上找到。
 
 | 来源 | 技术 | 说明 |
 |------|------|------|
@@ -140,7 +140,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 | **智联招聘** | Chrome CDP | 传统行业 + IT（免登录） |
 | **拉勾** | Chrome CDP | 互联网专注（免登录） |
 
-> 搜一次 = 搜全行业。不需要逐家攻克官网。
+> 搜一次覆盖主流招聘渠道。不保证覆盖所有公司所有岗位——部分职位可能仅在官网或内推渠道发布。
 
 ---
 
@@ -155,7 +155,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
       ▼
   JobFindsMe MCP Server（本地）
       │
-  ├── Chrome CDP ────────→ BOSS/猎聘/智联/拉勾（全行业覆盖）
+  ├── Chrome CDP ────────→ BOSS/猎聘/前程无忧/智联/拉勾
       └── BOSS CDP 桥 ───────────→ Experimental（显式启用）
       │
       ▼

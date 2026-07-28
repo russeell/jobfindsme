@@ -7,11 +7,11 @@ def recommended_connectors(
     locations: tuple[str, ...],
     roles: tuple[str, ...] = (),
 ) -> tuple[DiscoverySource, ...]:
-    """Return the four recruitment platforms — they cover all Chinese companies.
+    """Return the five recruitment platforms for broadest reach.
 
-    Company career sites (Playwright/SSR) and foreign ATS (Greenhouse/Ashby/
-    Lever) are available via explicit sources but excluded from defaults:
-    BOSS + 猎聘 + 智联 + 拉勾 already list every major company's jobs.
+    No single source covers every position — some roles may appear only on
+    company career sites or internal referral channels. These five platforms
+    together provide the widest coverage with minimal maintenance.
     """
 
     if not _targets_china(locations):
