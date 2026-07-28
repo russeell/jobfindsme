@@ -10,7 +10,7 @@
 [![Release](https://img.shields.io/github/v/release/russeell/jobfindsme?include_prereleases)](https://github.com/russeell/jobfindsme/releases)
 [![License](https://img.shields.io/github/license/russeell/jobfindsme)](LICENSE)
 
-> 当前版本 **v0.2.0-rc.4** — 7 个自动 Connector + 22 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
+> 当前版本 **v0.2.0-rc.5** — 8 个自动 Connector + 29 个直达搜索链接，143 项自动化测试，支持 ZCode / Codex / Claude Code / Qwen Code。
 
 ---
 
@@ -27,45 +27,45 @@
 
 Agent + JobFindsMe：
   1. 本地解析简历 → 自动确认技能事实
-  2. 从百度/腾讯/Airbnb 公开 API 拉取岗位
+	  2. 从百度/腾讯/字节/美团/滴滴/B站/BOSS直聘 自动拉取岗位
   3. 硬过滤（地点/薪资/年限/排除词）→ 去重 → 证据匹配
   4. 返回 Top 10 + 匹配理由 + 投递链接
-  5. 同时给出 28 个官网直达搜索入口
+  5. 同时给出 29 个官网直达搜索入口
 ```
 
 ---
 
 ## 覆盖中国主要招聘渠道
 
+国内企业招聘分两个阵营：**大厂用官网，其他所有人用 BOSS直聘。** JobFindsMe 两条腿走路，都接。
+
 ### 官网自动抓取（7 家，Agent 直接拉取）
 
-企业以官网为主要招聘渠道的，建立自动 Connector：
+| 来源 | 技术 | 覆盖 |
+|------|------|------|
+| 百度 | SSR 页面解析 | 百度全岗位 |
+| 腾讯 | Schema.org JSON-LD | 腾讯全岗位 |
+| 字节跳动 | Playwright SPA 渲染 | 字节全岗位 |
+| 美团 | Playwright SPA 渲染 | 美团全岗位 |
+| 滴滴 | Playwright SPA 渲染 | 滴滴全岗位 |
+| 哔哩哔哩 | Playwright SPA 渲染 | B站全岗位 |
+| Airbnb 中国 | Greenhouse 公开 API | 含 AI 工程岗 |
 
-| 来源 | 技术 |
-|------|------|
-| 百度、腾讯 | SSR / JSON-LD 解析 |
-| 字节跳动、美团、滴滴、哔哩哔哩 | Playwright SPA 渲染 |
-| Airbnb 中国 | Greenhouse 公开 API |
+### 招聘平台自动抓取（1 家，覆盖几千家公司）
 
-### 招聘平台（覆盖 90% 中国企业，开发中）
+| 平台 | 技术 | 覆盖 |
+|------|------|------|
+| **BOSS直聘** 🆕 | Chrome CDP 浏览器桥 | 几乎所有中国公司 |
 
-大多数中国企业不靠官网招人，而是靠 BOSS直聘和猎聘。
-接入这两个平台 = 一次性覆盖几乎所有中国公司的岗位。
+> BOSS直聘 Connector 通过 Chrome DevTools Protocol 连接**你自己的浏览器**，在你已登录的会话中调搜索接口。不保存密码、不传输 Cookie、不绕过平台限制。需本地 Chrome 开启远程调试端口。
 
-| 平台 | 覆盖 | 接入方案 |
-|------|------|---------|
-| BOSS直聘 | 几乎所有中国公司 | 用户授权浏览器桥 🔜 |
-| 猎聘 | 中高端岗位 | 用户授权浏览器桥 🔜 |
-
-### 直达搜索链接（29 家，一键打开）
-
-无法自动接入的官网，提供动态搜索链接：
+### 直达搜索链接（29 家，一键打开官网）
 
 | 分类 | 企业 |
 |------|------|
-| 互联网 | 阿里巴巴、华为、京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁集团、联想 |
-| AI & 新势力 | 科大讯飞、旷视科技、商汤科技、知乎、蔚来、理想汽车、小鹏汽车、大疆、米哈游 |
-| 招聘平台 | BOSS直聘、猎聘、智联招聘、前程无忧 |
+| 互联网 | 阿里巴巴、华为、京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想 |
+| AI & 新势力 | 科大讯飞、旷视科技、商汤、知乎、蔚来、理想汽车、小鹏汽车、大疆、米哈游 |
+| 招聘平台 | 猎聘、智联招聘、前程无忧 |
 
 ---
 
@@ -89,7 +89,7 @@ Agent + JobFindsMe：
 
 ```bash
 python3 -m pip install \
-  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.4"
+  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
 ```
 
@@ -178,15 +178,17 @@ jobfindsme install qwen     # Qwen Code
 
 ## 当前状态
 
-`v0.2.0-rc.4`：
+`v0.2.0-rc.5`：
 
 - ✅ 143 个自动化测试，Python 3.11 / 3.12 CI
-- ✅ 4 个 Agent 集成（ZCode / Codex / Claude Code / Qwen Code）
-- ✅ 3 个自动 Connector + 28 个官方直达链接
+- ✅ 5 个 Agent 集成（ZCode / Codex / Claude Code / Qwen Code / MCP 通用）
+- ✅ 8 个自动 Connector（7 官网 + BOSS直聘）
+- ✅ 29 个直达搜索链接
 - ✅ 安装 / 升级 / 卸载 / 诊断一键完成
-- ✅ 中文岗位匹配与证据解释
-- 🔜 真实中文岗位标注基准（进行中）
-- 🔜 个人实地试用报告（进行中）
+- ✅ 中文简历解析 + 岗位匹配 + 证据解释
+- 🔜 猎聘浏览器桥（M17）
+- 🔜 真实中文岗位标注基准（M14）
+- 🔜 个人实地试用报告（M15）
 
 ---
 

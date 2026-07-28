@@ -10,7 +10,7 @@
 [![Release](https://img.shields.io/badge/release-v0.2.0--rc.4-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License](https://img.shields.io/github/license/russeell/jobfindsme)](LICENSE)
 
-> Current version **v0.2.0-rc.4** — 3 auto-connectors, 28 direct search links, 143 automated tests, supports ZCode / Codex / Claude Code / Qwen Code.
+> Current version **v0.2.0-rc.5** — 8 auto-connectors, 29 direct links, 143 automated tests, supports ZCode / Codex / Claude Code / Qwen Code.
 
 JobFindsMe is a **local-first, agent-native** job discovery and tracking engine. It is not a job board, and it will never auto-apply. Deterministic resume parsing, job discovery, deduplication, filtering, evidence-based matching, and state management run in a local Core. Your existing AI agent handles understanding your intent and explaining results.
 
