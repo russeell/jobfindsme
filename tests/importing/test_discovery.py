@@ -300,6 +300,23 @@ def test_persisted_browser_source_is_not_launched_without_runtime_opt_in(
         "jobfindsme.connectors.playwright.PlaywrightSpaConnector.fetch",
         unexpected_fetch,
     )
+    core.job_imports.import_records(
+        configured.workspace.workspace_id,
+        [
+            RawJobRecord(
+                source_kind=SourceKind.CAREER_SITE,
+                source_name="字节跳动",
+                source_url="https://jobs.bytedance.com/experienced/position",
+                external_id="old-cache",
+                payload={
+                    "title": "AI应用工程师",
+                    "company": "字节跳动",
+                    "description": "Python Agent RAG",
+                    "apply_url": "https://jobs.bytedance.com/experienced/position",
+                },
+            )
+        ],
+    )
 
     assert core.search_jobs() == []
     subscription = core.source_subscriptions.list(

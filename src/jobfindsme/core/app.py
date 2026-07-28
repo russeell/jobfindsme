@@ -221,6 +221,7 @@ class JobFindsMeCore:
         workspace_id: str | None = None,
         plan_id: str | None = None,
         limit: int = 20,
+        excluded_source_names: Sequence[str] = (),
     ) -> list[JobMatch]:
         context = self.context.resolve(
             workspace_id=workspace_id,
@@ -230,9 +231,13 @@ class JobFindsMeCore:
         profile = self.profiles.latest_confirmed_summary(
             workspace_id=context.workspace.workspace_id
         )
+        jobs = self.jobs.list(context.workspace.workspace_id)
+        if excluded_source_names:
+            excluded = set(excluded_source_names)
+            jobs = [job for job in jobs if job.source.source_name not in excluded]
         return self.matcher.match(
             context.plan,
-            self.jobs.list(context.workspace.workspace_id),
+            jobs,
             profile=profile,
             limit=limit,
         )
@@ -259,9 +264,16 @@ class JobFindsMeCore:
             )
         )
         if not allow_browser_sources:
+            browser_source_names = {
+                source.source_name
+                for source in effective_sources
+                if source.kind.uses_browser
+            }
             effective_sources = tuple(
                 source for source in effective_sources if not source.kind.uses_browser
             )
+        else:
+            browser_source_names = set()
         if effective_sources:
             self._discover_sources(
                 workspace_id=context.workspace.workspace_id,
@@ -272,6 +284,7 @@ class JobFindsMeCore:
             workspace_id=context.workspace.workspace_id,
             plan_id=context.plan.plan_id,
             limit=limit,
+            excluded_source_names=tuple(browser_source_names),
         )
 
     def _discover_sources(

@@ -142,6 +142,12 @@ def test_spa_sources_expose_recruitment_track() -> None:
 
     assert bytedance.payload["recruitment_track"] == "social"
     assert meituan.payload["recruitment_track"] == "campus"
+    assert bytedance.payload["apply_url"].endswith("/position/1/detail")
+    assert (
+        meituan.payload["apply_url"]
+        == "https://zhaopin.meituan.com/web/position/detail"
+        "?jobUnionId=2&highlightType=campus"
+    )
 
 
 def test_nested_response_job_list_is_extracted() -> None:

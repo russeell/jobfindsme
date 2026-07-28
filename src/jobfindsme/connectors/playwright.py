@@ -29,6 +29,7 @@ class SpaSiteConfig:
     description_field: str = "description"
     company_name: str = ""
     recruitment_track: str = "unknown"
+    detail_url_template: str | None = None
 
 
 class SpaBrowser(Protocol):
@@ -105,6 +106,9 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         description_field="description",
         company_name="字节跳动",
         recruitment_track="social",
+        detail_url_template=(
+            "https://jobs.bytedance.com/experienced/position/{external_id}/detail"
+        ),
     ),
     "meituan": SpaSiteConfig(
         source_name="美团",
@@ -119,6 +123,10 @@ SITE_REGISTRY: dict[str, SpaSiteConfig] = {
         description_field="desc",
         company_name="美团",
         recruitment_track="campus",
+        detail_url_template=(
+            "https://zhaopin.meituan.com/web/position/detail"
+            "?jobUnionId={external_id}&highlightType=campus"
+        ),
     ),
     "didi": SpaSiteConfig(
         source_name="滴滴",
@@ -209,6 +217,11 @@ class PlaywrightSpaConnector:
 
         title = str(job.get(cfg.title_field, ""))
         description = str(job.get(cfg.description_field, ""))
+        detail_url = (
+            cfg.detail_url_template.format(external_id=external_id)
+            if cfg.detail_url_template
+            else source_url
+        )
 
         return RawJobRecord(
             source_kind=SourceKind.CAREER_SITE,
@@ -220,8 +233,8 @@ class PlaywrightSpaConnector:
                 "company": cfg.company_name,
                 "description": description,
                 "location": location,
-                "url": source_url,
-                "apply_url": source_url,
+                "url": detail_url,
+                "apply_url": detail_url,
                 "recruitment_track": cfg.recruitment_track,
             },
         )
