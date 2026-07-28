@@ -413,7 +413,7 @@
     {
       "id": "M6-002",
       "title": "Mainstream Agent MCP compatibility matrix",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M6-001"
       ],
@@ -428,12 +428,21 @@
         "Only tested clients are listed as officially supported.",
         "Cherry Studio, Cursor, Cline, Roo Code and OpenCode are evaluated against one shared scenario suite.",
         "Unsupported schema, approval and transport behavior is documented without platform-specific business logic."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/integrations/test_compatibility_matrix.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M6-002.json"
     },
     {
       "id": "M7-001",
       "title": "One-command install and doctor",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M6-002"
       ],

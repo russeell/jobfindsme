@@ -1,0 +1,10 @@
+{
+  "suite_version": "0.1.0",
+  "scenarios": [
+    "initialize_and_list_seven_tools",
+    "reject_unknown_input_fields",
+    "pass_resume_path_without_reading_resume",
+    "return_structured_job_evidence",
+    "reject_delete_without_core_confirmation_token"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "jobfindsme",
+  "type": "STDIO",
+  "command": "__PYTHON__",
+  "args": ["-m", "jobfindsme.mcp"],
+  "cwd": "__PROJECT_ROOT__",
+  "env": {
+    "PYTHONPATH": "__PROJECT_ROOT__/src",
+    "JOBFINDSME_DB_PATH": "__DATA_DIR__/jobfindsme.db"
+  },
+  "installation": "Configure through Cherry Studio Settings > MCP Servers"
+}
