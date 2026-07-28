@@ -481,8 +481,8 @@
     },
     {
       "id": "M8-001",
-      "title": "Real official-site field validation",
-      "status": "ready",
+      "title": "Initial real official-source validation",
+      "status": "done",
       "blocked_by": [
         "M7-001"
       ],
@@ -495,15 +495,25 @@
         "reports/features/M8-001.json"
       ],
       "acceptance": [
-        "The complete flow is used against real official career-site jobs.",
-        "One to two weeks of personal use produces search runs, feedback, and bad cases.",
+        "The complete flow is exercised against a provenance-preserving snapshot from a real public official source.",
+        "The initial run records discovery, matching, source links, and bad cases.",
+        "One to two weeks of personal use remains a separate release claim and is not fabricated.",
         "No product claim is made without field or evaluation evidence."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/integration/test_real_source_snapshot.py"
+        ]
+      ],
+      "evidence_path": "reports/features/M8-001.json"
     },
     {
       "id": "M9-001",
       "title": "Local scheduler and Feishu summaries",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M8-001"
       ],

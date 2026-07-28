@@ -1,0 +1,14 @@
+{
+  "dataset_version": "0.1.0",
+  "source_snapshot": "data/fixtures/scaleai_greenhouse_2026-07-28.json",
+  "source_sha256": "b03adfcde35dc0cb79f027ee2605b8cb72b3e0555de689e6f20595faef881e75",
+  "search_plan": {
+    "target_roles": ["AI Advisory"],
+    "locations": ["San Francisco"]
+  },
+  "expected": {
+    "discovered": 3,
+    "unique": 3,
+    "matched_external_ids": ["4715976005", "4715970005"]
+  }
+}
