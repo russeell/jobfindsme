@@ -339,13 +339,18 @@
     {
       "id": "M5-001",
       "title": "Local stdio MCP server",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M4-001"
       ],
       "allowed_paths": [
+        "src/jobfindsme/core/**",
         "src/jobfindsme/mcp/**",
+        "src/jobfindsme/monitor_configs.py",
+        "src/jobfindsme/migrations/**",
         "tests/mcp/**",
+        "tests/core/**",
+        "tests/test_storage.py",
         "specs/feature_list.json",
         "reports/features/M5-001.json"
       ],
@@ -354,12 +359,30 @@
         "MCP contains no matching or persistence rules.",
         "Deletion requires Core-enforced preview and confirm phases.",
         "Malicious or approval-free clients cannot bypass safety."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/mcp",
+          "tests/core",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/mcp",
+          "src/jobfindsme/monitor_configs.py",
+          "tests/mcp"
+        ]
+      ],
+      "evidence_path": "reports/features/M5-001.json"
     },
     {
       "id": "M6-001",
       "title": "Qwen Code, Codex and Claude Code integrations",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M5-001"
       ],

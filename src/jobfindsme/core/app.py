@@ -14,6 +14,7 @@ from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
 from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.monitor_configs import MonitorConfig, MonitorConfigService
 from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
 from jobfindsme.profiles.models import (
     CandidateProfile,
@@ -40,6 +41,7 @@ class JobFindsMeCore:
         self.matcher = DeterministicMatcher()
         self.job_states = JobStateService(self.database)
         self.privacy = PrivacyService(self.database)
+        self.monitor_configs = MonitorConfigService(self.database)
 
     def create_workspace(self, name: str = "My Job Search") -> Workspace:
         return self.workspaces.create(name)
@@ -150,4 +152,21 @@ class JobFindsMeCore:
             workspace_id=workspace_id,
             scope=scope,
             confirmation_token=confirmation_token,
+        )
+
+    def configure_monitor(
+        self,
+        *,
+        workspace_id: str,
+        plan_id: str,
+        enabled: bool,
+        interval_hours: int = 24,
+        notification_channel: str | None = None,
+    ) -> MonitorConfig:
+        return self.monitor_configs.configure(
+            workspace_id=workspace_id,
+            plan_id=plan_id,
+            enabled=enabled,
+            interval_hours=interval_hours,
+            notification_channel=notification_channel,
         )
