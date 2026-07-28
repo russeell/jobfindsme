@@ -33,23 +33,6 @@ def recommended_connectors(
             query=query,
         ),
         DiscoverySource(
-            kind="spa_playwright",
-            source_name="滴滴",
-            site_key="didi",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="spa_playwright",
-            source_name="哔哩哔哩",
-            site_key="bilibili",
-            query=query,
-        ),
-        DiscoverySource(
-            kind="boss_cdp",
-            source_name="BOSS直聘",
-            query=query,
-        ),
-        DiscoverySource(
             kind="greenhouse",
             source_name="Airbnb 中国",
             board_token="airbnb",
@@ -72,7 +55,7 @@ def source_links(
     encoded = quote_plus(query)
 
     return (
-        # ── 有自动 Connector 的企业 ──
+        # ── 默认 Connector ──
         SourceLink(
             name="百度招聘 (自动)",
             category="企业官网 · 自动发现",
@@ -81,11 +64,11 @@ def source_links(
             note="已接入自动 Connector，岗位实时获取并匹配",
         ),
         SourceLink(
-            name="腾讯招聘 (自动)",
-            category="企业官网 · 自动发现",
+            name="腾讯招聘",
+            category="企业官网 · 直达链接",
             url="https://careers.tencent.com/zh-cn/search.html",
             access_mode="official_link",
-            note="已接入自动 Connector，岗位实时获取并匹配",
+            note="尚未接入自动 Connector",
         ),
         SourceLink(
             name="字节跳动招聘 (自动)",
@@ -102,18 +85,18 @@ def source_links(
             note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
         ),
         SourceLink(
-            name="滴滴招聘 (自动)",
-            category="企业官网 · 自动发现",
+            name="滴滴招聘 (Beta)",
+            category="企业官网 · Beta Connector",
             url=f"https://talent.didiglobal.com/social?keyword={encoded}",
             access_mode="official_link",
-            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+            note="能获取岗位，但现场验证中关键词过滤不准确，默认不启用",
         ),
         SourceLink(
-            name="哔哩哔哩招聘 (自动)",
-            category="企业官网 · 自动发现",
+            name="哔哩哔哩招聘 (Beta)",
+            category="企业官网 · Beta Connector",
             url=f"https://jobs.bilibili.com/social?keyword={encoded}",
             access_mode="official_link",
-            note="已接入 Playwright 自动 Connector，岗位实时获取并匹配",
+            note="能获取岗位，但关键词和地点字段仍需加固，默认不启用",
         ),
         SourceLink(
             name="Airbnb 中国 (自动)",
@@ -247,13 +230,13 @@ def source_links(
         ),
         # ── 招聘平台（用户自行浏览） ──
         SourceLink(
-            name="BOSS直聘 (自动)",
-            category="招聘平台",
+            name="BOSS直聘 (Experimental)",
+            category="招聘平台 · 实验性浏览器桥",
             url=f"https://www.zhipin.com/web/geek/job?query={encoded}",
             access_mode="user_browser",
             note=(
-                "已接入 Chrome CDP 自动 Connector。"
-                "需本地 Chrome 开启远程调试并登录 BOSS。"
+                "需显式启用、本地 Chrome 开启远程调试并登录 BOSS；"
+                "尚未完成登录态现场验证。"
             ),
         ),
         SourceLink(

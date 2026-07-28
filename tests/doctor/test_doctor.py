@@ -40,6 +40,26 @@ def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
     assert "jobfindsme[browser]" in browser.message
 
 
+def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        "jobfindsme.doctor.service.find_spec",
+        lambda _name: object(),
+    )
+    monkeypatch.setattr(
+        "jobfindsme.doctor.service._browser_binary_available",
+        lambda: False,
+    )
+
+    report = Doctor(tmp_path / "private" / "jobfindsme.db").run()
+    browser = next(
+        item for item in report.diagnostics if item.name == "browser_connectors"
+    )
+
+    assert report.ok is True
+    assert browser.ok is False
+    assert "playwright install chromium" in browser.message
+
+
 def test_doctor_reports_insecure_data_directory_permissions(tmp_path) -> None:
     public = tmp_path / "public"
     public.mkdir(mode=0o755)

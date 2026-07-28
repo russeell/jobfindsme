@@ -1,0 +1,57 @@
+{
+  "release": "0.2.0-rc.5",
+  "implementation_status": "release_candidate",
+  "validation_date": "2026-07-28",
+  "git_tag_target": "v0.2.0-rc.5",
+  "automated_validation": {
+    "pytest": {
+      "passed": 163,
+      "failed": 0
+    },
+    "ruff_check": "passed",
+    "ruff_format_check": "passed",
+    "clean_wheel_install": "passed",
+    "installed_workspace_init": "passed",
+    "installed_package_doctor": "passed",
+    "installed_mcp_empty_result": "passed"
+  },
+  "connector_evidence": {
+    "verified_live": [
+      "Baidu",
+      "ByteDance",
+      "Meituan"
+    ],
+    "contract_and_snapshot": [
+      "Airbnb Greenhouse",
+      "Airwallex Ashby"
+    ],
+    "beta": [
+      "Didi",
+      "Bilibili"
+    ],
+    "experimental": [
+      "BOSS Zhipin CDP bridge"
+    ],
+    "link_only_examples": [
+      "Tencent",
+      "Liepin",
+      "Zhaopin",
+      "51job"
+    ]
+  },
+  "closed_gaps": [
+    "SPA mapping is dependency-injected and contract-tested.",
+    "Browser dependencies are declared under the browser extra.",
+    "Doctor distinguishes optional browser readiness from Core readiness.",
+    "BOSS navigates to a same-origin page and closes CDP resources.",
+    "Source failures return cached jobs and update health state.",
+    "Migration reconciliation validates required columns and restores indexes.",
+    "README and Product Spec separate verified, beta, experimental, and link-only sources."
+  ],
+  "claim_boundary": [
+    "Didi and Bilibili returned live jobs but query and location quality remain incomplete.",
+    "BOSS has deterministic protocol tests but no logged-in live field validation.",
+    "An Agent installer target is not an official compatibility claim.",
+    "M14 real Chinese recommendation metrics and M15 personal field use remain in progress."
+  ]
+}

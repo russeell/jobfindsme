@@ -9,7 +9,7 @@ JobFindsMe for the current user.
 
 ```bash
 python3 -m pip install \
-  "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+  "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 ```
 
 2. **Run doctor to verify:**
@@ -45,5 +45,9 @@ Tell the user to restart their agent. After restart, they can say:
 - `jobfindsme doctor` diagnoses: database, permissions, MCP connectivity,
   connector health, and secret storage.
 - The installer backs up existing config files before modifying them.
-- Supported agents: ZCode, Codex, Claude Code, Qwen Code, Kimi Code,
-  TRAE, TRAE CN, Qoder, WorkBuddy.
+- Configuration installers are provided for ZCode, Codex, Claude Code,
+  Qwen Code, Kimi Code, TRAE, TRAE CN, Qoder, and WorkBuddy.
+- An installer target is not an official compatibility claim. See the
+  field-tested compatibility report for verified hosts.
+- BOSS is experimental and is not enabled by default. It requires a dedicated,
+  logged-in Chrome profile with local remote debugging.

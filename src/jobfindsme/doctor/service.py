@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import stat
 import sys
 from importlib.util import find_spec
@@ -10,6 +11,32 @@ from jobfindsme.contracts import StrictModel
 from jobfindsme.core import JobFindsMeCore
 from jobfindsme.mcp.server import StdioMcpServer
 from jobfindsme.mcp.tools import ToolRegistry
+
+
+def _browser_binary_available() -> bool:
+    system_browsers = (
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    )
+    if any(Path(path).is_file() for path in system_browsers):
+        return True
+    if any(
+        shutil.which(command)
+        for command in (
+            "google-chrome",
+            "chromium",
+            "chromium-browser",
+            "microsoft-edge",
+        )
+    ):
+        return True
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as playwright:
+            return Path(playwright.chromium.executable_path).is_file()
+    except Exception:
+        return False
 
 
 class Diagnostic(StrictModel):
@@ -131,13 +158,23 @@ class Doctor:
                     '"jobfindsme[browser]" and Playwright Chromium'
                 ),
             )
+        if not _browser_binary_available():
+            return Diagnostic(
+                name="browser_connectors",
+                ok=False,
+                required=False,
+                message=(
+                    "optional packages are installed but no compatible browser "
+                    "was found; run 'python -m playwright install chromium'"
+                ),
+            )
         return Diagnostic(
             name="browser_connectors",
             ok=True,
             required=False,
             message=(
-                "optional packages ready; run "
-                "'python -m playwright install chromium' if Chromium is missing"
+                "optional packages and a compatible browser are ready; "
+                "BOSS additionally requires an explicit local CDP session"
             ),
         )
 

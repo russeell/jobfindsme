@@ -8,7 +8,7 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Turn your AI agent into a job search engine.** One sentence searches Baidu, Tencent, ByteDance, Meituan, Didi, Bilibili, and BOSS Zhipin simultaneously — matches against your resume and explains why each job fits.
+**Turn your AI agent into a job search engine.** Discover jobs from verified career sources, match them against a local resume, and return evidence plus official application links.
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ The agent handles install, MCP config, and Skill setup automatically. Then start
 **Or manually:**
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
 jobfindsme install zcode    # or codex / claude / qwen
 ```
@@ -42,7 +42,7 @@ No workspace IDs or plan IDs needed — Core handles everything.
 
 | | Job Apps | JobFindsMe |
 |---|---|---|
-| Coverage | One platform | **8 sources at once** |
+| Coverage | One platform | **Multiple verifiable sources** |
 | Resume | Uploaded | **Stays local** |
 | Recommendations | Black box | **Evidence-based** |
 | Model API | — | **Not required** |
@@ -50,14 +50,17 @@ No workspace IDs or plan IDs needed — Core handles everything.
 
 ## Sources
 
-**8 auto-connectors** pull jobs directly. **29 one-click links** for everything else.
+Sources are classified as verified, beta, experimental, or link-only.
 
 | Source | Method | Coverage |
 |--------|--------|----------|
-| Baidu, Tencent | SSR / JSON-LD | All roles |
-| ByteDance, Meituan, Didi, Bilibili | Playwright SPA | All roles |
-| **BOSS Zhipin** | Chrome CDP bridge | **Thousands of companies** |
-| Airbnb China | Greenhouse API | China-based roles |
+| Baidu | SSR | Verified |
+| ByteDance, Meituan | Playwright SPA | Verified; browser extra required |
+| Airbnb China | Greenhouse API | Contract and snapshot verified |
+| Airwallex | Ashby API | Contract and China snapshot verified |
+| Didi, Bilibili | Playwright SPA | Beta; query quality incomplete |
+| BOSS Zhipin | Chrome CDP bridge | Experimental; explicit opt-in |
+| Tencent and other sites | Direct links | Not described as auto-fetched |
 
 Plus 29 direct links to Alibaba, Huawei, JD.com, NetEase, and more.
 
@@ -70,10 +73,10 @@ Your agent (ZCode / Codex / Claude Code)
   JobFindsMe MCP Server (local stdio)
       │
       ├── Baidu SSR ────────────→ Baidu jobs
-      ├── Tencent JSON-LD ──────→ Tencent jobs
-      ├── Playwright SPA ───────→ ByteDance/Meituan/Didi/Bilibili
-      ├── Chrome CDP bridge ────→ BOSS Zhipin (1000s of companies)
-      └── Greenhouse API ───────→ Global companies
+      ├── Playwright SPA ───────→ ByteDance/Meituan
+      ├── Greenhouse/Ashby ─────→ China roles at global companies
+      ├── Beta connectors ──────→ Didi/Bilibili (opt-in)
+      └── BOSS CDP bridge ──────→ Experimental (opt-in)
       │
       ▼
   Deduplicate → Filter → Evidence match → Top 10 + reasons + links
@@ -97,7 +100,7 @@ Your agent (ZCode / Codex / Claude Code)
 
 - Resume stays local — agent never reads the full file
 - Only structured facts and minimum evidence retained
-- BOSS connector uses YOUR Chrome, YOUR login — zero credential exposure
+- The experimental BOSS connector only attaches to a local Chrome CDP session
 - Two-phase deletion enforced by Core
 
 ## Disclaimer

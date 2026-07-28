@@ -1233,7 +1233,7 @@
     {
       "id": "M19-001",
       "title": "RC5 release truth and documentation alignment",
-      "status": "in_progress",
+      "status": "done",
       "blocked_by": [
         "M18-001"
       ],
@@ -1244,6 +1244,10 @@
         "PROJECT_SPEC.md",
         "pyproject.toml",
         "specs/feature_list.json",
+        "src/jobfindsme/source_catalog.py",
+        "src/jobfindsme/doctor/**",
+        "tests/core/test_source_catalog.py",
+        "tests/doctor/**",
         "reports/release/v0.2.0-rc.5.json",
         "reports/features/M19-001.json"
       ],

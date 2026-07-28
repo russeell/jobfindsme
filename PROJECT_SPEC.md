@@ -1,10 +1,10 @@
 # JobFindsMe Product And Architecture Specification
 
-> Status: v0.2.0-rc.4 release candidate
+> Status: v0.2.0-rc.5 release candidate
 >
 > Baseline: Agent-native, Local-first
 >
-> Updated: 2026-07-28 (RC4)
+> Updated: 2026-07-28 (RC5)
 
 ## 1. Product Goal
 
@@ -268,15 +268,15 @@ or:
 国内企业招聘渠道并非以官网为主，而是分为三个层级：
 
 ```
-第一层：企业官网为主（BAT/字节等大厂）
-  百度、腾讯、字节跳动、美团、滴滴、哔哩哔哩 —— 官网是主要招聘入口
-  → 策略：建立自动 Connector，实时抓取
+第一层：有稳定证据的企业官网或公开 ATS
+  百度、字节跳动、美团、Airbnb、Airwallex
+  → 策略：默认 Connector，持续做现场回归
 
 第二层：平台为主，官网为辅（绝大多数公司）
   京东、网易、拼多多、小红书、快手、小米、携程、蚂蚁、联想……
   以及几千家中小型互联网和 AI 创业公司
-  它们的官网要么没有招聘页，要么只是摆设，真正招人在 BOSS直聘/猎聘上
-  → 策略：接入主流招聘平台，一次性覆盖
+  官网可能不完整，招聘平台覆盖更广
+  → 策略：先提供直达链接；浏览器桥必须显式授权并单独验证
 
 第三层：外企中国岗位
   Airbnb、Stripe、Shopify 等通过 Greenhouse/Ashby 发布全球岗位
@@ -284,33 +284,35 @@ or:
 ```
 
 综上，JobFindsMe 的来源体系必须是**两条腿走路**：
-- **官网 Connector**：大厂官网直接抓取（精确但覆盖窄）
-- **平台接入**：BOSS直聘/猎聘浏览器桥（覆盖广但需用户授权）
+- **官网/ATS Connector**：默认使用有契约和现场证据的来源
+- **平台接入**：实验性浏览器桥，默认关闭且需要用户授权
 
-### 11.2 官网 Connector（已实现）
+### 11.2 来源验证状态
 
 对以官网为主要招聘渠道的企业，建立自动 Connector：
 
 | 状态 | 公司 | 技术 |
 |------|------|------|
-| ✅ | 百度 | SSR 页面解析 |
-| ✅ | 腾讯 | Schema.org JSON-LD |
-| ✅ | 字节跳动 | Playwright SPA 渲染 |
-| ✅ | 美团 | Playwright SPA 渲染 |
-| ✅ | 滴滴 | Playwright SPA 渲染 |
-| ✅ | 哔哩哔哩 | Playwright SPA 渲染 |
-| ✅ | Airbnb 中国 | Greenhouse 公开 API |
+| Verified | 百度 | SSR 页面解析 |
+| Verified | 字节跳动 | Playwright SPA 渲染 |
+| Verified | 美团 | Playwright SPA 渲染 |
+| Contract + snapshot | Airbnb 中国 | Greenhouse 公开 API |
+| Contract + snapshot | Airwallex | Ashby 公开 API |
+| Beta | 滴滴 | 能返回岗位，关键词过滤待加固 |
+| Beta | 哔哩哔哩 | 关键词和地点字段待加固 |
+| Experimental | BOSS直聘 | CDP 契约通过，登录态现场验证未完成 |
+| Link-only | 腾讯及其他官网 | 只提供直达链接 |
 
 另有 29 家企业官网提供手动直达搜索链接，按关键词动态生成 URL。
 
-### 11.3 招聘平台接入（进行中）
+### 11.3 招聘平台接入
 
-以下平台覆盖中国 90% 以上的招聘岗位：
+登录型招聘平台覆盖大量中国岗位，但覆盖比例不在缺少可复现数据时声明：
 
 | 平台 | 覆盖 | 接入方式 | 状态 |
 |------|------|---------|------|
-| **BOSS直聘** | 几乎所有中国公司 | 用户授权浏览器桥 | 🔜 规划中 |
-| **猎聘** | 中高端岗位 | 用户授权浏览器桥 | 🔜 规划中 |
+| **BOSS直聘** | 广泛企业岗位 | 用户授权浏览器桥 | Experimental |
+| **猎聘** | 中高端岗位 | 直达链接 | Link-only |
 | **拉勾** | 互联网行业 | 待调研 | 📋 |
 
 平台接入的核心原则：
@@ -354,15 +356,14 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 10. Zero-ID onboarding and profile-grounded matching.
 11. Subscription-backed discovery monitoring and source health.
 12. Bounded MCP output, redirect-safe HTTP, and regional data contracts.
-13. Enterprise career-site connectors: Playwright-based connectors for
-    ByteDance, Meituan, Didi, Bilibili, plus Baidu SSR and Tencent JSON-LD.
+13. Enterprise career-site connectors and China source catalog.
 14. Real Chinese job matching evidence: 50+ labeled jobs across 3+ days of
     real use, script-generated metrics, and qualitative evidence.
 15. Personal field trial across at least two Agent hosts.
-16. **BOSS直聘浏览器桥**：用户授权本地浏览器扩展，合规提取平台岗位数据，
-    一次性覆盖中国 90% 以上企业。
-17. **猎聘浏览器桥**：同上，覆盖中高端岗位市场。
-18. Public release and community onboarding.
+16. SPA Connector contract tests, browser diagnostics, and live source reports.
+17. BOSS CDP bridge hardening; keep experimental until a logged-in field test.
+18. Schema-aware migration reconciliation.
+19. RC5 release truth, documentation alignment, and community onboarding.
 
 ## 13. Definition Of Done
 

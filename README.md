@@ -8,7 +8,7 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**把 AI Agent 变成求职引擎。** 一句话，同时搜索百度、腾讯、字节、美团、滴滴、B站、BOSS直聘——根据你的简历匹配，告诉你为什么合适，给你投递链接。
+**把 AI Agent 变成求职引擎。** 根据本地简历，从经过验证的企业招聘源发现岗位，给出匹配证据和官方投递链接。
 
 ---
 
@@ -27,7 +27,7 @@ Agent 会读取安装指南，自动执行安装、配置 MCP、安装 Skill。
 **或者手动安装：**
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme[browser] @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
 jobfindsme install zcode     # ZCode
 jobfindsme install codex     # Codex
@@ -54,7 +54,7 @@ jobfindsme install workbuddy # WorkBuddy
 
 | | 招聘 App | JobFindsMe |
 |---|---|---|
-| 搜索范围 | 一个平台 | **8 个来源同时搜** |
+| 搜索范围 | 一个平台 | **多个可验证来源统一搜索** |
 | 简历 | 上传到平台 | **留在本地** |
 | 推荐理由 | 黑盒算法 | **每条有证据**：技能→JD 对照 |
 | 模型 API | — | **不需要**，Core 确定性匹配 |
@@ -64,16 +64,24 @@ jobfindsme install workbuddy # WorkBuddy
 
 ## 来源覆盖
 
-**国内招聘两条路：大厂用官网，其他人用 BOSS。两条都接。**
+来源分为 `Verified`、`Beta`、`Experimental` 和直达链接，避免把“有代码”写成“已验证”。
 
-### 自动抓取（Agent 直接拉取）
+### 默认 Connector
 
 | 来源 | 技术 | 覆盖 |
 |------|------|------|
-| 百度、腾讯 | SSR / JSON-LD | 两大厂全岗位 |
-| 字节、美团、滴滴、B站 | Playwright SPA | 四家大厂全岗位 |
-| **BOSS直聘** | Chrome CDP 浏览器桥 | **几千家公司** |
-| Airbnb 中国 | Greenhouse API | 外企中国岗 |
+| 百度 | SSR | Verified |
+| 字节、美团 | Playwright SPA | Verified，需 `browser` 扩展 |
+| Airbnb 中国 | Greenhouse API | Contract + snapshot verified |
+| Airwallex | Ashby API | Contract + China snapshot verified |
+
+### 非默认来源
+
+| 来源 | 状态 | 说明 |
+|------|------|------|
+| 滴滴、B站 | Beta | 能返回岗位，但关键词/地点质量仍需加固 |
+| BOSS直聘 | Experimental | CDP 契约已测试，尚未完成登录态现场验证 |
+| 腾讯等官网 | Link-only | 提供直达链接，不声称自动抓取 |
 
 ### 直达链接（29 家，一键打开官网结果页）
 
@@ -93,10 +101,10 @@ jobfindsme install workbuddy # WorkBuddy
   JobFindsMe MCP Server（本地）
       │
       ├── 百度 SSR 解析 ────────→ 百度岗位
-      ├── 腾讯 JSON-LD ──────────→ 腾讯岗位
-      ├── Playwright 渲染 ───────→ 字节/美团/滴滴/B站
-      ├── Chrome CDP 浏览器桥 ───→ BOSS直聘（几千家公司）
-      └── Greenhouse API ────────→ 外企中国岗
+      ├── Playwright 渲染 ───────→ 字节/美团
+      ├── Greenhouse/Ashby API ──→ 外企中国岗
+      ├── Beta Connector ────────→ 滴滴/B站（显式启用）
+      └── BOSS CDP 桥 ───────────→ Experimental（显式启用）
       │
       ▼
   去重 → 硬过滤（地点/薪资/年限）→ 证据匹配 → Top 10 + 理由 + 链接
@@ -124,7 +132,7 @@ jobfindsme install workbuddy # WorkBuddy
 
 - 简历留本地，Agent 不读完整文件
 - 只存结构化事实和最少证据
-- BOSS Connector 连你自己的 Chrome，不碰密码/Cookie
+- BOSS 实验性 Connector 只连接用户显式启动的本地 Chrome CDP，不读取密码
 - 删除需预览 + 确认令牌两步
 
 ---
