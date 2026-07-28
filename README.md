@@ -16,20 +16,27 @@
 
 **最快方式：让你的 Agent 帮你装。**
 
-直接在 ZCode / Codex / Claude Code 里说：
+直接在 ZCode / Codex / Claude Code / Kimi Code / TRAE / Qoder 里说：
 
 ```
-帮我安装 JobFindsMe
+帮我安装 JobFindsMe：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-Agent 会自动执行安装、配置 MCP、安装 Skill，然后你就可以直接搜岗位。
+Agent 会读取安装指南，自动执行安装、配置 MCP、安装 Skill。
 
 **或者手动安装：**
 
 ```bash
 pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
 jobfindsme doctor
-jobfindsme install zcode    # 或 codex / claude / qwen
+jobfindsme install zcode     # ZCode
+jobfindsme install codex     # Codex
+jobfindsme install claude    # Claude Code
+jobfindsme install qwen      # Qwen Code
+jobfindsme install kimi      # Kimi Code
+jobfindsme install trae      # TRAE
+jobfindsme install qoder     # Qoder
+jobfindsme install workbuddy # WorkBuddy
 ```
 
 重启 Agent，然后：

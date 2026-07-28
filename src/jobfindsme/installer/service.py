@@ -21,8 +21,37 @@ class InstallResult(StrictModel):
     commands: tuple[str, ...] = Field(default_factory=tuple)
 
 
+# Agents that use standard JSON with top-level "mcpServers" key.
+# Maps host name → (config_path, skills_dir).
+_STANDARD_JSON_HOSTS: dict[str, tuple[str, str]] = {
+    "claude": (".claude.json", ".claude/skills"),
+    "qwen": (".qwen/settings.json", ".qwen/skills"),
+    "kimi": (".kimi/mcp.json", ".kimi/skills"),
+    "trae": (
+        "Library/Application Support/Trae/User/mcp.json",
+        ".trae/skills",
+    ),
+    "trae-cn": (
+        "Library/Application Support/Trae CN/User/mcp.json",
+        ".trae-cn/skills",
+    ),
+    "qoder": (".qoder/mcp.json", ".qoder/skills"),
+    "workbuddy": (".workbuddy/mcp.json", ".workbuddy/skills"),
+}
+
+
 class HostInstaller:
-    HOSTS = {"codex", "claude", "qwen", "zcode"}
+    HOSTS = {
+        "codex",
+        "claude",
+        "qwen",
+        "zcode",
+        "kimi",
+        "trae",
+        "trae-cn",
+        "qoder",
+        "workbuddy",
+    }
 
     def __init__(
         self,
@@ -61,7 +90,14 @@ class HostInstaller:
         if host == "codex":
             content = _remove_codex_config(config_path.read_text())
             config_path.write_text(content, encoding="utf-8")
-        else:
+        elif host == "zcode":
+            document = json.loads(config_path.read_text())
+            document.get("mcp", {}).get("servers", {}).pop("jobfindsme", None)
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        elif host in _STANDARD_JSON_HOSTS:
             document = json.loads(config_path.read_text())
             document.get("mcpServers", {}).pop("jobfindsme", None)
             config_path.write_text(
@@ -83,6 +119,7 @@ class HostInstaller:
         config_path, skill_path = self._paths(host)
         config_path.parent.mkdir(parents=True, exist_ok=True)
         backup = self._backup(config_path) if config_path.exists() else None
+
         if host == "codex":
             existing = config_path.read_text() if config_path.exists() else ""
             marker = "[mcp_servers.jobfindsme]"
@@ -106,12 +143,12 @@ class HostInstaller:
                 if backup:
                     backup.unlink()
                 raise FileExistsError("ZCode jobfindsme MCP config already exists")
-            servers["jobfindsme"] = self._json_server(host)
+            servers["jobfindsme"] = self._json_server()
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
-        else:
+        elif host in _STANDARD_JSON_HOSTS:
             document = (
                 json.loads(config_path.read_text()) if config_path.exists() else {}
             )
@@ -120,11 +157,12 @@ class HostInstaller:
                 if backup:
                     backup.unlink()
                 raise FileExistsError(f"{host} jobfindsme MCP config already exists")
-            servers["jobfindsme"] = self._json_server(host)
+            servers["jobfindsme"] = self._json_server()
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
+
         self._install_skill(skill_path)
         return InstallResult(
             host=host,
@@ -143,11 +181,12 @@ class HostInstaller:
             "required = true\n"
             'default_tools_approval_mode = "prompt"\n'
             "\n[mcp_servers.jobfindsme.env]\n"
-            f"JOBFINDSME_DB_PATH = {json.dumps(str(self.data_dir / 'jobfindsme.db'))}\n"
+            f"JOBFINDSME_DB_PATH = "
+            f"{json.dumps(str(self.data_dir / 'jobfindsme.db'))}\n"
         )
 
-    def _json_server(self, host: str) -> dict[str, object]:
-        server: dict[str, object] = {
+    def _json_server(self) -> dict[str, object]:
+        return {
             "type": "stdio",
             "command": self.python,
             "args": ["-m", "jobfindsme.mcp"],
@@ -155,7 +194,6 @@ class HostInstaller:
                 "JOBFINDSME_DB_PATH": str(self.data_dir / "jobfindsme.db"),
             },
         }
-        return server
 
     def _paths(self, host: str) -> tuple[Path, Path]:
         if host == "codex":
@@ -163,20 +201,18 @@ class HostInstaller:
                 self.home / ".codex" / "config.toml",
                 self.home / ".codex" / "skills" / "jobfindsme" / "SKILL.md",
             )
-        if host == "claude":
-            return (
-                self.home / ".claude.json",
-                self.home / ".claude" / "skills" / "jobfindsme" / "SKILL.md",
-            )
         if host == "zcode":
             return (
                 self.home / ".zcode" / "cli" / "config.json",
                 self.home / ".zcode" / "skills" / "jobfindsme" / "SKILL.md",
             )
-        return (
-            self.home / ".qwen" / "settings.json",
-            self.home / ".qwen" / "skills" / "jobfindsme" / "SKILL.md",
-        )
+        if host in _STANDARD_JSON_HOSTS:
+            cfg_rel, skill_rel = _STANDARD_JSON_HOSTS[host]
+            return (
+                self.home / cfg_rel,
+                self.home / skill_rel / "jobfindsme" / "SKILL.md",
+            )
+        raise ValueError(f"unsupported host: {host}")
 
     def _install_skill(self, target: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
