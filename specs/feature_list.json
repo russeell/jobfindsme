@@ -605,7 +605,7 @@
     {
       "id": "M11-001",
       "title": "Zero-ID onboarding and active search configuration",
-      "status": "in_progress",
+      "status": "done",
       "blocked_by": [
         "M10-001"
       ],
