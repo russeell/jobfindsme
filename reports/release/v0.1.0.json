@@ -15,7 +15,7 @@
     "installed_package_doctor": "passed",
     "installed_package_mcp_tools": 7,
     "install_upgrade_uninstall": "passed",
-    "github_ci": "configured"
+    "github_ci": "passed"
   },
   "field_validation": {
     "real_public_source_initial_flow": "passed",
