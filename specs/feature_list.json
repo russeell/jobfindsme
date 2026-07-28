@@ -684,7 +684,7 @@
     {
       "id": "M12-001",
       "title": "Subscription-backed discovery monitoring",
-      "status": "backlog",
+      "status": "done",
       "blocked_by": [
         "M11-002"
       ],
