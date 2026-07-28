@@ -1,6 +1,8 @@
-# JobFindsMe
+# JobFindsMe · AI 求职引擎
 
-> **厌倦了在不同招聘 App 之间来回切换？让岗位来找你。**
+> **5 大平台一站式搜索 · 本地简历智能匹配 · 投递链接直达**
+>
+> BOSS直聘 · 猎聘 · 前程无忧 · 智联招聘 · 拉勾
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -8,7 +10,13 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**把 AI Agent 变成求职引擎。** 根据本地简历，从经过验证的企业招聘源发现岗位，给出匹配证据和官方投递链接。
+**JobFindsMe** 是一个标准 MCP Server，让你的 AI Agent（ZCode、Claude Code、Codex 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
+
+- 🔍 **一站式搜索** — 同时搜 BOSS直聘、猎聘、前程无忧、智联、拉勾
+- 📄 **本地简历匹配** — 简历不出本地，AI 自动解析技能/经验/学历
+- 📊 **每条有证据** — 匹配度百分比 + 技能对照 + 推荐理由
+- 🔗 **投递链接直达** — 点击即跳转官方岗位页
+- 🔌 **标准 MCP** — 适用所有 MCP 兼容 Agent，无需逐个适配
 
 ---
 

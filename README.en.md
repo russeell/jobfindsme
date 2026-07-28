@@ -1,6 +1,8 @@
-# JobFindsMe
+# JobFindsMe · AI Job Search Engine
 
-> **Tired of switching between job apps? Let jobs find you.**
+> **5 platforms, one search · Local resume matching · Direct apply links**
+>
+> BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -8,89 +10,96 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Turn your AI agent into a job search engine.** Discover jobs from verified career sources, match them against a local resume, and return evidence plus official application links.
+**JobFindsMe** is a standard MCP Server that turns your AI agent into a job search engine. It searches 5 major Chinese recruitment platforms simultaneously, matches results against your local resume, and returns every job with a match score, evidence-based reasons, and a direct apply link.
+
+- 🔍 **One search, 5 platforms** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
+- 📄 **Local resume matching** — resume never leaves your machine
+- 📊 **Evidence-based results** — match percentage + skill comparison + reasons
+- 🔗 **Direct apply links** — one click to the official job page
+- 🔌 **Standard MCP** — works with any MCP-compatible agent
 
 ## Quick Start
 
-**Fastest way: ask your agent to install it.**
-
-Just say in ZCode / Codex / Claude Code:
-
-```
-Install JobFindsMe for me
-```
-
-The agent handles install, MCP config, and Skill setup automatically. Then start searching.
-
-**Or manually:**
+### 1. Install
 
 ```bash
 pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
-jobfindsme doctor
-jobfindsme install zcode    # or codex / claude / qwen
 ```
 
-Restart your agent and say:
+### 2. Configure MCP
+
+**Option A: print the JSON and paste it (any agent)**
+
+```bash
+jobfindsme config
+```
+
+Paste the output into any MCP-compatible agent's config file. Or write directly:
+
+```bash
+jobfindsme install --path ~/.your-agent/mcp.json
+```
+
+**Option B: shortcut for known agents**
+
+```bash
+jobfindsme install zcode     # ZCode
+jobfindsme install claude    # Claude Code
+jobfindsme install codex     # Codex
+```
+
+### 3. Restart your agent and search
 
 ```
-Use JobFindsMe to find AI Engineer roles in Shanghai, based on my resume.
+Use JobFindsMe to find AI Engineer roles in Shanghai and Shenzhen,
+based on ~/Documents/resume.pdf.
 ```
 
 No workspace IDs or plan IDs needed — Core handles everything.
 
-Default searches never launch Chrome. Browser-backed sources run only after
-explicit opt-in and installation of `jobfindsme[browser]`.
+### 4. Enable platform search (one-time)
 
-Jobs use one stable format. Recruitment track and employment type are separate:
-
-```text
-1. AI Application Engineer｜Example Tech｜Shanghai｜社招｜正式｜匹配度 86%
-   投递链接：https://careers.example.com/jobs/123
-
-2. LLM Engineer Intern｜Example Tech｜Beijing｜校招｜实习｜匹配度 81%
-   投递链接：https://careers.example.com/jobs/456
+```bash
+jobfindsme setup              # Open Chrome with 4 login pages
 ```
 
-## Why Not Job Apps?
-
-| | Job Apps | JobFindsMe |
-|---|---|---|
-| Coverage | One platform | **Multiple verifiable sources** |
-| Resume | Uploaded | **Stays local** |
-| Recommendations | Black box | **Evidence-based** |
-| Model API | — | **Not required** |
-| Data export | Rarely | **One-click** |
+> Liepin, 51job, Zhaopin, and Lagou work **without login**. Only BOSS Zhipin requires authentication.
 
 ## Sources
 
-**12 auto-connectors. All major Chinese companies are covered via the 4 CDP platform connectors — no manual links needed.**
+**5 platforms cover most Chinese companies' job listings.**
 
-| Source | Type | Method |
-|--------|------|--------|
-| Baidu, Tencent | Career site | SSR / JSON-LD |
-| ByteDance, Meituan, Didi, Bilibili | Career site | Playwright SPA |
-| **BOSS Zhipin, Liepin, Zhaopin, Lagou** | Platform CDP | Chrome browser bridge |
-| Airbnb, Airwallex | ATS API | Greenhouse / Ashby |
+| Platform | Login | Jobs/query | Strength |
+|----------|:-----:|:----------:|----------|
+| **BOSS Zhipin** | Required | ~15 | Largest volume, plain-text salary |
+| **Liepin** | ❌ | ~42 | Mid-senior roles, MNC positions |
+| **51job** | ❌ | ~20 | Broad coverage, traditional + IT |
+| **Zhaopin** | ❌ | ~15 | General recruitment |
+| **Lagou** | ❌ | ~15 | Internet-focused |
 
-> BOSS Zhipin + Liepin + Zhaopin + Lagou cover Alibaba, Huawei, JD.com, NetEase, Pinduoduo, Xiaohongshu, Kuaishou, Xiaomi, Ctrip, Ant Group, Lenovo, and thousands more. Every major Chinese company posts jobs on these four platforms.
+> No single source covers every position — some roles appear only on company career sites or internal referral channels. These 5 platforms together provide the widest reach.
 
-## How It Works
+## Prompt Templates
+
+**With resume (auto-parse + match):**
 
 ```
-Your agent (ZCode / Codex / Claude Code)
-      │
-      ▼
-  JobFindsMe MCP Server (local stdio)
-      │
-      ├── Baidu SSR ────────────→ Baidu jobs
-      ├── Playwright SPA ───────→ ByteDance/Meituan (explicit opt-in)
-      ├── Greenhouse/Ashby ─────→ China roles at global companies
-      ├── Beta connectors ──────→ Didi/Bilibili (opt-in)
-      └── BOSS CDP bridge ──────→ Experimental (opt-in)
-      │
-      ▼
-  Deduplicate → Filter → Evidence match → Top 10 + reasons + links
+Use JobFindsMe to find [role] jobs in [city], based on [resume path].
 ```
+
+**Without resume (search only, no scoring):**
+
+```
+Use JobFindsMe to search [role] jobs in [city].
+```
+
+**View job details:**
+
+```
+Use JobFindsMe to show me the details of job #3.
+```
+
+> Every result includes: job description, match score, apply link, and evidence-based reasons.
 
 ## MCP Tools
 
@@ -110,12 +119,8 @@ Your agent (ZCode / Codex / Claude Code)
 
 - Resume stays local — agent never reads the full file
 - Only structured facts and minimum evidence retained
-- The experimental BOSS connector only attaches to a local Chrome CDP session
+- CDP connectors only attach to a local Chrome DevTools session
 - Two-phase deletion enforced by Core
-
-## Disclaimer
-
-JobFindsMe is a local tool that helps organize and match job information you already have access to. The user bears all consequences of use (including platform account restrictions). Commercial resale, mass scraping, and bypassing platform restrictions are prohibited.
 
 ## License
 

@@ -5,10 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jobfindsme"
 version = "0.2.0rc5"
-description = "🔥 让岗位来找你——一句话搜各大招聘网站，搜的全，匹配准，投的快！"
+description = "🤖 AI求职引擎 | 接入BOSS直聘·猎聘·前程无忧·智联·拉勾 | 一句话搜索 · 简历匹配 · 投递直达 | MCP Server"
 readme = "README.md"
 license = "MIT"
+keywords = ["ai", "job-search", "recruitment", "mcp", "career", "resume", "china-jobs",
+            "求职", "招聘", "AI求职", "BOSS直聘", "猎聘", "前程无忧", "智联招聘", "拉勾"]
 requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Office/Business",
+]
 dependencies = [
   "certifi>=2024.8.30",
   "pydantic>=2.10,<3",
