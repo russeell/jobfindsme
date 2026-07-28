@@ -12,7 +12,9 @@ from typing import Any
 
 from jobfindsme.contracts import JobStateKind
 from jobfindsme.core import JobFindsMeCore
+from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
+from jobfindsme.installer import HostInstaller
 from jobfindsme.profiles.models import ResumeImportMode
 
 
@@ -110,6 +112,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--scope", choices=("jobs", "profile", "workspace"), required=True
     )
     delete_confirm.add_argument("--token", required=True)
+
+    install = groups.add_parser("install")
+    install.add_argument("host", choices=("codex", "claude", "qwen"))
+    install.add_argument("--home", type=Path)
+
+    groups.add_parser("doctor")
     return parser
 
 
@@ -237,6 +245,10 @@ def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
             scope=args.scope,
             confirmation_token=args.token,
         )
+    if args.group == "install":
+        return HostInstaller(home=args.home).install(args.host)
+    if args.group == "doctor":
+        return Doctor(core.database.path).run()
     raise AssertionError("argparse accepted an unsupported command")
 
 

@@ -442,11 +442,12 @@
     {
       "id": "M7-001",
       "title": "One-command install and doctor",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M6-002"
       ],
       "allowed_paths": [
+        "src/jobfindsme/cli.py",
         "src/jobfindsme/installer/**",
         "src/jobfindsme/doctor/**",
         "tests/installer/**",
@@ -458,12 +459,30 @@
         "Qwen Code, Codex and Claude Code installations require one explicit command each.",
         "Existing host configuration is backed up and never silently overwritten.",
         "Doctor diagnoses database, permissions, MCP, connectors, and secret storage."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/installer",
+          "tests/doctor"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/installer",
+          "src/jobfindsme/doctor",
+          "tests/installer",
+          "tests/doctor"
+        ]
+      ],
+      "evidence_path": "reports/features/M7-001.json"
     },
     {
       "id": "M8-001",
       "title": "Real official-site field validation",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
         "M7-001"
       ],
