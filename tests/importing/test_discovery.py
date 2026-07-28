@@ -220,3 +220,58 @@ def test_spa_failure_returns_cached_jobs_and_marks_source_degraded(
     assert [item.job.external_id for item in matches] == ["cached-byte-1"]
     assert subscriptions[0].health_status == "degraded"
     assert "browser timeout" in (subscriptions[0].last_error or "")
+
+
+def test_boss_failure_returns_cached_jobs_and_marks_source_degraded(
+    tmp_path, monkeypatch
+) -> None:
+    core = JobFindsMeCore(tmp_path / "boss-cache.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+        sources=(
+            DiscoverySource(
+                kind="boss_cdp",
+                source_name="BOSS直聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    core.job_imports.import_records(
+        configured.workspace.workspace_id,
+        [
+            RawJobRecord(
+                source_kind=SourceKind.CAREER_SITE,
+                source_name="BOSS直聘",
+                source_url="https://www.zhipin.com/web/geek/job",
+                external_id="cached-boss-1",
+                payload={
+                    "title": "AI应用工程师",
+                    "company": "示例科技",
+                    "description": "Python Agent RAG",
+                    "location": "上海",
+                    "apply_url": (
+                        "https://www.zhipin.com/job_detail/cached-boss-1.html"
+                    ),
+                },
+            )
+        ],
+    )
+
+    def fail_fetch(_self):
+        raise RuntimeError("BOSS login required")
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin.BossZhipinConnector.fetch",
+        fail_fetch,
+    )
+
+    matches = core.search_jobs()
+    subscriptions = core.source_subscriptions.list(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+    )
+
+    assert [item.job.external_id for item in matches] == ["cached-boss-1"]
+    assert subscriptions[0].health_status == "degraded"
+    assert "login required" in (subscriptions[0].last_error or "")

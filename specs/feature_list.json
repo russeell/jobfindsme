@@ -1159,7 +1159,7 @@
     {
       "id": "M17-001",
       "title": "BOSS CDP browser bridge hardening",
-      "status": "in_progress",
+      "status": "done",
       "blocked_by": [
         "M16-001"
       ],

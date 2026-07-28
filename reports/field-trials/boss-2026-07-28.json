@@ -1,0 +1,25 @@
+{
+  "trial_id": "boss-2026-07-28",
+  "observed_at": "2026-07-28T14:15:00+08:00",
+  "environment": {
+    "platform": "macOS arm64",
+    "cdp_endpoint": "http://127.0.0.1:9222",
+    "authenticated_session": false
+  },
+  "status": "blocked",
+  "observations": [
+    "The local CDP endpoint returned no usable version response.",
+    "No logged-in dedicated BOSS Chrome profile was available.",
+    "No live BOSS job payload was observed."
+  ],
+  "automated_evidence": [
+    "The connector navigates to the BOSS origin before the search API call.",
+    "Success, authentication, HTTP, malformed response, and cleanup paths are contract-tested.",
+    "Discovery falls back to cached BOSS jobs and records degraded source health."
+  ],
+  "conclusion": {
+    "release_classification": "experimental",
+    "verified_live": false,
+    "required_next_action": "Start a dedicated Chrome profile with remote debugging, log in to BOSS, run a bounded search, and record returned job provenance."
+  }
+}
