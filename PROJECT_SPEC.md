@@ -327,11 +327,17 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 11. Subscription-backed discovery monitoring and source health.
 12. Bounded MCP output, redirect-safe HTTP, and regional data contracts.
 13. Additional public ATS coverage for multinational China roles.
-14. A stable China official-career connector and a labeled Chinese benchmark.
-15. One-week personal field trial and supported-Agent compatibility evidence.
+14. Real Chinese job matching evidence: 50+ labeled jobs across 3+ days of
+    real use, script-generated metrics (P@10, NDCG@10, FNR, valid-link rate),
+    and seven qualitative evidence items for interview storytelling.
+15. Personal field trial across at least two Agent hosts (ZCode + one other),
+    supported-Agent compatibility evidence, and a field-trial report that
+    separates observed facts from assumptions.
 
 Milestones 14 and 15 run in parallel: daily China-role use produces both the
-labeled benchmark and the field-trial evidence.
+labeled evidence and the field-trial report. No academic benchmark threshold
+is set — metrics serve as internal baselines for continuous improvement.
+Qualitative evidence matters more than scores at this stage.
 
 A dedicated JobFindsMe Agent is considered only after at least three stable
 sources, repeat usage, real feedback, and a demonstrated limitation in existing

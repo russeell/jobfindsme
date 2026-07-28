@@ -1055,8 +1055,8 @@
     },
     {
       "id": "M14-001",
-      "title": "Real Chinese labeled matching benchmark",
-      "status": "ready",
+      "title": "Real Chinese job matching evidence and metrics",
+      "status": "in_progress",
       "blocked_by": [
         "M13-006"
       ],
@@ -1067,20 +1067,22 @@
         "tests/evaluation/**",
         "data/eval/**",
         "reports/evaluation/**",
+        "reports/field-trials/**",
         "reports/features/M14-001.json"
       ],
       "acceptance": [
-        "A human-labeled Chinese dataset covers relevance, duplicates, liveness, links, and hard-filter errors.",
-        "Precision@10, NDCG@10, hard-filter false-negative rate, and valid-link rate are script-generated.",
-        "Dataset provenance and annotation guidance are versioned.",
-        "Synthetic regression metrics are reported separately."
+        "At least 50 human-labeled Chinese jobs cover relevance, duplicates, liveness, links, and hard-filter errors across 3+ days of real use.",
+        "Metrics (P@10, NDCG@10, FNR, valid-link rate, duplicates caught, source uptime) are script-generated from labeled data.",
+        "Seven qualitative evidence items are recorded: jobs found, valid link rate, dedup count, source reliability ranking, best/worst match examples, hard-filter false negatives, actual applications submitted.",
+        "Dataset provenance and annotation guidance are versioned and in-repo.",
+        "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate."
       ],
       "evidence_path": "reports/features/M14-001.json"
     },
     {
       "id": "M15-001",
       "title": "Personal field trial and supported Agent matrix",
-      "status": "ready",
+      "status": "in_progress",
       "blocked_by": [
         "M13-006"
       ],
@@ -1097,12 +1099,12 @@
         "reports/release/**"
       ],
       "acceptance": [
-        "The owner uses the same profile and Search Plan for at least seven consecutive days.",
+        "The owner uses the same profile and Search Plan for at least 3 cumulative days — consecutive use is preferred but not required.",
         "Only roles located in mainland China or explicitly serving the China market count toward trial metrics.",
-        "Daily Top 10 labels are collected while the field trial is running and feed M14.",
+        "JobFindsMe is used through at least two Agent hosts — ZCode plus one of Codex/Claude Code/Qwen Code — completing the same privacy and workflow scenarios.",
+        "Daily Top 10 labels are collected and feed M14.",
         "Source failures, duplicates, invalid links, and ranking bad cases are recorded.",
-        "Each officially supported Agent completes the same privacy and workflow scenarios.",
-        "Only observed field metrics appear in release and README claims."
+        "The field-trial report distinguishes observed facts from assumptions, and synthetic scores from real labels."
       ],
       "evidence_path": "reports/features/M15-001.json"
     }
