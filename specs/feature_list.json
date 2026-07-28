@@ -513,15 +513,18 @@
     {
       "id": "M9-001",
       "title": "Local scheduler and Feishu summaries",
-      "status": "ready",
+      "status": "done",
       "blocked_by": [
         "M8-001"
       ],
       "allowed_paths": [
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/migrations/**",
         "src/jobfindsme/monitoring/**",
         "src/jobfindsme/notifications/**",
         "tests/monitoring/**",
         "tests/notifications/**",
+        "tests/test_storage.py",
         "integrations/schedulers/**",
         "specs/feature_list.json",
         "reports/features/M9-001.json"
@@ -530,7 +533,26 @@
         "Monitoring runs only with explicit consent and documented online requirements.",
         "Runs are idempotent and recover safely after missed schedules.",
         "Feishu summaries are signed, bounded, pausable, and revocable."
-      ]
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/monitoring",
+          "tests/notifications",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/monitoring",
+          "src/jobfindsme/notifications",
+          "tests/monitoring",
+          "tests/notifications"
+        ]
+      ],
+      "evidence_path": "reports/features/M9-001.json"
     }
   ]
 }
