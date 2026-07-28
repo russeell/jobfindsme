@@ -791,7 +791,7 @@
         "tests/doctor/**",
         "data/fixtures/ashby_jobs.json",
         "reports/features/M13-001.json",
-        "reports/release/v0.2.0.json"
+        "reports/release/v0.2.0-rc.1.json"
       ],
       "acceptance": [
         "Ashby's documented public job-board API is supported without credentials.",
@@ -841,7 +841,7 @@
         "tests/integration/**",
         "data/fixtures/**",
         "reports/field-trials/**",
-        "reports/release/v0.2.0.json",
+        "reports/release/v0.2.0-rc.1.json",
         "reports/features/M13-002.json"
       ],
       "acceptance": [
@@ -863,11 +863,58 @@
       "evidence_path": "reports/features/M13-002.json"
     },
     {
+      "id": "M13-003",
+      "title": "V0.2 RC release semantics and China location aliases",
+      "status": "done",
+      "blocked_by": [
+        "M13-002"
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "specs/feature_list.json",
+        "src/jobfindsme/mcp/server.py",
+        "src/jobfindsme/taxonomy.py",
+        "src/jobfindsme/matching/**",
+        "tests/matching/**",
+        "reports/release/**",
+        "reports/field-trials/**",
+        "reports/features/M13-003.json"
+      ],
+      "acceptance": [
+        "Package, MCP server, release report, and Git tag use V0.2 RC semantics.",
+        "Chinese city filters match equivalent English locations from public sources.",
+        "M14 benchmark labeling and M15 field use can proceed in parallel.",
+        "The seven-day trial only counts China-located roles and observed behavior."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/matching",
+          "tests/integration",
+          "tests/mcp"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/taxonomy.py",
+          "src/jobfindsme/matching",
+          "src/jobfindsme/mcp",
+          "tests/matching"
+        ]
+      ],
+      "evidence_path": "reports/features/M13-003.json"
+    },
+    {
       "id": "M14-001",
       "title": "Real Chinese labeled matching benchmark",
       "status": "ready",
       "blocked_by": [
-        "M13-002"
+        "M13-003"
       ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
@@ -889,9 +936,9 @@
     {
       "id": "M15-001",
       "title": "Personal field trial and supported Agent matrix",
-      "status": "backlog",
+      "status": "ready",
       "blocked_by": [
-        "M14-001"
+        "M13-003"
       ],
       "allowed_paths": [
         "README.md",
@@ -907,6 +954,8 @@
       ],
       "acceptance": [
         "The owner uses the same profile and Search Plan for at least seven consecutive days.",
+        "Only roles located in mainland China or explicitly serving the China market count toward trial metrics.",
+        "Daily Top 10 labels are collected while the field trial is running and feed M14.",
         "Source failures, duplicates, invalid links, and ranking bad cases are recorded.",
         "Each officially supported Agent completes the same privacy and workflow scenarios.",
         "Only observed field metrics appear in release and README claims."

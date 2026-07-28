@@ -2,6 +2,8 @@
 
 让现有 AI Agent 根据本地简历，从公开招聘来源发现、匹配并持续跟踪岗位。
 
+当前版本：`v0.2.0-rc.1` 发布候选。
+
 - 本地优先：简历、收藏和投递状态保存在本机 SQLite
 - 无模型依赖：不配置 API Key 也能完成完整确定性流程
 - Agent 原生：支持 Codex、Claude Code、Qwen Code 和 MCP 客户端

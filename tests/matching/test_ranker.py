@@ -71,6 +71,21 @@ def test_matcher_applies_constraints_before_ranking() -> None:
     assert matches[0].job.source.source_url
 
 
+def test_chinese_city_filter_matches_english_china_source_location() -> None:
+    jobs = [
+        job("shanghai", location="CN - Shanghai"),
+        job("beijing", location="CN - Beijing"),
+    ]
+
+    matches = DeterministicMatcher().match(
+        plan(locations=("上海",), salary_min_k=None),
+        jobs,
+    )
+
+    assert [match.job.external_id for match in matches] == ["shanghai"]
+    assert "工作地点符合搜索计划" in matches[0].evidence.reasons
+
+
 def test_exact_title_ranks_above_partial_description_match() -> None:
     jobs = [
         job("exact"),

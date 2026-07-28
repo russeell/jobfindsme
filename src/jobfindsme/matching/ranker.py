@@ -15,6 +15,7 @@ from jobfindsme.contracts import (
 from jobfindsme.matching.tokenizer import tokenize
 from jobfindsme.profiles.models import FactType, ProfileSummary
 from jobfindsme.taxonomy import (
+    expand_location_terms,
     expand_role_terms,
     extract_required_skills,
     extract_skills,
@@ -72,8 +73,9 @@ class DeterministicMatcher:
         )
         if any(term.casefold() in searchable for term in plan.exclusions):
             return False
-        if plan.locations and not any(
-            location.casefold() in searchable for location in plan.locations
+        location_terms = expand_location_terms(plan.locations)
+        if location_terms and not any(
+            location.casefold() in searchable for location in location_terms
         ):
             return False
         if (
@@ -131,7 +133,7 @@ class DeterministicMatcher:
             if plan.locations
             and any(
                 location.casefold() in " ".join(job.locations).casefold()
-                for location in plan.locations
+                for location in expand_location_terms(plan.locations)
             )
             else 0.0
         )

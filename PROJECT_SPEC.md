@@ -1,6 +1,6 @@
 # JobFindsMe Product And Architecture Specification
 
-> Status: v0.2 product-closure baseline
+> Status: v0.2.0-rc.1 release candidate
 >
 > Baseline: Agent-native, Local-first
 >
@@ -324,6 +324,9 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 13. Additional public ATS coverage for multinational China roles.
 14. A stable China official-career connector and a labeled Chinese benchmark.
 15. One-week personal field trial and supported-Agent compatibility evidence.
+
+Milestones 14 and 15 run in parallel: daily China-role use produces both the
+labeled benchmark and the field-trial evidence.
 
 A dedicated JobFindsMe Agent is considered only after at least three stable
 sources, repeat usage, real feedback, and a demonstrated limitation in existing

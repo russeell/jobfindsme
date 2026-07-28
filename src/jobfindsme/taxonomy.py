@@ -50,6 +50,21 @@ ROLE_ALIASES: dict[str, tuple[str, ...]] = {
     "后端工程师": ("后端工程师", "服务端工程师", "backend engineer"),
 }
 
+LOCATION_ALIASES: dict[str, tuple[str, ...]] = {
+    "中国": ("china", "cn -"),
+    "北京": ("beijing", "北京市"),
+    "上海": ("shanghai", "上海市"),
+    "深圳": ("shenzhen", "深圳市"),
+    "杭州": ("hangzhou", "杭州市"),
+    "广州": ("guangzhou", "广州市"),
+    "成都": ("chengdu", "成都市"),
+    "重庆": ("chongqing", "重庆市"),
+    "武汉": ("wuhan", "武汉市"),
+    "西安": ("xi'an", "xian", "西安市"),
+    "南京": ("nanjing", "南京市"),
+    "苏州": ("suzhou", "苏州市"),
+}
+
 
 def extract_skills(text: str) -> dict[str, str]:
     """Return canonical skill -> exact evidence snippet."""
@@ -83,6 +98,21 @@ def expand_role_terms(roles: tuple[str, ...]) -> tuple[str, ...]:
         normalized = role.casefold()
         expanded.append(role)
         for canonical, aliases in ROLE_ALIASES.items():
+            family = (canonical, *aliases)
+            if any(
+                item.casefold() in normalized or normalized in item.casefold()
+                for item in family
+            ):
+                expanded.extend(family)
+    return tuple(dict.fromkeys(expanded))
+
+
+def expand_location_terms(locations: tuple[str, ...]) -> tuple[str, ...]:
+    expanded: list[str] = []
+    for location in locations:
+        normalized = location.casefold()
+        expanded.append(location)
+        for canonical, aliases in LOCATION_ALIASES.items():
             family = (canonical, *aliases)
             if any(
                 item.casefold() in normalized or normalized in item.casefold()

@@ -1,5 +1,5 @@
 {
-  "release": "0.2.0",
+  "release": "0.2.0-rc.1",
   "implementation_status": "release_candidate",
   "validation_date": "2026-07-28",
   "closed_product_gaps": [
@@ -15,7 +15,7 @@
   ],
   "automated_validation": {
     "pytest": {
-      "passed": 118,
+      "passed": 119,
       "failed": 0
     },
     "ruff_check": "passed",
@@ -24,7 +24,7 @@
     "installed_package_doctor": "passed",
     "installed_package_mcp_tools": 9,
     "codex_install_uninstall": "passed",
-    "wheel_sha256": "ab9751af16a138552ee989340bc977c2da810eec6bd9ba799ad000aeddef31de"
+    "wheel_sha256": "0ee83f9c5f2b55e0fddd5ebdaf658c7bc2a418e193cf9d0b1f27eae583e3796e"
   },
   "field_validation": {
     "real_public_source_initial_flow": "passed_on_v0.1_snapshot",
