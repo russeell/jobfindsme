@@ -75,13 +75,30 @@ class HostInstaller:
             .read_text(encoding="utf-8")
         )
 
-    def install(self, host: str) -> InstallResult:
-        return self._write(host, replace=False, action="install")
+    def install(self, host: str, *, config_path: Path | None = None) -> InstallResult:
+        return self._write(host, replace=False, action="install", config_path=config_path)
 
-    def upgrade(self, host: str) -> InstallResult:
-        return self._write(host, replace=True, action="upgrade")
+    def upgrade(self, host: str, *, config_path: Path | None = None) -> InstallResult:
+        return self._write(host, replace=True, action="upgrade", config_path=config_path)
 
-    def uninstall(self, host: str) -> InstallResult:
+    def uninstall(self, host: str, *, config_path: Path | None = None) -> InstallResult:
+        if host == "generic":
+            if not config_path:
+                raise ValueError("--path is required for generic host")
+            backup = self._backup(config_path) if config_path.exists() else None
+            document = json.loads(config_path.read_text()) if config_path.exists() else {}
+            document.get("mcpServers", {}).pop("jobfindsme", None)
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            return InstallResult(
+                host="generic",
+                action="uninstall",
+                config_path=str(config_path),
+                skill_path="",
+                backups=(str(backup),) if backup else (),
+            )
         self._validate_host(host)
         config_path, skill_path = self._paths(host)
         if not config_path.exists():
@@ -113,7 +130,31 @@ class HostInstaller:
             backups=(str(backup),),
         )
 
-    def _write(self, host: str, *, replace: bool, action: str) -> InstallResult:
+    def _write(self, host: str, *, replace: bool, action: str, config_path: Path | None = None) -> InstallResult:
+        if host == "generic":
+            if not config_path:
+                raise ValueError("--path is required for generic host")
+            self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            backup = self._backup(config_path) if config_path.exists() else None
+            document = json.loads(config_path.read_text()) if config_path.exists() else {}
+            servers = document.setdefault("mcpServers", {})
+            if "jobfindsme" in servers and not replace:
+                if backup:
+                    backup.unlink()
+                raise FileExistsError("jobfindsme MCP config already exists")
+            servers["jobfindsme"] = self._json_server()
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            return InstallResult(
+                host="generic",
+                action=action,
+                config_path=str(config_path),
+                skill_path="",
+                backups=(str(backup),) if backup else (),
+            )
         self._validate_host(host)
         self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
         config_path, skill_path = self._paths(host)

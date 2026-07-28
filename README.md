@@ -14,32 +14,59 @@
 
 ## 快速开始
 
-**最快方式：让你的 Agent 帮你装。**
+JobFindsMe 是一个标准 **MCP Server**，适配所有 MCP 兼容的 Agent（ZCode、Claude Code、Codex、Kimi、TRAE、Qoder、Hermes、OpenClaw……）。
 
-直接在 ZCode / Codex / Claude Code / Kimi Code / TRAE / Qoder 里说：
+### 1. 安装
+
+```bash
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+```
+
+### 2. 配置 MCP
+
+**方式 A：输出 JSON 自己粘贴（推荐，适用所有 Agent）**
+
+```bash
+jobfindsme config
+```
+
+输出类似：
+
+```json
+{
+  "mcpServers": {
+    "jobfindsme": {
+      "command": "/path/to/python",
+      "args": ["-m", "jobfindsme.mcp"]
+    }
+  }
+}
+```
+
+粘贴到任意 Agent 的 MCP 配置文件，或用 `--path` 直接写入：
+
+```bash
+jobfindsme install --path ~/.your-agent/mcp.json
+```
+
+**方式 B：快捷安装（已知 Agent）**
+
+```bash
+jobfindsme install zcode     # ZCode
+jobfindsme install claude    # Claude Code
+jobfindsme install codex     # Codex
+jobfindsme install kimi      # Kimi Code
+jobfindsme install trae      # TRAE
+# ... 其他 Agent 用方式 A
+```
+
+**方式 C：让 Agent 帮你装**
 
 ```
 帮我安装 JobFindsMe：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-Agent 会读取安装指南，自动执行安装、配置 MCP、安装 Skill。
-
-**或者手动安装：**
-
-```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
-jobfindsme doctor
-jobfindsme install zcode     # ZCode
-jobfindsme install codex     # Codex
-jobfindsme install claude    # Claude Code
-jobfindsme install qwen      # Qwen Code
-jobfindsme install kimi      # Kimi Code
-jobfindsme install trae      # TRAE
-jobfindsme install qoder     # Qoder
-jobfindsme install workbuddy # WorkBuddy
-```
-
-重启 Agent，然后：
+### 3. 重启 Agent，然后搜索
 
 ```
 用 JobFindsMe，根据 ~/Documents/resume.pdf，

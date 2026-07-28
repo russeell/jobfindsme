@@ -128,6 +128,7 @@ def build_parser() -> argparse.ArgumentParser:
         host_action = groups.add_parser(action)
         host_action.add_argument(
             "host",
+            nargs="?",
             choices=(
                 "codex",
                 "claude",
@@ -141,9 +142,11 @@ def build_parser() -> argparse.ArgumentParser:
             ),
         )
         host_action.add_argument("--home", type=Path)
+        host_action.add_argument("--path", type=Path, help="custom config.json path (any MCP agent)")
 
     groups.add_parser("doctor")
     groups.add_parser("self-update")
+    groups.add_parser("config", help="output standard MCP JSON for any agent")
     setup_parser = groups.add_parser("setup")
     setup_parser.add_argument(
         "--platform",
@@ -178,6 +181,20 @@ def _self_update() -> dict:
     return {
         "ok": result.returncode == 0,
         "output": (result.stdout + result.stderr).strip(),
+    }
+
+
+def _mcp_json_config() -> dict:
+    """Standard MCP JSON — paste into any agent's config file."""
+    import sys
+
+    return {
+        "mcpServers": {
+            "jobfindsme": {
+                "command": sys.executable,
+                "args": ["-m", "jobfindsme.mcp"],
+            }
+        }
     }
 
 
@@ -326,6 +343,10 @@ def run(argv: Sequence[str] | None = None) -> int:
         result = _self_update()
         _emit(result, args.output)
         return 0 if result["ok"] else 1
+    if args.group == "config":
+        import json as _json
+        print(_json.dumps(_mcp_json_config(), ensure_ascii=False, indent=2))
+        return 0
     if args.group == "setup":
         from jobfindsme.connectors.boss_zhipin import setup_chrome
 
@@ -335,7 +356,15 @@ def run(argv: Sequence[str] | None = None) -> int:
         return 0 if result["ok"] else 1
     if args.group in {"install", "upgrade", "uninstall"}:
         installer = HostInstaller(home=args.home)
-        result = getattr(installer, args.group)(args.host)
+        custom_path = getattr(args, "path", None)
+        if custom_path:
+            result = getattr(installer, args.group)(
+                "generic", config_path=custom_path
+            )
+        elif args.host:
+            result = getattr(installer, args.group)(args.host)
+        else:
+            raise ValueError("either host or --path is required")
     else:
         result = _execute(JobFindsMeCore(args.db), args)
     _emit(
