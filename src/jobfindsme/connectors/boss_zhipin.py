@@ -131,9 +131,7 @@ class _CDPSession:
             if response.get("id") != self._message_id:
                 continue
             if "error" in response:
-                raise BossConnectorError(
-                    f"CDP {method} failed: {response['error']}"
-                )
+                raise BossConnectorError(f"CDP {method} failed: {response['error']}")
             return response
 
     def eval_js(self, js: str, sid: str) -> Any:
