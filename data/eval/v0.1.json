@@ -1,0 +1,1247 @@
+{
+  "dataset_version": "0.1.0",
+  "dataset_type": "synthetic_regression",
+  "claims_policy": "Do not treat these scores as field performance.",
+  "cases": [
+    {
+      "case_id": "match-000",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "北京",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-001",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-002",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-003",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-004",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-005",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-006",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-007",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-008",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-009",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-010",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-011",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-012",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-013",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-014",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-015",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-016",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-017",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-018",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-019",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-020",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-021",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-022",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-023",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-024",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-025",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-026",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-027",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-028",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-029",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-030",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "北京",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-031",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-032",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-033",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-034",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-035",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "北京",
+        "description": "外包驻场，Python RAG，1-3年，25-40K"
+      },
+      "expected_match": false
+    },
+    {
+      "case_id": "match-036",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-037",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-038",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "AI应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "match-039",
+      "kind": "matching",
+      "plan": {
+        "role": "AI应用工程师",
+        "location": "杭州",
+        "salary_min_k": 20,
+        "experience_max_years": 3
+      },
+      "candidate": {
+        "title": "大模型应用工程师",
+        "location": "杭州",
+        "description": "Python RAG Agent，1-3年，25-40K"
+      },
+      "expected_match": true
+    },
+    {
+      "case_id": "fresh-000",
+      "kind": "freshness",
+      "age_days": 0,
+      "closed": true,
+      "expected": "closed"
+    },
+    {
+      "case_id": "fresh-001",
+      "kind": "freshness",
+      "age_days": 1,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-002",
+      "kind": "freshness",
+      "age_days": 2,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-003",
+      "kind": "freshness",
+      "age_days": 3,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-004",
+      "kind": "freshness",
+      "age_days": 4,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-005",
+      "kind": "freshness",
+      "age_days": 5,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-006",
+      "kind": "freshness",
+      "age_days": 6,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-007",
+      "kind": "freshness",
+      "age_days": 7,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-008",
+      "kind": "freshness",
+      "age_days": 8,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-009",
+      "kind": "freshness",
+      "age_days": 9,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-010",
+      "kind": "freshness",
+      "age_days": 10,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-011",
+      "kind": "freshness",
+      "age_days": 11,
+      "closed": true,
+      "expected": "closed"
+    },
+    {
+      "case_id": "fresh-012",
+      "kind": "freshness",
+      "age_days": 12,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-013",
+      "kind": "freshness",
+      "age_days": 13,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-014",
+      "kind": "freshness",
+      "age_days": 14,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-015",
+      "kind": "freshness",
+      "age_days": 15,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-016",
+      "kind": "freshness",
+      "age_days": 16,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-017",
+      "kind": "freshness",
+      "age_days": 17,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-018",
+      "kind": "freshness",
+      "age_days": 18,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-019",
+      "kind": "freshness",
+      "age_days": 19,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-020",
+      "kind": "freshness",
+      "age_days": 20,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-021",
+      "kind": "freshness",
+      "age_days": 21,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-022",
+      "kind": "freshness",
+      "age_days": 22,
+      "closed": true,
+      "expected": "closed"
+    },
+    {
+      "case_id": "fresh-023",
+      "kind": "freshness",
+      "age_days": 23,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-024",
+      "kind": "freshness",
+      "age_days": 24,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-025",
+      "kind": "freshness",
+      "age_days": 25,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-026",
+      "kind": "freshness",
+      "age_days": 26,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-027",
+      "kind": "freshness",
+      "age_days": 27,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-028",
+      "kind": "freshness",
+      "age_days": 28,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-029",
+      "kind": "freshness",
+      "age_days": 29,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-030",
+      "kind": "freshness",
+      "age_days": 30,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-031",
+      "kind": "freshness",
+      "age_days": 31,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-032",
+      "kind": "freshness",
+      "age_days": 32,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-033",
+      "kind": "freshness",
+      "age_days": 33,
+      "closed": true,
+      "expected": "closed"
+    },
+    {
+      "case_id": "fresh-034",
+      "kind": "freshness",
+      "age_days": 34,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-035",
+      "kind": "freshness",
+      "age_days": 35,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-036",
+      "kind": "freshness",
+      "age_days": 36,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-037",
+      "kind": "freshness",
+      "age_days": 37,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-038",
+      "kind": "freshness",
+      "age_days": 38,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "fresh-039",
+      "kind": "freshness",
+      "age_days": 39,
+      "closed": false,
+      "expected": "active"
+    },
+    {
+      "case_id": "dedup-000",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": false,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-001",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-002",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-003",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-004",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-005",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-006",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-007",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-008",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-009",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-010",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-011",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-012",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-013",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-014",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-015",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-016",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-017",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-018",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-019",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-020",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-021",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-022",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-023",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-024",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-025",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-026",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-027",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-028",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-029",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-030",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-031",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-032",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-033",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-034",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-035",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": false,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-036",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": false,
+      "same_url": true,
+      "expected_duplicate": false
+    },
+    {
+      "case_id": "dedup-037",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-038",
+      "kind": "deduplication",
+      "same_company": true,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": true
+    },
+    {
+      "case_id": "dedup-039",
+      "kind": "deduplication",
+      "same_company": false,
+      "same_title": true,
+      "same_url": true,
+      "expected_duplicate": false
+    }
+  ]
+}
