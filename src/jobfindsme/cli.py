@@ -144,7 +144,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     groups.add_parser("doctor")
     groups.add_parser("self-update")
-    groups.add_parser("boss-setup")
+    setup_parser = groups.add_parser("setup")
+    setup_parser.add_argument(
+        "--platform",
+        nargs="+",
+        choices=("boss", "liepin", "zhilian", "lagou"),
+    )
     return parser
 
 
@@ -321,10 +326,11 @@ def run(argv: Sequence[str] | None = None) -> int:
         result = _self_update()
         _emit(result, args.output)
         return 0 if result["ok"] else 1
-    if args.group == "boss-setup":
-        from jobfindsme.connectors.boss_zhipin import setup_boss_chrome
+    if args.group == "setup":
+        from jobfindsme.connectors.boss_zhipin import setup_chrome
 
-        result = setup_boss_chrome()
+        platforms = tuple(getattr(args, "platform", None) or ())
+        result = setup_chrome(platforms)
         _emit(result, "markdown")
         return 0 if result["ok"] else 1
     if args.group in {"install", "upgrade", "uninstall"}:

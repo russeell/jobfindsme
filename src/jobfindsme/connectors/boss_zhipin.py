@@ -314,16 +314,23 @@ class BossZhipinConnector:
 
 BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
 
+PLATFORM_LOGIN_URLS = {
+    "boss": ("https://www.zhipin.com/web/user/?ka=header-login", "BOSS直聘"),
+    "liepin": ("https://www.liepin.com/login/", "猎聘"),
+    "zhilian": ("https://passport.zhaopin.com/login", "智联招聘"),
+    "lagou": ("https://passport.lagou.com/login/login.html", "拉勾"),
+}
 
-def setup_boss_chrome() -> dict:
+
+def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     """Launch an isolated Chrome profile for platform login.
 
-    Opens BOSS直聘 + 猎聘 + 智联招聘 + 拉勾 in a dedicated Chrome window.
-    The user logs into each platform once; the session persists in
-    ~/.jobfindsme/chrome-profile and is reused automatically by all
-    subsequent CDP searches.
+    Opens the login page for each selected platform. The user logs in
+    once per platform; sessions persist in ~/.jobfindsme/chrome-profile.
 
-    Returns a status dict with 'ok' and 'message'.
+    Args:
+        platforms: Which platforms to open (boss, liepin, zhilian, lagou).
+                   If empty, defaults to all four.
     """
     import subprocess
     from pathlib import Path
@@ -345,30 +352,34 @@ def setup_boss_chrome() -> dict:
             "message": "未找到 Chrome。请安装 Google Chrome 后重试。",
         }
 
-    # Open all four platforms in separate tabs
-    platforms = [
-        "https://www.zhipin.com",
-        "https://www.liepin.com",
-        "https://www.zhaopin.com",
-        "https://www.lagou.com",
-    ]
+    selected = list(platforms) if platforms else list(PLATFORM_LOGIN_URLS)
+    if not all(p in PLATFORM_LOGIN_URLS for p in selected):
+        return {
+            "ok": False,
+            "message": (
+                f"不支持的平台：{set(selected) - set(PLATFORM_LOGIN_URLS)}\n"
+                f"可选：{', '.join(PLATFORM_LOGIN_URLS)}"
+            ),
+        }
+
+    urls = [PLATFORM_LOGIN_URLS[p][0] for p in selected]
+    labels = [PLATFORM_LOGIN_URLS[p][1] for p in selected]
+
     subprocess.Popen(
         [chrome, f"--remote-debugging-port={DEFAULT_CDP_PORT}",
-         f"--user-data-dir={profile}"] + platforms,
+         f"--user-data-dir={profile}"] + urls,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
 
+    label_list = "\n".join(f"  • {l}" for l in labels)
     return {
         "ok": True,
         "message": (
             f"Chrome 已启动（端口 {DEFAULT_CDP_PORT}）。\n"
-            "请在打开的窗口里登录以下平台：\n"
-            "  • zhipin.com（BOSS直聘）\n"
-            "  • liepin.com（猎聘）\n"
-            "  • zhaopin.com（智联招聘）\n"
-            "  • lagou.com（拉勾）\n\n"
-            "登录态将保存在本地，以后搜索自动生效，无需重复操作。\n"
+            f"请在打开的窗口里登录以下平台：\n"
+            f"{label_list}\n\n"
+            "登录态保存在本地，以后搜索自动生效。\n"
             f"Profile: {profile}"
         ),
     }
