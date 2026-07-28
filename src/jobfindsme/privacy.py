@@ -5,6 +5,7 @@ import json
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from pydantic import Field
 
@@ -61,6 +62,13 @@ class PrivacyService:
                 "SELECT * FROM job_states WHERE workspace_id = ?",
                 (workspace_id,),
             ).fetchall()
+            state_events = connection.execute(
+                """
+                SELECT * FROM job_state_events
+                WHERE workspace_id = ? ORDER BY created_at, event_id
+                """,
+                (workspace_id,),
+            ).fetchall()
             facts = connection.execute(
                 """
                 SELECT fact_type, current_value, evidence_snippet, status
@@ -74,6 +82,7 @@ class PrivacyService:
             "search_plans": [dict(row) for row in plans],
             "jobs": [json.loads(row["payload_json"]) for row in jobs],
             "job_states": [dict(row) for row in states],
+            "job_state_events": [dict(row) for row in state_events],
             "profile_facts": [dict(row) for row in facts],
         }
 
@@ -114,6 +123,7 @@ class PrivacyService:
         self._validate_scope(scope)
         now = self.clock()
         token_hash = _token_hash(confirmation_token)
+        managed_paths: list[str] = []
         with self.database.connect() as connection:
             token = connection.execute(
                 """
@@ -128,6 +138,19 @@ class PrivacyService:
                 or datetime.fromisoformat(token["expires_at"]) < now
             ):
                 raise PermissionError("invalid or expired confirmation token")
+            if scope in {"profile", "workspace"}:
+                managed_paths = [
+                    row["managed_path"]
+                    for row in connection.execute(
+                        """
+                        SELECT managed_path FROM source_documents
+                        WHERE workspace_id = ? AND managed_path IS NOT NULL
+                        """,
+                        (workspace_id,),
+                    ).fetchall()
+                ]
+                for managed_path in managed_paths:
+                    Path(managed_path).unlink(missing_ok=True)
             if scope == "jobs":
                 connection.execute(
                     "DELETE FROM jobs WHERE workspace_id = ?", (workspace_id,)

@@ -134,3 +134,33 @@ class JobState(StrictModel):
     state: JobStateKind
     note: str = Field(default="", max_length=1000)
     updated_at: datetime
+
+
+class DiscoverySourceKind(StrEnum):
+    GREENHOUSE = "greenhouse"
+    CAREER_URL = "career_url"
+    JSON_FILE = "json_file"
+    CSV_FILE = "csv_file"
+
+
+class DiscoverySource(StrictModel):
+    kind: DiscoverySourceKind
+    source_name: str
+    board_token: str | None = None
+    url: str | None = None
+    path: str | None = None
+    robots_allowed: bool = False
+
+    @model_validator(mode="after")
+    def validate_kind_fields(self) -> Self:
+        required = {
+            DiscoverySourceKind.GREENHOUSE: self.board_token,
+            DiscoverySourceKind.CAREER_URL: self.url,
+            DiscoverySourceKind.JSON_FILE: self.path,
+            DiscoverySourceKind.CSV_FILE: self.path,
+        }[self.kind]
+        if not required:
+            raise ValueError(f"{self.kind} source is missing its locator")
+        if self.kind is DiscoverySourceKind.CAREER_URL and not self.robots_allowed:
+            raise ValueError("career_url requires robots_allowed=true")
+        return self

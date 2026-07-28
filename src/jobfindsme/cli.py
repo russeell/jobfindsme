@@ -113,9 +113,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     delete_confirm.add_argument("--token", required=True)
 
-    install = groups.add_parser("install")
-    install.add_argument("host", choices=("codex", "claude", "qwen"))
-    install.add_argument("--home", type=Path)
+    for action in ("install", "upgrade", "uninstall"):
+        host_action = groups.add_parser(action)
+        host_action.add_argument("host", choices=("codex", "claude", "qwen"))
+        host_action.add_argument("--home", type=Path)
 
     groups.add_parser("doctor")
     return parser
@@ -245,8 +246,6 @@ def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
             scope=args.scope,
             confirmation_token=args.token,
         )
-    if args.group == "install":
-        return HostInstaller(home=args.home).install(args.host)
     if args.group == "doctor":
         return Doctor(core.database.path).run()
     raise AssertionError("argparse accepted an unsupported command")
@@ -254,7 +253,11 @@ def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
 
 def run(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    result = _execute(JobFindsMeCore(args.db), args)
+    if args.group in {"install", "upgrade", "uninstall"}:
+        installer = HostInstaller(home=args.home)
+        result = getattr(installer, args.group)(args.host)
+    else:
+        result = _execute(JobFindsMeCore(args.db), args)
     _emit(result, args.output)
     return 0
 

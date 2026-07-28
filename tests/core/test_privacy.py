@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from jobfindsme.core import JobFindsMeCore
+from jobfindsme.profiles.models import ResumeImportMode
 
 
 def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> None:
@@ -54,3 +57,34 @@ def test_export_contains_structured_data_but_no_complete_resume(tmp_path) -> Non
 
     assert exported["profile_facts"]
     assert "技能：Python、RAG\n项目：求职助手" not in str(exported)
+
+
+def test_profile_deletion_removes_managed_resume_copy(tmp_path) -> None:
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG", encoding="utf-8")
+    core = JobFindsMeCore(tmp_path / "data" / "jobfindsme.db")
+    workspace = core.create_workspace("private")
+    profile = core.import_resume(
+        workspace_id=workspace.workspace_id,
+        source_path=resume,
+        mode=ResumeImportMode.MANAGED,
+    )
+    document = core.profiles.load_document(
+        workspace_id=workspace.workspace_id,
+        document_id=profile.document_id,
+    )
+    managed_path = document.managed_path
+    assert managed_path is not None
+    assert Path(managed_path).exists()
+
+    preview = core.preview_delete(
+        workspace_id=workspace.workspace_id,
+        scope="profile",
+    )
+    core.confirm_delete(
+        workspace_id=workspace.workspace_id,
+        scope="profile",
+        confirmation_token=preview.confirmation_token,
+    )
+
+    assert not Path(managed_path).exists()

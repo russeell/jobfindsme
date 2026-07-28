@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "jobfindsme"
 version = "0.1.0"
 description = "Agent-native, local-first job discovery and tracking engine"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.10,<3",
@@ -21,8 +23,16 @@ dev = [
 [project.scripts]
 jobfindsme = "jobfindsme.cli:main"
 
+[project.urls]
+Homepage = "https://github.com/russeell/jobfindsme"
+Repository = "https://github.com/russeell/jobfindsme"
+Issues = "https://github.com/russeell/jobfindsme/issues"
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+jobfindsme = ["resources/**/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

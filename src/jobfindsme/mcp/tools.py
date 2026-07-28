@@ -39,7 +39,7 @@ TOOL_DEFINITIONS = (
     ),
     ToolDefinition(
         "search_jobs",
-        "Match locally imported jobs against a saved Search Plan.",
+        "Discover from explicit sources, then match against a Search Plan.",
         SearchJobsInput,
     ),
     ToolDefinition(
@@ -97,13 +97,26 @@ class ToolRegistry:
     def _dispatch(self, name: str, request: BaseModel) -> Any:
         values = request.model_dump()
         if name == "setup_profile":
+            if values["action"] == "confirm":
+                return self.core.confirm_profile(
+                    workspace_id=values["workspace_id"],
+                    profile_id=values["profile_id"],
+                    accepted_fact_ids=values["accepted_fact_ids"],
+                    corrections=values["corrections"],
+                )
             return self.core.import_resume(
                 workspace_id=values["workspace_id"],
                 source_path=values["resume_path"],
                 mode=values["mode"],
             )
         if name == "search_jobs":
-            return self.core.match_jobs(**values)
+            assert isinstance(request, SearchJobsInput)
+            return self.core.search_jobs(
+                workspace_id=request.workspace_id,
+                plan_id=request.plan_id,
+                sources=request.sources,
+                limit=request.limit,
+            )
         if name == "get_jobs":
             return self.core.jobs.list(values["workspace_id"])
         if name == "update_job_state":

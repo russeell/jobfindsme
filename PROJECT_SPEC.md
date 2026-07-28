@@ -26,12 +26,13 @@ V0.1 must provide:
 - a local Workspace with one confirmed candidate profile;
 - multiple Search Plans sharing confirmed profile facts;
 - local resume parsing with evidence and explicit corrections;
-- URL、CSV、JSON、公开 ATS 和企业官方招聘站 Connector；
+- Schema.org `JobPosting` URL、CSV、JSON、公开 ATS 和企业官方招聘站
+  Connector；
 - normalization, versioning, deduplication, freshness, and liveness checks;
 - deterministic hard filters, BM25, rule ranking, and match evidence;
 - job states and feedback history;
 - CLI、本地 `stdio` MCP，以及 Qwen Code、Codex、Claude Code 首批集成；
-- 一份经过真实测试的主流 Agent 兼容矩阵；
+- 一份区分自动契约测试与真实客户端验证的 Agent 兼容矩阵；
 - installer, upgrade, uninstall, and doctor commands;
 - reproducible offline evaluation;
 - optional local scheduling and Feishu summaries after the interactive flow is
@@ -135,7 +136,7 @@ Workspace
 |- Jobs and JobVersions
 |- MatchEvidence
 |- FeedbackEvents and JobState
-`- SearchRuns and ConnectorRuns
+`- MonitorRuns and JobStateEvents
 ```
 
 The V0.1 implementation is local-only, but every personal record carries a
@@ -228,7 +229,7 @@ internal Core steps, not separate tools the host must orchestrate.
 `delete_local_data` accepts either:
 
 ```json
-{"action": "preview", "scope": "all"}
+{"action": "preview", "scope": "workspace"}
 ```
 
 or:
@@ -236,7 +237,7 @@ or:
 ```json
 {
   "action": "confirm",
-  "scope": "all",
+  "scope": "workspace",
   "confirmation_token": "short-lived-token"
 }
 ```
@@ -288,14 +289,14 @@ P2: 其他符合 MCP stdio 与工具 Schema 的客户端
 ## 12. Delivery Milestones
 
 1. Product and architecture baseline.
-2. Local Workspace and multiple Search Plans.
-3. Core API independent from FastAPI.
-4. Product-grade CLI adapter.
-5. Local stdio MCP Server.
-6. Qwen Code、Codex、Claude Code integrations and compatibility suite.
-7. One-command install, upgrade, uninstall, and doctor.
-8. End-to-end validation with real official career-site jobs.
-9. Local scheduler and Feishu summaries.
+2. Local Workspace, Search Plans, and resume lifecycle.
+3. Official-source discovery, deterministic matching, and offline evaluation.
+4. Product-grade CLI and local stdio MCP Server.
+5. Agent integrations and an evidence-based compatibility matrix.
+6. One-command install, upgrade, uninstall, and doctor.
+7. Initial real official-source validation.
+8. Local scheduler and signed Feishu summaries.
+9. Release hardening and clean-environment package validation.
 
 A dedicated JobFindsMe Agent is considered only after at least three stable
 sources, repeat usage, real feedback, and a demonstrated limitation in existing

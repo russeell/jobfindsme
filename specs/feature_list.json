@@ -553,6 +553,54 @@
         ]
       ],
       "evidence_path": "reports/features/M9-001.json"
+    },
+    {
+      "id": "M10-001",
+      "title": "Release hardening and contract alignment",
+      "status": "done",
+      "blocked_by": [
+        "M9-001"
+      ],
+      "allowed_paths": [
+        ".github/**",
+        "LICENSE",
+        "README.md",
+        "PROJECT_SPEC.md",
+        "pyproject.toml",
+        "src/jobfindsme/**",
+        "integrations/**",
+        "tests/**",
+        "specs/feature_list.json",
+        "reports/release/**",
+        "reports/features/M10-001.json"
+      ],
+      "acceptance": [
+        "MCP can confirm a locally parsed profile without adding an eighth tool.",
+        "search_jobs can discover from explicit public or local sources before matching.",
+        "Job state changes retain append-only history.",
+        "Install, upgrade, uninstall, and doctor work from an installed package.",
+        "README, specification, CI, package metadata, and implementation agree.",
+        "A clean-environment package smoke test passes."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ]
+      ],
+      "evidence_path": "reports/features/M10-001.json"
     }
   ]
 }

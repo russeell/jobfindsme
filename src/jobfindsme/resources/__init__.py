@@ -1,0 +1,1 @@
+"""Packaged user-facing resources."""

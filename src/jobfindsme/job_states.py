@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import UTC, datetime
+from uuid import uuid4
 
 from jobfindsme.contracts import JobState, JobStateKind
 from jobfindsme.storage import Database
@@ -35,6 +36,30 @@ class JobStateService:
             updated_at=self.clock(),
         )
         with self.database.connect() as connection:
+            previous = connection.execute(
+                """
+                SELECT state FROM job_states
+                WHERE workspace_id = ? AND job_id = ?
+                """,
+                (value.workspace_id, value.job_id),
+            ).fetchone()
+            connection.execute(
+                """
+                INSERT INTO job_state_events (
+                    event_id, workspace_id, job_id, previous_state,
+                    new_state, note, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    f"event_{uuid4().hex}",
+                    value.workspace_id,
+                    value.job_id,
+                    previous["state"] if previous else None,
+                    value.state,
+                    value.note,
+                    value.updated_at.isoformat(),
+                ),
+            )
             connection.execute(
                 """
                 INSERT INTO job_states (

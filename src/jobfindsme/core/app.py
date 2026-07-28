@@ -4,12 +4,14 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from jobfindsme.contracts import (
+    DiscoverySource,
     JobMatch,
     JobState,
     JobStateKind,
     SearchPlan,
     Workspace,
 )
+from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
 from jobfindsme.job_states import JobStateService
@@ -38,6 +40,7 @@ class JobFindsMeCore:
         self.profiles = ResumeProfileService(self.database)
         self.jobs = JobRepository(self.database)
         self.job_imports = JobImportService(self.jobs)
+        self.discovery = JobDiscoveryService(self.job_imports)
         self.matcher = DeterministicMatcher()
         self.job_states = JobStateService(self.database)
         self.privacy = PrivacyService(self.database)
@@ -113,6 +116,25 @@ class JobFindsMeCore:
             plan_id=plan_id,
         )
         return self.matcher.match(plan, self.jobs.list(workspace_id), limit=limit)
+
+    def search_jobs(
+        self,
+        *,
+        workspace_id: str,
+        plan_id: str,
+        sources: tuple[DiscoverySource, ...] = (),
+        limit: int = 20,
+    ) -> list[JobMatch]:
+        if sources:
+            self.discovery.discover(
+                workspace_id=workspace_id,
+                sources=sources,
+            )
+        return self.match_jobs(
+            workspace_id=workspace_id,
+            plan_id=plan_id,
+            limit=limit,
+        )
 
     def update_job_state(
         self,

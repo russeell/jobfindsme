@@ -4,6 +4,7 @@ import json
 import shutil
 import sys
 from datetime import UTC, datetime
+from importlib.resources import files
 from pathlib import Path
 
 from pydantic import Field
@@ -13,6 +14,7 @@ from jobfindsme.contracts import StrictModel
 
 class InstallResult(StrictModel):
     host: str
+    action: str
     config_path: str
     skill_path: str
     backups: tuple[str, ...] = ()
@@ -38,38 +40,88 @@ class HostInstaller:
             else self.home / ".jobfindsme" / "data"
         )
         self.now = now or datetime.now(UTC)
-        self.skill_source = (
-            Path(__file__).parents[3] / "integrations" / "shared" / "SKILL.md"
+        self.skill_content = (
+            files("jobfindsme.resources.jobfindsme")
+            .joinpath("SKILL.md")
+            .read_text(encoding="utf-8")
         )
 
     def install(self, host: str) -> InstallResult:
-        if host not in self.HOSTS:
-            raise ValueError(f"unsupported host: {host}")
-        self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        return self._write(host, replace=False, action="install")
+
+    def upgrade(self, host: str) -> InstallResult:
+        return self._write(host, replace=True, action="upgrade")
+
+    def uninstall(self, host: str) -> InstallResult:
+        self._validate_host(host)
+        config_path, skill_path = self._paths(host)
+        if not config_path.exists():
+            raise FileNotFoundError(f"{host} config does not exist")
+        backup = self._backup(config_path)
         if host == "codex":
-            return self._install_codex()
-        if host == "claude":
-            return self._install_json_host(
-                host="claude",
-                config_path=self.home / ".claude.json",
-                skill_path=self.home / ".claude" / "skills" / "jobfindsme" / "SKILL.md",
+            content = _remove_codex_config(config_path.read_text())
+            config_path.write_text(content, encoding="utf-8")
+        else:
+            document = json.loads(config_path.read_text())
+            document.get("mcpServers", {}).pop("jobfindsme", None)
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
             )
-        return self._install_json_host(
-            host="qwen",
-            config_path=self.home / ".qwen" / "settings.json",
-            skill_path=self.home / ".qwen" / "skills" / "jobfindsme" / "SKILL.md",
+        skill_path.unlink(missing_ok=True)
+        return InstallResult(
+            host=host,
+            action="uninstall",
+            config_path=str(config_path),
+            skill_path=str(skill_path),
+            backups=(str(backup),),
         )
 
-    def _install_codex(self) -> InstallResult:
-        config_path = self.home / ".codex" / "config.toml"
-        skill_path = self.home / ".codex" / "skills" / "jobfindsme" / "SKILL.md"
+    def _write(self, host: str, *, replace: bool, action: str) -> InstallResult:
+        self._validate_host(host)
+        self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        config_path, skill_path = self._paths(host)
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        existing = config_path.read_text() if config_path.exists() else ""
-        marker = "[mcp_servers.jobfindsme]"
-        if marker in existing:
-            raise FileExistsError("Codex jobfindsme MCP config already exists")
-        backup = self._backup(config_path)
-        block = (
+        backup = self._backup(config_path) if config_path.exists() else None
+        if host == "codex":
+            existing = config_path.read_text() if config_path.exists() else ""
+            marker = "[mcp_servers.jobfindsme]"
+            if marker in existing and not replace:
+                if backup:
+                    backup.unlink()
+                raise FileExistsError("Codex jobfindsme MCP config already exists")
+            if replace:
+                existing = _remove_codex_config(existing)
+            config_path.write_text(
+                existing.rstrip() + self._codex_block() + "\n",
+                encoding="utf-8",
+            )
+        else:
+            document = (
+                json.loads(config_path.read_text()) if config_path.exists() else {}
+            )
+            servers = document.setdefault("mcpServers", {})
+            if "jobfindsme" in servers and not replace:
+                if backup:
+                    backup.unlink()
+                raise FileExistsError(f"{host} jobfindsme MCP config already exists")
+            servers["jobfindsme"] = self._json_server(host)
+            config_path.write_text(
+                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        self._install_skill(skill_path)
+        return InstallResult(
+            host=host,
+            action=action,
+            config_path=str(config_path),
+            skill_path=str(skill_path),
+            backups=(str(backup),) if backup else (),
+            commands=(f"{host} mcp list",),
+        )
+
+    def _codex_block(self) -> str:
+        return (
             "\n[mcp_servers.jobfindsme]\n"
             f"command = {json.dumps(self.python)}\n"
             'args = ["-m", "jobfindsme.mcp"]\n'
@@ -78,30 +130,9 @@ class HostInstaller:
             "\n[mcp_servers.jobfindsme.env]\n"
             f"JOBFINDSME_DB_PATH = {json.dumps(str(self.data_dir / 'jobfindsme.db'))}\n"
         )
-        config_path.write_text(existing.rstrip() + block + "\n")
-        self._install_skill(skill_path)
-        return InstallResult(
-            host="codex",
-            config_path=str(config_path),
-            skill_path=str(skill_path),
-            backups=(str(backup),) if backup else (),
-            commands=("codex mcp list",),
-        )
 
-    def _install_json_host(
-        self,
-        *,
-        host: str,
-        config_path: Path,
-        skill_path: Path,
-    ) -> InstallResult:
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        document = json.loads(config_path.read_text()) if config_path.exists() else {}
-        servers = document.setdefault("mcpServers", {})
-        if "jobfindsme" in servers:
-            raise FileExistsError(f"{host} jobfindsme MCP config already exists")
-        backup = self._backup(config_path)
-        server = {
+    def _json_server(self, host: str) -> dict[str, object]:
+        server: dict[str, object] = {
             "command": self.python,
             "args": ["-m", "jobfindsme.mcp"],
             "env": {
@@ -110,31 +141,54 @@ class HostInstaller:
         }
         if host == "claude":
             server["type"] = "stdio"
-        servers["jobfindsme"] = server
-        config_path.write_text(
-            json.dumps(document, ensure_ascii=False, indent=2) + "\n"
-        )
-        self._install_skill(skill_path)
-        return InstallResult(
-            host=host,
-            config_path=str(config_path),
-            skill_path=str(skill_path),
-            backups=(str(backup),) if backup else (),
-            commands=(f"{host} mcp list",),
+        return server
+
+    def _paths(self, host: str) -> tuple[Path, Path]:
+        if host == "codex":
+            return (
+                self.home / ".codex" / "config.toml",
+                self.home / ".codex" / "skills" / "jobfindsme" / "SKILL.md",
+            )
+        if host == "claude":
+            return (
+                self.home / ".claude.json",
+                self.home / ".claude" / "skills" / "jobfindsme" / "SKILL.md",
+            )
+        return (
+            self.home / ".qwen" / "settings.json",
+            self.home / ".qwen" / "skills" / "jobfindsme" / "SKILL.md",
         )
 
     def _install_skill(self, target: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            self._backup(target)
-        shutil.copyfile(self.skill_source, target)
+        target.write_text(self.skill_content, encoding="utf-8")
 
-    def _backup(self, path: Path) -> Path | None:
-        if not path.exists():
-            return None
+    def _backup(self, path: Path) -> Path:
         timestamp = self.now.strftime("%Y%m%dT%H%M%SZ")
         backup = path.with_name(f"{path.name}.backup-{timestamp}")
-        if backup.exists():
-            raise FileExistsError(f"backup already exists: {backup}")
+        suffix = 1
+        while backup.exists():
+            backup = path.with_name(f"{path.name}.backup-{timestamp}.{suffix}")
+            suffix += 1
         shutil.copy2(path, backup)
         return backup
+
+    def _validate_host(self, host: str) -> None:
+        if host not in self.HOSTS:
+            raise ValueError(f"unsupported host: {host}")
+
+
+def _remove_codex_config(content: str) -> str:
+    lines = content.splitlines()
+    kept: list[str] = []
+    skipping = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[mcp_servers.jobfindsme"):
+            skipping = True
+            continue
+        if skipping and stripped.startswith("["):
+            skipping = False
+        if not skipping:
+            kept.append(line)
+    return "\n".join(kept).rstrip() + ("\n" if kept else "")

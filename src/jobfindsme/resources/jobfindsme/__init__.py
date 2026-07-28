@@ -1,0 +1,1 @@
+"""JobFindsMe Agent Skill resource."""

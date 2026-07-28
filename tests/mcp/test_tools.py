@@ -105,6 +105,40 @@ def test_monitor_configuration_is_persisted_by_core(tmp_path) -> None:
     assert row["interval_hours"] == 12
 
 
+def test_setup_profile_supports_import_and_confirmation_in_one_tool(
+    tmp_path,
+) -> None:
+    core, workspace, _, registry = make_registry(tmp_path)
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG\n项目：本地求职引擎", encoding="utf-8")
+
+    imported = registry.call(
+        "setup_profile",
+        {
+            "action": "import",
+            "workspace_id": workspace.workspace_id,
+            "resume_path": str(resume),
+        },
+    )
+    profile = imported["structuredContent"]
+    fact_ids = [fact["fact_id"] for fact in profile["facts"]]
+    confirmed = registry.call(
+        "setup_profile",
+        {
+            "action": "confirm",
+            "workspace_id": workspace.workspace_id,
+            "profile_id": profile["profile_id"],
+            "accepted_fact_ids": fact_ids,
+        },
+    )
+
+    assert confirmed["isError"] is False
+    assert all(
+        fact["status"] == "confirmed"
+        for fact in confirmed["structuredContent"]["facts"]
+    )
+
+
 def test_mcp_layer_contains_no_matching_or_persistence_imports() -> None:
     root = Path(__file__).parents[2] / "src" / "jobfindsme" / "mcp"
     forbidden = {"sqlite3", "matching", "importing", "storage"}

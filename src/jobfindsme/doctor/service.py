@@ -86,16 +86,22 @@ class Doctor:
 
     @staticmethod
     def _connectors() -> Diagnostic:
-        root = Path(__file__).parents[3]
-        fixtures = (
-            root / "data" / "fixtures" / "greenhouse_jobs.json",
-            root / "data" / "fixtures" / "official_career_job.html",
-        )
-        missing = [str(path) for path in fixtures if not path.exists()]
+        try:
+            from jobfindsme.connectors import (
+                GreenhouseConnector,
+                JsonLdCareerSiteConnector,
+            )
+
+            names = (
+                GreenhouseConnector.__name__,
+                JsonLdCareerSiteConnector.__name__,
+            )
+        except ImportError as error:
+            return Diagnostic(name="connectors", ok=False, message=str(error))
         return Diagnostic(
             name="connectors",
-            ok=not missing,
-            message="fixtures ready" if not missing else f"missing: {missing}",
+            ok=True,
+            message=f"ready: {', '.join(names)}",
         )
 
     @staticmethod
