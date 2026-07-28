@@ -725,7 +725,7 @@
     {
       "id": "M12-002",
       "title": "Bounded MCP output and source security",
-      "status": "backlog",
+      "status": "done",
       "blocked_by": [
         "M12-001"
       ],
