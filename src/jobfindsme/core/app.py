@@ -310,6 +310,14 @@ class jobfindsmecore:
         import logging
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
+        # Minimize Chrome before creating background tabs
+        try:
+            from jobfindsme.connectors.boss_zhipin import _CDPSession
+
+            _CDPSession.minimize_windows()
+        except Exception:
+            pass
+
         _log = logging.getLogger(__name__)
         subscriptions = {
             (item.source.kind, item.source.source_name): item

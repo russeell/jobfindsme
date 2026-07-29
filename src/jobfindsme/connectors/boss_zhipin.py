@@ -87,6 +87,22 @@ class CdpSession(Protocol):
 class _CDPSession:
     """Minimal Chrome DevTools Protocol session over a local WebSocket."""
 
+    @staticmethod
+    def minimize_windows(port: int = DEFAULT_CDP_PORT) -> None:
+        """Hide all Chrome windows so search tabs don't visibly pop up."""
+        with suppress(Exception):
+            cdp = _CDPSession(port)
+            targets = cdp.send("Target.getTargets")
+            bounds = {"windowState": "minimized"}
+            for t in targets.get("result", {}).get("targetInfos", []):
+                if t.get("type") == "page":
+                    with suppress(Exception):
+                        cdp.send(  # noqa: E501
+                            "Browser.setWindowBounds",
+                            {"windowId": t["targetId"], "bounds": bounds},
+                        )
+            cdp.close()
+
     def __init__(self, port: int = DEFAULT_CDP_PORT) -> None:
         try:
             import requests
@@ -382,7 +398,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    # Bring Chrome to foreground on macOS
+    # Ask macOS to show the Chrome window so user can log in
     subprocess.run(
         ["open", "-a", "Google Chrome"],
         stdout=subprocess.DEVNULL,
