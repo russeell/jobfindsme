@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
+from datetime import UTC, datetime
 
 from jobfindsme.contracts import (
     EvidencePair,
@@ -26,6 +27,10 @@ from jobfindsme.taxonomy import (
 class DeterministicMatcher:
     """Apply hard constraints first, then rank with explainable BM25-style terms."""
 
+    # Auto-expire UNKNOWN jobs older than this many days.
+    # None = disabled. Production sets this to 7.
+    stale_after_days: int | None = None
+
     def match(
         self,
         plan: SearchPlan,
@@ -34,8 +39,16 @@ class DeterministicMatcher:
         profile: ProfileSummary | None = None,
         limit: int = 20,
         min_score: float = 0.10,
+        stale_after_days: int | None = None,
     ) -> list[JobMatch]:
-        eligible = [job for job in jobs if self._hard_filter(plan, job)]
+        effective_stale = (
+            stale_after_days if stale_after_days is not None else self.stale_after_days
+        )
+        eligible = [
+            job
+            for job in jobs
+            if self._hard_filter(plan, job, stale_after_days=effective_stale)
+        ]
         if not eligible:
             return []
         query_terms = tokenize(" ".join(expand_role_terms(plan.target_roles)))
@@ -68,8 +81,21 @@ class DeterministicMatcher:
         return sorted(scored, key=lambda item: (-item.score, item.job.job_id))[:limit]
 
     @staticmethod
-    def _hard_filter(plan: SearchPlan, job: JobPosting) -> bool:
+    def _hard_filter(
+        plan: SearchPlan,
+        job: JobPosting,
+        *,
+        stale_after_days: int | None = None,
+    ) -> bool:
         if job.source.liveness in {JobLiveness.CLOSED, JobLiveness.STALE}:
+            return False
+        # Auto-expire cached UNKNOWN jobs
+        if (
+            stale_after_days is not None
+            and job.source.liveness is JobLiveness.UNKNOWN
+            and job.source.fetched_at is not None
+            and (datetime.now(UTC) - job.source.fetched_at).days > stale_after_days
+        ):
             return False
         searchable = (
             f"{job.title} {job.description} {' '.join(job.locations)}".casefold()

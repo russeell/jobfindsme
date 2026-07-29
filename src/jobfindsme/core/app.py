@@ -54,6 +54,7 @@ class jobfindsmecore:
         self.job_imports = JobImportService(self.jobs)
         self.discovery = JobDiscoveryService(self.job_imports)
         self.matcher = DeterministicMatcher()
+        self.matcher.stale_after_days = 7  # auto-expire UNKNOWN jobs after 7 days
         self.job_states = JobStateService(self.database)
         self.privacy = PrivacyService(self.database)
         self.monitor_configs = MonitorConfigService(self.database)
