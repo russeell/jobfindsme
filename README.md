@@ -90,7 +90,7 @@ jobfindsme install workbuddy # WorkBuddy
 
 示例：
 ```
-用 JobFindsMe，根据 ~/Desktop/简历/董博.pdf，
+用 JobFindsMe，根据 ~/Documents/我的简历.pdf，
 找深圳和上海的 AI Agent 工程师岗位，20K 以上。
 ```
 
