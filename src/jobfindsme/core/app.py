@@ -296,6 +296,10 @@ class jobfindsmecore:
         plan_id: str,
         sources: Sequence[DiscoverySource],
     ) -> None:
+        import logging
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        _log = logging.getLogger(__name__)
         subscriptions = {
             (item.source.kind, item.source.source_name): item
             for item in self.source_subscriptions.list(
@@ -303,7 +307,10 @@ class jobfindsmecore:
                 plan_id=plan_id,
             )
         }
-        for source in sources:
+
+        def _discover_one(  # noqa: E501
+            source: DiscoverySource,
+        ) -> tuple[DiscoverySource, str | None]:
             subscription = subscriptions.get((source.kind, source.source_name))
             try:
                 summary = self.discovery.discover(
@@ -321,10 +328,8 @@ class jobfindsmecore:
                         subscription,
                         error=None,
                     )
+                return source, None
             except Exception as error:
-                import logging
-
-                _log = logging.getLogger(__name__)
                 _log.warning(
                     "source discovery failed: %s/%s — %s",
                     source.kind,
@@ -347,8 +352,22 @@ class jobfindsmecore:
                         error=str(error),
                         degraded=cached,
                     )
-        # Source health stores the failure details. Search still returns the local
-        # snapshot (or an empty result) so one network outage does not break Agent use.
+                return source, str(error)
+
+        max_workers = min(len(sources), 5)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(_discover_one, source): source for source in sources
+            }
+            for future in as_completed(futures):
+                source, error = future.result()
+                if error:
+                    _log.debug(
+                        "source %s/%s failed: %s",
+                        source.kind,
+                        source.source_name,
+                        error,
+                    )
 
     def update_job_state(
         self,

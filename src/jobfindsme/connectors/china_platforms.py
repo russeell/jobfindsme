@@ -36,13 +36,32 @@ class CdpFetchError(Exception):
     """Raised when CDP navigation or extraction fails after retries."""
 
 
+def _wait_for_selectors(
+    cdp: CdpSession,
+    sid: str,
+    selectors: list[str],
+    timeout_ms: int = 8000,
+) -> None:
+    """Poll until at least one selector matches or timeout."""
+    deadline = time.monotonic() + timeout_ms / 1000
+    while time.monotonic() < deadline:
+        for sel in selectors:
+            count = cdp.eval_js(
+                f"document.querySelectorAll({json.dumps(sel)}).length", sid
+            )
+            if isinstance(count, (int, float)) and count > 0:
+                return
+        time.sleep(0.3)
+    # Timeout — continue anyway, extraction JS may still find content
+
+
 def _cdp_fetch(
     search_url: str,
     extract_js: str,
     *,
     port: int = DEFAULT_CDP_PORT,
     session_factory: Callable[[int], CdpSession] = _CDPSession,
-    wait_ms: int = 4000,
+    wait_ms: int = 2000,
     retries: int = 2,
 ) -> list[dict[str, Any]]:
     """Navigate to a search page via CDP, inject JS, return extracted jobs.
@@ -79,7 +98,16 @@ def _cdp_fetch(
                 sid,
             )
             cdp.send("Page.navigate", {"url": search_url}, sid)
-            time.sleep(wait_ms / 1000)
+
+            # Poll for readyState + minimal content (not blind sleep)
+            deadline = time.monotonic() + max(wait_ms / 1000, 8)
+            while time.monotonic() < deadline:
+                state = cdp.eval_js("document.readyState", sid)
+                if state in {"interactive", "complete"}:
+                    body_len = cdp.eval_js("document.body.innerText.length", sid)
+                    if isinstance(body_len, (int, float)) and body_len > 200:
+                        break
+                time.sleep(0.3)
 
             raw = cdp.eval_js(extract_js, sid)
             if isinstance(raw, str):
