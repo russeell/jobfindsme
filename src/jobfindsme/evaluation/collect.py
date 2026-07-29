@@ -1,4 +1,4 @@
-"""Create a human-labeling template from JobFindsMe JSON search output."""
+"""Create a human-labeling template from jobfindsme JSON search output."""
 
 from __future__ import annotations
 
