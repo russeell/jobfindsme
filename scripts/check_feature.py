@@ -6,6 +6,7 @@ from scripts.feature_harness import (
     HarnessError,
     changed_paths,
     check_allowed_paths,
+    check_project_research_gate,
     find_feature,
     load_spec,
     run_checks,
@@ -18,9 +19,11 @@ def main() -> int:
         print("usage: python3 -m scripts.check_feature <FEATURE_ID>")
         return 2
 
-    feature = find_feature(load_spec(), sys.argv[1])
+    spec = load_spec()
+    feature = find_feature(spec, sys.argv[1])
     paths = changed_paths()
     try:
+        check_project_research_gate(spec, feature)
         check_allowed_paths(feature, paths)
     except HarnessError as error:
         print(error)

@@ -2,6 +2,14 @@
   "schema_version": "1.0",
   "project": "JobFindsMe",
   "product_baseline": "agent-native-local-first",
+  "research_policy": {
+    "enforced_from_feature": "M24-001",
+    "required_categories": [
+      "open_source",
+      "official_guide",
+      "paper_or_benchmark"
+    ]
+  },
   "status_values": [
     "backlog",
     "ready",
@@ -1519,6 +1527,36 @@
       "title": "Source truth, query planning, and catalog reconciliation",
       "status": "ready",
       "blocked_by": ["M23-001"],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "Career-Ops",
+          "url": "https://github.com/santifer/career-ops",
+          "adopted_pattern": "Treat configured portals and observed listings as explicit, inspectable source state.",
+          "rejected_or_not_adopted": "Do not let a host Agent's browser reasoning become the canonical source of truth."
+        },
+        {
+          "category": "official_guide",
+          "title": "Playwright Locators and Auto-waiting",
+          "url": "https://playwright.dev/docs/locators",
+          "adopted_pattern": "Prefer current user-facing or explicit selector contracts and bounded waiting for dynamic pages.",
+          "rejected_or_not_adopted": "Do not depend on long DOM-coupled CSS or XPath chains."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Data Cascades in High-Stakes AI",
+          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
+          "adopted_pattern": "Measure and repair source and data truth before tuning downstream ranking.",
+          "rejected_or_not_adopted": "Do not treat a ranking improvement as compensation for incomplete or stale source records."
+        }
+      ],
+      "local_constraints": [
+        "Chinese recruitment pages change frequently and may require a user-owned browser session.",
+        "A partial search page cannot prove that an absent job is closed.",
+        "The default path must not require a model API or a hosted evaluation service.",
+        "User-customized source subscriptions must survive catalog upgrades."
+      ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
         "specs/feature_list.json",
@@ -1545,6 +1583,81 @@
         ["ruff", "check", "src/jobfindsme", "tests/core", "tests/importing", "tests/connectors"]
       ],
       "evidence_path": "reports/features/M24-001.json"
+    },
+    {
+      "id": "M25-001",
+      "title": "Research-gated evaluation-driven engineering loop",
+      "status": "done",
+      "blocked_by": ["M23-001"],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "OpenAI Evals",
+          "url": "https://github.com/openai/evals",
+          "adopted_pattern": "Keep versioned, use-case-specific evaluation data and custom deterministic graders.",
+          "rejected_or_not_adopted": "Do not require an OpenAI API or copy the framework when local Pydantic reports and pytest cover the current need."
+        },
+        {
+          "category": "official_guide",
+          "title": "Anthropic: Demystifying evals for AI agents",
+          "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+          "adopted_pattern": "Define capabilities with evals, retain traces, and combine code, human, and later model graders.",
+          "rejected_or_not_adopted": "Do not treat an automatic grader or a saturated regression suite as proof of user value."
+        },
+        {
+          "category": "official_guide",
+          "title": "LangSmith Evaluation Concepts",
+          "url": "https://docs.langchain.com/langsmith/evaluation-concepts",
+          "adopted_pattern": "Turn online failures into offline cases, validate fixes offline, then confirm with new live runs.",
+          "rejected_or_not_adopted": "Do not introduce LangSmith as a mandatory hosted dependency."
+        },
+        {
+          "category": "official_guide",
+          "title": "Google Rules of Machine Learning",
+          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+          "adopted_pattern": "Keep the end-to-end pipeline solid, log serving-time evidence, and optimize measured product goals.",
+          "rejected_or_not_adopted": "Do not add complex ranking models before simple data and pipeline failures are resolved."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
+          "url": "https://arxiv.org/abs/2309.15217",
+          "adopted_pattern": "Evaluate system dimensions separately instead of hiding failures behind one composite score.",
+          "rejected_or_not_adopted": "Do not apply RAG-specific metrics directly to job discovery or replace job-domain human labels."
+        }
+      ],
+      "local_constraints": [
+        "Core evaluation must work without a model API or hosted evaluation platform.",
+        "Reports cannot contain resume text, full job descriptions, cookies, or browser credentials.",
+        "Chinese platform anti-bot behavior and page changes require dated live evidence in addition to fixtures.",
+        "Human labels are scarce, so automatic operational checks and human recommendation labels must remain separate.",
+        "Generated engineering actions are proposals and cannot mutate Spec, Feature status, or code automatically."
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "scripts/feature_harness.py",
+        "scripts/check_feature.py",
+        "src/jobfindsme/evaluation/improvement.py",
+        "tests/evaluation/test_improvement.py",
+        "tests/harness/test_feature_harness.py",
+        "reports/features/M25-001.json"
+      ],
+      "acceptance": [
+        "High-risk design features can declare a machine-checked Research Gate covering an open-source implementation, an official guide, and a paper or benchmark.",
+        "Each research reference records both the adopted pattern and the rejected or deferred pattern, plus project-local constraints.",
+        "Multiple Live Loop reports and an optional human benchmark aggregate into separate runtime, data-truth, and recommendation signals.",
+        "Measured failures map to owned engineering proposals with priority, target, acceptance criteria, and required regression tests.",
+        "Operational evidence and human recommendation evidence are both required before public quality claims.",
+        "The analyzer never edits Spec, Feature status, or implementation code."
+      ],
+      "checks": [
+        ["python3", "-m", "pytest", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"],
+        ["ruff", "check", "--no-cache", "scripts/feature_harness.py", "scripts/check_feature.py", "src/jobfindsme/evaluation/improvement.py", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"],
+        ["ruff", "format", "--check", "--no-cache", "scripts/feature_harness.py", "scripts/check_feature.py", "src/jobfindsme/evaluation/improvement.py", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"]
+      ],
+      "evidence_path": "reports/features/M25-001.json"
     }
   ]
 }

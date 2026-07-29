@@ -163,12 +163,6 @@ the active context automatically.
 用户运行 `jobfindsme setup` 启动隔离 Chrome profile，并登录 BOSS。
 搜索期间浏览器桥必须运行。其他平台通常不要求账号，但可能触发验证或临时限制。
 
-### 10.5 Live Search Loop
-
-真实抓取必须生成机器报告：来源状态与耗时、discovered/unique/version 数量、
-端到端耗时、结果数量、字段完整度、未知分类和重复链接。Top 10 同时生成待人工
-标注模板。自动检查不能替代相关性、链接有效性和实际投递价值的人工判断。
-
 ### 10.3 删掉的 Connector
 
 以下 Connector 已从默认源移除（冗余或零产出）：
@@ -197,6 +191,12 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 
 `AGENTS.md` 提供框架无关的调用说明，所有 Agent 首次读取后即可使用。
 
+### 10.5 Live Search Loop
+
+真实抓取必须生成机器报告：来源状态与耗时、discovered/unique/version 数量、
+端到端耗时、结果数量、字段完整度、未知分类和重复链接。Top 10 同时生成待人工
+标注模板。自动检查不能替代相关性、链接有效性和实际投递价值的人工判断。
+
 ## 11. Output Format
 
 每条岗位必须包含四项：
@@ -208,7 +208,87 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 
 低于 10% 匹配的结果自动过滤。按分数降序，最多 15 条。
 
-## 12. Delivery Milestones
+## 12. Design Research and Evaluation-Driven Engineering
+
+### 12.1 Research Gate：先研究，再设计
+
+高风险 Feature 在进入 `ready` 前必须完成可审查的 Research Gate。研究的目的不是
+复制热门项目，而是识别成熟模式、适用边界和本项目约束。最低证据组合为：
+
+1. 一个真实生产或开源实现；
+2. 一份维护者或平台官方工程指南；
+3. 一篇相关论文或公开 benchmark（算法、排序、Agent、评测类设计必需）。
+
+每条资料必须在 `feature_list.json` 中记录：
+
+- `adopted_pattern`：本项目采用的具体设计；
+- `rejected_or_not_adopted`：明确不采用或延后的部分及原因；
+- `local_constraints`：中国岗位来源、本地隐私、无强制模型 API、维护成本、
+  反爬和用户时间成本等约束。
+
+不能仅以 star 数、文章结论或单次 Demo 作为设计依据。安全和数据丢失问题可先做
+紧急止损，但正式发布前仍须补齐研究记录、回归测试和实测证据。历史 Feature 不做
+机械补录；从启用 Research Gate 的 Feature 开始强制执行。
+
+当前设计依据包括：
+
+| 类型 | 参考 | 采用 | 不直接采用 |
+|---|---|---|---|
+| 开源项目 | [Career-Ops](https://github.com/santifer/career-ops)、[AI Job Search](https://github.com/MadsLorentzen/ai-job-search) | 本地优先、Agent 原生、结构化岗位评价、真实使用反馈 | 不复制自动投递、特定国家站点和模型强依赖 |
+| 官方工程指南 | [Anthropic Agent Evals](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)、[LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation-concepts)、[Google Rules of ML](https://developers.google.com/machine-learning/guides/rules-of-ml) | Eval-driven development、线上问题回流离线数据集、生产与评测使用同一数据路径 | 不引入必须联网的托管评测平台 |
+| 论文与 Benchmark | [RAGAS](https://arxiv.org/abs/2309.15217)、[ARES](https://arxiv.org/abs/2311.09476) | 分组件指标、少量人工标注校准自动评测 | 不用单个总分代替来源、数据、排序和用户价值指标 |
+
+从 `M24-001` 起，`scripts/check_feature.py` 会自动要求 Feature 声明研究门禁，
+并校验上述类别、采用/拒绝理由和本地约束；遗漏开关本身也无法生成通过证据。
+
+### 12.2 三层评测面
+
+| 评测面 | 主要指标 | 负责模块 | 能回答的问题 |
+|---|---|---|---|
+| Runtime / Source | 来源成功率、超时率、P50/P95、零结果率、缓存降级率 | Connector、浏览器桥、运行时 | 能否稳定、及时取得真实岗位 |
+| Data Truth | 必填字段完整率、未知分类率、重复率、链接有效率、来源越界 | Parser、Normalizer、Canonical Job、Liveness | 岗位数据是否真实、完整、可投递 |
+| Recommendation / User | Precision@10、NDCG@10、硬过滤误杀率、首次有效结果耗时、打开/收藏/投递 | Matcher、Search Plan、Agent 工作流 | 推荐是否真的值得用户花时间 |
+
+来源或字段质量未达到门槛时，不允许通过调整排序权重掩盖问题。合成数据只用于回归，
+不能证明真实中文岗位推荐质量；自动评分不能替代用户相关性和链接有效性的人工标注。
+
+### 12.3 评测驱动的工程闭环
+
+```text
+真实搜索运行
+  -> Live Loop 报告
+  -> Top 10 人工标注
+  -> 多日聚合与根因分类
+  -> Engineering Improvement Proposal
+  -> 人工审批 Spec / Feature
+  -> 先加入失败 fixture 或能力评测
+  -> 实现修复
+  -> 离线回归与留出集对比
+  -> 真实来源影子复跑
+  -> 发布或回滚
+```
+
+指标到工程改动的所有权必须明确：来源成功率归 Connector；字段完整度归解析与标准化；
+重复率归 canonicalization；硬过滤误杀归薪资/地点/年限/招聘类型解析；P@10 归候选资格
+与过滤；NDCG@10 归排序；有效链接率归 canonical URL 与 liveness；首次有效结果耗时归
+Agent 工作流和运行时。
+
+`jobfindsme.evaluation.improvement` 聚合多次 Loop 与人工 benchmark，输出带优先级、
+目标值、建议验收条件和必需测试的工程提案。它不得自动修改 Spec、Feature 状态或代码；
+最终设计决策由人审批。
+
+```bash
+python -m jobfindsme.evaluation.improvement \
+  --loop-report reports/loops/day-1.json \
+  --loop-report reports/loops/day-2.json \
+  --benchmark reports/evaluation/chinese-benchmark.json \
+  --output reports/improvements/current.json
+```
+
+数据集、阈值、配置、代码版本和输入报告 Hash 必须随结果保存。调参集与留出集分离；
+Bad Case 修复后进入永久回归集；公开指标必须同时通过运行证据和人工 benchmark。
+
+## 13. Delivery Milestones
 
 1. ✅ Product and architecture baseline.
 2. ✅ Local Workspace, Search Plans, and resume lifecycle.

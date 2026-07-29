@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
 FEATURES_PATH = ROOT / "specs" / "feature_list.json"
@@ -22,6 +23,13 @@ class CheckResult:
     command: list[str]
     returncode: int
     output: str
+
+
+REQUIRED_RESEARCH_CATEGORIES = {
+    "open_source",
+    "official_guide",
+    "paper_or_benchmark",
+}
 
 
 def load_spec(path: Path = FEATURES_PATH) -> dict[str, Any]:
@@ -89,6 +97,92 @@ def check_allowed_paths(feature: dict[str, Any], paths: list[str]) -> None:
     if rejected:
         joined = ", ".join(rejected)
         raise HarnessError(f"paths outside {feature['id']} scope: {joined}")
+
+
+def check_research_gate(
+    feature: dict[str, Any],
+    *,
+    required_categories: set[str] = REQUIRED_RESEARCH_CATEGORIES,
+) -> None:
+    """Require reviewable external evidence before high-risk design work."""
+
+    if not feature.get("design_research_required", False):
+        return
+
+    references = feature.get("research_refs", [])
+    categories = {
+        reference.get("category")
+        for reference in references
+        if isinstance(reference, dict)
+    }
+    missing_categories = required_categories - categories
+    if missing_categories:
+        missing = ", ".join(sorted(missing_categories))
+        raise HarnessError(
+            f"{feature['id']} research gate missing categories: {missing}"
+        )
+
+    required_fields = {
+        "category",
+        "title",
+        "url",
+        "adopted_pattern",
+        "rejected_or_not_adopted",
+    }
+    for index, reference in enumerate(references, start=1):
+        if not isinstance(reference, dict):
+            raise HarnessError(
+                f"{feature['id']} research reference {index} must be an object"
+            )
+        missing_fields = [
+            field for field in required_fields if not reference.get(field)
+        ]
+        if missing_fields:
+            missing = ", ".join(sorted(missing_fields))
+            raise HarnessError(
+                f"{feature['id']} research reference {index} missing: {missing}"
+            )
+        parsed = urlparse(str(reference["url"]))
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise HarnessError(
+                f"{feature['id']} research reference {index} must use https"
+            )
+
+    constraints = feature.get("local_constraints", [])
+    if not isinstance(constraints, list) or not constraints:
+        raise HarnessError(f"{feature['id']} research gate needs local_constraints")
+    if any(not isinstance(item, str) or not item.strip() for item in constraints):
+        raise HarnessError(
+            f"{feature['id']} local_constraints must be non-empty strings"
+        )
+
+
+def research_gate_required(spec: dict[str, Any], feature: dict[str, Any]) -> bool:
+    """Return whether a feature falls within the project research policy."""
+
+    policy = spec.get("research_policy")
+    if not isinstance(policy, dict):
+        return False
+    enforced_from = policy.get("enforced_from_feature")
+    if not enforced_from:
+        return False
+    feature_ids = [item["id"] for item in spec["features"]]
+    try:
+        return feature_ids.index(feature["id"]) >= feature_ids.index(enforced_from)
+    except ValueError as error:
+        raise HarnessError("research policy references an unknown feature") from error
+
+
+def check_project_research_gate(spec: dict[str, Any], feature: dict[str, Any]) -> None:
+    required = research_gate_required(spec, feature)
+    if required and not feature.get("design_research_required", False):
+        raise HarnessError(
+            f"{feature['id']} must declare design_research_required "
+            "under project policy"
+        )
+    policy = spec.get("research_policy", {})
+    categories = set(policy.get("required_categories", REQUIRED_RESEARCH_CATEGORIES))
+    check_research_gate(feature, required_categories=categories)
 
 
 def run_checks(feature: dict[str, Any], root: Path = ROOT) -> list[CheckResult]:
