@@ -152,7 +152,8 @@ class Database:
             # ALTER TABLE ADD COLUMN — skip if column already exists
             alter_match = re.match(
                 r"ALTER\s+TABLE\s+(\w+)\s+ADD\s+(?:COLUMN\s+)?(\w+)",
-                statement, re.IGNORECASE,
+                statement,
+                re.IGNORECASE,
             )
             if alter_match:
                 table, column = alter_match.group(1), alter_match.group(2)
