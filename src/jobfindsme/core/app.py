@@ -167,6 +167,29 @@ class jobfindsmecore:
             selected_sources = recommended_connectors(
                 tuple(locations), tuple(target_roles)
             )
+        elif sources is None:
+            existing = self.source_subscriptions.list(
+                workspace_id=context.workspace.workspace_id,
+                plan_id=plan.plan_id,
+            )
+            existing_names = {item.source.source_name for item in existing}
+            # Only auto-add defaults for plans that already use platform sources
+            has_defaults = any(src.source.kind.uses_browser for src in existing)
+            if has_defaults:
+                new_defaults = [
+                    src
+                    for src in recommended_connectors(
+                        tuple(locations), tuple(target_roles)
+                    )
+                    if src.source_name not in existing_names
+                ]
+                if new_defaults:
+                    merged = [item.source for item in existing] + new_defaults
+                    self.source_subscriptions.replace(
+                        workspace_id=context.workspace.workspace_id,
+                        plan_id=plan.plan_id,
+                        sources=merged,
+                    )
         subscriptions = (
             self.source_subscriptions.replace(
                 workspace_id=context.workspace.workspace_id,
@@ -406,12 +429,14 @@ class jobfindsmecore:
                     workspace_id=workspace_id,
                     sources=(source,),
                 )[0]
-                self.jobs.mark_missing_closed(
-                    workspace_id=workspace_id,
-                    source_name=source.source_name,
-                    observed_job_ids={job.job_id for job in summary.jobs},
-                    observed_at=datetime.now(UTC),
-                )
+                # Browser sources return partial search pages — never close absent jobs
+                if not source.kind.uses_browser:
+                    self.jobs.mark_missing_closed(
+                        workspace_id=workspace_id,
+                        source_name=source.source_name,
+                        observed_job_ids={job.job_id for job in summary.jobs},
+                        observed_at=datetime.now(UTC),
+                    )
                 if subscription:
                     self.source_subscriptions.record_result(
                         subscription,

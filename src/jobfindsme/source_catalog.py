@@ -16,7 +16,7 @@ def recommended_connectors(
 
     if not _targets_china(locations):
         return ()
-    query = " ".join(roles[:3]) if roles else "AI 大模型 Agent"
+    query = roles[0] if roles else "AI"
 
     return (
         DiscoverySource(
