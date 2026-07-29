@@ -142,7 +142,9 @@ def build_parser() -> argparse.ArgumentParser:
             ),
         )
         host_action.add_argument("--home", type=Path)
-        host_action.add_argument("--path", type=Path, help="custom config.json path (any MCP agent)")
+        host_action.add_argument(
+            "--path", type=Path, help="custom MCP config path (any agent)"
+        )
 
     groups.add_parser("doctor")
     groups.add_parser("self-update")
@@ -345,6 +347,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         return 0 if result["ok"] else 1
     if args.group == "config":
         import json as _json
+
         print(_json.dumps(_mcp_json_config(), ensure_ascii=False, indent=2))
         return 0
     if args.group == "setup":
@@ -358,9 +361,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         installer = HostInstaller(home=args.home)
         custom_path = getattr(args, "path", None)
         if custom_path:
-            result = getattr(installer, args.group)(
-                "generic", config_path=custom_path
-            )
+            result = getattr(installer, args.group)("generic", config_path=custom_path)
         elif args.host:
             result = getattr(installer, args.group)(args.host)
         else:

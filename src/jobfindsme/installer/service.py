@@ -76,17 +76,23 @@ class HostInstaller:
         )
 
     def install(self, host: str, *, config_path: Path | None = None) -> InstallResult:
-        return self._write(host, replace=False, action="install", config_path=config_path)
+        return self._write(
+            host, replace=False, action="install", config_path=config_path
+        )  # noqa: E501
 
     def upgrade(self, host: str, *, config_path: Path | None = None) -> InstallResult:
-        return self._write(host, replace=True, action="upgrade", config_path=config_path)
+        return self._write(
+            host, replace=True, action="upgrade", config_path=config_path
+        )  # noqa: E501
 
     def uninstall(self, host: str, *, config_path: Path | None = None) -> InstallResult:
         if host == "generic":
             if not config_path:
                 raise ValueError("--path is required for generic host")
             backup = self._backup(config_path) if config_path.exists() else None
-            document = json.loads(config_path.read_text()) if config_path.exists() else {}
+            document = (
+                json.loads(config_path.read_text()) if config_path.exists() else {}
+            )  # noqa: E501
             document.get("mcpServers", {}).pop("jobfindsme", None)
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
@@ -130,14 +136,18 @@ class HostInstaller:
             backups=(str(backup),),
         )
 
-    def _write(self, host: str, *, replace: bool, action: str, config_path: Path | None = None) -> InstallResult:
+    def _write(
+        self, host: str, *, replace: bool, action: str, config_path: Path | None = None
+    ) -> InstallResult:  # noqa: E501
         if host == "generic":
             if not config_path:
                 raise ValueError("--path is required for generic host")
             self.data_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
             config_path.parent.mkdir(parents=True, exist_ok=True)
             backup = self._backup(config_path) if config_path.exists() else None
-            document = json.loads(config_path.read_text()) if config_path.exists() else {}
+            document = (
+                json.loads(config_path.read_text()) if config_path.exists() else {}
+            )  # noqa: E501
             servers = document.setdefault("mcpServers", {})
             if "jobfindsme" in servers and not replace:
                 if backup:

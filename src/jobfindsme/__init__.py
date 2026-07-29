@@ -1,4 +1,4 @@
-"""JobFindsMe local product core."""
+"""jobfindsme local product core."""
 
 from jobfindsme.contracts import SearchPlan, Workspace
 

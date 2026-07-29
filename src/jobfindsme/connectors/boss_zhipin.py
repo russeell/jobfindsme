@@ -366,10 +366,14 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     labels = [PLATFORM_LOGIN_URLS[p][1] for p in selected]
 
     subprocess.Popen(
-        [chrome, f"--remote-debugging-port={DEFAULT_CDP_PORT}",
-         "--remote-allow-origins=*",
-         "--disable-gpu",
-         f"--user-data-dir={profile}"] + urls,
+        [
+            chrome,
+            f"--remote-debugging-port={DEFAULT_CDP_PORT}",
+            "--remote-allow-origins=*",
+            "--disable-gpu",
+            f"--user-data-dir={profile}",
+        ]
+        + urls,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -380,7 +384,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         stderr=subprocess.DEVNULL,
     )
 
-    label_list = "\n".join(f"  • {l}" for l in labels)
+    label_list = "\n".join(f"  • {label}" for label in labels)
     return {
         "ok": True,
         "message": (

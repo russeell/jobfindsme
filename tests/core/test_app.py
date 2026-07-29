@@ -3,7 +3,6 @@ from pathlib import Path
 
 from jobfindsme.contracts import DiscoverySource
 from jobfindsme.core import JobFindsMeCore
-from jobfindsme.importing import JobDiscoveryService
 from jobfindsme.importing.parsers import parse_json
 
 

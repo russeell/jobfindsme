@@ -92,7 +92,7 @@ class FeishuNotifier:
 
     def _render(self, summary: MonitorSummary) -> str:
         lines = [
-            f"JobFindsMe：发现 {len(summary.new_matches)} 个新匹配岗位",
+            f"jobfindsme：发现 {len(summary.new_matches)} 个新匹配岗位",
         ]
         for match in summary.new_matches[: self.max_jobs]:
             lines.append(

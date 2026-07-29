@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
 
-from jobfindsme.contracts import DiscoverySource
 from jobfindsme.core import JobFindsMeCore
-from jobfindsme.importing import JobDiscoveryService
 from jobfindsme.importing.parsers import parse_json
 from jobfindsme.monitoring import LocalMonitorRunner
 
@@ -123,4 +120,3 @@ def test_missed_intervals_run_only_the_latest_slot(tmp_path) -> None:
 
     assert result.status == "success"
     assert result.scheduled_for == datetime(2026, 8, 2, tzinfo=UTC)
-

@@ -85,8 +85,16 @@ def _cdp_fetch(
 
 # ── 猎聘 ─────────────────────────────────────────────────────────────────────
 
-LIEPIN_CITY_CODES = {"北京": "010", "上海": "020", "深圳": "050090", "杭州": "080020",
-                     "广州": "050020", "成都": "280020", "武汉": "170020", "南京": "060020"}  # noqa: E501
+LIEPIN_CITY_CODES = {
+    "北京": "010",
+    "上海": "020",
+    "深圳": "050090",
+    "杭州": "080020",
+    "广州": "050020",
+    "成都": "280020",
+    "武汉": "170020",
+    "南京": "060020",
+}  # noqa: E501
 
 _LIEPIN_EXTRACT_JS = """
 (function(){
@@ -136,10 +144,7 @@ class LiepinConnector:
 
     def fetch(self) -> list[RawJobRecord]:
         dqs = LIEPIN_CITY_CODES.get(self.city, "010")
-        url = (
-            "https://www.liepin.com/zhaopin/?"
-            f"key={self.keyword}&dqs={dqs}"
-        )
+        url = f"https://www.liepin.com/zhaopin/?key={self.keyword}&dqs={dqs}"
         items = _cdp_fetch(url, _LIEPIN_EXTRACT_JS, port=self.cdp_port)
         return [
             RawJobRecord(
@@ -224,9 +229,7 @@ class ZhilianConnector:
     def fetch(self) -> list[RawJobRecord]:
         city_param = f"&city={self.city}" if self.city else ""
         url = f"https://sou.zhaopin.com/?kw={self.keyword}&p=1{city_param}"
-        items = _cdp_fetch(
-            url, _ZHILIAN_EXTRACT_JS, port=self.cdp_port, wait_ms=6000
-        )
+        items = _cdp_fetch(url, _ZHILIAN_EXTRACT_JS, port=self.cdp_port, wait_ms=6000)
         return [
             RawJobRecord(
                 source_kind=SourceKind.CAREER_SITE,
@@ -294,15 +297,16 @@ class LagouConnector:
         self.cdp_port = cdp_port
 
     def fetch(self) -> list[RawJobRecord]:
-        city_code = {"上海": "上海", "北京": "北京", "深圳": "深圳",
-                      "杭州": "杭州", "广州": "广州"}.get(self.city, "")
+        city_code = {
+            "上海": "上海",
+            "北京": "北京",
+            "深圳": "深圳",
+            "杭州": "杭州",
+            "广州": "广州",
+        }.get(self.city, "")
         city_param = f"&city={city_code}" if city_code else ""
-        url = (
-            f"https://www.lagou.com/wn/jobs?kd={self.keyword}{city_param}"
-        )
-        items = _cdp_fetch(
-            url, _LAGOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000
-        )
+        url = f"https://www.lagou.com/wn/jobs?kd={self.keyword}{city_param}"
+        items = _cdp_fetch(url, _LAGOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000)
         return [
             RawJobRecord(
                 source_kind=SourceKind.CAREER_SITE,
@@ -334,7 +338,8 @@ _WUYOU_EXTRACT_JS = """  # noqa: E501
         var titleEl = item.querySelector('.jname');
         var companyEl = item.querySelector('.cname');
         var salaryEl = item.querySelector('[class*="sal"]');
-        var locationEl = item.querySelector('[class*="location"], [class*="area"], [class*="city"]');
+        var sel = '[class*="location"], [class*="area"], [class*="city"]';
+        var locationEl = item.querySelector(sel);
         var linkEl = item.querySelector('a');
         results.push({
             title: titleEl ? titleEl.textContent.trim() : '',
@@ -349,9 +354,15 @@ _WUYOU_EXTRACT_JS = """  # noqa: E501
 """
 
 _WUYOU_CITY_CODES = {
-    "北京": "010000", "上海": "020000", "深圳": "040000",
-    "广州": "030200", "杭州": "080200", "成都": "090200",
-    "武汉": "180200", "南京": "070200", "苏州": "070300",
+    "北京": "010000",
+    "上海": "020000",
+    "深圳": "040000",
+    "广州": "030200",
+    "杭州": "080200",
+    "成都": "090200",
+    "武汉": "180200",
+    "南京": "070200",
+    "苏州": "070300",
 }
 
 
@@ -380,9 +391,7 @@ class WuyouConnector:
             "https://we.51job.com/pc/search"
             f"?keyword={self.keyword}&location={city_code}"
         )
-        items = _cdp_fetch(
-            url, _WUYOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000
-        )
+        items = _cdp_fetch(url, _WUYOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000)
         return [
             RawJobRecord(
                 source_kind=SourceKind.CAREER_SITE,

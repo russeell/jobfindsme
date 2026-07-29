@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import stat
 import sys
+import urllib.request
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -10,9 +11,6 @@ from jobfindsme.contracts import StrictModel
 from jobfindsme.core import JobFindsMeCore
 from jobfindsme.mcp.server import StdioMcpServer
 from jobfindsme.mcp.tools import ToolRegistry
-
-
-import urllib.request
 
 
 def _cdp_port_reachable() -> bool:
@@ -200,18 +198,31 @@ class Doctor:
                 message="Chrome CDP not reachable — run 'jobfindsme setup' first",
             )
         try:
-            from urllib.parse import urlencode
             import json as _json
+            from urllib.parse import urlencode
+
             from jobfindsme.connectors.boss_zhipin import (
-                DEFAULT_CDP_PORT, _CDPSession, BOSS_ORIGIN, BOSS_API_PATH,
+                BOSS_API_PATH,
+                BOSS_ORIGIN,
+                DEFAULT_CDP_PORT,
+                _CDPSession,
             )
+
             cdp = _CDPSession(DEFAULT_CDP_PORT)
-            target = cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+            target = cdp.send(  # noqa: E501
+                "Target.createTarget", {"url": "about:blank", "background": True}
+            )
             target_id = target["result"]["targetId"]
-            attached = cdp.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+            attached = cdp.send(  # noqa: E501
+                "Target.attachToTarget",
+                {"targetId": target_id, "flatten": True},
+            )
             sid = attached["result"]["sessionId"]
             cdp.send("Page.enable", sid=sid)
-            api_url = f"{BOSS_ORIGIN}{BOSS_API_PATH}?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
+            api_url = (
+                f"{BOSS_ORIGIN}{BOSS_API_PATH}"
+                f"?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
+            )
             raw = cdp.eval_js(_BOSS_PROBE_JS.replace("__API_URL__", api_url), sid)
             cdp.send("Target.closeTarget", {"targetId": target_id})
             cdp.close()
@@ -219,25 +230,35 @@ class Doctor:
             if payload.get("error") == "authentication_required":
                 return Diagnostic(
                     name="boss_login",
-                    ok=False, required=False,
-                    message="BOSS直聘 requires login — run 'jobfindsme setup'. Other 4 platforms work without login.",
+                    ok=False,
+                    required=False,
+                    message=(
+                        "BOSS直聘 requires login — run 'jobfindsme setup'. "
+                        "Other 4 platforms work without login."
+                    ),
                 )
             job_count = len(payload.get("jobs", []))
             if job_count == 0:
                 return Diagnostic(
                     name="boss_login",
-                    ok=False, required=False,
-                    message="BOSS直聘 returned 0 jobs — may need login. Run 'jobfindsme setup'.",
+                    ok=False,
+                    required=False,
+                    message=(
+                        "BOSS直聘 returned 0 jobs — may need login. "
+                        "Run 'jobfindsme setup'."
+                    ),
                 )
             return Diagnostic(
                 name="boss_login",
-                ok=True, required=False,
+                ok=True,
+                required=False,
                 message=f"BOSS直聘 — logged in, {job_count}+ jobs reachable",
             )
         except Exception as e:
             return Diagnostic(
                 name="boss_login",
-                ok=False, required=False,
+                ok=False,
+                required=False,
                 message=f"BOSS直聘 login check failed — run 'jobfindsme setup': {e}",
             )
 

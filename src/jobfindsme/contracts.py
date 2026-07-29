@@ -223,7 +223,9 @@ class DiscoverySourceKind(StrEnum):
     def uses_browser(self) -> bool:
         return self in {
             self.BOSS_CDP,
-            self.LIEPIN_CDP, self.ZHILIAN_CDP, self.LAGOU_CDP,
+            self.LIEPIN_CDP,
+            self.ZHILIAN_CDP,
+            self.LAGOU_CDP,
             self.WUYOU_CDP,
         }
 

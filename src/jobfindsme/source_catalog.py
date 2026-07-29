@@ -51,7 +51,7 @@ def source_links(
     roles: tuple[str, ...],
     locations: tuple[str, ...],
 ) -> tuple[SourceLink, ...]:
-    """Stub — auto-connectors cover all major Chinese sources via BOSS/Liepin/Zhaopin/Lagou CDP."""
+    """Stub — auto-connectors now cover the major Chinese platforms via CDP."""
     return ()
 
 
@@ -59,9 +59,17 @@ def _targets_china(locations: tuple[str, ...]) -> bool:
     if not locations:
         return True
     china_markers = (
-        "中国", "北京", "上海", "深圳", "杭州",
-        "广州", "成都", "武汉", "南京", "苏州", "西安", "重庆",
+        "中国",
+        "北京",
+        "上海",
+        "深圳",
+        "杭州",
+        "广州",
+        "成都",
+        "武汉",
+        "南京",
+        "苏州",
+        "西安",
+        "重庆",
     )
-    return any(
-        marker in location for location in locations for marker in china_markers
-    )
+    return any(marker in location for location in locations for marker in china_markers)

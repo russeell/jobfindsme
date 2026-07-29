@@ -18,9 +18,7 @@ def test_connector_refuses_unapproved_source_policy() -> None:
 
 
 def test_authorized_policy_overrides_robots_block() -> None:
-    policy = ConnectorPolicy(
-        public_access=True, robots_allowed=False, authorized=True
-    )
+    policy = ConnectorPolicy(public_access=True, robots_allowed=False, authorized=True)
     assert policy.can_fetch
 
 
