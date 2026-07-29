@@ -48,7 +48,13 @@ class Database:
             Path(f"{self.path}-shm"),
         ):
             if path.exists():
-                os.chmod(path, 0o600)
+                try:
+                    os.chmod(path, 0o600)
+                except FileNotFoundError:
+                    # SQLite may remove a WAL/SHM sidecar between exists() and
+                    # chmod() while parallel connector threads close a handle.
+                    if path == self.path:
+                        raise
 
     @staticmethod
     def _table_names_from_sql(sql: str) -> set[str]:

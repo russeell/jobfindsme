@@ -1,0 +1,79 @@
+{
+  "feature_id": "M23-001",
+  "status": "passed",
+  "verified_at": "2026-07-29T10:05:35.766630+00:00",
+  "changed_paths": [
+    "AGENTS.md",
+    "PROJECT_SPEC.md",
+    "README.en.md",
+    "README.md",
+    "docs/SKILL.md",
+    "integrations/shared/SKILL.md",
+    "specs/feature_list.json",
+    "src/jobfindsme/connectors/boss_zhipin.py",
+    "src/jobfindsme/contracts.py",
+    "src/jobfindsme/core/app.py",
+    "src/jobfindsme/evaluation/live_loop.py",
+    "src/jobfindsme/privacy.py",
+    "src/jobfindsme/resources/jobfindsme/SKILL.md",
+    "src/jobfindsme/storage.py",
+    "tests/connectors/test_china_platforms.py",
+    "tests/core/test_privacy.py",
+    "tests/evaluation/test_live_loop.py",
+    "tests/test_storage.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "tests/evaluation/test_live_loop.py",
+        "tests/connectors/test_china_platforms.py",
+        "tests/core/test_privacy.py",
+        "tests/test_storage.py"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 21 items\n\ntests/evaluation/test_live_loop.py ....                                  [ 19%]\ntests/connectors/test_china_platforms.py ......                          [ 47%]\ntests/core/test_privacy.py ...                                           [ 61%]\ntests/test_storage.py ........                                           [100%]\n\n============================= 21 passed in 13.21s ==============================\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "check",
+        "--no-cache",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/connectors/boss_zhipin.py",
+        "src/jobfindsme/evaluation/live_loop.py",
+        "src/jobfindsme/privacy.py",
+        "src/jobfindsme/storage.py",
+        "tests/evaluation/test_live_loop.py",
+        "tests/connectors/test_china_platforms.py",
+        "tests/core/test_privacy.py",
+        "tests/test_storage.py"
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    },
+    {
+      "command": [
+        "ruff",
+        "format",
+        "--check",
+        "--no-cache",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/connectors/boss_zhipin.py",
+        "src/jobfindsme/evaluation/live_loop.py",
+        "src/jobfindsme/privacy.py",
+        "src/jobfindsme/storage.py",
+        "tests/evaluation/test_live_loop.py",
+        "tests/connectors/test_china_platforms.py",
+        "tests/core/test_privacy.py",
+        "tests/test_storage.py"
+      ],
+      "returncode": 0,
+      "output": "10 files already formatted\n"
+    }
+  ]
+}

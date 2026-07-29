@@ -1,9 +1,33 @@
+import os
 import sqlite3
 import stat
+from pathlib import Path
 
 import pytest
 
 from jobfindsme.storage import Database, MigrationConflict
+
+
+def test_secure_sqlite_files_tolerates_disappearing_sidecar(
+    tmp_path, monkeypatch
+) -> None:
+    database = Database(tmp_path / "jobfindsme.db")
+    database.path.touch()
+    sidecar = Path(f"{database.path}-shm")
+    sidecar.touch()
+    real_chmod = os.chmod
+
+    def disappearing_sidecar(path, mode):
+        if Path(path) == sidecar:
+            sidecar.unlink(missing_ok=True)
+            raise FileNotFoundError(path)
+        real_chmod(path, mode)
+
+    monkeypatch.setattr(os, "chmod", disappearing_sidecar)
+
+    database._secure_sqlite_files()
+
+    assert stat.S_IMODE(database.path.stat().st_mode) == 0o600
 
 
 def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> None:

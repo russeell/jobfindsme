@@ -1409,7 +1409,7 @@
     {
       "id": "M22-001",
       "title": "5 CDP platform connectors (simplified from 12)",
-      "status": "done",
+      "status": "in_progress",
       "blocked_by": ["M21-001"],
       "allowed_paths": [
         "README.md", "PROJECT_SPEC.md", "specs/feature_list.json",
@@ -1422,9 +1422,15 @@
       ],
       "acceptance": [
         "Default sources: BOSS直聘 + 猎聘 + 前程无忧 + 智联 + 拉勾.",
-        "4 of 5 platforms work without login; only BOSS requires setup.",
+        "All five sources use the local CDP browser bridge; BOSS additionally requires account login.",
         "Deleted connectors: Playwright SPA (字节/美团/滴滴/B站), Baidu SSR, Greenhouse, Ashby, Lever, JsonLdCareerSite — all redundant with platforms or zero China output.",
-        "source_catalog returns exactly 5 sources for China locations."
+        "source_catalog returns exactly 5 sources for China locations.",
+        "Connector contract tests cover mapping, resource cleanup, and explicit extraction failure.",
+        "Each platform remains in_progress until a dated live Loop report proves a successful real extraction."
+      ],
+      "checks": [
+        ["python3", "-m", "pytest", "tests/connectors", "tests/core/test_source_catalog.py"],
+        ["ruff", "check", "src/jobfindsme/connectors", "tests/connectors"]
       ],
       "evidence_path": "reports/features/M22-001.json"
     },
@@ -1465,6 +1471,80 @@
         "Results below threshold are silently filtered."
       ],
       "evidence_path": "reports/features/M22-003.json"
+    },
+    {
+      "id": "M23-001",
+      "title": "Measured live-search Loop and field-trial telemetry",
+      "status": "done",
+      "blocked_by": ["M3-002"],
+      "allowed_paths": [
+        "AGENTS.md",
+        "README.md",
+        "README.en.md",
+        "PROJECT_SPEC.md",
+        "docs/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/connectors/boss_zhipin.py",
+        "src/jobfindsme/evaluation/live_loop.py",
+        "src/jobfindsme/privacy.py",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "src/jobfindsme/storage.py",
+        "tests/connectors/test_china_platforms.py",
+        "tests/core/test_privacy.py",
+        "tests/evaluation/test_live_loop.py",
+        "tests/test_storage.py",
+        "specs/feature_list.json",
+        "reports/features/M23-001.json"
+      ],
+      "acceptance": [
+        "Core returns typed per-source status, elapsed time, discovered/unique/version counts, cache degradation, matching time, and end-to-end time.",
+        "The Loop writes a privacy-minimized local report without resume text or full job descriptions.",
+        "Automatic quality checks cover source success, URL shape, required fields, unknown classifications, duplicate URLs, and average score.",
+        "A search only returns jobs from its active source configuration; cached jobs from removed sources cannot pollute a run.",
+        "A Loop run can generate the existing M14/M15 pending Top-10 human-label template.",
+        "Automatic checks explicitly do not claim human relevance or real link validity.",
+        "Local-fixture success and source-failure paths are regression tested."
+      ],
+      "checks": [
+        ["python3", "-m", "pytest", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"],
+        ["ruff", "check", "--no-cache", "src/jobfindsme/contracts.py", "src/jobfindsme/core/app.py", "src/jobfindsme/connectors/boss_zhipin.py", "src/jobfindsme/evaluation/live_loop.py", "src/jobfindsme/privacy.py", "src/jobfindsme/storage.py", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"],
+        ["ruff", "format", "--check", "--no-cache", "src/jobfindsme/contracts.py", "src/jobfindsme/core/app.py", "src/jobfindsme/connectors/boss_zhipin.py", "src/jobfindsme/evaluation/live_loop.py", "src/jobfindsme/privacy.py", "src/jobfindsme/storage.py", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"]
+      ],
+      "evidence_path": "reports/features/M23-001.json"
+    },
+    {
+      "id": "M24-001",
+      "title": "Source truth, query planning, and catalog reconciliation",
+      "status": "ready",
+      "blocked_by": ["M23-001"],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/source_catalog.py",
+        "src/jobfindsme/source_subscriptions.py",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/connectors/**",
+        "tests/core/**",
+        "tests/importing/**",
+        "tests/connectors/**",
+        "reports/features/M24-001.json"
+      ],
+      "acceptance": [
+        "Discovery distinguishes complete snapshots from partial search pages; only complete snapshots may close absent jobs.",
+        "Platform queries preserve one primary role and the requested city instead of concatenating multiple roles into one brittle keyword.",
+        "Existing default Search Plans can reconcile a newer maintained source catalog without overwriting explicitly customized sources.",
+        "Recruitment track and employment type extraction is measured per source; unknown values remain visible and never silently satisfy strict filters.",
+        "Regression tests cover partial snapshots, location propagation, source-catalog upgrades, and unknown classification policy."
+      ],
+      "checks": [
+        ["python3", "-m", "pytest", "tests/core", "tests/importing", "tests/connectors"],
+        ["ruff", "check", "src/jobfindsme", "tests/core", "tests/importing", "tests/connectors"]
+      ],
+      "evidence_path": "reports/features/M24-001.json"
     }
   ]
 }

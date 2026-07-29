@@ -15,6 +15,7 @@ def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> Non
         workspace_id=workspace.workspace_id,
         scope="workspace",
     )
+    assert preview.confirmation_token.startswith("del_")
 
     with pytest.raises(PermissionError):
         core.confirm_delete(

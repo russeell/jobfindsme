@@ -259,6 +259,48 @@ class DiscoverySource(StrictModel):
         return self
 
 
+class SourceRunStatus(StrEnum):
+    SUCCESS = "success"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+class SourceRunStats(StrictModel):
+    """One source attempt captured by the live-search Loop."""
+
+    source_name: str
+    source_kind: DiscoverySourceKind
+    status: SourceRunStatus
+    elapsed_seconds: float = Field(ge=0)
+    discovered: int = Field(default=0, ge=0)
+    unique: int = Field(default=0, ge=0)
+    versions_created: int = Field(default=0, ge=0)
+    cache_used: bool = False
+    error: str | None = Field(default=None, max_length=1000)
+
+
+class SearchRunDiagnostics(StrictModel):
+    """Machine-generated timings and counts for one end-to-end search."""
+
+    started_at: datetime
+    finished_at: datetime
+    elapsed_seconds: float = Field(ge=0)
+    matching_seconds: float = Field(ge=0)
+    source_runs: tuple[SourceRunStats, ...] = ()
+    total_discovered: int = Field(default=0, ge=0)
+    total_unique: int = Field(default=0, ge=0)
+    duplicates_removed: int = Field(default=0, ge=0)
+    result_count: int = Field(default=0, ge=0)
+
+
+class SearchRunResult(StrictModel):
+    """Search output plus evidence needed by field-trial evaluation."""
+
+    matches: tuple[JobMatch, ...]
+    diagnostics: SearchRunDiagnostics
+
+
 class SourceHealth(StrEnum):
     NEVER_CHECKED = "never_checked"
     HEALTHY = "healthy"

@@ -7,14 +7,14 @@ a direct apply link.
 
 ## ⚠️ First-Time Setup (MUST check before first search)
 
-BOSS直聘 is the largest source but requires a one-time Chrome login. The other
-4 platforms work immediately. Before the user's first search, ALWAYS:
+BOSS直聘 is the largest source and requires account login. All five CDP sources
+need the dedicated local Chrome bridge. Before the user's first search, ALWAYS:
 
 1. Ask: "你登录过 BOSS直聘 吗？没登录的话岗位少一半。运行 `jobfindsme setup`，微信扫码 30 秒搞定，以后不用再登。要现在 setup 吗？"
-2. If the user says yes or seems unsure, guide them: run `jobfindsme setup`, scan QR code in Chrome with WeChat or BOSS App, close Chrome.
+2. If the user says yes or seems unsure, guide them: run `jobfindsme setup`, scan the QR code, and keep the dedicated Chrome process running during search.
 3. If the user says they've already logged in, proceed to search. If search returns 0 BOSS results, suggest setup again.
 
-> 💡 Login state persists across restarts. One login = forever.
+> Login state persists, but the local browser bridge must be running during a search.
 
 ## Workflow
 
@@ -44,7 +44,7 @@ Every job result MUST include ALL FOUR of these:
 
 1. 岗位介绍 — title, company, location, salary, track (校招/社招), type (实习/正式)
 2. 匹配度 — match score as percentage (🎯 86%)
-3. 投递链接 — official apply URL on its own line, labeled with 🔗
+3. 投递链接 — the source platform's direct job URL on its own line, labeled with 🔗
 4. 推荐理由 — from evidence.reasons and evidence.warnings
 
 Sort by score descending. Show top 15 max. Use 🥇🥈🥉 for top 3.
@@ -61,9 +61,9 @@ and suggest broadening the search criteria.
 
 ## Platform Notes
 
-> ⚠️ **BOSS直聘 requires login. The other 4 platforms do not.**
+> **All five sources use the local browser bridge. BOSS requires account login.**
 
 - BOSS直聘 — the largest source — needs a one-time Chrome login via `jobfindsme setup`.
-- 猎聘, 前程无忧, 智联, 拉勾 — work immediately without any login.
+- 猎聘, 前程无忧, 智联, 拉勾 — normally expose public search pages, but may still show verification or temporary access limits.
 
 **Proactive rule:** After the first search, if results are few or all from non-BOSS sources, tell the user: "BOSS直聘 是岗位最多的来源，但需要登录一次。运行 `jobfindsme setup`，用微信或手机扫码，30 秒搞定，以后搜索自动包含 BOSS。"

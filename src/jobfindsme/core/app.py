@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from time import perf_counter
 
 from jobfindsme.context import ActiveContextService
 from jobfindsme.contracts import (
@@ -14,6 +15,10 @@ from jobfindsme.contracts import (
     JobSummary,
     SearchConfiguration,
     SearchPlan,
+    SearchRunDiagnostics,
+    SearchRunResult,
+    SourceRunStats,
+    SourceRunStatus,
     Workspace,
 )
 from jobfindsme.importing.discovery import JobDiscoveryService
@@ -233,6 +238,7 @@ class jobfindsmecore:
         plan_id: str | None = None,
         limit: int = 20,
         excluded_source_names: Sequence[str] = (),
+        included_source_names: Sequence[str] = (),
     ) -> list[JobMatch]:
         context = self.context.resolve(
             workspace_id=workspace_id,
@@ -244,6 +250,9 @@ class jobfindsmecore:
             workspace_id=context.workspace.workspace_id
         )
         jobs = self.jobs.list(context.workspace.workspace_id)
+        if included_source_names:
+            included = set(included_source_names)
+            jobs = [job for job in jobs if job.source.source_name in included]
         if excluded_source_names:
             excluded = set(excluded_source_names)
             jobs = [job for job in jobs if job.source.source_name not in excluded]
@@ -263,6 +272,29 @@ class jobfindsmecore:
         limit: int = 20,
         allow_browser_sources: bool = False,
     ) -> list[JobMatch]:
+        return list(
+            self.search_jobs_with_diagnostics(
+                workspace_id=workspace_id,
+                plan_id=plan_id,
+                sources=sources,
+                limit=limit,
+                allow_browser_sources=allow_browser_sources,
+            ).matches
+        )
+
+    def search_jobs_with_diagnostics(
+        self,
+        *,
+        workspace_id: str | None = None,
+        plan_id: str | None = None,
+        sources: tuple[DiscoverySource, ...] = (),
+        limit: int = 20,
+        allow_browser_sources: bool = False,
+    ) -> SearchRunResult:
+        """Run discovery and matching while preserving operational evidence."""
+
+        started_at = datetime.now(UTC)
+        started = perf_counter()
         context = self.context.resolve(
             workspace_id=workspace_id,
             plan_id=plan_id,
@@ -276,28 +308,61 @@ class jobfindsmecore:
                 plan_id=context.plan.plan_id,
             )
         )
+        active_source_names = tuple(
+            dict.fromkeys(source.source_name for source in effective_sources)
+        )
+        skipped_sources: tuple[DiscoverySource, ...] = ()
         if not allow_browser_sources:
-            browser_source_names = {
-                source.source_name
-                for source in effective_sources
-                if source.kind.uses_browser
-            }
+            skipped_sources = tuple(
+                source for source in effective_sources if source.kind.uses_browser
+            )
+            browser_source_names = {source.source_name for source in skipped_sources}
             effective_sources = tuple(
                 source for source in effective_sources if not source.kind.uses_browser
             )
         else:
             browser_source_names = set()
+        source_runs = tuple(
+            SourceRunStats(
+                source_name=source.source_name,
+                source_kind=source.kind,
+                status=SourceRunStatus.SKIPPED,
+                elapsed_seconds=0,
+                error="browser source requires explicit opt-in",
+            )
+            for source in skipped_sources
+        )
         if effective_sources:
-            self._discover_sources(
+            source_runs += self._discover_sources(
                 workspace_id=context.workspace.workspace_id,
                 plan_id=context.plan.plan_id,
                 sources=effective_sources,
             )
-        return self.match_jobs(
+        matching_started = perf_counter()
+        matches = self.match_jobs(
             workspace_id=context.workspace.workspace_id,
             plan_id=context.plan.plan_id,
             limit=limit,
             excluded_source_names=tuple(browser_source_names),
+            included_source_names=active_source_names,
+        )
+        matching_seconds = perf_counter() - matching_started
+        finished_at = datetime.now(UTC)
+        total_discovered = sum(run.discovered for run in source_runs)
+        total_unique = sum(run.unique for run in source_runs)
+        return SearchRunResult(
+            matches=tuple(matches),
+            diagnostics=SearchRunDiagnostics(
+                started_at=started_at,
+                finished_at=finished_at,
+                elapsed_seconds=perf_counter() - started,
+                matching_seconds=matching_seconds,
+                source_runs=source_runs,
+                total_discovered=total_discovered,
+                total_unique=total_unique,
+                duplicates_removed=max(0, total_discovered - total_unique),
+                result_count=len(matches),
+            ),
         )
 
     def _discover_sources(
@@ -306,7 +371,7 @@ class jobfindsmecore:
         workspace_id: str,
         plan_id: str,
         sources: Sequence[DiscoverySource],
-    ) -> None:
+    ) -> tuple[SourceRunStats, ...]:
         import logging
         from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -329,8 +394,13 @@ class jobfindsmecore:
 
         def _discover_one(  # noqa: E501
             source: DiscoverySource,
-        ) -> tuple[DiscoverySource, str | None]:
+        ) -> SourceRunStats:
             subscription = subscriptions.get((source.kind, source.source_name))
+            source_started = perf_counter()
+            cached = self.jobs.has_source_jobs(
+                workspace_id=workspace_id,
+                source_name=source.source_name,
+            )
             try:
                 summary = self.discovery.discover(
                     workspace_id=workspace_id,
@@ -347,17 +417,21 @@ class jobfindsmecore:
                         subscription,
                         error=None,
                     )
-                return source, None
+                return SourceRunStats(
+                    source_name=source.source_name,
+                    source_kind=source.kind,
+                    status=SourceRunStatus.SUCCESS,
+                    elapsed_seconds=perf_counter() - source_started,
+                    discovered=summary.discovered,
+                    unique=summary.unique,
+                    versions_created=summary.versions_created,
+                )
             except Exception as error:
                 _log.warning(
                     "source discovery failed: %s/%s — %s",
                     source.kind,
                     source.source_name,
                     error,
-                )
-                cached = self.jobs.has_source_jobs(
-                    workspace_id=workspace_id,
-                    source_name=source.source_name,
                 )
                 if cached:
                     self.jobs.mark_source_unknown(
@@ -371,22 +445,43 @@ class jobfindsmecore:
                         error=str(error),
                         degraded=cached,
                     )
-                return source, str(error)
+                return SourceRunStats(
+                    source_name=source.source_name,
+                    source_kind=source.kind,
+                    status=(
+                        SourceRunStatus.DEGRADED if cached else SourceRunStatus.FAILED
+                    ),
+                    elapsed_seconds=perf_counter() - source_started,
+                    cache_used=cached,
+                    error=str(error)[:1000],
+                )
 
         max_workers = min(len(sources), 5)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
                 executor.submit(_discover_one, source): source for source in sources
             }
+            outcomes = []
             for future in as_completed(futures):
-                source, error = future.result()
-                if error:
+                outcome = future.result()
+                outcomes.append(outcome)
+                if outcome.error:
                     _log.debug(
                         "source %s/%s failed: %s",
-                        source.kind,
-                        source.source_name,
-                        error,
+                        outcome.source_kind,
+                        outcome.source_name,
+                        outcome.error,
                     )
+        order = {
+            (source.kind, source.source_name): index
+            for index, source in enumerate(sources)
+        }
+        return tuple(
+            sorted(
+                outcomes,
+                key=lambda item: order[(item.source_kind, item.source_name)],
+            )
+        )
 
     def update_job_state(
         self,

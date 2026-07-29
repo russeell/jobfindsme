@@ -97,9 +97,14 @@ class _CDPSession:
             for t in targets.get("result", {}).get("targetInfos", []):
                 if t.get("type") == "page":
                     with suppress(Exception):
-                        cdp.send(  # noqa: E501
+                        window = cdp.send(
+                            "Browser.getWindowForTarget",
+                            {"targetId": t["targetId"]},
+                        )
+                        window_id = window["result"]["windowId"]
+                        cdp.send(
                             "Browser.setWindowBounds",
-                            {"windowId": t["targetId"], "bounds": bounds},
+                            {"windowId": window_id, "bounds": bounds},
                         )
             cdp.close()
 
@@ -373,7 +378,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             "message": "未找到 Chrome。请安装 Google Chrome 后重试。",
         }
 
-    selected = list(platforms) if platforms else list(PLATFORM_LOGIN_URLS)
+    selected = list(platforms) if platforms else ["boss"]
     if not all(p in PLATFORM_LOGIN_URLS for p in selected):
         return {
             "ok": False,
@@ -398,13 +403,6 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
-    # Ask macOS to show the Chrome window so user can log in
-    subprocess.run(
-        ["open", "-a", "Google Chrome"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
     label_list = "\n".join(f"  • {label}" for label in labels)
     return {
         "ok": True,
@@ -412,7 +410,8 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             f"Chrome 已启动（端口 {DEFAULT_CDP_PORT}）。\n"
             f"请在打开的窗口里登录以下平台：\n"
             f"{label_list}\n\n"
-            "登录态保存在本地，以后搜索自动生效。\n"
+            "搜索期间请保持这个专用 Chrome 进程运行。\n"
+            "登录态保存在本地，下次只需重新启动浏览器桥。\n"
             f"Profile: {profile}"
         ),
     }

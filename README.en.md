@@ -15,7 +15,7 @@
 - 🔍 **One search, 5 platforms** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
 - 📊 **Evidence-based results** — match percentage + skill comparison + reasons
-- 🔗 **Direct apply links** — one click to the official job page
+- 🔗 **Direct job links** — one click to the source platform's job page
 - 🔌 **Standard MCP** — works with any MCP-compatible agent
 
 ## Quick Start
@@ -60,22 +60,22 @@ No workspace IDs or plan IDs needed — Core handles everything.
 ### 4. Enable platform search (one-time)
 
 ```bash
-jobfindsme setup              # Open Chrome with 4 login pages
+jobfindsme setup              # Start the isolated local Chrome bridge
 ```
 
-> Liepin, 51job, Zhaopin, and Lagou work **without login**. Only BOSS Zhipin requires authentication.
+> All five sources use the local Chrome CDP bridge. BOSS Zhipin additionally requires account login; public pages on other platforms may still present verification.
 
 ## Sources
 
 **5 platforms cover most Chinese companies' job listings.**
 
-| Platform | Login | Jobs/query | Strength |
-|----------|:-----:|:----------:|----------|
-| **BOSS Zhipin** | Required | ~15 | Largest volume, plain-text salary |
-| **Liepin** | ❌ | ~42 | Mid-senior roles, MNC positions |
-| **51job** | ❌ | ~20 | Broad coverage, traditional + IT |
-| **Zhaopin** | ❌ | ~15 | General recruitment |
-| **Lagou** | ❌ | ~15 | Internet-focused |
+| Platform | Access prerequisite | Strength |
+|----------|---------------------|----------|
+| **BOSS Zhipin** | Browser bridge + login | Large volume, common salary data |
+| **Liepin** | Browser bridge | Mid-senior roles, MNC positions |
+| **51job** | Browser bridge | Broad coverage, traditional + IT |
+| **Zhaopin** | Browser bridge | General recruitment |
+| **Lagou** | Browser bridge | Internet-focused roles |
 
 > No single source covers every position — some roles appear only on company career sites or internal referral channels. These 5 platforms together provide the widest reach.
 

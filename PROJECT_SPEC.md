@@ -49,7 +49,7 @@ V0.2 explicitly excludes:
 3. Every adapter calls the same Core and contains no business rules.
 4. No API key means the complete deterministic workflow still works.
 5. Resume content stays local and is minimized after parsing.
-6. The four non-BOSS platforms work **without login** — only BOSS直聘 requires one-time setup.
+6. All maintained sources use a local CDP browser bridge; BOSS also requires account login.
 7. Security cannot depend on a host agent or MCP client's optional behavior.
 
 ## 4. Main User Flow
@@ -59,8 +59,8 @@ Install → jobfindsme config → paste JSON → restart agent
          (or: agent reads INSTALL.md and auto-installs)
 
 First use:
-  → agent asks: "登录过 BOSS直聘吗？" (AGENTS.md §First-Time Setup)
-  → if no: jobfindsme setup → scan QR → done once
+  → agent checks whether the dedicated browser bridge is running
+  → if no: jobfindsme setup → scan BOSS QR → keep bridge running
 
 Search:
   → agent passes resume path to setup_profile
@@ -143,13 +143,13 @@ the active context automatically.
 
 ### 10.1 五个平台，覆盖主流渠道
 
-| 平台 | 登录 | 每次岗位 | 特点 |
-|------|:--:|:--:|------|
-| BOSS直聘 | 需要 | ~15 | 岗位最多，明文薪资 |
-| 猎聘 | ❌ | ~42 | 中高端 + 外企中国岗 |
-| 前程无忧 | ❌ | ~20 | 传统行业 + IT，覆盖面广 |
-| 智联招聘 | ❌ | ~15 | 综合招聘 |
-| 拉勾 | ❌ | ~15 | 互联网专注 |
+| 平台 | 访问前提 | 特点 |
+|------|------|------|
+| BOSS直聘 | 浏览器桥 + 登录 | 岗位量大，常见明文薪资 |
+| 猎聘 | 浏览器桥 | 中高端 + 外企中国岗 |
+| 前程无忧 | 浏览器桥 | 传统行业 + IT，覆盖面广 |
+| 智联招聘 | 浏览器桥 | 综合招聘 |
+| 拉勾 | 浏览器桥 | 互联网岗位 |
 
 腾讯、阿里、字节、拼多多、小米、网易、美团……绝大部分公司的岗位
 都在这五个平台上发布。不保证覆盖所有公司所有岗位。
@@ -160,8 +160,14 @@ the active context automatically.
 - **BOSS直聘**：注入 XHR 调用内部搜索 API（明文薪资）
 - **猎聘 / 前程无忧 / 智联 / 拉勾**：导航搜索页 → JS DOM 提取
 
-用户运行 `jobfindsme setup` 一次，在隔离 Chrome profile 中登录 BOSS。
-其他四个平台无需登录即可搜索。登录态本地持久保存。
+用户运行 `jobfindsme setup` 启动隔离 Chrome profile，并登录 BOSS。
+搜索期间浏览器桥必须运行。其他平台通常不要求账号，但可能触发验证或临时限制。
+
+### 10.5 Live Search Loop
+
+真实抓取必须生成机器报告：来源状态与耗时、discovered/unique/version 数量、
+端到端耗时、结果数量、字段完整度、未知分类和重复链接。Top 10 同时生成待人工
+标注模板。自动检查不能替代相关性、链接有效性和实际投递价值的人工判断。
 
 ### 10.3 删掉的 Connector
 
@@ -197,7 +203,7 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 
 1. 岗位介绍 — title, company, location, salary, track, type
 2. 匹配度 — 🎯 percentage
-3. 投递链接 — 🔗 official URL
+3. 投递链接 — 🔗 source-platform direct job URL
 4. 推荐理由 — evidence-based (reasons + warnings)
 
 低于 10% 匹配的结果自动过滤。按分数降序，最多 15 条。

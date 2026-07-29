@@ -111,7 +111,9 @@ class PrivacyService:
     def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
         self._validate_scope(scope)
         counts = self._counts(workspace_id)
-        token = secrets.token_urlsafe(32)
+        # Keep the token safe as a CLI value even if token_urlsafe() would
+        # otherwise begin with "-" and be parsed as an option.
+        token = f"del_{secrets.token_urlsafe(32)}"
         expires_at = self.clock() + timedelta(minutes=10)
         with self.database.connect() as connection:
             connection.execute(
