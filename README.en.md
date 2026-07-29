@@ -81,25 +81,42 @@ jobfindsme setup              # Open Chrome with 4 login pages
 
 ## Prompt Templates
 
-**With resume (auto-parse + match):**
+**Full template (`[]` = optional, remove lines you don't need):**
 
 ```
-Use JobFindsMe to find [role] jobs in [city], based on [resume path].
+Use JobFindsMe,
+based on [resume path]                  ← include only if you have a resume
+to find [role] jobs in [cities]        ← required
+salary [min]K-[max]K or [amount]+      ← optional
+[campus / experienced]                  ← optional
+[internship / full-time]                ← optional
+[0-3 / 3-5 / …] years experience       ← optional
+exclude [keywords]                      ← optional
 ```
 
-**Without resume (search only, no scoring):**
+**Examples:**
 
-```
-Use JobFindsMe to search [role] jobs in [city].
-```
+```bash
+# With resume, precise search
+Use JobFindsMe, based on ~/Documents/resume.pdf,
+to find AI Agent engineer jobs in Shanghai and Shenzhen, 25K+, experienced, full-time, 1-5 years.
 
-**View job details:**
+# With resume, broad search
+Use JobFindsMe, based on ~/Documents/resume.pdf,
+to find LLM application developer jobs in Hangzhou, campus recruitment.
 
-```
+# Without resume, quick browse
+Use JobFindsMe to search autonomous driving algorithm jobs in Beijing, 30K+, experienced.
+
+# Without resume, find internships
+Use JobFindsMe to search AI product manager internships nationwide.
+
+# View details / save
 Use JobFindsMe to show me the details of job #3.
+Use JobFindsMe to save jobs #1, #4, and #6.
 ```
 
-> Every result includes: job description, match score, apply link, and evidence-based reasons.
+> Every result includes: job description, match score, apply link, and evidence-based reasons. Match scores require a resume; search works either way.
 
 ## MCP Tools
 
