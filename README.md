@@ -63,7 +63,7 @@ BOSS直聘是岗位最多的来源，但需要你在 Chrome 里登录一次。�
 
 **①** 运行 `jobfindsme setup`，Chrome 自动打开登录页。
 
-**②** 用 **微信扫码** 或 **手机号登录**（跟 BOSS App 一样）：
+**②** 用 **微信扫码**、**BOSS直聘 App 扫码** 或 **手机号登录**：
 
 ![BOSS直聘登录](docs/boss-login.png)
 
