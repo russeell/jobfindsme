@@ -51,7 +51,25 @@ Agent 会自动完成安装、配置 MCP、安装 Skill。
 找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。
 ```
 
-不需要提供任何 ID 或参数——Core 自动处理一切。
+> ⚠️ **BOSS直聘需要登录，其他四个不需要。** 搜不到 BOSS 岗位？看下方登录教程。
+
+---
+
+### 🔐 BOSS直聘登录（只需一次）
+
+BOSS直聘是岗位最多的来源，但需要你在 Chrome 里登录一次。登录态保存在本地，以后自动生效。
+
+**三步完成：**
+
+**①** 运行 `jobfindsme setup`，Chrome 自动打开登录页。
+
+**②** 用 **微信扫码** 或 **手机号登录**（跟 BOSS App 一样）：
+
+![BOSS直聘登录](docs/boss-login.png)
+
+**③** 登录成功后关掉 Chrome。以后搜索自动复用，无需再登。
+
+> 💡 猎聘、前程无忧、智联、拉勾装完就能搜，无需 setup。
 
 ---
 
@@ -84,12 +102,7 @@ jobfindsme install workbuddy # WorkBuddy
 # Hermes / OpenClaw / Qoder → jobfindsme install --path
 ```
 
-```
-用 JobFindsMe，根据 ~/Documents/resume.pdf，
-找上海和杭州的 AI 应用工程师岗位，0-3 年经验。
-```
-
-不需要提供任何 ID 或参数——Core 自动处理一切。
+重启 Agent，然后搜索：
 
 ### 💬 提示词模版
 

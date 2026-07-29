@@ -46,6 +46,9 @@ Sort by score descending. Show top 15 max. Use 🥇🥈🥉 for top 3.
 
 ## Platform Notes
 
-- 猎聘, 前程无忧, 智联, 拉勾 — work without login.
-- BOSS直聘 — requires one-time Chrome login via `jobfindsme setup`.
-- If search returns 0, suggest the user run `jobfindsme setup`.
+> ⚠️ **BOSS直聘 requires login. The other 4 platforms do not.**
+
+- BOSS直聘 — the largest source — needs a one-time Chrome login via `jobfindsme setup`.
+- 猎聘, 前程无忧, 智联, 拉勾 — work immediately without any login.
+
+**Proactive rule:** After the first search, if results are few or all from non-BOSS sources, tell the user: "BOSS直聘 是岗位最多的来源，但需要登录一次。运行 `jobfindsme setup`，用微信或手机扫码，30 秒搞定，以后搜索自动包含 BOSS。"
