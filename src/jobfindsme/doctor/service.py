@@ -223,7 +223,9 @@ class Doctor:
                 f"{BOSS_ORIGIN}{BOSS_API_PATH}"
                 f"?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
             )
-            raw = cdp.eval_js(_BOSS_PROBE_JS.replace("__API_URL__", api_url), sid)
+            raw = cdp.eval_js(
+                _BOSS_PROBE_JS.replace("__API_URL__", _json.dumps(api_url)), sid
+            )
             cdp.send("Target.closeTarget", {"targetId": target_id})
             cdp.close()
             payload = _json.loads(raw) if isinstance(raw, str) else {}

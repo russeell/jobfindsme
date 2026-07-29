@@ -225,7 +225,8 @@ class ToolRegistry:
                 workspace_id=values.pop("workspace_id"),
                 plan_id=values.pop("plan_id"),
             )
-            assert context.plan is not None
+            if context.plan is None:
+                raise ValueError("no active Search Plan — run configure_search first")
             return self.core.configure_monitor(
                 workspace_id=context.workspace.workspace_id,
                 plan_id=context.plan.plan_id,

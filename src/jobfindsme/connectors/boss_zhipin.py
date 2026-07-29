@@ -19,10 +19,15 @@ DEFAULT_CDP_PORT = 9222
 
 _JS_FETCH_API = """
 (function(){
+    var url = __API_URL__;
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', '__API_URL__', false);
+    xhr.open('GET', url, false);
     xhr.withCredentials = true;
-    xhr.send();
+    try {
+        xhr.send();
+    } catch(e) {
+        return JSON.stringify({error: 'network_error', message: e.message});
+    }
     if (xhr.status === 401 || xhr.status === 403) {
         return JSON.stringify({error: 'authentication_required', status: xhr.status});
     }
@@ -213,7 +218,7 @@ class BossZhipinConnector:
                 params["city"] = self.city
             api_url = f"{BOSS_ORIGIN}{BOSS_API_PATH}?{urlencode(params)}"
             raw = cdp.eval_js(
-                _JS_FETCH_API.replace("__API_URL__", api_url),
+                _JS_FETCH_API.replace("__API_URL__", json.dumps(api_url)),
                 session_id,
             )
             items = self._parse_response(raw)
@@ -369,7 +374,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         [
             chrome,
             f"--remote-debugging-port={DEFAULT_CDP_PORT}",
-            "--remote-allow-origins=*",
+            "--remote-allow-origins=http://127.0.0.1:9222",
             "--disable-gpu",
             f"--user-data-dir={profile}",
         ]

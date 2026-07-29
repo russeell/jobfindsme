@@ -12,6 +12,15 @@ from jobfindsme.mcp.tools import ToolRegistry
 SUPPORTED_PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26")
 
 
+def _package_version() -> str:
+    try:
+        from importlib.metadata import version
+
+        return version("jobfindsme")
+    except Exception:
+        return "0.0.0"
+
+
 class StdioMcpServer:
     def __init__(self, registry: ToolRegistry) -> None:
         self.registry = registry
@@ -35,7 +44,7 @@ class StdioMcpServer:
                 result = {
                     "protocolVersion": protocol,
                     "capabilities": {"tools": {"listChanged": False}},
-                    "serverInfo": {"name": "jobfindsme", "version": "0.2.0-rc.3"},
+                    "serverInfo": {"name": "jobfindsme", "version": _package_version()},
                     "instructions": (
                         "Pass resume paths to setup_profile. "
                         "Never paste complete resumes into the host model. "
@@ -56,8 +65,8 @@ class StdioMcpServer:
             else:
                 return _rpc_error(request_id, -32601, f"method not found: {method}")
             return {"jsonrpc": "2.0", "id": request_id, "result": result}
-        except Exception as error:
-            return _rpc_error(request_id, -32603, str(error))
+        except Exception:
+            return _rpc_error(request_id, -32603, "internal error")
 
     def run(self, input_stream: TextIO, output_stream: TextIO) -> None:
         for line in input_stream:

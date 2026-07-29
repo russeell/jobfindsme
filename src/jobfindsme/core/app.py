@@ -227,7 +227,8 @@ class JobFindsMeCore:
             workspace_id=workspace_id,
             plan_id=plan_id,
         )
-        assert context.plan is not None
+        if context.plan is None:
+            raise ValueError("no active Search Plan — run configure_search first")
         profile = self.profiles.latest_confirmed_summary(
             workspace_id=context.workspace.workspace_id
         )
@@ -255,7 +256,8 @@ class JobFindsMeCore:
             workspace_id=workspace_id,
             plan_id=plan_id,
         )
-        assert context.plan is not None
+        if context.plan is None:
+            raise ValueError("no active Search Plan — run configure_search first")
         effective_sources = tuple(sources) or tuple(
             item.source
             for item in self.source_subscriptions.list(
