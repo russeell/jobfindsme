@@ -49,6 +49,10 @@ Every job result MUST include ALL FOUR of these:
 
 Sort by score descending. Show top 15 max. Use 🥇🥈🥉 for top 3.
 
+**Score threshold:** Results below 15% match are automatically filtered. If all
+results are gone after filtering, tell the user no qualified matches were found
+and suggest broadening the search criteria.
+
 ## Privacy
 
 - Never read or paste the full resume into model context.

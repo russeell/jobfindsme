@@ -33,6 +33,7 @@ class DeterministicMatcher:
         *,
         profile: ProfileSummary | None = None,
         limit: int = 20,
+        min_score: float = 0.10,
     ) -> list[JobMatch]:
         eligible = [job for job in jobs if self._hard_filter(plan, job)]
         if not eligible:
@@ -63,7 +64,8 @@ class DeterministicMatcher:
             )
             for job, terms in zip(eligible, documents, strict=True)
         ]
-        return sorted(matches, key=lambda item: (-item.score, item.job.job_id))[:limit]
+        scored = [m for m in matches if m.score >= min_score]
+        return sorted(scored, key=lambda item: (-item.score, item.job.job_id))[:limit]
 
     @staticmethod
     def _hard_filter(plan: SearchPlan, job: JobPosting) -> bool:
