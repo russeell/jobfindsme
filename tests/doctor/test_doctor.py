@@ -17,6 +17,7 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
         "mcp",
         "connectors",
         "browser_connectors",
+        "boss_login",
         "secrets",
     }
     assert all(item.message for item in report.diagnostics)

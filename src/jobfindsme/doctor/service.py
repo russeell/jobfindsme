@@ -25,6 +25,16 @@ def _cdp_port_reachable() -> bool:
         return False
 
 
+_BOSS_PROBE_JS = """
+(function(){
+    var x = new XMLHttpRequest();
+    x.open('GET', '__API_URL__', false);
+    try { x.send(); } catch(e) {}
+    return x.responseText;
+})()
+"""
+
+
 class Diagnostic(StrictModel):
     name: str
     ok: bool
@@ -50,6 +60,7 @@ class Doctor:
             self._mcp(),
             self._connectors(),
             self._browser_connectors(),
+            self._boss_login(),
             self._secrets(),
         )
         return DoctorReport(
@@ -177,6 +188,58 @@ class Doctor:
             required=False,
             message="Chrome CDP available on port 9222; platform search is ready",
         )
+
+    @staticmethod
+    def _boss_login() -> Diagnostic:
+        """Probe whether BOSS直聘 is logged in via the CDP API."""
+        if not _cdp_port_reachable():
+            return Diagnostic(
+                name="boss_login",
+                ok=False,
+                required=False,
+                message="Chrome CDP not reachable — run 'jobfindsme setup' first",
+            )
+        try:
+            from urllib.parse import urlencode
+            import json as _json
+            from jobfindsme.connectors.boss_zhipin import (
+                DEFAULT_CDP_PORT, _CDPSession, BOSS_ORIGIN, BOSS_API_PATH,
+            )
+            cdp = _CDPSession(DEFAULT_CDP_PORT)
+            target = cdp.send("Target.createTarget", {"url": "about:blank", "background": True})
+            target_id = target["result"]["targetId"]
+            attached = cdp.send("Target.attachToTarget", {"targetId": target_id, "flatten": True})
+            sid = attached["result"]["sessionId"]
+            cdp.send("Page.enable", sid=sid)
+            api_url = f"{BOSS_ORIGIN}{BOSS_API_PATH}?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
+            raw = cdp.eval_js(_BOSS_PROBE_JS.replace("__API_URL__", api_url), sid)
+            cdp.send("Target.closeTarget", {"targetId": target_id})
+            cdp.close()
+            payload = _json.loads(raw) if isinstance(raw, str) else {}
+            if payload.get("error") == "authentication_required":
+                return Diagnostic(
+                    name="boss_login",
+                    ok=False, required=False,
+                    message="BOSS直聘 requires login — run 'jobfindsme setup'. Other 4 platforms work without login.",
+                )
+            job_count = len(payload.get("jobs", []))
+            if job_count == 0:
+                return Diagnostic(
+                    name="boss_login",
+                    ok=False, required=False,
+                    message="BOSS直聘 returned 0 jobs — may need login. Run 'jobfindsme setup'.",
+                )
+            return Diagnostic(
+                name="boss_login",
+                ok=True, required=False,
+                message=f"BOSS直聘 — logged in, {job_count}+ jobs reachable",
+            )
+        except Exception as e:
+            return Diagnostic(
+                name="boss_login",
+                ok=False, required=False,
+                message=f"BOSS直聘 login check failed — run 'jobfindsme setup': {e}",
+            )
 
     @staticmethod
     def _secrets() -> Diagnostic:
