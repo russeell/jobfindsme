@@ -79,6 +79,8 @@ class jobfindsmecore:
         salary_max_k: int | None = None,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
+        recruitment_track: str | None = None,
+        employment_type: str | None = None,
         exclusions: Sequence[str] = (),
     ) -> SearchPlan:
         plan = self.search_plans.create(
@@ -90,6 +92,8 @@ class jobfindsmecore:
             salary_max_k=salary_max_k,
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
+            recruitment_track=recruitment_track,
+            employment_type=employment_type,
             exclusions=exclusions,
         )
         self.context.activate(workspace_id=workspace_id, plan_id=plan.plan_id)
@@ -107,6 +111,8 @@ class jobfindsmecore:
         salary_max_k: int | None = None,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
+        recruitment_track: str | None = None,
+        employment_type: str | None = None,
         exclusions: Sequence[str] = (),
         sources: Sequence[DiscoverySource] | None = None,
     ) -> SearchConfiguration:
@@ -125,6 +131,8 @@ class jobfindsmecore:
                 salary_max_k=salary_max_k,
                 experience_min_years=experience_min_years,
                 experience_max_years=experience_max_years,
+                recruitment_track=recruitment_track,
+                employment_type=employment_type,
                 exclusions=exclusions,
             )
         else:
@@ -138,6 +146,8 @@ class jobfindsmecore:
                 salary_max_k=salary_max_k,
                 experience_min_years=experience_min_years,
                 experience_max_years=experience_max_years,
+                recruitment_track=recruitment_track,
+                employment_type=employment_type,
                 exclusions=exclusions,
             )
             self.context.activate(

@@ -5,7 +5,7 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from jobfindsme.contracts import SearchPlan
+from jobfindsme.contracts import EmploymentType, RecruitmentTrack, SearchPlan
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]
@@ -39,6 +39,8 @@ class SearchPlanService:
         salary_max_k: int | None = None,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
+        recruitment_track: str | None = None,
+        employment_type: str | None = None,
         official_sources_only: bool = True,
         exclusions: Sequence[str] = (),
     ) -> SearchPlan:
@@ -55,6 +57,12 @@ class SearchPlanService:
             salary_max_k=salary_max_k,
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
+            recruitment_track=(
+                RecruitmentTrack(recruitment_track) if recruitment_track else None
+            ),
+            employment_type=(
+                EmploymentType(employment_type) if employment_type else None
+            ),
             official_sources_only=official_sources_only,
             exclusions=tuple(value.strip() for value in exclusions if value.strip()),
             created_at=now,
@@ -67,8 +75,9 @@ class SearchPlanService:
                     plan_id, workspace_id, name, target_roles_json,
                     locations_json, salary_min_k, salary_max_k,
                     experience_min_years, experience_max_years,
+                    recruitment_track, employment_type,
                     official_sources_only, exclusions_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     plan.plan_id,
@@ -80,6 +89,8 @@ class SearchPlanService:
                     plan.salary_max_k,
                     plan.experience_min_years,
                     plan.experience_max_years,
+                    plan.recruitment_track.value if plan.recruitment_track else None,
+                    plan.employment_type.value if plan.employment_type else None,
                     int(plan.official_sources_only),
                     json.dumps(plan.exclusions, ensure_ascii=False),
                     plan.created_at.isoformat(),
@@ -113,6 +124,8 @@ class SearchPlanService:
         salary_max_k: int | None = None,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
+        recruitment_track: str | None = None,
+        employment_type: str | None = None,
         official_sources_only: bool = True,
         exclusions: Sequence[str] = (),
     ) -> SearchPlan:
@@ -129,6 +142,12 @@ class SearchPlanService:
             salary_max_k=salary_max_k,
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
+            recruitment_track=(
+                RecruitmentTrack(recruitment_track) if recruitment_track else None
+            ),
+            employment_type=(
+                EmploymentType(employment_type) if employment_type else None
+            ),
             official_sources_only=official_sources_only,
             exclusions=tuple(value.strip() for value in exclusions if value.strip()),
             created_at=existing.created_at,
@@ -141,6 +160,7 @@ class SearchPlanService:
                     name = ?, target_roles_json = ?, locations_json = ?,
                     salary_min_k = ?, salary_max_k = ?,
                     experience_min_years = ?, experience_max_years = ?,
+                    recruitment_track = ?, employment_type = ?,
                     official_sources_only = ?, exclusions_json = ?, updated_at = ?
                 WHERE workspace_id = ? AND plan_id = ?
                 """,
@@ -152,6 +172,8 @@ class SearchPlanService:
                     plan.salary_max_k,
                     plan.experience_min_years,
                     plan.experience_max_years,
+                    plan.recruitment_track.value if plan.recruitment_track else None,
+                    plan.employment_type.value if plan.employment_type else None,
                     int(plan.official_sources_only),
                     json.dumps(plan.exclusions, ensure_ascii=False),
                     plan.updated_at.isoformat(),
@@ -187,6 +209,16 @@ class SearchPlanService:
             salary_max_k=row["salary_max_k"],
             experience_min_years=row["experience_min_years"],
             experience_max_years=row["experience_max_years"],
+            recruitment_track=(
+                RecruitmentTrack(row["recruitment_track"])
+                if row["recruitment_track"]
+                else None
+            ),
+            employment_type=(
+                EmploymentType(row["employment_type"])
+                if row["employment_type"]
+                else None
+            ),
             official_sources_only=bool(row["official_sources_only"]),
             exclusions=tuple(json.loads(row["exclusions_json"])),
             created_at=datetime.fromisoformat(row["created_at"]),

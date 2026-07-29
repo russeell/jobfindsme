@@ -30,6 +30,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0007_job_state_events",
         "0008_active_context_and_sources",
         "0009_job_source_records",
+        "0010_search_plan_filters",
     ]
     assert foreign_keys == 1
 

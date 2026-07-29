@@ -29,6 +29,8 @@ class SearchPlan(StrictModel):
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
+    recruitment_track: RecruitmentTrack | None = None
+    employment_type: EmploymentType | None = None
     official_sources_only: bool = True
     exclusions: tuple[str, ...] = ()
     created_at: datetime

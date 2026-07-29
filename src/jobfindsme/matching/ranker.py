@@ -6,11 +6,13 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from jobfindsme.contracts import (
+    EmploymentType,
     EvidencePair,
     JobLiveness,
     JobMatch,
     JobPosting,
     MatchEvidence,
+    RecruitmentTrack,
     SearchPlan,
 )
 from jobfindsme.matching.tokenizer import tokenize
@@ -95,6 +97,22 @@ class DeterministicMatcher:
             and job.source.liveness is JobLiveness.UNKNOWN
             and job.source.fetched_at is not None
             and (datetime.now(UTC) - job.source.fetched_at).days > stale_after_days
+        ):
+            return False
+        # Respect recruitment track filter
+        if (
+            plan.recruitment_track is not None
+            and plan.recruitment_track is not RecruitmentTrack.UNKNOWN
+            and job.recruitment_track is not RecruitmentTrack.UNKNOWN
+            and job.recruitment_track is not plan.recruitment_track
+        ):
+            return False
+        # Respect employment type filter
+        if (
+            plan.employment_type is not None
+            and plan.employment_type is not EmploymentType.UNKNOWN
+            and job.employment_type is not EmploymentType.UNKNOWN
+            and job.employment_type is not plan.employment_type
         ):
             return False
         searchable = (

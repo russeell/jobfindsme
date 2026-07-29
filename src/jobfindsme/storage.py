@@ -149,6 +149,22 @@ class Database:
                 connection.execute(statement)
                 continue
 
+            # ALTER TABLE ADD COLUMN — skip if column already exists
+            alter_match = re.match(
+                r"ALTER\s+TABLE\s+(\w+)\s+ADD\s+(?:COLUMN\s+)?(\w+)",
+                statement, re.IGNORECASE,
+            )
+            if alter_match:
+                table, column = alter_match.group(1), alter_match.group(2)
+                cols = {
+                    row[1]
+                    for row in connection.execute(
+                        f"PRAGMA table_info({table})"
+                    ).fetchall()
+                }
+                if column in cols:
+                    continue
+
             connection.execute(statement)
 
     def migrate(self) -> None:
