@@ -3,7 +3,7 @@
 Run these two commands:
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
 jobfindsme config
 ```
 

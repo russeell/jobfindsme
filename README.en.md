@@ -7,7 +7,7 @@
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-stdio-111111)](https://modelcontextprotocol.io/)
-[![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
+[![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **jobfindsme** is a standard MCP Server that turns your AI agent into a job search engine. It searches 5 major Chinese recruitment platforms simultaneously, matches results against your local resume, and returns every job with a match score, evidence-based reasons, and a direct apply link.
@@ -23,7 +23,7 @@
 ### 1. Install
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
 ```
 
 ### 2. Configure MCP

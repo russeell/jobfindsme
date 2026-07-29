@@ -1,6 +1,6 @@
 # jobfindsme Product And Architecture Specification
 
-> Status: v0.2.0-rc.5 release candidate
+> Status: latest release candidate
 >
 > Baseline: Agent-native, Local-first
 >

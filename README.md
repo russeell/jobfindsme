@@ -7,7 +7,7 @@
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-stdio-111111)](https://modelcontextprotocol.io/)
-[![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
+[![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **jobfindsme** 是一个标准 MCP Server，让你的 AI Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
@@ -80,7 +80,7 @@ BOSS直聘是岗位最多的来源，但需要你在 Chrome 里登录一次。�
 **安装 Python 包：**
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@v0.2.0-rc.5"
+pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
 ```
 
 **配置 MCP — 推荐输出 JSON 自行粘贴（适用所有 Agent）：**
