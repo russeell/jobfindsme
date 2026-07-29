@@ -1,11 +1,11 @@
 ---
 name: jobfindsme
-description: Find, compare, save, and track jobs with the local JobFindsMe engine. Searches BOSS直聘, 猎聘, 前程无忧, 智联, 拉勾 simultaneously.
+description: Find, compare, save, and track jobs with the local jobfindsme engine. Searches BOSS直聘, 猎聘, 前程无忧, 智联, 拉勾 simultaneously.
 ---
 
-# JobFindsMe
+# jobfindsme
 
-Use JobFindsMe when the user wants to discover, compare, save, track, export,
+Use jobfindsme when the user wants to discover, compare, save, track, export,
 monitor, or delete job-search data.
 
 ## Privacy

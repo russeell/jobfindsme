@@ -1,4 +1,4 @@
-# JobFindsMe · AI 求职引擎
+# jobfindsme · AI 求职引擎
 
 > **5 大平台一站式搜索 · 本地简历智能匹配 · 投递链接直达**
 >
@@ -10,7 +10,7 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**JobFindsMe** 是一个标准 MCP Server，让你的 AI Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
+**jobfindsme** 是一个标准 MCP Server，让你的 AI Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode 等）变成求职引擎。接入五大招聘平台，一句话搜索，本地简历匹配，每条结果都有匹配度、推荐理由和直达投递链接。
 
 - 🔍 **一站式搜索** — 同时搜 BOSS直聘、猎聘、前程无忧、智联、拉勾
 - 📄 **本地简历匹配** — 简历不出本地，AI 自动解析技能/经验/学历
@@ -22,7 +22,7 @@
 
 ## 为什么不用招聘 App？
 
-| | 招聘 App | JobFindsMe |
+| | 招聘 App | jobfindsme |
 |---|---|---|
 | 搜索范围 | 一个平台 | **五大平台统一搜索** |
 | 简历 | 上传到平台 | **留在本地** |
@@ -34,12 +34,12 @@
 
 ## 快速开始
 
-JobFindsMe 是一个标准 **MCP Server**，适配所有 MCP 兼容的 Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode……）。
+jobfindsme 是一个标准 **MCP Server**，适配所有 MCP 兼容的 Agent（Claude Code、Codex、Hermes、OpenClaw、Kimi、TRAE、Qoder、WorkBuddy、ZCode……）。
 
 ### 1. 安装（最简单：跟 Agent 说一句话）
 
 ```
-帮我安装 JobFindsMe：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+帮我安装 jobfindsme：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
 Agent 会自动完成安装、配置 MCP、安装 Skill。
@@ -47,7 +47,7 @@ Agent 会自动完成安装、配置 MCP、安装 Skill。
 ### 2. 重启 Agent，然后搜索
 
 ```
-用 JobFindsMe，根据 ~/Documents/resume.pdf，
+用 jobfindsme，根据 ~/Documents/resume.pdf，
 找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。
 ```
 
@@ -109,7 +109,7 @@ jobfindsme install workbuddy # WorkBuddy
 **完整模板（`[]` 为可选，去掉不需要的行即可）：**
 
 ```
-用 JobFindsMe，
+用 jobfindsme，
 根据 [简历路径]                     ← 有简历才写这行，自动解析匹配
 找 [城市] 的 [岗位方向] 岗位        ← 必填
 薪资 [最低K]-[最高K] 或 [金额] 以上   ← 可选，如 20K以上、20-40K
@@ -123,22 +123,22 @@ jobfindsme install workbuddy # WorkBuddy
 
 ```bash
 # 有简历，精确搜
-用 JobFindsMe，根据 ~/Documents/我的简历.pdf，
+用 jobfindsme，根据 ~/Documents/我的简历.pdf，
 找上海和深圳的 AI Agent 工程师岗位，25K以上，社招，正式，1-5年经验。
 
 # 有简历，放宽搜
-用 JobFindsMe，根据 ~/Documents/我的简历.pdf，
+用 jobfindsme，根据 ~/Documents/我的简历.pdf，
 找杭州的大模型应用开发岗位，校招。
 
 # 无简历，快速浏览
-用 JobFindsMe，搜北京的自动驾驶算法岗位，30K以上，社招。
+用 jobfindsme，搜北京的自动驾驶算法岗位，30K以上，社招。
 
 # 无简历，找实习
-用 JobFindsMe，搜全国的 AI 产品经理实习岗位。
+用 jobfindsme，搜全国的 AI 产品经理实习岗位。
 
 # 查看详情 / 保存
-用 JobFindsMe，看一下第 3 个岗位的详细内容。
-用 JobFindsMe，把第 1、4、6 个岗位存起来。
+用 jobfindsme，看一下第 3 个岗位的详细内容。
+用 jobfindsme，把第 1、4、6 个岗位存起来。
 ```
 
 > 💡 每条结果包含：**岗位介绍、匹配度、投递链接、推荐理由**。有简历才出匹配分，没简历也能搜。
@@ -196,7 +196,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
   Agent（Claude Code / Codex / WorkBuddy / ZCode / …）
       │
       ▼
-  JobFindsMe MCP Server（本地）
+  jobfindsme MCP Server（本地）
       │
   ├── Chrome CDP ────────→ BOSS/猎聘/前程无忧/智联/拉勾
       └── BOSS CDP 桥 ───────────→ Experimental（显式启用）
@@ -234,7 +234,7 @@ jobfindsme setup --platform boss liepin  # 只开部分平台
 
 ## 免责声明
 
-JobFindsMe 是本地工具，帮助整理和匹配你已登录、有权查看的岗位信息。使用产生的一切后果（含平台账号限制）由使用者承担。禁止商业转售、大规模爬取、绕过平台限制。
+jobfindsme 是本地工具，帮助整理和匹配你已登录、有权查看的岗位信息。使用产生的一切后果（含平台账号限制）由使用者承担。禁止商业转售、大规模爬取、绕过平台限制。
 
 ---
 

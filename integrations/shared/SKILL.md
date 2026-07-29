@@ -1,11 +1,11 @@
 ---
 name: jobfindsme
-description: Find, compare, save, and track jobs with the local JobFindsMe engine.
+description: Find, compare, save, and track jobs with the local jobfindsme engine.
 ---
 
-# JobFindsMe
+# jobfindsme
 
-Use JobFindsMe when the user wants to discover, compare, save, track, export,
+Use jobfindsme when the user wants to discover, compare, save, track, export,
 monitor, or delete job-search data.
 
 ## Privacy

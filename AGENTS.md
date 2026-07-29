@@ -1,6 +1,6 @@
-# JobFindsMe — Agent Instructions
+# jobfindsme — Agent Instructions
 
-JobFindsMe is a local MCP server that searches 5 Chinese recruitment platforms
+jobfindsme is a local MCP server that searches 5 Chinese recruitment platforms
 simultaneously (BOSS直聘, 猎聘, 前程无忧, 智联, 拉勾), matches results against
 the user's local resume, and returns every job with a match score, evidence, and
 a direct apply link.

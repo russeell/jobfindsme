@@ -1,4 +1,4 @@
-# JobFindsMe · AI Job Search Engine
+# jobfindsme · AI Job Search Engine
 
 > **5 platforms, one search · Local resume matching · Direct apply links**
 >
@@ -10,7 +10,7 @@
 [![v0.2.0-rc.5](https://img.shields.io/badge/release-v0.2.0--rc.5-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**JobFindsMe** is a standard MCP Server that turns your AI agent into a job search engine. It searches 5 major Chinese recruitment platforms simultaneously, matches results against your local resume, and returns every job with a match score, evidence-based reasons, and a direct apply link.
+**jobfindsme** is a standard MCP Server that turns your AI agent into a job search engine. It searches 5 major Chinese recruitment platforms simultaneously, matches results against your local resume, and returns every job with a match score, evidence-based reasons, and a direct apply link.
 
 - 🔍 **One search, 5 platforms** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
@@ -51,7 +51,7 @@ jobfindsme install codex     # Codex
 ### 3. Restart your agent and search
 
 ```
-Use JobFindsMe to find AI Engineer roles in Shanghai and Shenzhen,
+Use jobfindsme to find AI Engineer roles in Shanghai and Shenzhen,
 based on ~/Documents/resume.pdf.
 ```
 
@@ -84,7 +84,7 @@ jobfindsme setup              # Open Chrome with 4 login pages
 **Full template (`[]` = optional, remove lines you don't need):**
 
 ```
-Use JobFindsMe,
+Use jobfindsme,
 based on [resume path]                  ← include only if you have a resume
 to find [role] jobs in [cities]        ← required
 salary [min]K-[max]K or [amount]+      ← optional
@@ -98,22 +98,22 @@ exclude [keywords]                      ← optional
 
 ```bash
 # With resume, precise search
-Use JobFindsMe, based on ~/Documents/resume.pdf,
+Use jobfindsme, based on ~/Documents/resume.pdf,
 to find AI Agent engineer jobs in Shanghai and Shenzhen, 25K+, experienced, full-time, 1-5 years.
 
 # With resume, broad search
-Use JobFindsMe, based on ~/Documents/resume.pdf,
+Use jobfindsme, based on ~/Documents/resume.pdf,
 to find LLM application developer jobs in Hangzhou, campus recruitment.
 
 # Without resume, quick browse
-Use JobFindsMe to search autonomous driving algorithm jobs in Beijing, 30K+, experienced.
+Use jobfindsme to search autonomous driving algorithm jobs in Beijing, 30K+, experienced.
 
 # Without resume, find internships
-Use JobFindsMe to search AI product manager internships nationwide.
+Use jobfindsme to search AI product manager internships nationwide.
 
 # View details / save
-Use JobFindsMe to show me the details of job #3.
-Use JobFindsMe to save jobs #1, #4, and #6.
+Use jobfindsme to show me the details of job #3.
+Use jobfindsme to save jobs #1, #4, and #6.
 ```
 
 > Every result includes: job description, match score, apply link, and evidence-based reasons. Match scores require a resume; search works either way.

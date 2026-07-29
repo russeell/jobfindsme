@@ -1,4 +1,4 @@
-# JobFindsMe Product And Architecture Specification
+# jobfindsme Product And Architecture Specification
 
 > Status: v0.2.0-rc.5 release candidate
 >
@@ -8,8 +8,8 @@
 
 ## 1. Product Goal
 
-JobFindsMe 面向技术求职者和 AI 工具用户。用户可以提供本地简历，也可以只用
-自然语言描述求职目标，由现有 AI Agent 调用 JobFindsMe，从支持的职位来源中
+jobfindsme 面向技术求职者和 AI 工具用户。用户可以提供本地简历，也可以只用
+自然语言描述求职目标，由现有 AI Agent 调用 jobfindsme，从支持的职位来源中
 发现、匹配和跟踪仍在招聘的岗位。
 
 产品不以抓取页数、模型调用数或 Agent 步数作为成功标准，而以用户是否更快发现、
@@ -76,7 +76,7 @@ this repository.
 ## 4. Main User Flow
 
 ```text
-Install JobFindsMe
+Install jobfindsme
 -> ask an existing agent to find jobs
 -> agent passes the resume path to setup_profile
 -> Core parses locally and returns a minimal profile summary
@@ -102,7 +102,7 @@ flowchart TB
     H --> S["Host Skill"]
     S --> MCP["stdio MCP Adapter"]
 
-    CLI["CLI Adapter"] --> CORE["JobFindsMe Core"]
+    CLI["CLI Adapter"] --> CORE["jobfindsme Core"]
     MCP --> CORE
     SCHED["Local Scheduler"] --> CORE
 
@@ -161,7 +161,7 @@ Job feedback uses both:
 The Skill must instruct the host:
 
 > Do not read or copy the complete resume. Pass its local path to
-> `setup_profile`; JobFindsMe will parse it locally.
+> `setup_profile`; jobfindsme will parse it locally.
 
 Import modes:
 
@@ -292,7 +292,7 @@ or:
 
 国内企业招聘以 BOSS直聘/猎聘/智联/拉勾为主，官网为辅。只有 BAT/字节等少数大厂以官网为主要入口。
 
-JobFindsMe 两条腿走路：
+jobfindsme 两条腿走路：
 - **官网/ATS Connector**：对以官网为主的企业，建立直连（百度、腾讯、字节、美团、滴滴、B站、Airbnb、Airwallex）
 - **平台 CDP Connector**：对招聘平台，用户在自己的浏览器登录一次，CDP 桥自动调取岗位
 
@@ -309,7 +309,7 @@ BOSS + 猎聘 + 智联 + 拉勾四个平台覆盖阿里、华为、京东、网�
 
 ### 11.3 平台接入原则
 
-- 用户在自己的浏览器中登录，JobFindsMe 不接触凭据
+- 用户在自己的浏览器中登录，jobfindsme 不接触凭据
 - CDP 连接只提取用户已登录可见的岗位信息
 - 不绕过登录、验证码、反爬限制或平台条款
 - `jobfindsme boss-setup` 一键启动隔离 Chrome，同时打开四个平台登录页

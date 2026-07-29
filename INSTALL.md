@@ -1,4 +1,4 @@
-# Install JobFindsMe
+# Install jobfindsme
 
 Run these two commands:
 

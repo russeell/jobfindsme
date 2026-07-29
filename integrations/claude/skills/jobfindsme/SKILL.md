@@ -1,9 +1,9 @@
 ---
 name: jobfindsme
-description: Find, compare, save, and track jobs with the local JobFindsMe engine.
+description: Find, compare, save, and track jobs with the local jobfindsme engine.
 ---
 
-# JobFindsMe
+# jobfindsme
 
 Follow `integrations/shared/SKILL.md` exactly. In particular, never read the
 complete resume, ask only for constraints that change results, and require the
