@@ -108,7 +108,7 @@ class _CDPSession:
                 timeout=60,
                 origin=f"http://127.0.0.1:{port}",
             )
-        except Exception as exc:
+        except (OSError, ValueError, TimeoutError) as exc:
             raise BossConnectorError(
                 f"无法连接 Chrome 调试端口 127.0.0.1:{port}。\n"
                 "请先开启 Chrome 远程调试：\n"

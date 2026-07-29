@@ -32,6 +32,10 @@ class CdpSession(Protocol):
 # ── Shared CDP helpers ──────────────────────────────────────────────────────
 
 
+class CdpFetchError(Exception):
+    """Raised when CDP navigation or extraction fails after retries."""
+
+
 def _cdp_fetch(
     search_url: str,
     extract_js: str,
@@ -39,48 +43,60 @@ def _cdp_fetch(
     port: int = DEFAULT_CDP_PORT,
     session_factory: Callable[[int], CdpSession] = _CDPSession,
     wait_ms: int = 4000,
+    retries: int = 2,
 ) -> list[dict[str, Any]]:
-    """Navigate to a search page via CDP, inject JS, return extracted jobs."""
-    cdp = session_factory(port)
-    target_id: str | None = None
-    try:
-        target = cdp.send(
-            "Target.createTarget",
-            {"url": "about:blank", "background": True},
-        )
-        target_id = target["result"]["targetId"]
-        attached = cdp.send(
-            "Target.attachToTarget",
-            {"targetId": target_id, "flatten": True},
-        )
-        sid = attached["result"]["sessionId"]
-        cdp.send("Page.enable", sid=sid)
-        cdp.send("Runtime.enable", sid=sid)
-        cdp.send(
-            "Page.addScriptToEvaluateOnNewDocument",
-            {
-                "source": (
-                    "Object.defineProperty(document,'hidden',{get:()=>false});"
-                    "Object.defineProperty(document,'visibilityState',{get:()=>'visible'});"
-                )
-            },
-            sid,
-        )
-        cdp.send("Page.navigate", {"url": search_url}, sid)
-        time.sleep(wait_ms / 1000)
+    """Navigate to a search page via CDP, inject JS, return extracted jobs.
 
-        raw = cdp.eval_js(extract_js, sid)
-        if isinstance(raw, str):
-            try:
+    Raises CdpFetchError on persistent failure so callers can distinguish
+    "no jobs found" from "extraction broken".
+    """
+    last_error: Exception | None = None
+    for attempt in range(retries + 1):
+        cdp = session_factory(port)
+        target_id: str | None = None
+        try:
+            target = cdp.send(
+                "Target.createTarget",
+                {"url": "about:blank", "background": True},
+            )
+            target_id = target["result"]["targetId"]
+            attached = cdp.send(
+                "Target.attachToTarget",
+                {"targetId": target_id, "flatten": True},
+            )
+            sid = attached["result"]["sessionId"]
+            cdp.send("Page.enable", sid=sid)
+            cdp.send("Runtime.enable", sid=sid)
+            cdp.send(
+                "Page.addScriptToEvaluateOnNewDocument",
+                {
+                    "source": (
+                        "Object.defineProperty(document,'hidden',{get:()=>false});"
+                        "Object.defineProperty(document,'visibilityState',"
+                        "{get:()=>'visible'});"
+                    )
+                },
+                sid,
+            )
+            cdp.send("Page.navigate", {"url": search_url}, sid)
+            time.sleep(wait_ms / 1000)
+
+            raw = cdp.eval_js(extract_js, sid)
+            if isinstance(raw, str):
                 return json.loads(raw)
-            except json.JSONDecodeError:
-                return []
-        return []
-    finally:
-        if target_id is not None:
-            with suppress(Exception):
-                cdp.send("Target.closeTarget", {"targetId": target_id})
-        cdp.close()
+            return []
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries:
+                time.sleep(1.5 * (attempt + 1))
+        finally:
+            if target_id is not None:
+                with suppress(Exception):
+                    cdp.send("Target.closeTarget", {"targetId": target_id})
+            cdp.close()
+    raise CdpFetchError(
+        f"CDP extraction failed after {retries + 1} attempts: {last_error}"
+    ) from last_error
 
 
 # ── 猎聘 ─────────────────────────────────────────────────────────────────────

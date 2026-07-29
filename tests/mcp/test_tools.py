@@ -4,12 +4,12 @@ import ast
 import json
 from pathlib import Path
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
 
 
 def make_registry(tmp_path):
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("MCP")
     plan = core.create_search_plan(
         workspace_id=workspace.workspace_id,
@@ -39,7 +39,7 @@ def test_registry_exposes_product_level_tools(tmp_path) -> None:
 
 
 def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
@@ -208,7 +208,7 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
 
 
 def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")

@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.server import StdioMcpServer
 from jobfindsme.mcp.tools import ToolRegistry
 
@@ -20,7 +20,7 @@ def request(request_id: int, method: str, params=None) -> str:
 
 
 def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("MCP")
     input_stream = io.StringIO(
         "\n".join(
@@ -72,7 +72,7 @@ def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
 
 
 def test_unknown_rpc_method_returns_json_rpc_error(tmp_path) -> None:
-    server = StdioMcpServer(ToolRegistry(JobFindsMeCore(tmp_path / "jobfindsme.db")))
+    server = StdioMcpServer(ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db")))
 
     response = server.handle({"jsonrpc": "2.0", "id": 1, "method": "unsupported"})
 

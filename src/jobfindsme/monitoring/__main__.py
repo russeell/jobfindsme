@@ -4,13 +4,13 @@ import json
 from datetime import UTC, datetime
 
 from jobfindsme.cli import default_database_path
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.monitoring import LocalMonitorRunner
 from jobfindsme.notifications import FeishuNotifier
 
 
 def main() -> None:
-    core = JobFindsMeCore(default_database_path())
+    core = jobfindsmecore(default_database_path())
     notifier = FeishuNotifier.from_env()
     results = LocalMonitorRunner(core.database).run_due(
         now=datetime.now(UTC),

@@ -2,12 +2,12 @@ import ast
 from pathlib import Path
 
 from jobfindsme.contracts import DiscoverySource
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
 
 def test_core_composes_workspace_and_plan_use_cases(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("My Search")
 
     plan = core.create_search_plan(
@@ -41,7 +41,7 @@ def test_core_does_not_import_adapter_frameworks() -> None:
 
 
 def test_core_matches_imported_jobs_without_an_adapter_framework(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("求职")
     plan = core.create_search_plan(
         workspace_id=workspace.workspace_id,
@@ -73,7 +73,7 @@ def test_core_matches_imported_jobs_without_an_adapter_framework(tmp_path) -> No
 
 
 def test_core_configures_and_reuses_active_search_without_ids(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
 
     first = core.configure_search(
         target_roles=["AI应用工程师"],
@@ -91,7 +91,7 @@ def test_core_configures_and_reuses_active_search_without_ids(tmp_path) -> None:
 
 
 def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configuration = core.configure_search(target_roles=["AI应用工程师"])
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
@@ -132,7 +132,7 @@ def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
 def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared(
     tmp_path,
 ) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
         target_roles=["AI应用工程师"],
         sources=(

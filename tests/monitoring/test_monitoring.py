@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 from jobfindsme.monitoring import LocalMonitorRunner
 
@@ -10,7 +10,7 @@ NOW = datetime(2026, 7, 28, 8, 30, tzinfo=UTC)
 
 
 def configured_core(tmp_path, *, enabled: bool = True):
-    core = JobFindsMeCore(tmp_path / "monitor.db")
+    core = jobfindsmecore(tmp_path / "monitor.db")
     workspace = core.create_workspace("monitor")
     plan = core.create_search_plan(
         workspace_id=workspace.workspace_id,

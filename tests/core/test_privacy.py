@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.profiles.models import ResumeImportMode
 
 
 def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> None:
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("private")
     preview = core.preview_delete(
         workspace_id=workspace.workspace_id,
@@ -46,7 +46,7 @@ def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> Non
 def test_export_contains_structured_data_but_no_complete_resume(tmp_path) -> None:
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG\n项目：求职助手", encoding="utf-8")
-    core = JobFindsMeCore(tmp_path / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
     workspace = core.create_workspace("private")
     core.import_resume(
         workspace_id=workspace.workspace_id,
@@ -62,7 +62,7 @@ def test_export_contains_structured_data_but_no_complete_resume(tmp_path) -> Non
 def test_profile_deletion_removes_managed_resume_copy(tmp_path) -> None:
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
-    core = JobFindsMeCore(tmp_path / "data" / "jobfindsme.db")
+    core = jobfindsmecore(tmp_path / "data" / "jobfindsme.db")
     workspace = core.create_workspace("private")
     profile = core.import_resume(
         workspace_id=workspace.workspace_id,

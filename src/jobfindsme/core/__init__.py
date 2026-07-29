@@ -1,3 +1,3 @@
-from jobfindsme.core.app import JobFindsMeCore
+from jobfindsme.core.app import jobfindsmecore
 
-__all__ = ["JobFindsMeCore"]
+__all__ = ["jobfindsmecore"]

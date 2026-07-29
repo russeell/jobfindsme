@@ -8,7 +8,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 from jobfindsme.contracts import StrictModel
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.server import StdioMcpServer
 from jobfindsme.mcp.tools import ToolRegistry
 
@@ -91,7 +91,7 @@ class Doctor:
 
     def _database(self) -> Diagnostic:
         try:
-            core = JobFindsMeCore(self.database_path)
+            core = jobfindsmecore(self.database_path)
             with core.database.connect() as connection:
                 connection.execute("SELECT 1").fetchone()
         except Exception as error:
@@ -111,7 +111,7 @@ class Doctor:
 
     def _mcp(self) -> Diagnostic:
         try:
-            core = JobFindsMeCore(self.database_path)
+            core = jobfindsmecore(self.database_path)
             response = StdioMcpServer(ToolRegistry(core)).handle(
                 {
                     "jsonrpc": "2.0",

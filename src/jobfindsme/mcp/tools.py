@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.schemas import (
     ConfigureMonitorInput,
     ConfigureSearchInput,
@@ -85,7 +85,7 @@ TOOL_DEFINITIONS = (
 
 
 class ToolRegistry:
-    def __init__(self, core: JobFindsMeCore) -> None:
+    def __init__(self, core: jobfindsmecore) -> None:
         self.core = core
         self._definitions = {item.name: item for item in TOOL_DEFINITIONS}
 

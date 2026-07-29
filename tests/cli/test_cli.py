@@ -1,7 +1,7 @@
 import json
 
 from jobfindsme.cli import run
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
 
@@ -85,13 +85,13 @@ def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(
     profile = json.loads(capsys.readouterr().out)
 
     assert profile["facts"]
-    core = JobFindsMeCore(database)
+    core = jobfindsmecore(database)
     assert core.profiles.latest_confirmed_summary(workspace_id=profile["workspace_id"])
 
 
 def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
-    core = JobFindsMeCore(database)
+    core = jobfindsmecore(database)
     workspace = core.create_workspace("CLI")
     plan = core.create_search_plan(
         workspace_id=workspace.workspace_id,
@@ -143,7 +143,7 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
 
 def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
-    core = JobFindsMeCore(database)
+    core = jobfindsmecore(database)
     workspace = core.create_workspace("CLI")
     plan = core.create_search_plan(
         workspace_id=workspace.workspace_id,

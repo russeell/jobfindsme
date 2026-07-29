@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, TextIO
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.tools import ToolRegistry
 
 SUPPORTED_PROTOCOLS = ("2025-11-25", "2025-06-18", "2025-03-26")
@@ -93,7 +93,7 @@ def default_database_path() -> Path:
 
 
 def main() -> None:
-    core = JobFindsMeCore(default_database_path())
+    core = jobfindsmecore(default_database_path())
     StdioMcpServer(ToolRegistry(core)).run(sys.stdin, sys.stdout)
 
 

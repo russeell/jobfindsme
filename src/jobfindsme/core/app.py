@@ -36,7 +36,7 @@ from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 
 
-class JobFindsMeCore:
+class jobfindsmecore:
     """Typed use-case API shared by every adapter."""
 
     def __init__(self, database_path: str | Path) -> None:
@@ -322,6 +322,15 @@ class JobFindsMeCore:
                         error=None,
                     )
             except Exception as error:
+                import logging
+
+                _log = logging.getLogger(__name__)
+                _log.warning(
+                    "source discovery failed: %s/%s — %s",
+                    source.kind,
+                    source.source_name,
+                    error,
+                )
                 cached = self.jobs.has_source_jobs(
                     workspace_id=workspace_id,
                     source_name=source.source_name,

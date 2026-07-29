@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from jobfindsme.contracts import JobStateKind
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.installer import HostInstaller
@@ -248,7 +248,7 @@ def _emit(value: Any, output: str, *, job_list: bool = False) -> None:
         print(json.dumps(serializable, ensure_ascii=False))
 
 
-def _execute(core: JobFindsMeCore, args: argparse.Namespace) -> Any:
+def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
     if args.group == "workspace":
         if args.action == "init":
             return core.create_workspace(args.name)
@@ -367,7 +367,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         else:
             raise ValueError("either host or --path is required")
     else:
-        result = _execute(JobFindsMeCore(args.db), args)
+        result = _execute(jobfindsmecore(args.db), args)
     _emit(
         result,
         args.output,

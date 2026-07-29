@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from jobfindsme.core import JobFindsMeCore
+from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
 
 
@@ -44,7 +44,7 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
-    registry = ToolRegistry(JobFindsMeCore(tmp_path / "jobfindsme.db"))
+    registry = ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db"))
 
     profile = call(
         registry,
