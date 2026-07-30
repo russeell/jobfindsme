@@ -406,6 +406,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         _chrome_command(chrome, str(profile), urls),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        start_new_session=True,
     )
     label_list = "\n".join(f"  • {label}" for label in labels)
     return {

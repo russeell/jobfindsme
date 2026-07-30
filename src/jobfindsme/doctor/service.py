@@ -4,7 +4,6 @@ import os
 import stat
 import sys
 import urllib.request
-from contextlib import suppress
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -22,16 +21,6 @@ def _cdp_port_reachable() -> bool:
             return resp.status == 200
     except Exception:
         return False
-
-
-_BOSS_PROBE_JS = """
-(function(){
-    var x = new XMLHttpRequest();
-    x.open('GET', '__API_URL__', false);
-    try { x.send(); } catch(e) {}
-    return x.responseText;
-})()
-"""
 
 
 class Diagnostic(StrictModel):
@@ -199,59 +188,19 @@ class Doctor:
                 message="Chrome CDP not reachable — run 'jobfindsme setup' first",
             )
         try:
-            import json as _json
-            from urllib.parse import urlencode
-
+            from jobfindsme.connectors.base import ConnectorPolicy
             from jobfindsme.connectors.boss_zhipin import (
-                BOSS_API_PATH,
-                BOSS_ORIGIN,
-                BOSS_SEARCH_PAGE,
-                DEFAULT_CDP_PORT,
+                BossAuthenticationRequired,
                 BossZhipinConnector,
                 _CDPSession,
             )
 
-            cdp = _CDPSession(DEFAULT_CDP_PORT)
-            target_id: str | None = None
-            try:
-                target = cdp.send(
-                    "Target.createTarget", {"url": "about:blank", "background": True}
-                )
-                target_id = target["result"]["targetId"]
-                attached = cdp.send(
-                    "Target.attachToTarget",
-                    {"targetId": target_id, "flatten": True},
-                )
-                sid = attached["result"]["sessionId"]
-                cdp.send("Page.enable", sid=sid)
-                cdp.send("Runtime.enable", sid=sid)
-                cdp.send("Page.navigate", {"url": BOSS_SEARCH_PAGE}, sid)
-                BossZhipinConnector._wait_until_ready(cdp, sid)
-                api_url = (
-                    f"{BOSS_ORIGIN}{BOSS_API_PATH}"
-                    f"?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
-                )
-                raw = cdp.eval_js(
-                    _BOSS_PROBE_JS.replace("__API_URL__", _json.dumps(api_url)), sid
-                )
-            finally:
-                if target_id is not None:
-                    with suppress(Exception):
-                        cdp.send("Target.closeTarget", {"targetId": target_id})
-                cdp.close()
-            payload = _json.loads(raw) if isinstance(raw, str) else {}
-            if payload.get("error") == "authentication_required":
-                return Diagnostic(
-                    name="boss_login",
-                    ok=False,
-                    required=False,
-                    message=(
-                        "BOSS直聘 requires login — run 'jobfindsme setup'. "
-                        "Other 4 platforms work without login."
-                    ),
-                )
-            job_count = len(payload.get("jobs", []))
-            if job_count == 0:
+            records = BossZhipinConnector(
+                "工程师",
+                policy=ConnectorPolicy(public_access=True, robots_allowed=True),
+                session_factory=_CDPSession,
+            ).fetch()
+            if not records:
                 return Diagnostic(
                     name="boss_login",
                     ok=False,
@@ -265,7 +214,17 @@ class Doctor:
                 name="boss_login",
                 ok=True,
                 required=False,
-                message=f"BOSS直聘 — logged in, {job_count}+ jobs reachable",
+                message=f"BOSS直聘 — logged in, {len(records)} jobs reachable",
+            )
+        except BossAuthenticationRequired:
+            return Diagnostic(
+                name="boss_login",
+                ok=False,
+                required=False,
+                message=(
+                    "BOSS直聘 requires login — run 'jobfindsme setup'. "
+                    "Other platforms remain available."
+                ),
             )
         except Exception as e:
             return Diagnostic(
