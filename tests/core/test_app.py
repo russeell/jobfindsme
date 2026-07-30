@@ -1,9 +1,10 @@
 import ast
 from pathlib import Path
 
-from jobfindsme.contracts import DiscoverySource
+from jobfindsme.contracts import DiscoverySource, SourceRunStatus
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
+from jobfindsme.importing.service import ImportSummary
 
 
 def test_core_composes_workspace_and_plan_use_cases(tmp_path) -> None:
@@ -150,3 +151,60 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
     assert len(updated.sources) == 1
     assert cleared.sources == ()
     assert updated.plan.plan_id == configured.plan.plan_id
+
+
+def test_updating_catalog_plan_refreshes_primary_role_query(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+    )
+
+    updated = core.configure_search(
+        target_roles=["RAG工程师", "Agent工程师"],
+        locations=["上海"],
+    )
+
+    assert all(item.source.catalog_managed for item in configured.sources)
+    assert {item.source.query for item in updated.sources} == {"RAG工程师"}
+
+
+def test_partial_browser_snapshot_never_closes_absent_jobs(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="boss_cdp",
+                source_name="BOSS直聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    source = configured.sources[0].source
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(0, 0, 0, ()),),
+    )
+
+    def fail_if_closed(**_: object) -> None:
+        raise AssertionError("partial browser snapshots cannot close absent jobs")
+
+    monkeypatch.setattr(core.jobs, "mark_missing_closed", fail_if_closed)
+
+    result = core._discover_sources(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        sources=(source,),
+    )
+
+    assert result[0].status is SourceRunStatus.SUCCESS

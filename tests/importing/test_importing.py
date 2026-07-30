@@ -4,19 +4,46 @@ from datetime import UTC, datetime
 
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
+    DiscoverySource,
     EmploymentType,
     JobLiveness,
     RecruitmentTrack,
     SourceKind,
 )
+from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.importing.service import JobImportService
+from jobfindsme.importing.service import ImportSummary, JobImportService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 
 NOW = datetime(2026, 7, 28, tzinfo=UTC)
+
+
+def test_discovery_passes_primary_location_to_platform_connector() -> None:
+    captured: dict[str, object] = {}
+
+    class RecordingImports:
+        def import_connector(self, workspace_id, connector):
+            captured["workspace_id"] = workspace_id
+            captured["connector"] = connector
+            return ImportSummary(0, 0, 0, ())
+
+    service = JobDiscoveryService(RecordingImports())
+    service._discover_one(
+        workspace_id="workspace",
+        source=DiscoverySource(
+            kind="liepin_cdp",
+            source_name="猎聘",
+            query="AI应用工程师",
+            location="上海",
+        ),
+    )
+
+    assert captured["workspace_id"] == "workspace"
+    assert captured["connector"].keyword == "AI应用工程师"
+    assert captured["connector"].city == "上海"
 
 
 def raw_job(**overrides: object) -> RawJobRecord:

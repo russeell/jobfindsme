@@ -1,4 +1,9 @@
-from jobfindsme.source_catalog import recommended_connectors, source_links
+from jobfindsme.contracts import DiscoverySource
+from jobfindsme.source_catalog import (
+    recommended_connectors,
+    reconcile_catalog_sources,
+    source_links,
+)
 
 
 def test_china_search_gets_default_connectors() -> None:
@@ -9,6 +14,8 @@ def test_china_search_gets_default_connectors() -> None:
     assert names == {"BOSS直聘", "猎聘", "智联招聘", "拉勾", "前程无忧"}
     assert len(sources) == 5
     assert all(source.kind.uses_browser for source in sources)
+    assert all(source.catalog_managed for source in sources)
+    assert {source.location for source in sources} == {"上海"}
 
 
 def test_query_uses_only_first_role() -> None:
@@ -26,6 +33,43 @@ def test_partial_snapshot_sources_flag_browser_access() -> None:
     sources = recommended_connectors(("上海", "杭州"))
     for source in sources:
         assert source.kind.uses_browser
+
+
+def test_catalog_reconciliation_updates_queries_and_preserves_custom_source() -> None:
+    existing = recommended_connectors(("上海",), ("AI应用工程师",))
+    custom = DiscoverySource(
+        kind="json_file",
+        source_name="我的岗位",
+        path="/tmp/jobs.json",
+    )
+
+    reconciled = reconcile_catalog_sources(
+        existing + (custom,),
+        locations=("杭州",),
+        roles=("RAG工程师",),
+    )
+
+    managed = [source for source in reconciled if source.catalog_managed]
+    assert len(managed) == 5
+    assert {source.query for source in managed} == {"RAG工程师"}
+    assert {source.location for source in managed} == {"杭州"}
+    assert custom in reconciled
+
+
+def test_custom_browser_source_is_not_treated_as_catalog_plan() -> None:
+    custom = DiscoverySource(
+        kind="boss_cdp",
+        source_name="我的BOSS搜索",
+        query="只找远程岗位",
+    )
+
+    reconciled = reconcile_catalog_sources(
+        (custom,),
+        locations=("上海",),
+        roles=("RAG工程师",),
+    )
+
+    assert reconciled == (custom,)
 
 
 def test_source_links_returns_empty() -> None:

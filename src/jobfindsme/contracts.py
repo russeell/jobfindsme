@@ -235,6 +235,8 @@ class DiscoverySourceKind(StrEnum):
 class DiscoverySource(StrictModel):
     kind: DiscoverySourceKind
     source_name: str
+    catalog_managed: bool = False
+    location: str | None = None
     board_token: str | None = None
     board_name: str | None = None
     url: str | None = None

@@ -43,6 +43,7 @@ class JobDiscoveryService:
 
             connector = BossZhipinConnector(
                 source.query or "AI",
+                city=source.location or "",
                 policy=ConnectorPolicy(
                     public_access=True,
                     robots_allowed=True,
@@ -71,6 +72,7 @@ class JobDiscoveryService:
             }[source.kind]
             connector = connector_cls(
                 source.query or "AI",
+                city=source.location or "",
                 policy=ConnectorPolicy(
                     public_access=True,
                     robots_allowed=True,

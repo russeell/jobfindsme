@@ -1525,7 +1525,7 @@
     {
       "id": "M24-001",
       "title": "Source truth, query planning, and catalog reconciliation",
-      "status": "ready",
+      "status": "done",
       "blocked_by": ["M23-001"],
       "design_research_required": true,
       "research_refs": [
@@ -1575,6 +1575,7 @@
         "Discovery distinguishes complete snapshots from partial search pages; only complete snapshots may close absent jobs.",
         "Platform queries preserve one primary role and the requested city instead of concatenating multiple roles into one brittle keyword.",
         "Existing default Search Plans can reconcile a newer maintained source catalog without overwriting explicitly customized sources.",
+        "Catalog-managed sources refresh their query when the primary target role changes; custom sources remain unchanged.",
         "Recruitment track and employment type extraction is measured per source; unknown values remain visible and never silently satisfy strict filters.",
         "Regression tests cover partial snapshots, location propagation, source-catalog upgrades, and unknown classification policy."
       ],

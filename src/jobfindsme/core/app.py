@@ -35,7 +35,11 @@ from jobfindsme.profiles.models import (
 )
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.search_plans import SearchPlanService
-from jobfindsme.source_catalog import recommended_connectors, source_links
+from jobfindsme.source_catalog import (
+    recommended_connectors,
+    reconcile_catalog_sources,
+    source_links,
+)
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
@@ -172,24 +176,17 @@ class jobfindsmecore:
                 workspace_id=context.workspace.workspace_id,
                 plan_id=plan.plan_id,
             )
-            existing_names = {item.source.source_name for item in existing}
-            # Only auto-add defaults for plans that already use platform sources
-            has_defaults = any(src.source.kind.uses_browser for src in existing)
-            if has_defaults:
-                new_defaults = [
-                    src
-                    for src in recommended_connectors(
-                        tuple(locations), tuple(target_roles)
-                    )
-                    if src.source_name not in existing_names
-                ]
-                if new_defaults:
-                    merged = [item.source for item in existing] + new_defaults
-                    self.source_subscriptions.replace(
-                        workspace_id=context.workspace.workspace_id,
-                        plan_id=plan.plan_id,
-                        sources=merged,
-                    )
+            reconciled = reconcile_catalog_sources(
+                tuple(item.source for item in existing),
+                locations=tuple(locations),
+                roles=tuple(target_roles),
+            )
+            if reconciled != tuple(item.source for item in existing):
+                self.source_subscriptions.replace(
+                    workspace_id=context.workspace.workspace_id,
+                    plan_id=plan.plan_id,
+                    sources=reconciled,
+                )
         subscriptions = (
             self.source_subscriptions.replace(
                 workspace_id=context.workspace.workspace_id,
