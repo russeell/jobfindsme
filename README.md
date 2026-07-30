@@ -64,23 +64,31 @@ jobfindsme 是标准 **MCP Server**，适配所有 MCP 兼容的 Agent（Claude 
 
 ### 第 1 步：安装
 
-最简单的方式 —— 跟你的 Agent 说一句话：
+最简单的方式是把下面这句话发给你的 Agent：
 
 ```text
-帮我安装 jobfindsme：https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+请严格按说明快速安装 jobfindsme。当前 Agent 是 WorkBuddy；
+不要克隆仓库或运行测试：
+https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-Agent 会自动装包、配置 MCP、安装 Skill。
+Agent 会安装预构建版本并配置 MCP，通常几分钟内完成，不需要克隆仓库。
 
 或者手动：
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
-jobfindsme install claude    # Claude Code。换成 codex / kimi / trae / zcode / workbuddy 均可
+python3 -m venv ~/.jobfindsme/runtime
+~/.jobfindsme/runtime/bin/python -m pip install \
+  --index-url https://pypi.tuna.tsinghua.edu.cn/simple --upgrade \
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.0/jobfindsme-0.2.0-py3-none-any.whl"
+~/.jobfindsme/runtime/bin/python -m jobfindsme upgrade claude
 ```
 
 > [!TIP]
-> Agent 不在快捷名单里？`jobfindsme config` 输出标准 MCP JSON，粘贴到任意 Agent 的配置文件即可。
+> 将 `claude` 换成 `codex`、`kimi`、`trae`、`zcode` 或 `workbuddy`。
+> 其他 Agent 可用
+> `~/.jobfindsme/runtime/bin/python -m jobfindsme config`
+> 生成标准 MCP 配置。
 
 ### 第 2 步：启动本地浏览器桥并登录 BOSS
 

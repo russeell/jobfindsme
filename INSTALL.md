@@ -1,18 +1,59 @@
 # Install jobfindsme
 
-Run these two commands:
+This file is an installation recipe for coding agents. Complete only the steps
+below. Do not clone the repository, inspect the source, run the test suite,
+install development dependencies, or download a separate browser.
+
+## 1. Check Python
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
-jobfindsme config
+python3 --version
 ```
 
-Then paste the JSON output into the user's MCP config file. Or use a shortcut:
+Python 3.11 or newer is required. If it is unavailable, stop and tell the user.
+
+## 2. Install
+
+Create a dedicated runtime and install the prebuilt release package. The mirror
+keeps dependency downloads fast on networks where the default Python index is
+slow.
 
 ```bash
-jobfindsme install --path ~/.your-agent/mcp.json
+python3 -m venv ~/.jobfindsme/runtime
+~/.jobfindsme/runtime/bin/python -m pip install \
+  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+  --timeout 20 --retries 1 --upgrade \
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.0/jobfindsme-0.2.0-py3-none-any.whl"
 ```
 
-For known agents, replace `--path` with the agent name: `claude`, `codex`, `zcode`, `kimi`, `trae`, `workbuddy`.
+Do not replace this command with `git clone`, an editable install, or
+`playwright install`.
 
-Finally, tell the user to restart their agent.
+## 3. Connect the current agent
+
+For WorkBuddy:
+
+```bash
+~/.jobfindsme/runtime/bin/python -m jobfindsme upgrade workbuddy
+```
+
+Other built-in host names are `codex`, `claude`, `qwen`, `zcode`, `kimi`,
+`trae`, `trae-cn`, and `qoder`. For an unknown MCP client:
+
+```bash
+~/.jobfindsme/runtime/bin/python -m jobfindsme config
+```
+
+## 4. Verify
+
+```bash
+~/.jobfindsme/runtime/bin/python -m jobfindsme --version
+~/.jobfindsme/runtime/bin/python -m jobfindsme doctor
+```
+
+The browser and BOSS login checks may be marked optional until the user runs
+`jobfindsme setup`. They do not make installation fail.
+
+Restart the agent after configuration. Installation should normally finish
+within three minutes. If one command runs for more than five minutes, stop it
+and report the command and its latest output instead of trying unrelated fixes.

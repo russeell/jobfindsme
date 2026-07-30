@@ -41,3 +41,13 @@ jobs:
       - run: python -m pytest
       - run: ruff check .
       - run: ruff format --check .
+
+  clean-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: bash scripts/smoke_fast_install.sh

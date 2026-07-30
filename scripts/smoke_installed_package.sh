@@ -4,6 +4,18 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 temporary="$(mktemp -d "${TMPDIR:-/tmp}/jobfindsme-wheel-smoke.XXXXXX")"
 trap 'rm -rf "$temporary"' EXIT
+source_tree="$temporary/source"
+mkdir -p "$source_tree"
+
+(
+  cd "$root"
+  tar \
+    --exclude='./.git' \
+    --exclude='./build' \
+    --exclude='./dist' \
+    --exclude='./src/jobfindsme.egg-info' \
+    -cf - .
+) | tar -C "$source_tree" -xf -
 
 build_options=()
 if python -c "import setuptools.build_meta" >/dev/null 2>&1; then
@@ -11,7 +23,7 @@ if python -c "import setuptools.build_meta" >/dev/null 2>&1; then
 fi
 
 python -m pip wheel \
-  "$root" \
+  "$source_tree" \
   --no-deps \
   "${build_options[@]}" \
   --wheel-dir "$temporary/dist"
@@ -23,6 +35,7 @@ python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
 
 database="$temporary/jobfindsme.db"
+"$temporary/venv/bin/jobfindsme" install workbuddy --home "$temporary/home"
 "$temporary/venv/bin/jobfindsme" \
   --db "$database" \
   workspace init \
@@ -76,5 +89,9 @@ response = json.loads(completed.stdout)
 structured = response["result"]["structuredContent"]
 if not isinstance(structured, dict) or structured.get("jobs") != []:
     raise SystemExit(f"invalid installed MCP empty result: {structured!r}")
+
+config = os.path.join(os.path.dirname(database), "home", ".workbuddy", "mcp.json")
+if not os.path.exists(config):
+    raise SystemExit("installed wheel could not configure WorkBuddy")
 PY
 )
