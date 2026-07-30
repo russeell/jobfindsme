@@ -98,7 +98,16 @@ class CdpSession(Protocol):
 
 
 class _CDPSession:
-    """Minimal Chrome DevTools Protocol session over a local WebSocket."""
+    """Chrome DevTools Protocol session with read/write separation.
+
+    A background reader thread continuously receives CDP messages and
+    routes them: responses (with ``id``) resolve pending futures, and
+    events (with ``method``) are pushed into a thread-safe queue for
+    interception by callers (e.g. Network.responseReceived).
+
+    This fixes the bug where ``send()`` would consume and discard
+    unsolicited CDP events while waiting for its own response.
+    """
 
     @staticmethod
     def minimize_windows(port: int = DEFAULT_CDP_PORT) -> None:
@@ -151,6 +160,38 @@ class _CDPSession:
                 f"然后在 Chrome 中打开 {BOSS_ORIGIN} 登录。"
             ) from exc
         self._message_id = 0
+        self._lock = __import__("threading").Lock()
+        self._futures: dict[int, __import__("threading").Event] = {}
+        self._results: dict[int, dict[str, Any]] = {}
+        self._events: list[dict[str, Any]] = []
+        self._running = True
+        self._reader = __import__("threading").Thread(
+            target=self._read_loop, daemon=True
+        )
+        self._reader.start()
+
+    def _read_loop(self) -> None:
+        """Continuously read CDP messages and dispatch by type."""
+        while self._running:
+            try:
+                raw = self.ws.recv()
+            except Exception:
+                if self._running:
+                    time.sleep(0.1)
+                continue
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            msg_id = msg.get("id")
+            with self._lock:
+                if msg_id is not None:
+                    self._results[msg_id] = msg
+                    future = self._futures.pop(msg_id, None)
+                    if future:
+                        future.set()
+                elif msg.get("method"):
+                    self._events.append(msg)
 
     def send(
         self,
@@ -159,22 +200,36 @@ class _CDPSession:
         sid: str | None = None,
     ) -> dict[str, Any]:
         self._message_id += 1
+        mid = self._message_id
         message: dict[str, Any] = {
-            "id": self._message_id,
+            "id": mid,
             "method": method,
             "params": params or {},
         }
         if sid:
             message["sessionId"] = sid
+
+        event = __import__("threading").Event()
+        with self._lock:
+            self._futures[mid] = event
         self.ws.send(json.dumps(message))
 
-        while True:
-            response = json.loads(self.ws.recv())
-            if response.get("id") != self._message_id:
-                continue
-            if "error" in response:
-                raise BossConnectorError(f"CDP {method} failed: {response['error']}")
-            return response
+        if not event.wait(timeout=30):
+            raise BossConnectorError(f"CDP {method} timed out after 30s")
+        with self._lock:
+            response = self._results.pop(mid, None)
+        if response is None:
+            raise BossConnectorError(f"CDP {method} returned no response")
+        if "error" in response:
+            raise BossConnectorError(f"CDP {method} failed: {response['error']}")
+        return response
+
+    def drain_events(self) -> list[dict[str, Any]]:
+        """Return and clear all buffered CDP events (non-response messages)."""
+        with self._lock:
+            events = self._events
+            self._events = []
+            return events
 
     def eval_js(self, js: str, sid: str) -> Any:
         response = self.send(
@@ -194,6 +249,9 @@ class _CDPSession:
         return result.get("value")
 
     def close(self) -> None:
+        self._running = False
+        if self._reader.is_alive():
+            self._reader.join(timeout=2)
         self.ws.close()
 
 

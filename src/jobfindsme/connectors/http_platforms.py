@@ -1,46 +1,49 @@
-"""HTTP API connectors for 前程无忧 (51job) and 智联招聘 via in-page fetch.
+"""Passive Network-interception connectors for 前程无忧 and 智联招聘.
 
-Rather than fragile DOM regex extraction, these connectors navigate to the
-search page, then evaluate JavaScript that calls fetch() against the SPA's
-own backend API from within the authenticated page context. The page's JS
-environment handles all signing/cookies automatically.
+Instead of fragile DOM regex extraction, these connectors navigate to the
+search page, let the SPA make its own API calls, and intercept the JSON
+responses via CDP Network monitoring.  The page's own JavaScript handles
+all signing, cookies, and CORS — we just read the response body.
 
-This is a transitional step toward pure-HTTP connectors; the data quality
-is already much better than DOM extraction — structured JSON with all fields.
+The fixed _CDPSession (read/write separation with background reader thread)
+makes this possible: CDP events (Network.responseReceived etc.) are buffered
+in a queue that we drain, while send() waits on its own future.
 """
 
 from __future__ import annotations
 
 import json
 import time
-from collections.abc import Callable
 from contextlib import suppress
 from typing import Any
 
 from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
 from jobfindsme.connectors.boss_zhipin import (
     DEFAULT_CDP_PORT,
-    CdpSession,
     _CDPSession,
 )
 from jobfindsme.contracts import SourceKind
 
 
-def _fetch_json_from_page(
+def _intercept_api_response(
     search_url: str,
-    api_url_pattern: str,
+    api_url_patterns: tuple[str, ...],
     *,
     port: int = DEFAULT_CDP_PORT,
-    session_factory: Callable[[int], CdpSession] = _CDPSession,
-    wait_ms: int = 6000,
+    wait_ms: int = 8000,
 ) -> dict[str, Any] | None:
-    """Navigate to search_url, then fetch(api_url_pattern) from page context.
+    """Navigate to *search_url* and intercept the SPA's API call.
 
-    The page's own JS computes any required signatures/cookies. We just
-    eval a fetch() call and return the parsed JSON response.
+    The SPA loads, computes its own signatures, and calls its backend
+    API.  We capture the response via CDP Network monitoring without
+    injecting any code or computing any signatures ourselves.
+
+    Returns the parsed JSON response body, or None on failure.
     """
-    cdp = session_factory(port)
+    cdp = _CDPSession(port)
     target_id: str | None = None
+    sid: str | None = None
+
     try:
         target = cdp.send(
             "Target.createTarget",
@@ -54,37 +57,44 @@ def _fetch_json_from_page(
         sid = attached["result"]["sessionId"]
         cdp.send("Network.enable", sid=sid)
         cdp.send("Page.enable", sid=sid)
-        cdp.send("Runtime.enable", sid=sid)
+
         cdp.send("Page.navigate", {"url": search_url}, sid=sid)
 
-        # Wait for SPA to render (same dwell logic as _cdp_fetch)
+        captured_request_id: str | None = None
         deadline = time.monotonic() + max(wait_ms / 1000, 10)
-        body_met_at: float | None = None
-        while time.monotonic() < deadline:
-            state = cdp.eval_js("document.readyState", sid)
-            if state in {"interactive", "complete"}:
-                body_len = cdp.eval_js("document.body.innerText.length", sid)
-                if isinstance(body_len, (int, float)) and body_len > 200:
-                    if body_met_at is None:
-                        body_met_at = time.monotonic()
-                    if time.monotonic() - body_met_at >= 2.0:
-                        break
-            time.sleep(0.3)
 
-        # Call fetch() from page context — the page's JS handles signing
-        js = """
-(async function(){
-    try {
-        var resp = await fetch('%s', {credentials: 'include'});
-        if (!resp.ok) return JSON.stringify({error: resp.status});
-        var text = await resp.text();
-        return text;
-    } catch(e) { return JSON.stringify({error: e.message}); }
-})()
-""".replace("%s", api_url_pattern)
-        raw = cdp.eval_js(js, sid)
-        if isinstance(raw, str) and raw:
-            return json.loads(raw)
+        while time.monotonic() < deadline:
+            for event in cdp.drain_events():
+                method = event.get("method", "")
+                params = event.get("params", {})
+
+                if method == "Network.responseReceived":
+                    resp = params.get("response", {})
+                    url = resp.get("url", "")
+                    if resp.get("status") == 200 and any(
+                        p in url for p in api_url_patterns
+                    ):
+                        captured_request_id = params.get("requestId")
+
+                if (
+                    method == "Network.loadingFinished"
+                    and params.get("requestId") == captured_request_id
+                    and captured_request_id
+                ):
+                    try:
+                        result = cdp.send(
+                            "Network.getResponseBody",
+                            {"requestId": captured_request_id},
+                            sid=sid,
+                        )
+                        body = result.get("result", {}).get("body", "")
+                        if body:
+                            return json.loads(body)
+                    except Exception:
+                        pass
+                    captured_request_id = None
+            time.sleep(0.15)
+
         return None
     except Exception:
         return None
@@ -97,7 +107,7 @@ def _fetch_json_from_page(
 
 # ── 前程无忧 (51job) ─────────────────────────────────────────────────────────
 
-_WUYOU_CITY = {
+_WUYOU_CITY: dict[str, str] = {
     "北京": "010000",
     "上海": "020000",
     "深圳": "040000",
@@ -111,7 +121,7 @@ _WUYOU_CITY = {
 
 
 class WuyouHttpConnector:
-    """Discover jobs from 前程无忧 via in-page fetch to cupid API."""
+    """Discover jobs from 前程无忧 via passive CDP Network interception."""
 
     def __init__(
         self,
@@ -121,7 +131,6 @@ class WuyouHttpConnector:
         policy: ConnectorPolicy,
         source_name: str = "前程无忧",
         cdp_port: int = DEFAULT_CDP_PORT,
-        session_factory: Callable[[int], CdpSession] = _CDPSession,
     ) -> None:
         if not policy.can_fetch:
             raise PermissionError("source policy does not allow fetching")
@@ -129,7 +138,6 @@ class WuyouHttpConnector:
         self.city = city.strip()
         self.source_name = source_name
         self.cdp_port = cdp_port
-        self.session_factory = session_factory
 
     def fetch(self) -> list[RawJobRecord]:
         from urllib.parse import quote
@@ -139,26 +147,27 @@ class WuyouHttpConnector:
             "https://we.51job.com/pc/search"
             f"?keyword={quote(self.keyword)}&location={city_code}"
         )
-        ts = int(time.time() * 1000)
-        api_url = (
-            "https://cupid.51job.com/open/noauth/jobs/seo-job-list/normal"
-            f"?api_key=51job&timestamp={ts}"
-            f"&keyword={quote(self.keyword)}"
-            f"&location={city_code}&pageNum=1&pageSize=40"
-        )
-        data = _fetch_json_from_page(
+
+        data = _intercept_api_response(
             search_url,
-            api_url,
+            ("search-pc",),
             port=self.cdp_port,
-            session_factory=self.session_factory,
         )
         if not data:
             return []
 
-        jobs = data.get("resultbody", data)
-        if isinstance(jobs, dict):
-            jobs = jobs.get("joblist", jobs.get("list", jobs.get("data", [])))
-        if not isinstance(jobs, list):
+        body = data.get("resultbody", data)
+        if not isinstance(body, dict):
+            return []
+        # search-pc returns jobs nested as resultbody.job.items (list)
+        jobs_raw = body.get("job", body.get("data", {}))
+        if isinstance(jobs_raw, dict):
+            jobs_raw = jobs_raw.get("items", jobs_raw)
+        if isinstance(jobs_raw, dict):
+            jobs: list[dict] = list(jobs_raw.values())
+        elif isinstance(jobs_raw, list):
+            jobs = jobs_raw
+        else:
             return []
 
         return [
@@ -171,18 +180,27 @@ class WuyouHttpConnector:
                 ),
                 payload={
                     "title": str(item.get("jobName", item.get("title", ""))),
-                    "company": str(item.get("companyName", item.get("company", ""))),
-                    "description": str(
-                        item.get("jobDescription", item.get("description", ""))
+                    "company": str(
+                        item.get("fullCompanyName", item.get("companyName", ""))
                     ),
-                    "location": str(item.get("workArea", item.get("location", ""))),
-                    "salary": str(item.get("salaryDesc", item.get("salary", ""))),
-                    "url": str(item.get("jobUrl", item.get("url", ""))),
-                    "apply_url": str(item.get("jobUrl", item.get("url", ""))),
+                    "description": str(
+                        item.get("jobDescribe", item.get("description", ""))
+                    ),
+                    "location": str(
+                        item.get("jobAreaString", item.get("location", ""))
+                    ),
+                    "salary": str(
+                        item.get(
+                            "provideSalaryString",
+                            item.get("salary", ""),
+                        )
+                    ),
+                    "url": str(item.get("jobHref", item.get("url", ""))),
+                    "apply_url": str(item.get("jobHref", item.get("url", ""))),
                 },
             )
             for item in jobs
-            if isinstance(item, dict) and item.get("jobName") or item.get("title")
+            if isinstance(item, dict) and (item.get("jobName") or item.get("title"))
         ]
 
 
@@ -190,7 +208,7 @@ class WuyouHttpConnector:
 
 
 class ZhilianHttpConnector:
-    """Discover jobs from 智联招聘 via in-page fetch."""
+    """Discover jobs from 智联招聘 via passive CDP Network interception."""
 
     def __init__(
         self,
@@ -200,7 +218,6 @@ class ZhilianHttpConnector:
         policy: ConnectorPolicy,
         source_name: str = "智联招聘",
         cdp_port: int = DEFAULT_CDP_PORT,
-        session_factory: Callable[[int], CdpSession] = _CDPSession,
     ) -> None:
         if not policy.can_fetch:
             raise PermissionError("source policy does not allow fetching")
@@ -208,7 +225,6 @@ class ZhilianHttpConnector:
         self.city = city.strip()
         self.source_name = source_name
         self.cdp_port = cdp_port
-        self.session_factory = session_factory
 
     def fetch(self) -> list[RawJobRecord]:
         from urllib.parse import quote
@@ -217,24 +233,24 @@ class ZhilianHttpConnector:
         search_url = (
             f"https://sou.zhaopin.com/?kw={quote(self.keyword)}&p=1{city_param}"
         )
-        # The SPA calls this portal API; construct the URL pattern
-        api_url = (
-            "https://fe-api.zhaopin.com/c/i/portal/job/search"
-            f"?kw={quote(self.keyword)}&p=1{city_param}"
-            "&pageSize=40"
-        )
-        data = _fetch_json_from_page(
+
+        data = _intercept_api_response(
             search_url,
-            api_url,
+            ("portal/job/search",),
             port=self.cdp_port,
-            session_factory=self.session_factory,
         )
         if not data:
             return []
 
-        jobs = data.get("data", data)
-        if isinstance(jobs, dict):
-            jobs = jobs.get("list", jobs.get("results", jobs.get("data", [])))
+        jobs_raw = data.get("data", data)
+        if isinstance(jobs_raw, dict):
+            jobs_raw = jobs_raw.get("list", jobs_raw.get("results", []))
+        if isinstance(jobs_raw, dict):
+            jobs: list[dict] = list(jobs_raw.values())
+        elif isinstance(jobs_raw, list):
+            jobs = jobs_raw
+        else:
+            return []
 
         return [
             RawJobRecord(
@@ -257,5 +273,5 @@ class ZhilianHttpConnector:
                 },
             )
             for item in jobs
-            if isinstance(item, dict) and item.get("jobName") or item.get("title")
+            if isinstance(item, dict) and (item.get("jobName") or item.get("title"))
         ]

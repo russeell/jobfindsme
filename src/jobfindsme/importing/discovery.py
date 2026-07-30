@@ -104,9 +104,7 @@ class JobDiscoveryService:
             http_connector = _try_http_connector(source)
             if http_connector is not None:
                 try:
-                    return self.imports.import_connector(
-                        workspace_id, http_connector
-                    )
+                    return self.imports.import_connector(workspace_id, http_connector)
                 except Exception:
                     pass  # fall through to DOM connector
 
