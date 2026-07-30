@@ -68,6 +68,10 @@ class ConfigureSearchInput(StrictModel):
     sources: tuple[DiscoverySource, ...] | None = None
 
 
+class SuggestPlanInput(StrictModel):
+    workspace_id: str | None = None
+
+
 class GetJobsInput(StrictModel):
     workspace_id: str | None = None
     job_ids: tuple[str, ...] = ()

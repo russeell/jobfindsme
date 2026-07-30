@@ -10,7 +10,7 @@ from pathlib import Path
 from jobfindsme.contracts import StrictModel
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.server import StdioMcpServer
-from jobfindsme.mcp.tools import ToolRegistry
+from jobfindsme.mcp.tools import TOOL_DEFINITIONS, ToolRegistry
 
 
 def _cdp_port_reachable() -> bool:
@@ -112,7 +112,12 @@ class Doctor:
             count = len(response["result"]["tools"])
         except Exception as error:
             return Diagnostic(name="mcp", ok=False, message=str(error))
-        return Diagnostic(name="mcp", ok=count == 9, message=f"{count} tools")
+        expected = len(TOOL_DEFINITIONS)
+        return Diagnostic(
+            name="mcp",
+            ok=count == expected,
+            message=f"{count} tools",
+        )
 
     @staticmethod
     def _connectors() -> Diagnostic:

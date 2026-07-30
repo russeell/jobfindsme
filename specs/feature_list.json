@@ -2111,6 +2111,95 @@
         "README source claims are generated or manually gated from dated Live Loop and human-label evidence."
       ],
       "evidence_path": "reports/features/M27-002.json"
+    },
+    {
+      "id": "M28-001",
+      "title": "Evidence-bound profile-derived Search Plan proposal",
+      "status": "done",
+      "blocked_by": [
+        "M27-001"
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "Career-Ops",
+          "url": "https://github.com/santifer/career-ops",
+          "adopted_pattern": "Reduce repeated setup by deriving a reusable search configuration from durable local profile state.",
+          "rejected_or_not_adopted": "Do not silently persist inferred preferences or require a hosted model to construct the proposal."
+        },
+        {
+          "category": "official_guide",
+          "title": "Google Rules of Machine Learning",
+          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+          "adopted_pattern": "Start with observable, explainable heuristics and expose uncertainty before adding learned preference prediction.",
+          "rejected_or_not_adopted": "Do not present heuristic salary or location guesses as measured user intent."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Data Cascades in High-Stakes AI",
+          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
+          "adopted_pattern": "Preserve evidence provenance and confirmation boundaries for profile-derived decisions.",
+          "rejected_or_not_adopted": "Do not turn missing or noisy resume fields into confident downstream filters."
+        }
+      ],
+      "local_constraints": [
+        "Only confirmed local profile facts may influence a suggested Search Plan.",
+        "Resume locations describe history and cannot be treated as confirmed job-location preference.",
+        "Experience alone cannot justify a desired salary floor.",
+        "The proposal must be returned during the fast setup flow but cannot be persisted until the user confirms it.",
+        "Missing recruitment track or employment type remains unknown instead of defaulting every user to social full-time work."
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "README.md",
+        "docs/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/doctor/**",
+        "src/jobfindsme/mcp/**",
+        "src/jobfindsme/plan_suggestions.py",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "tests/core/**",
+        "tests/doctor/**",
+        "tests/mcp/**",
+        "reports/features/M28-001.json"
+      ],
+      "acceptance": [
+        "suggest_plan reads only the latest confirmed ProfileSummary and returns ready=false when none exists.",
+        "The proposal includes role, location, experience, recruitment, and employment hints with reasoning and explicit confirmation fields.",
+        "Salary remains unset unless the profile contains confirmed salary-preference evidence.",
+        "setup_profile auto-confirm returns the proposal without requiring a second Agent round trip.",
+        "The proposal is never persisted as an active Search Plan without configure_search confirmation.",
+        "Doctor validates the actual registered MCP tool count instead of a stale hard-coded number."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core/test_app.py",
+          "tests/mcp/test_tools.py",
+          "tests/mcp/test_stdio_server.py",
+          "tests/doctor/test_doctor.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src",
+          "tests"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "src",
+          "tests"
+        ]
+      ],
+      "evidence_path": "reports/features/M28-001.json"
     }
   ]
 }

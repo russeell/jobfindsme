@@ -21,6 +21,7 @@ from jobfindsme.contracts import (
     SearchRunResult,
     SourceRunStats,
     SourceRunStatus,
+    SuggestedPlan,
     Workspace,
 )
 from jobfindsme.importing.discovery import JobDiscoveryService
@@ -30,6 +31,7 @@ from jobfindsme.job_impressions import JobImpressionService
 from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
 from jobfindsme.monitor_configs import MonitorConfig, MonitorConfigService
+from jobfindsme.plan_suggestions import suggest_search_plan
 from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
 from jobfindsme.profiles.models import (
     CandidateProfile,
@@ -209,6 +211,18 @@ class jobfindsmecore:
             sources=subscriptions,
             source_links=source_links(tuple(target_roles), tuple(locations)),
         )
+
+    def suggest_plan(
+        self,
+        *,
+        workspace_id: str | None = None,
+    ) -> SuggestedPlan:
+        """Derive a reviewable Search Plan proposal from confirmed facts."""
+        workspace = self.context.resolve_workspace(workspace_id)
+        summary = self.profiles.latest_confirmed_summary(
+            workspace_id=workspace.workspace_id,
+        )
+        return suggest_search_plan(summary)
 
     def list_search_plans(self, workspace_id: str) -> list[SearchPlan]:
         return self.search_plans.list(workspace_id)

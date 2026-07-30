@@ -57,6 +57,8 @@ V0.2 provides:
 - persistent job states and monitor baselines for incremental discovery;
 - zero-ID first use with automatic Workspace and Search Plan;
 - prompt templates covering all search dimensions.
+- a profile-derived Search Plan proposal that uses confirmed facts only,
+  exposes uncertainty, and requires user confirmation before persistence;
 
 V0.2 explicitly excludes:
 

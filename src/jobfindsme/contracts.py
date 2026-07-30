@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -371,6 +371,28 @@ class SearchConfiguration(StrictModel):
     plan: SearchPlan
     sources: tuple[SourceSubscription, ...] = ()
     source_links: tuple[SourceLink, ...] = ()
+
+
+class SuggestedPlan(StrictModel):
+    """A search plan proposal derived from confirmed profile facts."""
+
+    target_roles: tuple[str, ...]
+    locations: tuple[str, ...] = ()
+    salary_min_k: int | None = None
+    salary_max_k: int | None = None
+    experience_min_years: int | None = None
+    experience_max_years: int | None = None
+    recruitment_track: RecruitmentTrack | None = None
+    employment_type: EmploymentType | None = None
+    exclusions: tuple[str, ...] = ()
+    candidate_experience_years: int | None = Field(default=None, ge=0, le=80)
+    confidence: Literal["low", "medium", "high"] = "low"
+    requires_confirmation: tuple[str, ...] = ()
+    reasoning: str = ""
+    ready: bool = Field(
+        default=True,
+        description="False when no confirmed profile exists yet.",
+    )
 
 
 class JobSourceRecord(StrictModel):

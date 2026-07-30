@@ -27,6 +27,7 @@ def test_registry_exposes_product_level_tools(tmp_path) -> None:
     assert [tool["name"] for tool in tools] == [
         "setup_profile",
         "configure_search",
+        "suggest_plan",
         "search_jobs",
         "get_jobs",
         "get_job_details",
@@ -247,6 +248,8 @@ def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) ->
     assert profile["fact_counts"]["skill"] >= 2
     assert profile["next_offset"] == 0
     assert profile["review_available"] is True
+    assert profile["suggested_plan"]["ready"] is True
+    assert "target_roles" in profile["suggested_plan"]["requires_confirmation"]
 
 
 def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:

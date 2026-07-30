@@ -32,6 +32,11 @@ monitor, or delete job-search data.
    do not turn every optional field into a question.
 3. Call `setup_profile` with `action: import`. It confirms parsed facts
    automatically by default so the first search can continue in the same turn.
+   Its response includes `suggested_plan`. Merge that proposal with constraints
+   the user stated explicitly, show the inferred fields and
+   `requires_confirmation`, and ask for one concise confirmation before saving
+   the plan. Explicit user input always overrides resume-derived hints. Never
+   infer a salary floor when the proposal leaves it empty.
    Set `auto_confirm: false` only when the user asks to review or edit facts,
    then use paginated review and explicit confirmation.
 4. Call `configure_search` with the extracted constraints and omit `sources`
@@ -51,8 +56,8 @@ monitor, or delete job-search data.
    direct source-platform job URL.
    Prefer new or materially changed jobs over unchanged jobs already shown.
    Never pad the answer with low-quality or repeated jobs merely to reach a
-   requested count. If Core does not yet expose reliable novelty metadata,
-   say so instead of inventing which jobs are new.
+   requested count. Use Core's `change_type` and `changes` fields; never infer
+   novelty from the Agent conversation.
 8. Use `update_job_state` only after the user states the desired change.
 9. Use `configure_monitor` only after explicit opt-in.
 10. `export_local_data` writes a local file. Return the receipt; do not read the

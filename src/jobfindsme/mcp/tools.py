@@ -15,6 +15,7 @@ from jobfindsme.mcp.schemas import (
     GetJobsInput,
     SearchJobsInput,
     SetupProfileInput,
+    SuggestPlanInput,
     UpdateJobStateInput,
 )
 from jobfindsme.presentation import (
@@ -49,6 +50,11 @@ TOOL_DEFINITIONS = (
         "configure_search",
         "Create or update the active search without exposing internal IDs.",
         ConfigureSearchInput,
+    ),
+    ToolDefinition(
+        "suggest_plan",
+        "Derive target roles, locations, and salary from confirmed resume facts.",
+        SuggestPlanInput,
     ),
     ToolDefinition(
         "search_jobs",
@@ -137,11 +143,15 @@ class ToolRegistry:
                     accepted_fact_ids=values["accepted_fact_ids"],
                     corrections=values["corrections"],
                 )
-                return _profile_page(
+                page = _profile_page(
                     profile,
                     offset=values["offset"],
                     limit=values["limit"],
                 )
+                page["suggested_plan"] = self.core.suggest_plan(
+                    workspace_id=values["workspace_id"]
+                )
+                return page
             if values["action"] == "review":
                 profile = self.core.review_profile(
                     workspace_id=values["workspace_id"],
@@ -160,12 +170,17 @@ class ToolRegistry:
                         accepted_fact_ids=[fact.fact_id for fact in profile.facts],
                     )
                     include_facts = False
-            return _profile_page(
+            page = _profile_page(
                 profile,
                 offset=values["offset"],
                 limit=values["limit"],
                 include_facts=include_facts,
             )
+            if values["auto_confirm"] and values["action"] == "import":
+                page["suggested_plan"] = self.core.suggest_plan(
+                    workspace_id=values["workspace_id"]
+                )
+            return page
         if name == "configure_search":
             assert isinstance(request, ConfigureSearchInput)
             return self.core.configure_search(
@@ -182,6 +197,11 @@ class ToolRegistry:
                 employment_type=request.employment_type,
                 exclusions=request.exclusions,
                 sources=request.sources,
+            )
+        if name == "suggest_plan":
+            assert isinstance(request, SuggestPlanInput)
+            return self.core.suggest_plan(
+                workspace_id=request.workspace_id,
             )
         if name == "search_jobs":
             assert isinstance(request, SearchJobsInput)
