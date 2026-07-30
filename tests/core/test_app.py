@@ -1,7 +1,11 @@
 import ast
 from pathlib import Path
 
-from jobfindsme.contracts import DiscoverySource, SourceRunStatus
+from jobfindsme.contracts import (
+    DiscoverySource,
+    SearchRefreshMode,
+    SourceRunStatus,
+)
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 from jobfindsme.importing.service import ImportSummary
@@ -208,3 +212,121 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
     )
 
     assert result[0].status is SourceRunStatus.SUCCESS
+
+
+def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海", "杭州"],
+    )
+    discovered = []
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+
+    def discover(**kwargs):
+        source = kwargs["sources"][0]
+        discovered.append(source.source_name)
+        return (ImportSummary(0, 0, 0, ()),)
+
+    monkeypatch.setattr(core.discovery, "discover", discover)
+
+    result = core.search_jobs_with_diagnostics(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        allow_browser_sources=True,
+        refresh_mode=SearchRefreshMode.FAST,
+    )
+
+    assert set(discovered) == {"BOSS直聘·上海", "BOSS直聘·杭州"}
+    assert result.diagnostics.refresh_mode is SearchRefreshMode.FAST
+    assert (
+        sum(
+            run.status is SourceRunStatus.SKIPPED
+            for run in result.diagnostics.source_runs
+        )
+        == 8
+    )
+
+
+def test_cache_search_performs_no_remote_discovery(tmp_path, monkeypatch) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+    )
+
+    def fail_discovery(**_: object) -> None:
+        raise AssertionError("cache mode cannot perform remote discovery")
+
+    monkeypatch.setattr(core.discovery, "discover", fail_discovery)
+
+    result = core.search_jobs_with_diagnostics(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        allow_browser_sources=True,
+        refresh_mode=SearchRefreshMode.CACHE,
+    )
+
+    assert result.diagnostics.refresh_mode is SearchRefreshMode.CACHE
+    assert all(
+        run.status is SourceRunStatus.SKIPPED for run in result.diagnostics.source_runs
+    )
+
+
+def test_empty_browser_refresh_uses_existing_cache_as_degraded(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="boss_cdp",
+                source_name="BOSS直聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    source = configured.sources[0].source
+    core.job_imports.import_records(
+        configured.workspace.workspace_id,
+        parse_json(
+            """
+            [{
+              "id": "cached",
+              "title": "AI应用工程师",
+              "company": "示例科技",
+              "description": "Python RAG Agent",
+              "url": "https://example.com/jobs/cached"
+            }]
+            """,
+            source_name=source.source_name,
+        ),
+    )
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(0, 0, 0, ()),),
+    )
+
+    run = core._discover_sources(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        sources=(source,),
+    )[0]
+
+    assert run.status is SourceRunStatus.DEGRADED
+    assert run.cache_used is True
+    assert "using cached records" in (run.error or "")

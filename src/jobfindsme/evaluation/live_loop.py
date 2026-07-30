@@ -21,6 +21,7 @@ from pydantic import Field
 from jobfindsme.contracts import (
     EmploymentType,
     RecruitmentTrack,
+    SearchRefreshMode,
     SearchRunDiagnostics,
     SourceRunStatus,
     StrictModel,
@@ -90,6 +91,7 @@ def run_live_search_loop(
         workspace_id=context.workspace.workspace_id,
         plan_id=context.plan.plan_id,
         allow_browser_sources=allow_browser_sources,
+        refresh_mode=SearchRefreshMode.FULL,
         limit=limit,
     )
     jobs = tuple(

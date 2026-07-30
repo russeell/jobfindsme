@@ -127,7 +127,7 @@ Two-phase deletion: `preview` → `confirm` with short-lived single-use token.
 ```text
 setup_profile       — import and parse resume
 configure_search    — set roles, cities, salary, exclusions
-search_jobs         — discover across 5 platforms + match
+search_jobs         — fast/full/cache refresh + local matching
 get_jobs            — pagination and state filtering
 get_job_details     — single job detail (untrusted external content)
 update_job_state    — save / applied / rejected
@@ -162,6 +162,18 @@ the active context automatically.
 
 用户运行 `jobfindsme setup` 启动隔离 Chrome profile，并登录 BOSS。
 搜索期间浏览器桥必须运行。其他平台通常不要求账号，但可能触发验证或临时限制。
+
+交互式搜索与全量采集必须分离：
+
+| 模式 | 远程行为 | 适用场景 |
+|------|----------|----------|
+| `fast`（默认） | 仅刷新当前城市的 BOSS，其他平台复用本地缓存 | 用户正在对话并等待结果 |
+| `cache` | 不访问远程来源 | 继续比较、排序或查看已发现岗位 |
+| `full` | 刷新已配置的全部平台和城市 | 定时监控、Live Loop、用户明确要求全量刷新 |
+
+该设计借鉴 RFC 5861 的 stale-while-revalidate / stale-if-error 思想：低延迟路径可使用
+可见的新鲜度状态与缓存结果，慢速刷新独立执行；缓存不得伪装成实时结果。多城市必须分别
+建立来源查询，不能只取第一个城市。
 
 ### 10.3 删掉的 Connector
 
@@ -207,6 +219,8 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 4. 推荐理由 — evidence-based (reasons + warnings)
 
 低于 10% 匹配的结果自动过滤。按分数降序，最多 15 条。
+固定文本输出由 Core Presentation 生成，不依赖宿主 Agent 自行读取结构化字段后发挥；
+`search_jobs` 同时返回刷新模式、端到端耗时和逐来源状态。
 
 ## 12. Design Research and Evaluation-Driven Engineering
 

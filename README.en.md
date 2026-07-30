@@ -10,9 +10,9 @@
 [![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**jobfindsme** is a standard MCP Server that turns your AI agent into a job search engine. It searches 5 major Chinese recruitment platforms simultaneously, matches results against your local resume, and returns every job with a match score, evidence-based reasons, and a direct apply link.
+**jobfindsme** is a standard MCP Server that turns your AI agent into a job search engine. Interactive searches refresh the highest-yield source and reuse visible local cache; explicit full refresh covers 5 major Chinese recruitment platforms. Results are matched against your local resume and include a score, evidence-based reasons, and a direct apply link.
 
-- 🔍 **One search, 5 platforms** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
+- 🔍 **Fast or exhaustive search** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
 - 📊 **Evidence-based results** — match percentage + skill comparison + reasons
 - 🔗 **Direct job links** — one click to the source platform's job page

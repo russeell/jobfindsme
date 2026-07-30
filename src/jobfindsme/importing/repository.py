@@ -3,7 +3,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-from jobfindsme.contracts import JobLiveness, JobPosting, JobSourceRecord
+from jobfindsme.contracts import (
+    EmploymentType,
+    JobLiveness,
+    JobPosting,
+    JobSourceRecord,
+    RecruitmentTrack,
+)
 from jobfindsme.storage import Database
 
 
@@ -106,7 +112,10 @@ class JobRepository:
                 (workspace_id,),
             ).fetchall()
         return [
-            JobPosting.model_validate(json.loads(row["payload_json"])) for row in rows
+            _repair_legacy_boss_classification(
+                JobPosting.model_validate(json.loads(row["payload_json"]))
+            )
+            for row in rows
         ]
 
     def has_source_jobs(self, *, workspace_id: str, source_name: str) -> bool:
@@ -187,7 +196,9 @@ class JobRepository:
             ).fetchone()
         if row is None:
             raise LookupError(job_id)
-        return JobPosting.model_validate(json.loads(row["payload_json"]))
+        return _repair_legacy_boss_classification(
+            JobPosting.model_validate(json.loads(row["payload_json"]))
+        )
 
     def source_records(
         self,
@@ -346,3 +357,34 @@ def _aggregate_liveness(values: list[JobLiveness]) -> JobLiveness:
         if preferred in values:
             return preferred
     return JobLiveness.UNKNOWN
+
+
+def _repair_legacy_boss_classification(job: JobPosting) -> JobPosting:
+    """Interpret cached BOSS rows written before explicit type fields existed."""
+
+    if not job.source.source_name.startswith("BOSS直聘"):
+        return job
+    text = f"{job.title} {job.description}".casefold()
+    recruitment_track = job.recruitment_track
+    if recruitment_track is RecruitmentTrack.UNKNOWN:
+        recruitment_track = (
+            RecruitmentTrack.CAMPUS
+            if any(term in text for term in ("校招", "校园", "应届"))
+            else RecruitmentTrack.SOCIAL
+        )
+    employment_type = job.employment_type
+    if employment_type is EmploymentType.UNKNOWN:
+        if any(term in text for term in ("实习", "intern")):
+            employment_type = EmploymentType.INTERNSHIP
+        elif "兼职" in text:
+            employment_type = EmploymentType.PART_TIME
+        elif "合同" in text:
+            employment_type = EmploymentType.CONTRACT
+        else:
+            employment_type = EmploymentType.FULL_TIME
+    return job.model_copy(
+        update={
+            "recruitment_track": recruitment_track,
+            "employment_type": employment_type,
+        }
+    )

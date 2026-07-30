@@ -27,13 +27,13 @@ _EMPLOYMENT_LABELS = {
 
 
 def format_job_list(items: Sequence[Any]) -> str:
-    """Render one predictable two-line block per job."""
+    """Render stable, evidence-based recommendation blocks."""
     if not items:
         return "未找到符合条件的岗位。"
 
     blocks = []
     for index, item in enumerate(items, start=1):
-        job, score = _job_and_score(item)
+        job, score, evidence = _job_score_and_evidence(item)
         locations = "、".join(job.locations) or "地点未注明"
         fields = [
             f"{index}. {job.title}",
@@ -46,17 +46,31 @@ def format_job_list(items: Sequence[Any]) -> str:
             fields.append(job.salary.raw_text)
         if score is not None:
             fields.append(f"匹配度 {round(score * 100)}%")
-        blocks.append("｜".join(fields) + f"\n   投递链接：{job.apply_url}")
+        lines = ["｜".join(fields)]
+        reasons = tuple(getattr(evidence, "reasons", ())) if evidence else ()
+        warnings = tuple(getattr(evidence, "warnings", ())) if evidence else ()
+        if reasons:
+            lines.append("推荐理由：" + "；".join(reasons[:3]))
+        if warnings:
+            lines.append("注意事项：" + "；".join(warnings[:2]))
+        lines.append(f"   投递链接：{job.apply_url}")
+        blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
 
-def _job_and_score(item: Any) -> tuple[JobSummary | Any, float | None]:
+def _job_score_and_evidence(
+    item: Any,
+) -> tuple[JobSummary | Any, float | None, Any | None]:
     if isinstance(item, JobMatch):
-        return item.job, item.score
+        return item.job, item.score, item.evidence
     if isinstance(item, JobSummary):
-        return item, None
+        return item, None, None
     if isinstance(item, dict):
         job = item.get("job", item)
         score = item.get("score")
-        return job, float(score) if score is not None else None
-    return item, None
+        return (
+            job,
+            float(score) if score is not None else None,
+            item.get("evidence"),
+        )
+    return item, None, None

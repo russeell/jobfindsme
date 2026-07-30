@@ -26,6 +26,7 @@ class FakeCdp:
         self.calls: list[tuple[str, dict[str, Any], str | None]] = []
         self.closed = False
         self.target_closed = False
+        self.evaluated_js: list[str] = []
 
     def send(
         self,
@@ -46,6 +47,7 @@ class FakeCdp:
     def eval_js(self, js: str, _sid: str) -> Any:
         if js == "document.readyState":
             return "complete"
+        self.evaluated_js.append(js)
         assert f"{BOSS_ORIGIN}/wapi/" in js
         assert "withCredentials = true" in js
         return json.dumps(self.api_payload)
@@ -108,6 +110,43 @@ def test_boss_payload_maps_salary_location_skills_and_job_link() -> None:
     assert job.locations == ("上海 · 浦东新区",)
     assert "Python" in job.description
     assert job.apply_url.endswith("encrypted-1.html")
+    assert job.recruitment_track == "social"
+    assert job.employment_type == "full_time"
+
+
+def test_boss_classifies_campus_internship_from_visible_labels() -> None:
+    fake = FakeCdp(
+        {
+            "jobs": [
+                {
+                    "job_id": "intern-1",
+                    "title": "AI应用工程师实习生",
+                    "job_labels": "2027届校园招聘",
+                    "company": "示例科技",
+                    "location": "杭州",
+                    "salary": "300-400元/天",
+                    "job_link": "https://www.zhipin.com/job_detail/intern-1.html",
+                }
+            ]
+        }
+    )
+
+    job = normalize_job(connector(fake).fetch()[0])
+
+    assert job.recruitment_track == "campus"
+    assert job.employment_type == "internship"
+
+
+def test_boss_translates_supported_chinese_city_to_api_code() -> None:
+    fake = FakeCdp()
+    BossZhipinConnector(
+        "AI应用工程师",
+        city="杭州",
+        policy=public_policy(),
+        session_factory=lambda _port: fake,
+    ).fetch()
+
+    assert any("city=101210100" in js for js in fake.evaluated_js)
 
 
 def test_authentication_failure_is_distinct_and_resources_are_closed() -> None:

@@ -19,44 +19,27 @@ def recommended_connectors(
     if not _targets_china(locations):
         return ()
     query = roles[0] if roles else "AI"
-    location = locations[0] if locations else None
-
-    return (
+    requested_locations = tuple(dict.fromkeys(locations)) or (None,)
+    platforms = (
+        ("boss_cdp", "BOSS直聘"),
+        ("liepin_cdp", "猎聘"),
+        ("zhilian_cdp", "智联招聘"),
+        ("lagou_cdp", "拉勾"),
+        ("wuyou_cdp", "前程无忧"),
+    )
+    multiple_locations = len(requested_locations) > 1
+    return tuple(
         DiscoverySource(
-            kind="boss_cdp",
-            source_name="BOSS直聘",
+            kind=kind,
+            source_name=(
+                f"{name}·{location}" if multiple_locations and location else name
+            ),
             catalog_managed=True,
             location=location,
             query=query,
-        ),
-        DiscoverySource(
-            kind="liepin_cdp",
-            source_name="猎聘",
-            catalog_managed=True,
-            location=location,
-            query=query,
-        ),
-        DiscoverySource(
-            kind="zhilian_cdp",
-            source_name="智联招聘",
-            catalog_managed=True,
-            location=location,
-            query=query,
-        ),
-        DiscoverySource(
-            kind="lagou_cdp",
-            source_name="拉勾",
-            catalog_managed=True,
-            location=location,
-            query=query,
-        ),
-        DiscoverySource(
-            kind="wuyou_cdp",
-            source_name="前程无忧",
-            catalog_managed=True,
-            location=location,
-            query=query,
-        ),
+        )
+        for kind, name in platforms
+        for location in requested_locations
     )
 
 

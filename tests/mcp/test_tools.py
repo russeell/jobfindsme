@@ -67,6 +67,27 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     assert core.list_workspaces()
 
 
+def test_configure_search_persists_recruitment_and_employment_filters(
+    tmp_path,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    registry = ToolRegistry(core)
+
+    result = registry.call(
+        "configure_search",
+        {
+            "target_roles": ["AI应用工程师"],
+            "locations": ["上海", "杭州"],
+            "recruitment_track": "social",
+            "employment_type": "full_time",
+        },
+    )
+
+    plan = result["structuredContent"]["plan"]
+    assert plan["recruitment_track"] == "social"
+    assert plan["employment_type"] == "full_time"
+
+
 def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
     _, workspace, _, registry = make_registry(tmp_path)
 
@@ -311,7 +332,40 @@ def test_job_list_text_has_stable_classification_and_link_format(tmp_path) -> No
         "1. 大模型应用工程师实习生｜示例科技｜上海｜校招｜实习\n"
         "   投递链接：https://example.com/jobs/intern-1"
     )
-    assert result["structuredContent"]["jobs"][0]["job_id"]
+
+
+def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "match-1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Agent",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/match-1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    assert "匹配度" in text
+    assert "推荐理由：" in text
+    assert "投递链接：https://example.com/jobs/match-1" in text
+    assert result["structuredContent"]["diagnostics"]["refresh_mode"] == "cache"
+    assert result["structuredContent"]["jobs"][0]["job"]["job_id"]
 
 
 def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:

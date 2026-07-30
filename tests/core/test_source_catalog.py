@@ -11,11 +11,22 @@ def test_china_search_gets_default_connectors() -> None:
 
     assert sources
     names = {source.source_name for source in sources}
-    assert names == {"BOSS直聘", "猎聘", "智联招聘", "拉勾", "前程无忧"}
-    assert len(sources) == 5
+    assert names == {
+        "BOSS直聘·上海",
+        "BOSS直聘·杭州",
+        "猎聘·上海",
+        "猎聘·杭州",
+        "智联招聘·上海",
+        "智联招聘·杭州",
+        "拉勾·上海",
+        "拉勾·杭州",
+        "前程无忧·上海",
+        "前程无忧·杭州",
+    }
+    assert len(sources) == 10
     assert all(source.kind.uses_browser for source in sources)
     assert all(source.catalog_managed for source in sources)
-    assert {source.location for source in sources} == {"上海"}
+    assert {source.location for source in sources} == {"上海", "杭州"}
 
 
 def test_query_uses_only_first_role() -> None:

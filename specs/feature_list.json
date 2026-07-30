@@ -1826,6 +1826,110 @@
         ]
       ],
       "evidence_path": "reports/features/M25-001.json"
+    },
+    {
+      "id": "M26-001",
+      "title": "Low-latency search modes, multi-city coverage, and evidence output",
+      "status": "done",
+      "blocked_by": [
+        "M24-001",
+        "M25-001"
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "mergedao/mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Keep the interactive MCP surface direct and separate bounded job-list discovery from on-demand detail retrieval.",
+          "rejected_or_not_adopted": "Do not launch a new browser per source, return silent empty-success results, or discard durable state and evaluation evidence."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "RFC 5861: stale-while-revalidate and stale-if-error",
+          "url": "https://datatracker.ietf.org/doc/html/rfc5861",
+          "adopted_pattern": "Serve explicitly marked cached data on the low-latency path and separate expensive refresh from interactive response time.",
+          "rejected_or_not_adopted": "Do not treat cached jobs as fresh or hide source failures from diagnostics."
+        },
+        {
+          "category": "official_guide",
+          "title": "Playwright browser guidance",
+          "url": "https://playwright.dev/docs/browsers",
+          "adopted_pattern": "Keep browser automation bounded and observable instead of making every user interaction an exhaustive browser crawl.",
+          "rejected_or_not_adopted": "Do not make Playwright a required second browser runtime when the user-owned CDP session already provides authenticated access."
+        }
+      ],
+      "local_constraints": [
+        "Chinese recruitment platforms have uneven yield, latency, login requirements, and anti-bot behavior.",
+        "Interactive users need results quickly; monitoring and evaluation need broad source coverage.",
+        "Multiple requested cities must each be searched rather than silently dropping all but the first.",
+        "Recommendation text must remain deterministic and must not depend on the host Agent inventing reasons."
+      ],
+      "allowed_paths": [
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "docs/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/connectors/boss_zhipin.py",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/evaluation/live_loop.py",
+        "src/jobfindsme/importing/repository.py",
+        "src/jobfindsme/mcp/schemas.py",
+        "src/jobfindsme/mcp/tools.py",
+        "src/jobfindsme/matching/ranker.py",
+        "src/jobfindsme/monitoring/__main__.py",
+        "src/jobfindsme/presentation.py",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "src/jobfindsme/source_catalog.py",
+        "tests/core/test_app.py",
+        "tests/core/test_source_catalog.py",
+        "tests/connectors/test_boss_zhipin.py",
+        "tests/mcp/test_tools.py",
+        "tests/matching/test_ranker.py",
+        "tests/importing/test_importing.py",
+        "reports/features/M26-001.json"
+      ],
+      "acceptance": [
+        "Interactive search defaults to fast refresh, cache mode performs no remote discovery, and full mode remains explicit.",
+        "Live Loop and scheduled monitoring always use full refresh.",
+        "Fast mode refreshes the preferred source for every requested city and reuses other configured source caches.",
+        "Supported Chinese city names are translated to the platform's required city identifiers before BOSS discovery.",
+        "Search diagnostics expose refresh mode, end-to-end time, matching time, per-source state, and cache use.",
+        "An empty browser refresh with existing records is reported as degraded cache use rather than a successful proof of zero available jobs.",
+        "MCP search configuration persists recruitment track and employment type so strict filters execute in Core rather than in host-Agent post-processing.",
+        "A requested minimum salary compares against the posted lower bound; unknown recruitment track or employment type cannot silently satisfy an explicit strict filter.",
+        "Cached BOSS rows created before explicit classification fields are interpreted consistently until a fresh source record replaces them.",
+        "Stable text output includes role, company, location, recruitment track, employment type, salary when known, match percentage, recommendation reasons, warnings, and direct apply URL.",
+        "Regression tests prove multi-city source planning and prevent remote access in cache mode."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider"
+        ],
+        [
+          "ruff",
+          "check",
+          "--no-cache",
+          "src",
+          "tests"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "--no-cache",
+          "src",
+          "tests"
+        ]
+      ],
+      "evidence_path": "reports/features/M26-001.json"
     }
   ]
 }

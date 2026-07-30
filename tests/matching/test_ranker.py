@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from jobfindsme.connectors.base import RawJobRecord
-from jobfindsme.contracts import SearchPlan, SourceKind
+from jobfindsme.contracts import (
+    EmploymentType,
+    RecruitmentTrack,
+    SearchPlan,
+    SourceKind,
+)
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching import DeterministicMatcher
 from jobfindsme.matching.tokenizer import tokenize
@@ -174,6 +179,38 @@ def test_unknown_salary_is_retained_with_warning() -> None:
     )[0]
 
     assert "岗位未公开薪资" in match.evidence.warnings
+
+
+def test_minimum_salary_requires_the_posted_lower_bound_to_match() -> None:
+    matches = DeterministicMatcher().match(
+        plan(salary_min_k=20),
+        [
+            job("below", description="Python RAG Agent，1-3年，18-30K"),
+            job("meets", description="Python RAG Agent，1-3年，20-30K"),
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["meets"]
+    assert "岗位未公开薪资" not in matches[0].evidence.warnings
+
+
+def test_strict_track_and_type_do_not_accept_unknown_classification() -> None:
+    strict_plan = plan(
+        recruitment_track=RecruitmentTrack.SOCIAL,
+        employment_type=EmploymentType.FULL_TIME,
+    )
+    matches = DeterministicMatcher().match(
+        strict_plan,
+        [
+            job("unknown", description="Python RAG Agent，1-3年，25-40K"),
+            job(
+                "social-full-time",
+                description="社会招聘，全职正式岗位，Python RAG Agent，1-3年，25-40K",
+            ),
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["social-full-time"]
 
 
 def test_confirmed_profile_skills_change_ranking_and_keep_evidence() -> None:

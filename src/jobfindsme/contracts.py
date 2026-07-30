@@ -268,6 +268,14 @@ class SourceRunStatus(StrEnum):
     SKIPPED = "skipped"
 
 
+class SearchRefreshMode(StrEnum):
+    """Control how much remote discovery an interactive search performs."""
+
+    FAST = "fast"
+    FULL = "full"
+    CACHE = "cache"
+
+
 class SourceRunStats(StrictModel):
     """One source attempt captured by the live-search Loop."""
 
@@ -289,6 +297,7 @@ class SearchRunDiagnostics(StrictModel):
     finished_at: datetime
     elapsed_seconds: float = Field(ge=0)
     matching_seconds: float = Field(ge=0)
+    refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST
     source_runs: tuple[SourceRunStats, ...] = ()
     total_discovered: int = Field(default=0, ge=0)
     total_unique: int = Field(default=0, ge=0)

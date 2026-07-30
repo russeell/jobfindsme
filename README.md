@@ -25,7 +25,8 @@
 找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。
 ```
 
-jobfindsme 同时搜 **BOSS直聘 · 猎聘 · 前程无忧 · 智联 · 拉勾**，返回这样的结果：
+jobfindsme 默认快速刷新 BOSS，并合并本地已有的猎聘、前程无忧、智联和拉勾结果；
+需要时可明确要求“全平台刷新”。
 
 <div align="center">
 <img src="docs/demo.gif" alt="jobfindsme demo" width="860" />
@@ -37,7 +38,7 @@ jobfindsme 同时搜 **BOSS直聘 · 猎聘 · 前程无忧 · 智联 · 拉勾*
 
 | | 招聘 App | jobfindsme |
 |---|---|---|
-| 搜索范围 | 一个平台 | **五大平台统一搜索** |
+| 搜索范围 | 一个平台 | **五大平台统一结果，可选快速/全量刷新** |
 | 简历 | 上传到平台服务器 | **留在本地，Agent 都读不到全文** |
 | 推荐理由 | 黑盒算法 | **每条有证据**：技能 ↔ JD 逐条对照 |
 | 模型 API | — | **不需要**，本地确定性匹配，零 API key |
@@ -149,7 +150,8 @@ jobfindsme setup   # 启动隔离 Chrome；登录后搜索期间保持它运行
       ▼
   jobfindsme MCP Server（本地 stdio）
       │
-      └── Chrome CDP ──→ BOSS · 猎聘 · 前程无忧 · 智联 · 拉勾
+      └── 快速：刷新 BOSS + 复用缓存
+      └── 全量：Chrome CDP → 五大平台
       │
       ▼
   去重 → 硬过滤（地点/薪资/年限）→ BM25 匹配 → ≥10% → Top 15 + 理由 + 链接

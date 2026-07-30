@@ -16,6 +16,19 @@ BOSS_ORIGIN = "https://www.zhipin.com"
 BOSS_SEARCH_PAGE = f"{BOSS_ORIGIN}/web/geek/job"
 BOSS_API_PATH = "/wapi/zpgeek/search/joblist.json"
 DEFAULT_CDP_PORT = 9222
+BOSS_CITY_CODES = {
+    "北京": "101010100",
+    "上海": "101020100",
+    "重庆": "101040100",
+    "广州": "101280100",
+    "深圳": "101280600",
+    "杭州": "101210100",
+    "南京": "101190100",
+    "苏州": "101190400",
+    "武汉": "101200100",
+    "成都": "101270100",
+    "西安": "101110100",
+}
 
 _JS_FETCH_API = """
 (function(){
@@ -202,7 +215,8 @@ class BossZhipinConnector:
         self.keyword = keyword.strip()
         if not self.keyword or len(self.keyword) > 100:
             raise ValueError("invalid keyword")
-        self.city = city.strip()
+        normalized_city = city.strip()
+        self.city = BOSS_CITY_CODES.get(normalized_city, normalized_city)
         self.source_name = source_name
         self.cdp_port = cdp_port
         self.session_factory = session_factory
@@ -301,6 +315,22 @@ class BossZhipinConnector:
         item: dict[str, Any],
         source_url: str,
     ) -> RawJobRecord:
+        classification_text = " ".join(
+            str(item.get(key, "")) for key in ("title", "job_labels")
+        ).casefold()
+        recruitment_track = (
+            "campus"
+            if any(term in classification_text for term in ("校招", "校园", "应届"))
+            else "social"
+        )
+        if any(term in classification_text for term in ("实习", "intern")):
+            employment_type = "internship"
+        elif "兼职" in classification_text:
+            employment_type = "part_time"
+        elif "合同" in classification_text:
+            employment_type = "contract"
+        else:
+            employment_type = "full_time"
         return RawJobRecord(
             source_kind=SourceKind.CAREER_SITE,
             source_name=self.source_name,
@@ -327,7 +357,8 @@ class BossZhipinConnector:
                 "apply_url": item.get("job_link", source_url),
                 "boss_name": item.get("boss_name", ""),
                 "boss_active": item.get("boss_active", ""),
-                "recruitment_track": "social",
+                "recruitment_track": recruitment_track,
+                "employment_type": employment_type,
                 "company_scale": item.get("company_scale", ""),
                 "company_stage": item.get("company_stage", ""),
                 "company_industry": item.get("company_industry", ""),

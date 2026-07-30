@@ -103,7 +103,6 @@ class DeterministicMatcher:
         if (
             plan.recruitment_track is not None
             and plan.recruitment_track is not RecruitmentTrack.UNKNOWN
-            and job.recruitment_track is not RecruitmentTrack.UNKNOWN
             and job.recruitment_track is not plan.recruitment_track
         ):
             return False
@@ -111,7 +110,6 @@ class DeterministicMatcher:
         if (
             plan.employment_type is not None
             and plan.employment_type is not EmploymentType.UNKNOWN
-            and job.employment_type is not EmploymentType.UNKNOWN
             and job.employment_type is not plan.employment_type
         ):
             return False
@@ -145,8 +143,8 @@ class DeterministicMatcher:
             return False
         if (
             plan.salary_min_k is not None
-            and _annual_salary_max(job) is not None
-            and _annual_salary_max(job) < plan.salary_min_k * 1000 * 12
+            and _annual_salary_min(job) is not None
+            and _annual_salary_min(job) < plan.salary_min_k * 1000 * 12
         ):
             return False
         if (
@@ -226,7 +224,7 @@ class DeterministicMatcher:
         warnings = []
         if job.source.liveness == JobLiveness.UNKNOWN:
             warnings.append("来源刷新失败或岗位缺少有效性验证")
-        if job.salary_min_k is None:
+        if job.salary is None and job.salary_min_k is None:
             warnings.append("岗位未公开薪资")
         if profile_skill_evidence and missing_job_skills:
             warnings.append(f"简历未提供这些技能证据：{', '.join(missing_job_skills)}")
@@ -241,9 +239,12 @@ class DeterministicMatcher:
                 f"岗位要求至少{job.experience_min_years}年，"
                 f"简历可确认约{profile_experience}年"
             )
-        reasons = [f"匹配关键词：{', '.join(matched)}"] if matched else []
         if title_bonus:
-            reasons.append("职位名称直接匹配目标岗位")
+            reasons = [f"岗位名称与目标方向“{plan.target_roles[0]}”直接匹配"]
+        elif matched:
+            reasons = ["岗位职责与目标方向存在关键词重合"]
+        else:
+            reasons = []
         if location_bonus:
             reasons.append("工作地点符合搜索计划")
         if matched_profile_skills:

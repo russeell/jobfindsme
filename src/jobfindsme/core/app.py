@@ -8,6 +8,7 @@ from time import perf_counter
 from jobfindsme.context import ActiveContextService
 from jobfindsme.contracts import (
     DiscoverySource,
+    DiscoverySourceKind,
     JobDetails,
     JobMatch,
     JobState,
@@ -15,6 +16,7 @@ from jobfindsme.contracts import (
     JobSummary,
     SearchConfiguration,
     SearchPlan,
+    SearchRefreshMode,
     SearchRunDiagnostics,
     SearchRunResult,
     SourceRunStats,
@@ -291,6 +293,7 @@ class jobfindsmecore:
         sources: tuple[DiscoverySource, ...] = (),
         limit: int = 20,
         allow_browser_sources: bool = False,
+        refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
     ) -> list[JobMatch]:
         return list(
             self.search_jobs_with_diagnostics(
@@ -299,6 +302,7 @@ class jobfindsmecore:
                 sources=sources,
                 limit=limit,
                 allow_browser_sources=allow_browser_sources,
+                refresh_mode=refresh_mode,
             ).matches
         )
 
@@ -310,6 +314,7 @@ class jobfindsmecore:
         sources: tuple[DiscoverySource, ...] = (),
         limit: int = 20,
         allow_browser_sources: bool = False,
+        refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
     ) -> SearchRunResult:
         """Run discovery and matching while preserving operational evidence."""
 
@@ -352,11 +357,29 @@ class jobfindsmecore:
             )
             for source in skipped_sources
         )
-        if effective_sources:
+        refresh_sources, refresh_skipped = _select_refresh_sources(
+            effective_sources,
+            refresh_mode,
+        )
+        source_runs += tuple(
+            SourceRunStats(
+                source_name=source.source_name,
+                source_kind=source.kind,
+                status=SourceRunStatus.SKIPPED,
+                elapsed_seconds=0,
+                cache_used=self.jobs.has_source_jobs(
+                    workspace_id=context.workspace.workspace_id,
+                    source_name=source.source_name,
+                ),
+                error=f"{refresh_mode} mode uses local cache for this source",
+            )
+            for source in refresh_skipped
+        )
+        if refresh_sources:
             source_runs += self._discover_sources(
                 workspace_id=context.workspace.workspace_id,
                 plan_id=context.plan.plan_id,
-                sources=effective_sources,
+                sources=refresh_sources,
             )
         matching_started = perf_counter()
         matches = self.match_jobs(
@@ -377,6 +400,7 @@ class jobfindsmecore:
                 finished_at=finished_at,
                 elapsed_seconds=perf_counter() - started,
                 matching_seconds=matching_seconds,
+                refresh_mode=refresh_mode,
                 source_runs=source_runs,
                 total_discovered=total_discovered,
                 total_unique=total_unique,
@@ -426,6 +450,22 @@ class jobfindsmecore:
                     workspace_id=workspace_id,
                     sources=(source,),
                 )[0]
+                if source.kind.uses_browser and cached and summary.discovered == 0:
+                    error = "browser refresh returned no jobs; using cached records"
+                    if subscription:
+                        self.source_subscriptions.record_result(
+                            subscription,
+                            error=error,
+                            degraded=True,
+                        )
+                    return SourceRunStats(
+                        source_name=source.source_name,
+                        source_kind=source.kind,
+                        status=SourceRunStatus.DEGRADED,
+                        elapsed_seconds=perf_counter() - source_started,
+                        cache_used=True,
+                        error=error,
+                    )
                 # Browser sources return partial search pages — never close absent jobs
                 if not source.kind.uses_browser:
                     self.jobs.mark_missing_closed(
@@ -630,3 +670,23 @@ def _summary(job) -> JobSummary:
         liveness=job.source.liveness,
         description_excerpt=excerpt,
     )
+
+
+def _select_refresh_sources(
+    sources: tuple[DiscoverySource, ...],
+    mode: SearchRefreshMode,
+) -> tuple[tuple[DiscoverySource, ...], tuple[DiscoverySource, ...]]:
+    """Keep interactive search quick while retaining cached broad coverage."""
+
+    if mode is SearchRefreshMode.FULL:
+        return sources, ()
+    if mode is SearchRefreshMode.CACHE:
+        return (), sources
+    preferred = tuple(
+        source for source in sources if source.kind is DiscoverySourceKind.BOSS_CDP
+    )
+    if not preferred and sources:
+        preferred = (sources[0],)
+    preferred_ids = {id(source) for source in preferred}
+    skipped = tuple(source for source in sources if id(source) not in preferred_ids)
+    return preferred, skipped

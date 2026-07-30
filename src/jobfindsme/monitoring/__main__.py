@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 
 from jobfindsme.cli import default_database_path
+from jobfindsme.contracts import SearchRefreshMode
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.monitoring import LocalMonitorRunner
 from jobfindsme.notifications import FeishuNotifier
@@ -17,6 +18,8 @@ def main() -> None:
         search=lambda workspace_id, plan_id: core.search_jobs(
             workspace_id=workspace_id,
             plan_id=plan_id,
+            allow_browser_sources=True,
+            refresh_mode=SearchRefreshMode.FULL,
         ),
         notify=notifier.send if notifier else None,
     )

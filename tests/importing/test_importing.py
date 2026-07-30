@@ -221,6 +221,30 @@ def test_import_deduplicates_and_versions_only_content_changes(tmp_path) -> None
     assert version_count == 2
 
 
+def test_repository_repairs_legacy_boss_job_classification(tmp_path) -> None:
+    database = Database(tmp_path / "jobs.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create("Legacy BOSS")
+    repository = JobRepository(database)
+    legacy = normalize_job(
+        raw_job(
+            source_name="BOSS直聘·杭州",
+            external_id="legacy-boss",
+            payload={
+                "title": "AI应用工程师",
+                "description": "Python RAG Agent",
+            },
+        )
+    )
+    assert legacy.employment_type == "unknown"
+
+    repository.upsert(workspace.workspace_id, legacy)
+    repaired = repository.list(workspace.workspace_id)[0]
+
+    assert repaired.recruitment_track == "social"
+    assert repaired.employment_type == "full_time"
+
+
 def test_reappearing_content_does_not_crash_or_create_duplicate_version(
     tmp_path,
 ) -> None:

@@ -4,7 +4,14 @@ from typing import Literal, Self
 
 from pydantic import Field, model_validator
 
-from jobfindsme.contracts import DiscoverySource, JobStateKind, StrictModel
+from jobfindsme.contracts import (
+    DiscoverySource,
+    EmploymentType,
+    JobStateKind,
+    RecruitmentTrack,
+    SearchRefreshMode,
+    StrictModel,
+)
 from jobfindsme.profiles.models import ResumeImportMode
 
 
@@ -40,6 +47,7 @@ class SearchJobsInput(StrictModel):
     plan_id: str | None = None
     sources: tuple[DiscoverySource, ...] = ()
     allow_browser_sources: bool = True
+    refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST
     limit: int = Field(default=20, ge=1, le=100)
 
 
@@ -53,6 +61,8 @@ class ConfigureSearchInput(StrictModel):
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
+    recruitment_track: RecruitmentTrack | None = None
+    employment_type: EmploymentType | None = None
     exclusions: tuple[str, ...] = ()
     sources: tuple[DiscoverySource, ...] | None = None
 

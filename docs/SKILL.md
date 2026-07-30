@@ -65,6 +65,10 @@ Never invent, reuse, or bypass a confirmation token.
 
 ## Output Format
 
+Interactive searches use `fast` refresh by default. Use `full` only for an
+explicit exhaustive refresh or a scheduled evaluation, and use `cache` for
+instant follow-up comparison of jobs already discovered.
+
 Every job result MUST include these four elements; never omit any:
 
 1. **岗位介绍** — title, company, location, salary (if present), employment type

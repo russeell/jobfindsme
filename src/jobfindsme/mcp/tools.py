@@ -48,7 +48,7 @@ TOOL_DEFINITIONS = (
     ),
     ToolDefinition(
         "search_jobs",
-        "Discover from explicit sources, then match against a Search Plan.",
+        "Find matching jobs; fast refresh is default, full refresh is explicit.",
         SearchJobsInput,
     ),
     ToolDefinition(
@@ -171,18 +171,22 @@ class ToolRegistry:
                 salary_max_k=request.salary_max_k,
                 experience_min_years=request.experience_min_years,
                 experience_max_years=request.experience_max_years,
+                recruitment_track=request.recruitment_track,
+                employment_type=request.employment_type,
                 exclusions=request.exclusions,
                 sources=request.sources,
             )
         if name == "search_jobs":
             assert isinstance(request, SearchJobsInput)
-            matches = self.core.search_jobs(
+            result = self.core.search_jobs_with_diagnostics(
                 workspace_id=request.workspace_id,
                 plan_id=request.plan_id,
                 sources=request.sources,
                 limit=request.limit,
                 allow_browser_sources=request.allow_browser_sources,
+                refresh_mode=request.refresh_mode,
             )
+            matches = result.matches
             summaries = {
                 item.job_id: item
                 for item in self.core.list_job_summaries(
@@ -199,7 +203,11 @@ class ToolRegistry:
                 }
                 for match in matches
             ]
-            return {"jobs": jobs, "count": len(jobs)}
+            return {
+                "jobs": jobs,
+                "count": len(jobs),
+                "diagnostics": result.diagnostics,
+            }
         if name == "get_jobs":
             jobs = self.core.list_job_summaries(**values)
             next_offset = (
