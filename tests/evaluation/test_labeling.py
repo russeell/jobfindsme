@@ -10,6 +10,7 @@ import pytest
 from jobfindsme.contracts import SearchRunDiagnostics
 from jobfindsme.evaluation.labeling import (
     JobLabel,
+    assemble_field_trial_dataset,
     assemble_labeled_dataset,
     compute_hard_filter_fnr,
     compute_ndcg_at_k,
@@ -467,3 +468,104 @@ def test_field_claim_requires_hashed_live_loop_reports(tmp_path) -> None:
     assert tampered.provenance_verified is False
     assert tampered.ready_for_claim is False
     assert any("hash mismatch" in issue for issue in tampered.provenance_issues)
+
+
+def test_field_trial_assembler_builds_verified_provenance(tmp_path) -> None:
+    day_path = tmp_path / "day_01.json"
+    template = new_daily_template(
+        day=1,
+        date="2026-07-30",
+        plan_id="plan-1",
+        profile_hash="profile-hash",
+        jobs=_sample_jobs(2),
+        source_attempts=["boss_cdp"],
+        source_successes=["boss_cdp"],
+    )
+    write_daily_template(day_path, template)
+    raw_day = json.loads(day_path.read_text())
+    for label in raw_day["labels"]:
+        label["annotated"] = True
+        label["relevance"] = 2
+    day_path.write_text(json.dumps(raw_day, ensure_ascii=False, indent=2))
+
+    now = datetime(2026, 7, 30, tzinfo=UTC)
+    jobs = tuple(
+        LoopJob(
+            rank=index,
+            job_id=job["job_id"],
+            source_name=job["source_name"],
+            title=job["title"],
+            company=job["company"],
+            location=job["location"],
+            score=0.8,
+            recruitment_track="unknown",
+            employment_type="unknown",
+            apply_url=job["apply_url"],
+        )
+        for index, job in enumerate(_sample_jobs(2), start=1)
+    )
+    loop_report = LiveSearchLoopReport(
+        run_id="loop-real-1",
+        agent_host="codex",
+        workspace_id="workspace",
+        plan_id="plan-1",
+        profile_hash="profile-hash",
+        generated_at=now,
+        diagnostics=SearchRunDiagnostics(
+            started_at=now,
+            finished_at=now,
+            elapsed_seconds=0,
+            matching_seconds=0,
+            result_count=2,
+        ),
+        quality=LoopQuality(
+            source_success_rate=1,
+            url_shape_valid_rate=1,
+            required_field_complete_rate=1,
+            unknown_track_rate=1,
+            unknown_employment_type_rate=1,
+            duplicate_apply_urls=0,
+            average_match_score=0.8,
+        ),
+        jobs=jobs,
+    )
+    report_path = tmp_path / "loop_01.json"
+    report_path.write_text(loop_report.model_dump_json(indent=2))
+
+    dataset = assemble_field_trial_dataset(
+        version="v1.0.0",
+        labeler="owner",
+        day_paths=[day_path],
+        report_paths=[report_path],
+    )
+
+    stored_path = dataset.provenance.source_report_paths[0]
+    assert dataset.provenance.evidence_kind == "field_trial"
+    assert dataset.provenance.human_annotated is True
+    assert (
+        dataset.provenance.source_report_sha256[stored_path]
+        == hashlib.sha256(report_path.read_bytes()).hexdigest()
+    )
+
+
+def test_field_trial_assembler_rejects_unreviewed_labels(tmp_path) -> None:
+    day_path = tmp_path / "day_01.json"
+    report_path = tmp_path / "loop_01.json"
+    write_daily_template(
+        day_path,
+        new_daily_template(
+            day=1,
+            date="2026-07-30",
+            plan_id="plan-1",
+            profile_hash="profile-hash",
+            jobs=_sample_jobs(1),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="human-reviewed"):
+        assemble_field_trial_dataset(
+            version="v1.0.0",
+            labeler="owner",
+            day_paths=[day_path],
+            report_paths=[report_path],
+        )

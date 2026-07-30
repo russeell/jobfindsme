@@ -8,6 +8,7 @@ M15-001 requires daily Top-10 labels collected during a 7-day field trial.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Literal, Self
@@ -230,6 +231,108 @@ def write_labeled_dataset(path: str | Path, dataset: LabeledDataset) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     raw = dataset.model_dump_json(indent=2, exclude_none=True) + "\n"
     target.write_text(raw, encoding="utf-8")
+
+
+def assemble_field_trial_dataset(
+    *,
+    version: str,
+    labeler: str,
+    day_paths: list[str | Path],
+    report_paths: list[str | Path],
+    annotation_guide_version: str = "0.2",
+) -> LabeledDataset:
+    """Build claim-verifiable field evidence from labels and immutable Loop reports.
+
+    Inputs are paired by position. This is intentionally strict: a mislabeled day,
+    modified report, changed profile, or changed Search Plan must stop assembly
+    instead of silently producing plausible-looking metrics.
+    """
+    from jobfindsme.evaluation.live_loop import LiveSearchLoopReport
+
+    if not labeler.strip():
+        raise ValueError("labeler must not be empty")
+    if not day_paths:
+        raise ValueError("at least one daily label file is required")
+    if len(day_paths) != len(report_paths):
+        raise ValueError("each daily label file requires exactly one Loop report")
+
+    days = tuple(read_daily_labels(path) for path in day_paths)
+    if len({day.day for day in days}) != len(days):
+        raise ValueError("daily label files contain duplicate day numbers")
+    if any(not label.annotated for day in days for label in day.labels):
+        raise ValueError("all labels must be human-reviewed before assembly")
+    if len({day.plan_id for day in days}) != 1:
+        raise ValueError("all field-trial days must use the same Search Plan")
+    if len({day.profile_hash for day in days}) != 1:
+        raise ValueError("all field-trial days must use the same confirmed profile")
+
+    pairs = sorted(
+        zip(days, report_paths, strict=True),
+        key=lambda pair: pair[0].day,
+    )
+    ordered_days = tuple(day for day, _ in pairs)
+    stored_report_paths: list[str] = []
+    report_hashes: dict[str, str] = {}
+    for day, raw_report_path in pairs:
+        report_path = Path(raw_report_path).expanduser().resolve()
+        report = LiveSearchLoopReport.model_validate_json(
+            report_path.read_text(encoding="utf-8")
+        )
+        if report.plan_id != day.plan_id:
+            raise ValueError(f"plan_id mismatch for day {day.day}")
+        if report.profile_hash != day.profile_hash:
+            raise ValueError(f"profile_hash mismatch for day {day.day}")
+        if tuple(job.job_id for job in report.jobs) != tuple(
+            label.job_id for label in day.labels
+        ):
+            raise ValueError(f"Top job IDs mismatch for day {day.day}")
+
+        stored_path = _portable_path(report_path)
+        stored_report_paths.append(stored_path)
+        report_hashes[stored_path] = hashlib.sha256(
+            report_path.read_bytes()
+        ).hexdigest()
+
+    date_range = f"{min(day.date for day in days)} to {max(day.date for day in days)}"
+    platforms = tuple(
+        sorted(
+            {
+                source
+                for day in days
+                for source in (
+                    *day.source_attempts,
+                    *(label.source_name for label in day.labels),
+                )
+            }
+        )
+    )
+    return LabeledDataset(
+        dataset_version=version,
+        provenance=DatasetProvenance(
+            evidence_kind="field_trial",
+            collection_method="live_loop_human_annotation",
+            human_annotated=True,
+            labeler=labeler.strip(),
+            date_range=date_range,
+            source_report_paths=tuple(stored_report_paths),
+            source_report_sha256=report_hashes,
+            platforms=platforms,
+            plan={
+                "plan_id": ordered_days[0].plan_id,
+                "profile_hash": ordered_days[0].profile_hash,
+            },
+            annotation_guide_version=annotation_guide_version,
+            notes="Assembled from immutable Live Loop reports and human labels.",
+        ),
+        days=ordered_days,
+    )
+
+
+def _portable_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(Path.cwd().resolve()))
+    except ValueError:
+        return str(path)
 
 
 # ── Metrics helpers shared by runner ─────────────────────────────────────────

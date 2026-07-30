@@ -102,9 +102,28 @@ python -m jobfindsme.evaluation.live_loop \
 人工逐条打开投递链接后填写标签。不要修改 Loop 原始报告；它的 Hash 会进入最终
 dataset provenance。若报告被改动，`ready_for_claim` 自动变为 `false`。
 
-## 7 天完成后
+## 至少 5 个有效采集日、累计 50 条人工标签后
 
-运行以下命令汇总所有标注：
+M14 的原则门槛是“至少 3 天且至少 50 条”，但每日模板最多包含 Top 10，
+因此当前实现下实际至少需要 5 个有 10 条结果的采集日；若某天不足 10 条，
+还需要继续采集。
+
+先把每日标签和对应的原始 Live Loop 报告组装成可验真的数据集。`--days` 与
+`--loop-reports` 必须按日期一一对应：
+
+```bash
+python -m jobfindsme.evaluation.assemble \
+  --version v1.0.0 \
+  --labeler russeell \
+  --days data/eval/field_trial/day_*.json \
+  --loop-reports reports/field-trials/loops/day_*.json \
+  --output data/eval/field_trial/chinese_real_v1.0.json
+```
+
+组装器会拒绝待标注项、不同 Search Plan、不同简历画像，以及与原始报告不一致的
+岗位 ID；同时自动记录报告路径和 SHA256。
+
+然后运行正式评测门禁：
 
 ```bash
 python -m jobfindsme.evaluation.run \
