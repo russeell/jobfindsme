@@ -203,11 +203,11 @@ class Doctor:
             if not records:
                 return Diagnostic(
                     name="boss_login",
-                    ok=False,
+                    ok=True,
                     required=False,
                     message=(
-                        "BOSS直聘 returned 0 jobs — may need login. "
-                        "Run 'jobfindsme setup'."
+                        "BOSS直聘会话可访问，但本次探测返回 0 条；"
+                        "可能是短时限流或查询无结果"
                     ),
                 )
             return Diagnostic(

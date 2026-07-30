@@ -118,3 +118,20 @@ def test_boss_login_probe_navigates_to_same_origin_and_closes_resources(
     assert navigate[1]["url"].startswith("https://www.zhipin.com/")
     assert methods[-1] == "Target.closeTarget"
     assert fake.closed is True
+
+
+def test_empty_boss_probe_is_not_misreported_as_logged_out(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "jobfindsme.doctor.service._cdp_port_reachable",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin.BossZhipinConnector.fetch",
+        lambda _self: [],
+    )
+
+    diagnostic = Doctor._boss_login()
+
+    assert diagnostic.ok is True
+    assert "限流" in diagnostic.message
+    assert "需要登录" not in diagnostic.message

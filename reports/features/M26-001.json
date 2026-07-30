@@ -7,7 +7,7 @@
     {
       "name": "pytest",
       "status": "passed",
-      "evidence": "202 passed"
+      "evidence": "203 passed"
     },
     {
       "name": "ruff_check",
