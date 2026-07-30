@@ -282,7 +282,7 @@ def assemble_field_trial_dataset(
             raise ValueError(f"plan_id mismatch for day {day.day}")
         if report.profile_hash != day.profile_hash:
             raise ValueError(f"profile_hash mismatch for day {day.day}")
-        if tuple(job.job_id for job in report.jobs) != tuple(
+        if tuple(job.job_id for job in report.jobs[: len(day.labels)]) != tuple(
             label.job_id for label in day.labels
         ):
             raise ValueError(f"Top job IDs mismatch for day {day.day}")

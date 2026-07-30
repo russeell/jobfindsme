@@ -100,6 +100,45 @@ def test_location_only_non_technical_job_never_enters_candidates() -> None:
     assert [match.job.external_id for match in matches] == ["ai"]
 
 
+def test_ai_keywords_do_not_make_product_manager_an_engineering_candidate() -> None:
+    matches = DeterministicMatcher().match(
+        plan(locations=("上海",), salary_min_k=None),
+        [
+            job(
+                "product-manager",
+                title="AI Agent /大模型/搜索/推荐算法产品经理",
+                location="上海",
+            ),
+            job(
+                "engineer",
+                title="AI Agent 后端工程师（RAG方向）",
+                location="上海",
+            ),
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["engineer"]
+
+
+def test_product_manager_remains_valid_when_explicitly_requested() -> None:
+    matches = DeterministicMatcher().match(
+        plan(
+            target_roles=("AI产品经理",),
+            locations=("上海",),
+            salary_min_k=None,
+        ),
+        [
+            job(
+                "product-manager",
+                title="AI Agent 产品经理",
+                location="上海",
+            )
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["product-manager"]
+
+
 def test_entry_level_plan_rejects_senior_title_without_structured_years() -> None:
     matches = DeterministicMatcher().match(
         plan(experience_max_years=3, salary_min_k=None),

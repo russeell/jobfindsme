@@ -316,7 +316,7 @@ def _verify_field_provenance(
             issues.append(f"plan_id mismatch: {raw_path}")
         if report.profile_hash != day.profile_hash:
             issues.append(f"profile_hash mismatch: {raw_path}")
-        if tuple(job.job_id for job in report.jobs) != tuple(
+        if tuple(job.job_id for job in report.jobs[: len(day.labels)]) != tuple(
             label.job_id for label in day.labels
         ):
             issues.append(f"Top job IDs mismatch: {raw_path}")

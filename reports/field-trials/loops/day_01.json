@@ -1,0 +1,272 @@
+{
+  "schema_version": "1.0",
+  "run_id": "loop_2b7e5b2463d34e32b4083ff7a79f98ec",
+  "agent_host": "zcode",
+  "workspace_id": "ws_b923306c21124f94ae50b4405d791d7b",
+  "plan_id": "plan_1782f79e3a2e4fe689cd8d299656149f",
+  "profile_hash": "737442372c0a0db19fab3ee3a31bbe3a5629ec09b9d383016195638ec73d5088",
+  "generated_at": "2026-07-30T02:20:25.356300Z",
+  "diagnostics": {
+    "started_at": "2026-07-30T02:20:16.796519Z",
+    "finished_at": "2026-07-30T02:20:25.356139Z",
+    "elapsed_seconds": 8.559625750000123,
+    "matching_seconds": 0.050284750002902,
+    "source_runs": [
+      {
+        "source_name": "拉勾",
+        "source_kind": "lagou_cdp",
+        "status": "success",
+        "elapsed_seconds": 8.469974499952514,
+        "discovered": 0,
+        "unique": 0,
+        "versions_created": 0,
+        "cache_used": false,
+        "error": null
+      },
+      {
+        "source_name": "智联招聘",
+        "source_kind": "zhilian_cdp",
+        "status": "success",
+        "elapsed_seconds": 3.2514136669924483,
+        "discovered": 13,
+        "unique": 10,
+        "versions_created": 0,
+        "cache_used": false,
+        "error": null
+      },
+      {
+        "source_name": "猎聘",
+        "source_kind": "liepin_cdp",
+        "status": "success",
+        "elapsed_seconds": 2.6892366250394844,
+        "discovered": 42,
+        "unique": 42,
+        "versions_created": 42,
+        "cache_used": false,
+        "error": null
+      },
+      {
+        "source_name": "BOSS直聘",
+        "source_kind": "boss_cdp",
+        "status": "success",
+        "elapsed_seconds": 0.6587629170389846,
+        "discovered": 30,
+        "unique": 30,
+        "versions_created": 6,
+        "cache_used": false,
+        "error": null
+      },
+      {
+        "source_name": "前程无忧",
+        "source_kind": "wuyou_cdp",
+        "status": "success",
+        "elapsed_seconds": 2.7050189579604194,
+        "discovered": 20,
+        "unique": 20,
+        "versions_created": 2,
+        "cache_used": false,
+        "error": null
+      }
+    ],
+    "total_discovered": 105,
+    "total_unique": 102,
+    "duplicates_removed": 3,
+    "result_count": 15
+  },
+  "quality": {
+    "source_success_rate": 1.0,
+    "url_shape_valid_rate": 1.0,
+    "required_field_complete_rate": 1.0,
+    "unknown_track_rate": 0.0,
+    "unknown_employment_type_rate": 0.8666666666666667,
+    "duplicate_apply_urls": 0,
+    "average_match_score": 0.3719172666666667,
+    "unexpected_result_sources": [],
+    "automatic_findings": [
+      "来源返回 0 条：拉勾"
+    ]
+  },
+  "jobs": [
+    {
+      "rank": 1,
+      "job_id": "job_2581387ec0dd239d117ae54d",
+      "source_name": "BOSS直聘",
+      "title": "大模型应用/智能体/AI Agent开发工程师",
+      "company": "知微行易",
+      "location": "上海 · 浦东新区 · 花木",
+      "score": 0.434445,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/7f8009d6d0d151c90nd729y_E1RY.html"
+    },
+    {
+      "rank": 2,
+      "job_id": "job_5e8b82cc84c1d3607e092e8d",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent 应用工程师（互动内容方向）",
+      "company": "Yahaha Studios",
+      "location": "上海 · 虹口区 · 四川北路",
+      "score": 0.403269,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/6d75417be100b5010nJ72t2_GVtU.html"
+    },
+    {
+      "rank": 3,
+      "job_id": "job_f8902fb4b2fe45b381c337c0",
+      "source_name": "BOSS直聘",
+      "title": "FDE工程师（AI Agent方向/大模型/智能体）",
+      "company": "上海容易链智能科技",
+      "location": "上海 · 浦东新区 · 陆家嘴",
+      "score": 0.384014,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/f9ee65bec848aa250nJ62N21FFFR.html"
+    },
+    {
+      "rank": 4,
+      "job_id": "job_f9b91d48cd65ca83d5ea87bc",
+      "source_name": "BOSS直聘",
+      "title": "大模型应用开发工程师（AI Agent方向）",
+      "company": "字节跳动",
+      "location": "上海 · 杨浦区 · 五角场",
+      "score": 0.379464,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/7c76eb42cb64ee900nJ609y-FVpZ.html"
+    },
+    {
+      "rank": 5,
+      "job_id": "job_855af8b5840a15c954e22d61",
+      "source_name": "BOSS直聘",
+      "title": "Dify+大模型应用开发工程师",
+      "company": "某大型生物/制药上市公司",
+      "location": "上海",
+      "score": 0.378567,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/22b9f88ce5d7d73b0nF_39q8EVBT.html"
+    },
+    {
+      "rank": 6,
+      "job_id": "job_f52692f714c7702e1c7377f8",
+      "source_name": "BOSS直聘",
+      "title": "大模型应用开发（AI Agent 平台）(A221304)",
+      "company": "思格新能源",
+      "location": "上海 · 浦东新区 · 张江",
+      "score": 0.375412,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/abd3bfe6b549c06a0nVy2t-7F1VR.html"
+    },
+    {
+      "rank": 7,
+      "job_id": "job_599131776f68adca565de1a1",
+      "source_name": "BOSS直聘",
+      "title": "AI 全栈工程师（AI Agent 方向）",
+      "company": "埃森哲",
+      "location": "上海 · 长宁区 · 中山公园",
+      "score": 0.367379,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/544938ffd84061650nF93t60EFFZ.html"
+    },
+    {
+      "rank": 8,
+      "job_id": "job_821842cf8d8cb8111622ad41",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent 后端工程师（RAG 方向）",
+      "company": "北京蓝标传媒",
+      "location": "上海 · 徐汇区 · 漕河泾",
+      "score": 0.362509,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/0e89ec193f62bffe0nFy2ty0E1FU.html"
+    },
+    {
+      "rank": 9,
+      "job_id": "job_ae1d47deefa5adb202a6d29b",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent 初级开发工程师",
+      "company": "埃林哲",
+      "location": "上海 · 青浦区 · 上海国家会展中心",
+      "score": 0.360303,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/091f3c94683862380nFy2t-9F1ZQ.html"
+    },
+    {
+      "rank": 10,
+      "job_id": "job_03f08c99f4a5beaa909a866e",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent /大模型/搜索/推荐算法产品经理",
+      "company": "燧弘华创",
+      "location": "上海 · 闵行区 · 虹桥",
+      "score": 0.356262,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/bcdb4e9bc1b330080nF-2N69FVpV.html"
+    },
+    {
+      "rank": 11,
+      "job_id": "job_6cee9fff5041d42564d7930e",
+      "source_name": "BOSS直聘",
+      "title": "大模型AI Agent产品实习生 (海外运营增长)",
+      "company": "小马星河",
+      "location": "上海 · 徐汇区 · 漕河泾",
+      "score": 0.356026,
+      "recruitment_track": "social",
+      "employment_type": "internship",
+      "apply_url": "https://www.zhipin.com/job_detail/70ec4bb0cf1a57130nVz2tu4ElZU.html"
+    },
+    {
+      "rank": 12,
+      "job_id": "job_72c25e837556196b9655cd13",
+      "source_name": "BOSS直聘",
+      "title": "大模型 / AI Agent 全栈开发实习生(Python)",
+      "company": "艾尔维",
+      "location": "上海 · 普陀区 · 梅川路",
+      "score": 0.356026,
+      "recruitment_track": "social",
+      "employment_type": "internship",
+      "apply_url": "https://www.zhipin.com/job_detail/26266878e6ed64ac0nd83N-1FlZS.html"
+    },
+    {
+      "rank": 13,
+      "job_id": "job_2be44ae390f73c867b1648a0",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent全栈工程师（AI-Native）",
+      "company": "某人工智能公司",
+      "location": "上海",
+      "score": 0.355185,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/9473a956e9a8d93a0nd-2d2-E1NX.html"
+    },
+    {
+      "rank": 14,
+      "job_id": "job_1e706d75f30dd97112d2216a",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent 全栈工程师",
+      "company": "趣申请",
+      "location": "上海 · 浦东新区 · 陆家嘴",
+      "score": 0.354949,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/6cff4d217b41fe150nd62tW9FFZS.html"
+    },
+    {
+      "rank": 15,
+      "job_id": "job_22c46a81c1beedc73aa68779",
+      "source_name": "BOSS直聘",
+      "title": "AI Agent开发工程师",
+      "company": "爱凡哲投资管理",
+      "location": "上海 · 浦东新区 · 陆家嘴",
+      "score": 0.354949,
+      "recruitment_track": "social",
+      "employment_type": "unknown",
+      "apply_url": "https://www.zhipin.com/job_detail/783373bdc889b91b0nd-2964E1VW.html"
+    }
+  ],
+  "claim_boundary": "Automatic checks measure operations and data shape only. Human labels are required for relevance and real link validity."
+}

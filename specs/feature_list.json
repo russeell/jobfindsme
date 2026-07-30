@@ -1078,21 +1078,25 @@
         "reports/evaluation/**",
         "reports/field-trials/**",
         "reports/features/M14-001.json",
-        "scripts/build_chinese_synthetic_dataset.py"
+        "scripts/build_chinese_synthetic_dataset.py",
+        "src/jobfindsme/taxonomy.py",
+        "tests/matching/test_ranker.py"
       ],
       "acceptance": [
         "At least 50 human-labeled Chinese jobs cover relevance, duplicates, liveness, links, and hard-filter errors across 3+ days of real use.",
         "Metrics (P@10, NDCG@10, FNR, valid-link rate, duplicates caught, source uptime) are script-generated from labeled data.",
         "Seven qualitative evidence items are recorded: jobs found, valid link rate, dedup count, source reliability ranking, best/worst match examples, hard-filter false negatives, actual applications submitted.",
         "Dataset provenance and annotation guidance are versioned and in-repo.",
-        "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate."
+        "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate.",
+        "Every human-labeled hard-filter error is converted into a deterministic regression test before the next collection day."
       ],
       "checks": [
         [
           "python3",
           "-m",
           "pytest",
-          "tests/evaluation"
+          "tests/evaluation",
+          "tests/matching"
         ],
         [
           "python3",
@@ -1122,7 +1126,9 @@
           "check",
           "src/jobfindsme/evaluation",
           "tests/evaluation",
-          "scripts/build_chinese_synthetic_dataset.py"
+          "scripts/build_chinese_synthetic_dataset.py",
+          "src/jobfindsme/taxonomy.py",
+          "tests/matching"
         ],
         [
           "ruff",
@@ -1130,7 +1136,9 @@
           "--check",
           "src/jobfindsme/evaluation",
           "tests/evaluation",
-          "scripts/build_chinese_synthetic_dataset.py"
+          "scripts/build_chinese_synthetic_dataset.py",
+          "src/jobfindsme/taxonomy.py",
+          "tests/matching"
         ]
       ],
       "evidence_path": "reports/features/M14-001.json"

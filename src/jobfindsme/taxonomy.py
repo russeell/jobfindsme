@@ -92,6 +92,13 @@ AI_ROLE_SIGNALS = (
     "nlp",
 )
 
+NON_ENGINEERING_ROLE_MARKERS = (
+    "产品经理",
+    "产品运营",
+    "product manager",
+    "product owner",
+)
+
 LOCATION_ALIASES: dict[str, tuple[str, ...]] = {
     "中国": ("china", "cn -"),
     "北京": ("beijing", "北京市"),
@@ -176,6 +183,16 @@ def is_target_role_candidate(
     """
 
     normalized_title = title.casefold()
+    normalized_roles = tuple(role.casefold() for role in roles)
+    non_engineering_markers = tuple(
+        marker for marker in NON_ENGINEERING_ROLE_MARKERS if marker in normalized_title
+    )
+    if non_engineering_markers:
+        return any(
+            marker in role
+            for marker in non_engineering_markers
+            for role in normalized_roles
+        )
     role_terms = expand_role_terms(roles)
     if any(term.casefold() in normalized_title for term in role_terms):
         return True
