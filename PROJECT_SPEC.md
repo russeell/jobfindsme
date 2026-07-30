@@ -1,19 +1,42 @@
 # jobfindsme Product And Architecture Specification
 
-> Status: v0.2 active development
+> Status: active development
 >
-> Baseline: Agent-native, Local-first, MCP-standard
+> Baseline: Agent-native, Local-first, Incremental job radar
 >
-> Updated: 2026-07-29
+> Updated: 2026-07-30
 
 ## 1. Product Goal
 
-jobfindsme 面向技术求职者和 AI 工具用户。提供本地简历或描述求职目标，
-由 AI Agent 调用 jobfindsme，从五大招聘平台同步搜索、匹配和跟踪岗位。
+jobfindsme 面向技术求职者和 AI 工具用户。它不是新的招聘网站，也不是每次返回
+一批相似结果的一次性搜索器，而是可以被现有 AI Agent 调用的本地求职雷达。
+
+系统持续从多个招聘来源发现岗位，在本地维护用户画像、搜索计划、岗位身份、
+版本和用户状态。首次搜索建立岗位基线；后续搜索优先报告新增、变化和此前遗漏的
+高匹配岗位，不重复打扰用户。
 
 一句话定位：
 
-> 本地优先的 AI 求职引擎 — 五大平台一站式搜索，简历本地匹配，投递直达。
+> 让你的 AI Agent 持续替你找工作：跨来源发现、只看新增、记住每次选择。
+
+### 1.1 Product Promise
+
+jobfindsme 必须同时回答三个用户问题：
+
+1. **能否多找到好岗位？** 衡量有效覆盖，而不是 Connector 数量或原始抓取数量。
+2. **能否节省时间？** 用户不再反复打开多个 App，也不必重复处理看过的岗位。
+3. **推荐是否准确？** Top 结果必须符合硬条件，并提供可检查的推荐证据。
+
+### 1.2 North-star Metrics
+
+| 目标 | 核心指标 |
+|---|---|
+| 有效覆盖 | Qualified Unique Jobs@10、非主来源合格岗位增量、有效投递链接率 |
+| 节省时间 | 首次有效结果耗时、每日查看耗时、避免重复展示数量 |
+| 推荐质量 | Precision@10、NDCG@10、硬过滤误杀率、用户收藏/忽略反馈 |
+| 持续价值 | 每日新增合格岗位数、7 日复用率、岗位变化发现率 |
+
+原始 `discovered` 数量、配置的来源数量和合成数据准确率不能单独作为产品效果声明。
 
 ## 2. V0.2 Scope
 
@@ -31,16 +54,28 @@ V0.2 provides:
 - installer, upgrade, uninstall, doctor (with BOSS login check), and self-update;
 - reproducible offline evaluation;
 - optional local monitoring and Feishu summaries;
+- persistent job states and monitor baselines for incremental discovery;
 - zero-ID first use with automatic Workspace and Search Plan;
 - prompt templates covering all search dimensions.
 
 V0.2 explicitly excludes:
 
-- Playwright SPA, SSR/JSON-LD, Greenhouse, Ashby, and Lever connectors (removed — redundant with platforms);
+- unbounded browser crawlers or a large catalog of unverified company connectors;
 - a public Web application, accounts, cloud database, or multi-tenancy;
 - automatic applications or bypassing login and anti-bot controls;
 - a custom agent runtime;
 - mandatory model APIs, vector databases, Redis, or hosted queues.
+
+The next product increment must complete:
+
+- canonical jobs across sources instead of treating each source URL as a new job;
+- first-search baseline and novelty-aware subsequent results;
+- changed, reopened, and closed job detection;
+- source-neutral ranking with evidence confidence;
+- detail enrichment for high-value candidates from list-only sources;
+- cross-source human evaluation rather than a BOSS-only Top 10.
+- a hybrid source layer that prefers structured HTTP/API connectors and starts
+  or attaches to a browser only for sources that genuinely require it.
 
 ## 3. Product Principles
 
@@ -49,8 +84,11 @@ V0.2 explicitly excludes:
 3. Every adapter calls the same Core and contains no business rules.
 4. No API key means the complete deterministic workflow still works.
 5. Resume content stays local and is minimized after parsing.
-6. All maintained sources use a local CDP browser bridge; BOSS also requires account login.
+6. Source transport follows API/HTTP first, authenticated browser session second,
+   and DOM extraction last; a browser bridge is not a universal dependency.
 7. Security cannot depend on a host agent or MCP client's optional behavior.
+8. Repeated searches must produce useful deltas, not repeat the same result list.
+9. A source is supported only after it passes live quality gates; configured is not verified.
 
 ## 4. Main User Flow
 
@@ -62,14 +100,24 @@ First use:
   → agent checks whether the dedicated browser bridge is running
   → if no: jobfindsme setup → scan BOSS QR → keep bridge running
 
-Search:
+First search:
   → agent passes resume path to setup_profile
   → configure_search with roles, cities, salary, etc.
-  → search_jobs across 5 platforms
-  → results with match%, evidence, apply links
+  → discover from currently healthy sources
+  → normalize and deduplicate into canonical jobs
+  → return the first high-confidence baseline with evidence and apply links
   → user saves / dismisses / marks applied
 
-Results below 10% match are automatically filtered.
+Later searches:
+  → reuse the same Search Plan and prior job baseline
+  → refresh healthy sources
+  → compare canonical jobs and versions
+  → exclude unchanged jobs already shown or rejected
+  → report new, changed, reopened, and closed jobs
+
+No qualified delta:
+  → say that no new high-quality job was found
+  → do not fill the answer with old or weakly related results
 ```
 
 ## 5. Architecture
@@ -81,16 +129,22 @@ Any MCP Agent (Claude Code / Codex / ZCode / Hermes / …)
     AGENTS.md (read once, universal instructions)
         │
         ▼
-  jobfindsme MCP Server (local stdio)
-        │
-        ├── BOSS直聘 CDP ────── 15+ jobs/query (requires login)
-        ├── 猎聘 CDP ────────── 42+ jobs/query (no login)
-        ├── 前程无忧 CDP ─────── 20+ jobs/query (no login)
-        ├── 智联招聘 CDP ─────── 15+ jobs/query (no login)
-        └── 拉勾 CDP ────────── 15+ jobs/query (no login)
+  jobfindsme MCP Server (local stdio adapter)
         │
         ▼
-    Deduplicate → Filter (≥10%) → BM25 Rank → Evidence → Top N + reasons + links
+  JobFindsMe Core
+        ├── Search Plan + Candidate Profile
+        ├── Source Scheduler + Connector Health
+        ├── Multi-source Discovery
+        ├── Normalization + Canonical Job Deduplication
+        ├── Candidate Detail Enrichment
+        ├── Hard Filters + Evidence-based Ranking
+        ├── Job Versions + Seen/Saved/Applied/Rejected State
+        └── Novelty and Change Detection
+        │
+        ▼
+  First run: ranked baseline
+  Later runs: new / changed / reopened / closed digest
 ```
 
 Core must not import FastAPI, MCP SDKs, agent SDKs, or UI packages.
@@ -104,9 +158,11 @@ Workspace
 |  `- ProfileFacts
 |- SearchPlan A / B …
 |- Jobs and JobVersions
+|- CanonicalJobs and SourceRecords
 |- MatchEvidence
 |- FeedbackEvents and JobState
-`- MonitorRuns and JobStateEvents
+|- MonitorRuns and JobStateEvents
+`- SearchCursors and SourceHealth
 ```
 
 Profile facts are shared across plans. Role, location, salary, experience,
@@ -127,7 +183,7 @@ Two-phase deletion: `preview` → `confirm` with short-lived single-use token.
 ```text
 setup_profile       — import and parse resume
 configure_search    — set roles, cities, salary, exclusions
-search_jobs         — fast/full/cache refresh + local matching
+search_jobs         — refresh + matching; first run creates a result baseline
 get_jobs            — pagination and state filtering
 get_job_details     — single job detail (untrusted external content)
 update_job_state    — save / applied / rejected
@@ -141,29 +197,51 @@ the active context automatically.
 
 ## 10. Source Strategy
 
-### 10.1 五个平台，覆盖主流渠道
+### 10.1 来源能力必须分级
 
-| 平台 | 访问前提 | 特点 |
-|------|------|------|
-| BOSS直聘 | 浏览器桥 + 登录 | 岗位量大，常见明文薪资 |
-| 猎聘 | 浏览器桥 | 中高端 + 外企中国岗 |
-| 前程无忧 | 浏览器桥 | 传统行业 + IT，覆盖面广 |
-| 智联招聘 | 浏览器桥 | 综合招聘 |
-| 拉勾 | 浏览器桥 | 互联网岗位 |
+| 等级 | 含义 | 是否进入默认推荐 |
+|---|---|---|
+| `verified` | 实时抓取、关键字段、链接和人工相关性评测均达标 | 是 |
+| `discovery` | 能发现列表岗位，但详情或分类字段不完整 | 仅作候选发现 |
+| `degraded` | 验证码、限流、页面变化或连续零结果 | 使用缓存或跳过 |
+| `experimental` | Connector 已实现但尚无稳定现场证据 | 否 |
 
-腾讯、阿里、字节、拼多多、小米、网易、美团……绝大部分公司的岗位
-都在这五个平台上发布。不保证覆盖所有公司所有岗位。
+当前已经接入 BOSS直聘、猎聘、前程无忧、智联和拉勾的本地浏览器 Connector，
+但不同来源的数据完整度和稳定性不同。文档不得把“已经接入”表述成“已经提供
+同等质量推荐”。来源只有通过 Live Loop 和人工标注后才能升级为 `verified`。
 
 ### 10.2 技术方案
 
-全部通过 Chrome CDP 实现：
+当前平台 Connector 主要通过 Chrome CDP 实现：
 - **BOSS直聘**：注入 XHR 调用内部搜索 API（明文薪资）
 - **猎聘 / 前程无忧 / 智联 / 拉勾**：导航搜索页 → JS DOM 提取
 
 用户运行 `jobfindsme setup` 启动隔离 Chrome profile，并登录 BOSS。
 搜索期间浏览器桥必须运行。其他平台通常不要求账号，但可能触发验证或临时限制。
 
-交互式搜索与全量采集必须分离：
+这不是目标架构。每个来源必须选择最低成本且可审查的传输方式：
+
+| 优先级 | 方式 | 适用场景 |
+|---|---|---|
+| 1 | 官方或公开结构化 API / ATS feed | 腾讯、美团、阿里、Greenhouse、Lever 等可直接返回岗位结构 |
+| 2 | 无登录 HTTP 列表与详情端点 | 页面背后有稳定公开请求，且个人低频访问符合项目边界 |
+| 3 | 已登录浏览器会话中的受控请求 | BOSS 等确实依赖用户登录态的来源 |
+| 4 | CDP DOM 提取 | 没有稳定结构化端点、必须执行 JavaScript 的兜底来源 |
+| 5 | URL / CSV / JSON 导入 | 来源不可自动访问或用户主动提供数据 |
+
+采用混合架构的原因：
+
+- HTTP/API 请求比页面导航更快，字段通常更完整，也不会弹出大量标签页；
+- 列表发现与详情增强可以分开，避免为每个候选岗位打开页面；
+- 只有需要登录态的来源才要求浏览器桥，降低安装和首次使用成本；
+- 每种 Connector 仍必须遵守限速、超时、来源条款和现场质量门禁。
+
+不得直接复制第三方项目中绕过风控、批量抓取或关闭 robots 约束的实现。公开接口
+仍可能变化或受服务条款限制，因此每个 API Connector 都必须有域名白名单、Fixture、
+契约测试、限速、失败降级和 dated Live Loop 证据。
+
+交互式搜索与全量采集必须分离，来源调度同时考虑实时产出、字段完整度、
+历史成功率、延迟和验证码状态：
 
 | 模式 | 远程行为 | 适用场景 |
 |------|----------|----------|
@@ -175,18 +253,16 @@ the active context automatically.
 可见的新鲜度状态与缓存结果，慢速刷新独立执行；缓存不得伪装成实时结果。多城市必须分别
 建立来源查询，不能只取第一个城市。
 
-### 10.3 删掉的 Connector
+### 10.3 已移除实现与重新引入条件
 
-以下 Connector 已从默认源移除（冗余或零产出）：
+以下旧实现已从默认源移除，但“旧实现无效”不代表对应来源类型永远无效：
 
-| Connector | 原因 |
-|-----------|------|
-| Playwright SPA (字节/美团/滴滴/B站) | 岗位已在五大平台上 |
-| BaiduCareer (SSR) | 同上 |
-| Greenhouse (Airbnb) | 0 条中国 AI 岗 |
-| Ashby (Airwallex) | 数据解析 bug，0 条 |
-| Lever | API 大面积关闭 |
-| JsonLdCareerSite | 未被任何源使用 |
+| 旧实现 | 移除原因 | 重新引入条件 |
+|---|---|---|
+| Playwright SPA | 浏览器成本高、字段质量和稳定性不足 | 替换成有测试的结构化 API，或证明浏览器是唯一可行方式 |
+| BaiduCareer SSR | 单次验证没有产生目标岗位 | 能提供可复现的中国目标岗位增量 |
+| Greenhouse / Ashby / Lever 样例 | 选定公司样例没有产生足够中国目标岗位 | 作为通用 ATS Connector，通过多公司中国岗位验证 |
+| JsonLdCareerSite | 没有实际来源使用 | 至少一个稳定官网和真实回归 Fixture |
 
 代码保留 `JSON_FILE` 和 `CSV_FILE` 用于用户自导入。
 
@@ -218,7 +294,15 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 3. 投递链接 — 🔗 source-platform direct job URL
 4. 推荐理由 — evidence-based (reasons + warnings)
 
-低于 10% 匹配的结果自动过滤。按分数降序，最多 15 条。
+首次搜索按分数降序返回基线。后续搜索默认输出增量摘要：
+
+1. 新发现的高匹配岗位；
+2. 已收藏岗位的重要变化；
+3. 重新开放或已经关闭的岗位；
+4. 本轮过滤的重复、已看过和低相关岗位数量。
+
+低于门槛的结果自动过滤，但门槛必须由人工评测确定。系统不得为了凑满数量重复展示
+旧结果或插入低相关岗位。匹配分表示确定性排序分，不得宣传为录用概率。
 固定文本输出由 Core Presentation 生成，不依赖宿主 Agent 自行读取结构化字段后发挥；
 `search_jobs` 同时返回刷新模式、端到端耗时和逐来源状态。
 
@@ -249,6 +333,7 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 | 类型 | 参考 | 采用 | 不直接采用 |
 |---|---|---|---|
 | 开源项目 | [Career-Ops](https://github.com/santifer/career-ops)、[AI Job Search](https://github.com/MadsLorentzen/ai-job-search) | 本地优先、Agent 原生、结构化岗位评价、真实使用反馈 | 不复制自动投递、特定国家站点和模型强依赖 |
+| 来源实现 | [Career-Ops providers](https://github.com/santifer/career-ops/tree/main/providers)、[JobSpy](https://github.com/speedyapply/JobSpy)、[mcp-jobs](https://github.com/mergedao/mcp-jobs) | API/HTTP 优先、并发来源请求、列表与详情分离、浏览器作为必要兜底 | 不采用每次抓取都启动浏览器、无状态重复结果或未经验证的批量访问 |
 | 官方工程指南 | [Anthropic Agent Evals](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)、[LangSmith Evaluation](https://docs.langchain.com/langsmith/evaluation-concepts)、[Google Rules of ML](https://developers.google.com/machine-learning/guides/rules-of-ml) | Eval-driven development、线上问题回流离线数据集、生产与评测使用同一数据路径 | 不引入必须联网的托管评测平台 |
 | 论文与 Benchmark | [RAGAS](https://arxiv.org/abs/2309.15217)、[ARES](https://arxiv.org/abs/2311.09476) | 分组件指标、少量人工标注校准自动评测 | 不用单个总分代替来源、数据、排序和用户价值指标 |
 
@@ -261,7 +346,7 @@ jobfindsme 是标准 MCP Server。适配所有 MCP 兼容的 Agent：
 |---|---|---|---|
 | Runtime / Source | 来源成功率、超时率、P50/P95、零结果率、缓存降级率 | Connector、浏览器桥、运行时 | 能否稳定、及时取得真实岗位 |
 | Data Truth | 必填字段完整率、未知分类率、重复率、链接有效率、来源越界 | Parser、Normalizer、Canonical Job、Liveness | 岗位数据是否真实、完整、可投递 |
-| Recommendation / User | Precision@10、NDCG@10、硬过滤误杀率、首次有效结果耗时、打开/收藏/投递 | Matcher、Search Plan、Agent 工作流 | 推荐是否真的值得用户花时间 |
+| Recommendation / User | Precision@10、NDCG@10、Qualified Unique Jobs@10、非主来源增量、首次有效结果耗时、每日查看耗时、避免重复数量、打开/收藏/投递 | Matcher、Search Plan、Novelty、Agent 工作流 | 推荐是否真的值得用户花时间并持续使用 |
 
 来源或字段质量未达到门槛时，不允许通过调整排序权重掩盖问题。合成数据只用于回归，
 不能证明真实中文岗位推荐质量；自动评分不能替代用户相关性和链接有效性的人工标注。
@@ -322,3 +407,7 @@ regression；即使样本数和分数达标，也不得产生 `ready_for_claim=t
 13. □ Labeled benchmark (50+ jobs across multiple days).
 14. □ Monitor + Feishu notifications in production.
 15. □ Release hardening and PyPI publication.
+16. □ Canonical Job、跨来源去重和岗位版本变化检测。
+17. □ 首次结果基线与后续增量摘要，默认不重复展示已看岗位。
+18. □ 候选详情增强和来源质量分级。
+19. □ 连续 7 天真实使用，验证有效覆盖、节省时间和推荐准确性。

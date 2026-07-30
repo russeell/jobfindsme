@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "JobFindsMe",
-  "product_baseline": "agent-native-local-first",
+  "product_baseline": "agent-native-local-first-incremental-job-radar",
   "research_policy": {
     "enforced_from_feature": "M24-001",
     "required_categories": [
@@ -1839,6 +1839,13 @@
       "research_refs": [
         {
           "category": "open_source",
+          "title": "Career-Ops provider registry",
+          "url": "https://github.com/santifer/career-ops/tree/main/providers",
+          "adopted_pattern": "Prefer source-specific public JSON APIs for Tencent, Meituan, Alibaba, Greenhouse, Lever, and similar providers before browser automation.",
+          "rejected_or_not_adopted": "Do not assume an observed endpoint is permanent or acceptable for high-volume use; every adopted provider needs its own policy and live-evidence review."
+        },
+        {
+          "category": "open_source",
           "title": "mergedao/mcp-jobs",
           "url": "https://github.com/mergedao/mcp-jobs",
           "adopted_pattern": "Keep the interactive MCP surface direct and separate bounded job-list discovery from on-demand detail retrieval.",
@@ -1933,6 +1940,151 @@
         ]
       ],
       "evidence_path": "reports/features/M26-001.json"
+    },
+    {
+      "id": "M27-001",
+      "title": "Persistent incremental job radar and novelty-aware results",
+      "status": "backlog",
+      "blocked_by": [
+        "M26-001"
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "Career-Ops",
+          "url": "https://github.com/santifer/career-ops",
+          "adopted_pattern": "Treat a job search as a persistent local workflow with durable job state instead of a stateless list-generation request.",
+          "rejected_or_not_adopted": "Do not copy automatic application behavior or require a hosted model for the deterministic state loop."
+        },
+        {
+          "category": "official_guide",
+          "title": "Google Rules of Machine Learning",
+          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
+          "adopted_pattern": "Define measurable product goals and keep serving-time evidence before adding ranking complexity.",
+          "rejected_or_not_adopted": "Do not optimize raw click or discovery counts when repeated or low-quality jobs waste user time."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Data Cascades in High-Stakes AI",
+          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
+          "adopted_pattern": "Make canonical identity, history, and source provenance first-class before using downstream scores.",
+          "rejected_or_not_adopted": "Do not hide identity or history failures behind a single recommendation metric."
+        }
+      ],
+      "local_constraints": [
+        "Users may access the same local workspace from different MCP-compatible Agents.",
+        "The default workflow must remain useful without a model API or hosted account.",
+        "A repeated search must not lose saved, applied, or rejected state.",
+        "Novelty claims must come from persisted job identity and version evidence, not Agent conversation memory."
+      ],
+      "allowed_paths": [
+        "AGENTS.md",
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "docs/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/matching/**",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "src/jobfindsme/monitoring/**",
+        "src/jobfindsme/mcp/**",
+        "src/jobfindsme/presentation.py",
+        "src/jobfindsme/migrations/**",
+        "tests/core/**",
+        "tests/importing/**",
+        "tests/matching/**",
+        "tests/monitoring/**",
+        "tests/mcp/**",
+        "reports/features/M27-001.json"
+      ],
+      "acceptance": [
+        "The first successful search creates a per-Search-Plan result baseline backed by durable canonical job identifiers.",
+        "A later search classifies results as new, materially changed, reopened, closed, or unchanged.",
+        "Unchanged jobs already shown or rejected are suppressed by default; saved and applied jobs remain queryable and are never silently reset.",
+        "No-result output distinguishes no qualified delta from source failure or an empty cache.",
+        "Diagnostics expose new, changed, reopened, closed, repeated-suppressed, and low-relevance-filtered counts.",
+        "The human-facing digest never pads the response with old or weak jobs merely to reach a count.",
+        "Regression tests cover repeat searches, cross-Agent state reuse, job version changes, source failure, and explicit history requests."
+      ],
+      "evidence_path": "reports/features/M27-001.json"
+    },
+    {
+      "id": "M27-002",
+      "title": "Effective cross-source coverage and bounded detail enrichment",
+      "status": "backlog",
+      "blocked_by": [
+        "M26-001"
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "mergedao/mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Keep list discovery lightweight and retrieve details only for selected candidates.",
+          "rejected_or_not_adopted": "Do not equate a configured platform or raw list-card count with verified recommendation coverage."
+        },
+        {
+          "category": "official_guide",
+          "title": "Playwright Locators and Auto-waiting",
+          "url": "https://playwright.dev/docs/locators",
+          "adopted_pattern": "Use bounded, observable detail extraction with resilient user-facing locators where browser access is necessary.",
+          "rejected_or_not_adopted": "Do not fetch every detail page or make interactive latency depend on the slowest blocked source."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Data Cascades in High-Stakes AI",
+          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
+          "adopted_pattern": "Measure source field completeness and provenance before tuning ranking weights.",
+          "rejected_or_not_adopted": "Do not compensate for missing descriptions or classifications by boosting incomplete records."
+        }
+      ],
+      "local_constraints": [
+        "Chinese platforms have uneven data fields, latency, login requirements, and anti-bot behavior.",
+        "Detail fetching must have per-source budgets and cannot open unbounded browser tabs.",
+        "Unknown recruitment track or employment type cannot silently satisfy an explicit strict filter.",
+        "A source must provide incremental qualified jobs before it is promoted as a default recommendation source."
+      ],
+      "allowed_paths": [
+        "AGENTS.md",
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "docs/SKILL.md",
+        "integrations/shared/SKILL.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/core/**",
+        "src/jobfindsme/evaluation/**",
+        "src/jobfindsme/importing/**",
+        "src/jobfindsme/matching/**",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "src/jobfindsme/source_catalog.py",
+        "tests/connectors/**",
+        "tests/core/**",
+        "tests/evaluation/**",
+        "tests/importing/**",
+        "tests/matching/**",
+        "reports/features/M27-002.json"
+      ],
+      "acceptance": [
+        "Each source declares a transport class: structured_api, public_http, authenticated_browser, browser_dom, or local_import.",
+        "Source selection prefers structured API/HTTP and never starts a browser when a verified non-browser connector can satisfy the same source.",
+        "Every source exposes a maturity state, field-completeness profile, recent yield, latency, and failure reason.",
+        "List-card records declare their detail level and are not treated as complete job descriptions.",
+        "The system enriches only a bounded set of role-qualified candidates before final ranking.",
+        "Recruitment track, employment type, experience, and job description extraction have source-specific contract tests.",
+        "Blocked or zero-yield sources are cooled down and cannot hold the interactive response open indefinitely.",
+        "Evaluation compares BOSS-only, multi-source discovery, and multi-source enriched ranking using Qualified Unique Jobs@10 and non-primary-source incremental gain.",
+        "README source claims are generated or manually gated from dated Live Loop and human-label evidence."
+      ],
+      "evidence_path": "reports/features/M27-002.json"
     }
   ]
 }

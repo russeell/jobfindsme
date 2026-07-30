@@ -1,8 +1,7 @@
-# jobfindsme · AI Job Search Engine
+# jobfindsme · Your Local Job Radar
 
-> **5 platforms, one search · Local resume matching · Direct apply links**
->
-> BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
+> **Let your AI agent keep looking for jobs: discover across sources, focus on
+> what is new, and remember every decision locally.**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -10,11 +9,17 @@
 [![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**jobfindsme** is a standard MCP Server that turns your AI agent into a job search engine. Interactive searches refresh the highest-yield source and reuse visible local cache; explicit full refresh covers 5 major Chinese recruitment platforms. Results are matched against your local resume and include a score, evidence-based reasons, and a direct apply link.
+**jobfindsme** is a local-first job radar exposed as a standard MCP Server.
+It keeps your profile, search plans, job versions, and application state on
+your machine. The first search establishes a baseline; repeated searches are
+being evolved to focus on new and changed opportunities instead of returning
+the same list again.
 
-- 🔍 **Fast or exhaustive search** — BOSS Zhipin · Liepin · 51job · Zhaopin · Lagou
+- 🔍 **Multi-source discovery** — connectors for BOSS Zhipin, Liepin, 51job, Zhaopin, and Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
 - 📊 **Evidence-based results** — match percentage + skill comparison + reasons
+- 🧠 **Persistent state** — remember saved, dismissed, and applied jobs across agents
+- 🆕 **Incremental radar** — track new, changed, reopened, and closed jobs
 - 🔗 **Direct job links** — one click to the source platform's job page
 - 🔌 **Standard MCP** — works with any MCP-compatible agent
 
@@ -52,7 +57,7 @@ jobfindsme install codex     # Codex
 
 ```
 Use jobfindsme to find AI Engineer roles in Shanghai and Shenzhen,
-based on ~/Documents/resume.pdf.
+based on my local resume at ~/Documents/resume.pdf.
 ```
 
 No workspace IDs or plan IDs needed — Core handles everything.
@@ -65,19 +70,37 @@ jobfindsme setup              # Start the isolated local Chrome bridge
 
 > All five sources use the local Chrome CDP bridge. BOSS Zhipin additionally requires account login; public pages on other platforms may still present verification.
 
-## Sources
+## Product Goals
 
-**5 platforms cover most Chinese companies' job listings.**
+1. Find more *qualified unique jobs*, not merely more raw records.
+2. Save time by removing app switching and repeated reading.
+3. Produce relevant recommendations with inspectable evidence.
 
-| Platform | Access prerequisite | Strength |
+## Source Maturity
+
+| Platform | Current role | Access prerequisite |
 |----------|---------------------|----------|
-| **BOSS Zhipin** | Browser bridge + login | Large volume, common salary data |
-| **Liepin** | Browser bridge | Mid-senior roles, MNC positions |
-| **51job** | Browser bridge | Broad coverage, traditional + IT |
-| **Zhaopin** | Browser bridge | General recruitment |
-| **Lagou** | Browser bridge | Internet-focused roles |
+| **BOSS Zhipin** | Primary verified recommendation source | Browser bridge + login |
+| **Liepin** | Discovery; detail enrichment pending | Browser bridge |
+| **51job** | Discovery; detail enrichment pending | Browser bridge |
+| **Zhaopin** | Discovery; parser quality under evaluation | Browser bridge |
+| **Lagou** | Experimental; verification may block access | Browser bridge |
 
-> No single source covers every position — some roles appear only on company career sites or internal referral channels. These 5 platforms together provide the widest reach.
+Connecting a source does not mean it already provides equal recommendation
+quality. Live Loop reports measure latency, field completeness, valid links,
+and human relevance before a source is described as verified.
+
+The current five platform connectors still use the local browser bridge. The
+target source architecture is hybrid:
+
+```text
+structured API / ATS → public HTTP → authenticated browser request
+→ DOM extraction → local import
+```
+
+The browser remains appropriate for sources such as BOSS Zhipin that require a
+user-owned login session. A verified public JSON or ATS endpoint should use a
+lightweight HTTP connector instead of opening browser pages.
 
 ## Prompt Templates
 
@@ -98,11 +121,11 @@ exclude [keywords]                      ← optional
 
 ```bash
 # With resume, precise search
-Use jobfindsme, based on ~/Documents/resume.pdf,
+Use jobfindsme, based on my local resume at ~/Documents/resume.pdf,
 to find AI Agent engineer jobs in Shanghai and Shenzhen, 25K+, experienced, full-time, 1-5 years.
 
 # With resume, broad search
-Use jobfindsme, based on ~/Documents/resume.pdf,
+Use jobfindsme, based on my local resume at ~/Documents/resume.pdf,
 to find LLM application developer jobs in Hangzhou, campus recruitment.
 
 # Without resume, quick browse
@@ -116,7 +139,8 @@ Use jobfindsme to show me the details of job #3.
 Use jobfindsme to save jobs #1, #4, and #6.
 ```
 
-> Every result includes: job description, match score, apply link, and evidence-based reasons. Match scores require a resume; search works either way.
+> Results include a ranking score, direct link, and evidence-based reasons when
+> the source provides sufficient fields. The score is not a hiring probability.
 
 ## MCP Tools
 

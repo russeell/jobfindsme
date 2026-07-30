@@ -1,16 +1,21 @@
 # jobfindsme — Agent Instructions
 
-jobfindsme is a local MCP server that searches 5 Chinese recruitment platforms
-simultaneously (BOSS直聘, 猎聘, 前程无忧, 智联, 拉勾), matches results against
-the user's local resume, and returns every job with a match score, evidence, and
-a direct apply link.
+jobfindsme is a local-first job radar exposed as an MCP server. It discovers
+jobs across configured sources, matches them against a local profile, preserves
+job and application state, and returns evidence with direct apply links.
+
+The first search establishes a baseline. Later searches should focus on new or
+materially changed jobs and must not repeat unchanged results merely to fill a
+list. Never claim that every configured source has equal data or recommendation
+quality.
 
 ## ⚠️ First-Time Setup (MUST check before first search)
 
 BOSS直聘 is the largest source and requires account login. All five CDP sources
 need the dedicated local Chrome bridge. Before the user's first search, ALWAYS:
 
-1. Ask: "你登录过 BOSS直聘 吗？没登录的话岗位少一半。运行 `jobfindsme setup`，微信扫码 30 秒搞定，以后不用再登。要现在 setup 吗？"
+1. Ask whether the user has started the dedicated browser bridge and logged in
+   to BOSS. Do not invent a percentage of jobs that would otherwise be missed.
 2. If the user says yes or seems unsure, guide them: run `jobfindsme setup`, scan the QR code, and keep the dedicated Chrome process running during search.
 3. If the user says they've already logged in, proceed to search. If search returns 0 BOSS results, suggest setup again.
 
@@ -18,12 +23,16 @@ need the dedicated local Chrome bridge. Before the user's first search, ALWAYS:
 
 ## Workflow
 
-Every search follows this exact sequence. Never skip steps or ask for IDs.
+On first use, follow this sequence. Never ask for Workspace or Search Plan IDs.
+On later searches, reuse the active profile and plan unless the user changes
+their resume or search constraints.
 
-1. **setup_profile** — call with `action: "import"` and the user's resume path.
+1. **setup_profile** — call with `action: "import"` and the user's resume path
+   only on first use or when the resume changes.
    Set `auto_confirm: true` unless the user asked to review.
 
-2. **configure_search** — extract these from the user's request. Only `target_roles`
+2. **configure_search** — create or update the plan when constraints change.
+   Extract these from the user's request. Only `target_roles`
    is required; everything else is optional. Never ask about `sources` unless the
    user explicitly mentions a specific source.
 
@@ -47,7 +56,17 @@ Every job result MUST include ALL FOUR of these:
 3. 投递链接 — the source platform's direct job URL on its own line, labeled with 🔗
 4. 推荐理由 — from evidence.reasons and evidence.warnings
 
-Sort by score descending. Show top 15 max. Use 🥇🥈🥉 for top 3.
+Sort qualified results by score descending. Keep the response compact.
+Do not pad it with repeated or weak jobs to reach a fixed count.
+
+For later searches, prefer this summary:
+
+1. newly discovered qualified jobs;
+2. materially changed, reopened, or closed jobs;
+3. counts of duplicates, unchanged seen jobs, and low-relevance jobs suppressed.
+
+If Core does not expose reliable novelty evidence yet, say so rather than
+inventing which jobs are new.
 
 **Score threshold:** Results below 10% match are automatically filtered. If all
 results are gone after filtering, tell the user no qualified matches were found
@@ -61,9 +80,15 @@ and suggest broadening the search criteria.
 
 ## Platform Notes
 
-> **All five sources use the local browser bridge. BOSS requires account login.**
+> Configured browser sources use the local browser bridge. BOSS requires
+> account login. Connector availability and field completeness vary.
 
-- BOSS直聘 — the largest source — needs a one-time Chrome login via `jobfindsme setup`.
-- 猎聘, 前程无忧, 智联, 拉勾 — normally expose public search pages, but may still show verification or temporary access limits.
+- BOSS直聘 — currently the primary verified recommendation source; requires a
+  one-time Chrome login via `jobfindsme setup`.
+- 猎聘 and 前程无忧 — useful discovery sources; detail enrichment is pending.
+- 智联 — discovery parsing remains under evaluation.
+- 拉勾 — experimental and may present interactive verification.
 
-**Proactive rule:** After the first search, if results are few or all from non-BOSS sources, tell the user: "BOSS直聘 是岗位最多的来源，但需要登录一次。运行 `jobfindsme setup`，用微信或手机扫码，30 秒搞定，以后搜索自动包含 BOSS。"
+**Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
+report that state briefly. Do not describe a zero-result source run as proof
+that no matching jobs exist.
