@@ -68,7 +68,16 @@
 - `agent_host`：本次使用的 Agent，例如 `codex` 或 `claude-code`。
 
 `P@10` 和 `NDCG@10` 按天计算后做宏平均，避免只有第一天的数据进入指标。
-报告仅在至少 3 天、50 条人工标签且没有待标注项时标记为可对外引用。
+报告只有同时满足以下条件才标记为可对外引用：
+
+- 至少 3 天、50 条人工标签且没有待标注项；
+- `evidence_kind` 为 `field_trial`；
+- `collection_method` 为 `live_loop_human_annotation`；
+- provenance 保存至少 3 份原始 Live Loop 报告路径及 SHA256；
+- 评测时原始报告仍存在且 Hash 一致。
+
+手工构造、脚本生成或从 fixture 复制的岗位只能放在 `data/eval/synthetic/`，
+即使数量和指标达标也不能成为 M14 证据。
 
 ## 每日标注文件位置
 
@@ -79,29 +88,19 @@ data/eval/field_trial/day_02.json  # 第 2 天
 data/eval/field_trial/day_07.json  # 第 7 天
 ```
 
-先把当天搜索结果保存为 JSON：
+每天直接运行 Live Loop，同时保存机器报告和待标注 Top 10：
 
 ```bash
-jobfindsme --output json jobs search \
-  --workspace WORKSPACE_ID \
-  --plan PLAN_ID \
-  --limit 10 > /tmp/jobfindsme-day-01.json
-```
-
-再生成待人工检查的当天模板：
-
-```bash
-python -m jobfindsme.evaluation.collect \
-  --jobs /tmp/jobfindsme-day-01.json \
-  --output data/eval/field_trial/day_01.json \
+python -m jobfindsme.evaluation.live_loop \
+  --agent-host codex \
+  --allow-browser-sources \
   --day 1 \
-  --date 2026-07-28 \
-  --plan-id PLAN_ID \
-  --profile-hash PROFILE_HASH \
-  --source-attempt bytedance \
-  --source-success bytedance \
-  --agent-host codex
+  --output reports/field-trials/loops/day_01.json \
+  --annotation-output data/eval/field_trial/day_01.json
 ```
+
+人工逐条打开投递链接后填写标签。不要修改 Loop 原始报告；它的 Hash 会进入最终
+dataset provenance。若报告被改动，`ready_for_claim` 自动变为 `false`。
 
 ## 7 天完成后
 
@@ -110,6 +109,7 @@ python -m jobfindsme.evaluation.collect \
 ```bash
 python -m jobfindsme.evaluation.run \
   --type chinese \
-  --dataset data/eval/v0.2_labeled.json \
-  --report reports/evaluation/v0.2_labeled.json
+  --dataset data/eval/field_trial/chinese_real_v1.0.json \
+  --require-claim-ready \
+  --report reports/evaluation/chinese_real_v1.0.json
 ```

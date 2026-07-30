@@ -90,12 +90,32 @@ class DailyLabels(StrictModel):
         return self
 
 
+class DatasetProvenance(StrictModel):
+    """Evidence origin used to separate fixtures from observed field data."""
+
+    evidence_kind: Literal["synthetic", "field_trial"] = "synthetic"
+    collection_method: Literal[
+        "generated_fixture",
+        "live_loop_human_annotation",
+        "unspecified",
+    ] = "unspecified"
+    human_annotated: bool = False
+    labeler: str | None = None
+    date_range: str | None = None
+    source_report_paths: tuple[str, ...] = ()
+    source_report_sha256: dict[str, str] = Field(default_factory=dict)
+    platforms: tuple[str, ...] = ()
+    plan: dict[str, Any] = Field(default_factory=dict)
+    annotation_guide_version: str | None = None
+    notes: str = ""
+
+
 class LabeledDataset(StrictModel):
     """A versioned, human-labeled Chinese job matching dataset."""
 
     dataset_version: str
     dataset_type: str = "real_chinese_labeled"
-    provenance: dict[str, Any]
+    provenance: DatasetProvenance
     days: tuple[DailyLabels, ...]
 
     @property

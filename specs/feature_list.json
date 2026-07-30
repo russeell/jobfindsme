@@ -1077,7 +1077,8 @@
         "data/eval/**",
         "reports/evaluation/**",
         "reports/field-trials/**",
-        "reports/features/M14-001.json"
+        "reports/features/M14-001.json",
+        "scripts/build_chinese_synthetic_dataset.py"
       ],
       "acceptance": [
         "At least 50 human-labeled Chinese jobs cover relevance, duplicates, liveness, links, and hard-filter errors across 3+ days of real use.",
@@ -1085,6 +1086,13 @@
         "Seven qualitative evidence items are recorded: jobs found, valid link rate, dedup count, source reliability ranking, best/worst match examples, hard-filter false negatives, actual applications submitted.",
         "Dataset provenance and annotation guidance are versioned and in-repo.",
         "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate."
+      ],
+      "checks": [
+        ["python3", "-m", "pytest", "tests/evaluation"],
+        ["python3", "-m", "jobfindsme.evaluation.run", "--dataset", "data/eval/v0.1.json", "--type", "synthetic", "--report", "reports/evaluation/v0.1.json"],
+        ["python3", "-m", "jobfindsme.evaluation.run", "--dataset", "data/eval/field_trial/chinese_real_v1.0.json", "--type", "chinese", "--require-claim-ready", "--report", "reports/evaluation/chinese_real_v1.0.json"],
+        ["ruff", "check", "src/jobfindsme/evaluation", "tests/evaluation", "scripts/build_chinese_synthetic_dataset.py"],
+        ["ruff", "format", "--check", "src/jobfindsme/evaluation", "tests/evaluation", "scripts/build_chinese_synthetic_dataset.py"]
       ],
       "evidence_path": "reports/features/M14-001.json"
     },

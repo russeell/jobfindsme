@@ -1,9 +1,13 @@
 """Tests for labeling models and Chinese benchmark evaluation."""
 
+import hashlib
 import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
+from jobfindsme.contracts import SearchRunDiagnostics
 from jobfindsme.evaluation.labeling import (
     JobLabel,
     assemble_labeled_dataset,
@@ -13,6 +17,11 @@ from jobfindsme.evaluation.labeling import (
     compute_valid_link_rate,
     new_daily_template,
     write_daily_template,
+)
+from jobfindsme.evaluation.live_loop import (
+    LiveSearchLoopReport,
+    LoopJob,
+    LoopQuality,
 )
 from jobfindsme.evaluation.runner import evaluate_chinese_dataset
 
@@ -326,3 +335,135 @@ def test_unannotated_template_is_not_counted_as_human_evidence(tmp_path) -> None
     assert report.total_labeled == 0
     assert report.total_unlabeled == 5
     assert report.ready_for_claim is False
+
+
+def _build_claim_sized_dataset(tmp_path, provenance: dict) -> tuple[object, list]:
+    day_paths = []
+    for day in range(1, 6):
+        path = tmp_path / f"day_{day:02}.json"
+        template = new_daily_template(
+            day=day,
+            date=f"2026-07-{24 + day}",
+            plan_id="plan-1",
+            profile_hash="profile-hash",
+            jobs=_sample_jobs(10),
+        )
+        write_daily_template(path, template)
+        data = json.loads(path.read_text())
+        for label in data["labels"]:
+            label["annotated"] = True
+            label["relevance"] = 2
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
+        day_paths.append(path)
+    return (
+        assemble_labeled_dataset(
+            version="1.0.0",
+            provenance=provenance,
+            day_paths=day_paths,
+        ),
+        day_paths,
+    )
+
+
+def test_synthetic_50_job_dataset_is_never_claim_ready(tmp_path) -> None:
+    dataset, _ = _build_claim_sized_dataset(
+        tmp_path,
+        {
+            "evidence_kind": "synthetic",
+            "collection_method": "generated_fixture",
+            "labeler": "builder-script",
+        },
+    )
+    from jobfindsme.evaluation.labeling import write_labeled_dataset
+
+    dataset_path = tmp_path / "synthetic.json"
+    write_labeled_dataset(dataset_path, dataset)
+    report = evaluate_chinese_dataset(dataset_path)
+
+    assert report.total_labeled == 50
+    assert report.evidence_kind == "synthetic"
+    assert report.provenance_verified is False
+    assert report.ready_for_claim is False
+
+
+def test_field_claim_requires_hashed_live_loop_reports(tmp_path) -> None:
+    initial, day_paths = _build_claim_sized_dataset(
+        tmp_path,
+        {"evidence_kind": "synthetic"},
+    )
+    report_paths = []
+    report_hashes = {}
+    now = datetime(2026, 7, 25, tzinfo=UTC)
+    for day in initial.days:
+        path = tmp_path / f"loop_{day.day}.json"
+        jobs = tuple(
+            LoopJob(
+                rank=label.rank,
+                job_id=label.job_id,
+                source_name=label.source_name,
+                title=label.title,
+                company=label.company,
+                location=label.location,
+                score=0.8,
+                recruitment_track="unknown",
+                employment_type="unknown",
+                apply_url=label.apply_url,
+            )
+            for label in day.labels
+        )
+        report = LiveSearchLoopReport(
+            run_id=f"run-{day.day}",
+            agent_host="codex",
+            workspace_id="workspace",
+            plan_id=day.plan_id,
+            profile_hash=day.profile_hash,
+            generated_at=now + timedelta(days=day.day),
+            diagnostics=SearchRunDiagnostics(
+                started_at=now,
+                finished_at=now,
+                elapsed_seconds=0,
+                matching_seconds=0,
+                result_count=len(jobs),
+            ),
+            quality=LoopQuality(
+                source_success_rate=1,
+                url_shape_valid_rate=1,
+                required_field_complete_rate=1,
+                unknown_track_rate=1,
+                unknown_employment_type_rate=1,
+                duplicate_apply_urls=0,
+                average_match_score=0.8,
+            ),
+            jobs=jobs,
+        )
+        path.write_text(report.model_dump_json(indent=2))
+        raw_path = str(path)
+        report_paths.append(raw_path)
+        report_hashes[raw_path] = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    dataset = assemble_labeled_dataset(
+        version="1.0.0",
+        provenance={
+            "evidence_kind": "field_trial",
+            "collection_method": "live_loop_human_annotation",
+            "human_annotated": True,
+            "labeler": "owner",
+            "source_report_paths": report_paths,
+            "source_report_sha256": report_hashes,
+        },
+        day_paths=day_paths,
+    )
+    from jobfindsme.evaluation.labeling import write_labeled_dataset
+
+    dataset_path = tmp_path / "field.json"
+    write_labeled_dataset(dataset_path, dataset)
+    report = evaluate_chinese_dataset(dataset_path)
+
+    assert report.provenance_verified is True
+    assert report.ready_for_claim is True
+
+    Path(report_paths[0]).write_text("tampered")
+    tampered = evaluate_chinese_dataset(dataset_path)
+    assert tampered.provenance_verified is False
+    assert tampered.ready_for_claim is False
+    assert any("hash mismatch" in issue for issue in tampered.provenance_issues)

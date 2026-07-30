@@ -287,6 +287,9 @@ python -m jobfindsme.evaluation.improvement \
 
 数据集、阈值、配置、代码版本和输入报告 Hash 必须随结果保存。调参集与留出集分离；
 Bad Case 修复后进入永久回归集；公开指标必须同时通过运行证据和人工 benchmark。
+真实中文 Benchmark 还必须声明 `field_trial` provenance，并关联至少 3 份未被修改的
+Live Loop 报告及 SHA256。脚本构造的岗位、链接、来源状态或标签只能作为 synthetic
+regression；即使样本数和分数达标，也不得产生 `ready_for_claim=true`。
 
 ## 13. Delivery Milestones
 

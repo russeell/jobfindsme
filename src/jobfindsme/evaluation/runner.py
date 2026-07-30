@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
@@ -173,6 +173,9 @@ class ChineseBenchmarkReport(StrictModel):
     source_failure_sources: tuple[str, ...]
     duplicates_detected: int = 0
     duplicate_leaks: int = 0
+    evidence_kind: str
+    provenance_verified: bool
+    provenance_issues: tuple[str, ...] = ()
     ready_for_claim: bool
     synthetic_metrics: EvaluationReport | None = None
 
@@ -188,6 +191,8 @@ class ChineseBenchmarkReport(StrictModel):
             f"  SourceOK: {self.source_success_rate:.3f}\n"
             f"  Deduped:  {self.duplicates_detected}\n"
             f"  DupLeaks: {self.duplicate_leaks}\n"
+            f"  Evidence: {self.evidence_kind} "
+            f"(verified={self.provenance_verified})\n"
             f"  Claimable:{self.ready_for_claim}\n"
             f"  SrcFail:  {', '.join(self.source_failure_sources) or 'none'}"
         )
@@ -232,8 +237,12 @@ def evaluate_chinese_dataset(path: str | Path) -> ChineseBenchmarkReport:
         len(source_successes) / len(source_attempts) if source_attempts else 0.0
     )
     total_unlabeled = len(all_candidates) - len(all_labels)
+    provenance_verified, provenance_issues = _verify_field_provenance(dataset)
     ready_for_claim = (
-        len(all_labels) >= 50 and len(evaluated_days) >= 3 and total_unlabeled == 0
+        len(all_labels) >= 50
+        and len(evaluated_days) >= 3
+        and total_unlabeled == 0
+        and provenance_verified
     )
 
     return ChineseBenchmarkReport(
@@ -251,5 +260,65 @@ def evaluate_chinese_dataset(path: str | Path) -> ChineseBenchmarkReport:
         source_failure_sources=tuple(sorted(source_failures)),
         duplicates_detected=duplicates_detected,
         duplicate_leaks=duplicate_leaks,
+        evidence_kind=dataset.provenance.evidence_kind,
+        provenance_verified=provenance_verified,
+        provenance_issues=provenance_issues,
         ready_for_claim=ready_for_claim,
     )
+
+
+def _verify_field_provenance(
+    dataset: LabeledDataset,
+) -> tuple[bool, tuple[str, ...]]:
+    from jobfindsme.evaluation.live_loop import LiveSearchLoopReport
+
+    provenance = dataset.provenance
+    issues = []
+    if provenance.evidence_kind != "field_trial":
+        issues.append("dataset is not declared as field_trial evidence")
+    if provenance.collection_method != "live_loop_human_annotation":
+        issues.append("collection method is not live_loop_human_annotation")
+    if not provenance.human_annotated:
+        issues.append("human annotation is not attested")
+    if not provenance.labeler:
+        issues.append("labeler is missing")
+    if len(provenance.source_report_paths) != len(dataset.days):
+        issues.append("each labeled day must have exactly one source Loop report")
+
+    run_ids = set()
+    for index, raw_path in enumerate(provenance.source_report_paths):
+        path = Path(raw_path).expanduser()
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        expected = provenance.source_report_sha256.get(raw_path)
+        if not path.is_file():
+            issues.append(f"source report missing: {raw_path}")
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if not expected:
+            issues.append(f"source report hash missing: {raw_path}")
+        elif actual != expected:
+            issues.append(f"source report hash mismatch: {raw_path}")
+        try:
+            report = LiveSearchLoopReport.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
+        except (OSError, ValidationError):
+            issues.append(f"invalid Live Loop report: {raw_path}")
+            continue
+        if report.run_id in run_ids:
+            issues.append(f"duplicate Live Loop run_id: {report.run_id}")
+        run_ids.add(report.run_id)
+        if index >= len(dataset.days):
+            continue
+        day = dataset.days[index]
+        if report.plan_id != day.plan_id:
+            issues.append(f"plan_id mismatch: {raw_path}")
+        if report.profile_hash != day.profile_hash:
+            issues.append(f"profile_hash mismatch: {raw_path}")
+        if tuple(job.job_id for job in report.jobs) != tuple(
+            label.job_id for label in day.labels
+        ):
+            issues.append(f"Top job IDs mismatch: {raw_path}")
+
+    return not issues, tuple(issues)

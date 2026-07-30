@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from jobfindsme.evaluation.runner import (
@@ -19,10 +20,21 @@ def main() -> int:
         default="synthetic",
         help="Dataset type (default: synthetic)",
     )
+    parser.add_argument(
+        "--require-claim-ready",
+        action="store_true",
+        help="Fail unless a Chinese dataset has verified field provenance.",
+    )
     args = parser.parse_args()
 
     if args.type == "chinese":
-        report = evaluate_chinese_dataset(args.dataset)
+        try:
+            report = evaluate_chinese_dataset(args.dataset)
+        except FileNotFoundError:
+            print(
+                f"Chinese benchmark dataset not found: {args.dataset}", file=sys.stderr
+            )
+            return 2
         report_path = Path(args.report)
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(
@@ -30,8 +42,7 @@ def main() -> int:
             encoding="utf-8",
         )
         print(report.summary())
-        # Chinese benchmark has no single gate — report all metrics
-        return 0
+        return int(args.require_claim_ready and not report.ready_for_claim)
 
     report = evaluate_dataset(args.dataset)
     report_path = Path(args.report)
