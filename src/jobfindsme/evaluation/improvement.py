@@ -29,7 +29,7 @@ class ActionPriority(StrEnum):
 
 
 class EngineeringThresholds(StrictModel):
-    """Provisional release policy; revise only from versioned baselines."""
+    """Release-evidence policy; rapid feedback is available after one live run."""
 
     minimum_loop_runs: int = Field(default=3, ge=1)
     minimum_source_success_rate: float = Field(default=0.80, ge=0, le=1)
@@ -75,12 +75,14 @@ class EngineeringImprovementReport(StrictModel):
     thresholds: EngineeringThresholds
     signals: AggregateSignals
     actions: tuple[ImprovementAction, ...]
+    rapid_feedback_ready: bool
     operational_evidence_ready: bool
     human_evidence_ready: bool
     ready_for_public_claim: bool
     decision_policy: str = (
-        "Generated actions are proposals. A human must approve the Spec change; "
-        "every fix must add a regression case and pass the same evaluation again."
+        "One live run may trigger rapid feedback but cannot support a public quality "
+        "claim. Generated actions are proposals: a human approves the Spec change, "
+        "and every fix adds a regression case plus holdout and live re-validation."
     )
 
 
@@ -116,6 +118,7 @@ def analyze_engineering_improvements(
         thresholds=policy,
         signals=signals,
         actions=tuple(actions),
+        rapid_feedback_ready=(signals.loop_runs >= 1 and signals.source_attempts >= 1),
         operational_evidence_ready=operational_ready,
         human_evidence_ready=human_ready,
         ready_for_public_claim=operational_ready and human_ready,
@@ -196,10 +199,14 @@ def _operational_actions(
                 str(signals.loop_runs),
                 f">={policy.minimum_loop_runs}",
                 (
-                    "Collect repeated runs before changing architecture or "
-                    "publishing claims."
+                    "Use the current run for immediate diagnosis, then collect "
+                    "independent runs before release or public quality claims."
                 ),
-                ("Use the same profile and Search Plan across multiple dated runs.",),
+                (
+                    "Rapid feedback remains available after one valid live run.",
+                    "Release evidence uses the same profile and Search Plan across "
+                    "multiple independent runs.",
+                ),
                 ("Keep every raw Loop report and its hash.",),
             )
         )

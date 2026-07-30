@@ -1069,6 +1069,43 @@
       "blocked_by": [
         "M13-006"
       ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "langchain-ai/openevals",
+          "url": "https://github.com/langchain-ai/openevals",
+          "adopted_pattern": "Start with a small domain-specific evaluation set and combine deterministic evaluators with human judgment where necessary.",
+          "rejected_or_not_adopted": "Do not require an LLM judge, hosted service, or model API for the default evaluation loop."
+        },
+        {
+          "category": "official_guide",
+          "title": "Anthropic: Demystifying evals for AI agents",
+          "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+          "adopted_pattern": "Separate capability from regression evals, inspect traces, and feed production failures back into continuously run offline datasets.",
+          "rejected_or_not_adopted": "Do not wait for statistically powered A/B tests when one deterministic failure or one live trace already identifies an actionable defect."
+        },
+        {
+          "category": "official_guide",
+          "title": "LangSmith Evaluation Concepts",
+          "url": "https://docs.langchain.com/langsmith/evaluation-concepts",
+          "adopted_pattern": "Combine offline regression and backtesting with online monitoring, then turn production feedback into versioned offline examples.",
+          "rejected_or_not_adopted": "Do not require LangSmith hosting; implement the lifecycle locally with versioned JSON reports and pytest."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Navigating the Evaluation Funnel to Optimize Iteration Speed for Recommender Systems",
+          "url": "https://arxiv.org/abs/2404.08671",
+          "adopted_pattern": "Use a staged evaluation funnel that rejects unsuccessful changes with cheap necessary criteria before expensive online or human evaluation.",
+          "rejected_or_not_adopted": "Do not use one offline metric or a fixed seven-day waiting period as the universal release decision."
+        }
+      ],
+      "local_constraints": [
+        "Real Chinese job sources change independently and may share one browser failure, so repeated runs are not automatically independent evidence.",
+        "One owner can provide rapid pairwise labels, but public quality claims need broader, versioned evidence and a holdout set.",
+        "The default evaluation loop must run locally without a model API or hosted evaluation service.",
+        "Temporal novelty can be tested quickly with timestamped snapshot pairs; natural multi-day use remains useful for release confidence."
+      ],
       "allowed_paths": [
         "PROJECT_SPEC.md",
         "specs/feature_list.json",
@@ -1083,12 +1120,16 @@
         "tests/matching/test_ranker.py"
       ],
       "acceptance": [
-        "At least 50 human-labeled Chinese jobs cover relevance, duplicates, liveness, links, and hard-filter errors across 3+ days of real use.",
+        "A single real Live Loop can generate rapid engineering feedback immediately; it is explicitly insufficient for public quality claims.",
+        "Each candidate change passes deterministic regression and saved-snapshot replay before a live source run.",
+        "Rapid recommendation review compares baseline and candidate on the same jobs and labels only changed or uncertain Top-10 results.",
+        "Temporal novelty is verified with at least two timestamped snapshots or deterministic snapshot-pair replay; no seven-day wait is required.",
+        "Public-claim readiness requires at least 50 human-labeled Chinese jobs and 3 independent real snapshots spanning at least 2 source-refresh windows.",
         "Metrics (P@10, NDCG@10, FNR, valid-link rate, duplicates caught, source uptime) are script-generated from labeled data.",
         "Seven qualitative evidence items are recorded: jobs found, valid link rate, dedup count, source reliability ranking, best/worst match examples, hard-filter false negatives, actual applications submitted.",
-        "Dataset provenance and annotation guidance are versioned and in-repo.",
+        "Regression, comparison, holdout, and live datasets are versioned separately with provenance and annotation guidance.",
         "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate.",
-        "Every human-labeled hard-filter error is converted into a deterministic regression test before the next collection day."
+        "Every human-labeled hard-filter error is converted into a deterministic regression test before the next candidate comparison or live smoke run."
       ],
       "checks": [
         [
@@ -1163,10 +1204,11 @@
         "reports/release/**"
       ],
       "acceptance": [
-        "The owner uses the same profile and Search Plan for at least 3 cumulative days — consecutive use is preferred but not required.",
+        "Rapid compatibility and recommendation feedback may be completed in one session and must not wait for a fixed seven-day window.",
+        "Release evidence uses at least 3 independent sessions across at least 2 dates; a seven-day soak is optional for stable-release and retention research.",
         "Only roles located in mainland China or explicitly serving the China market count toward trial metrics.",
         "JobFindsMe is used through at least two Agent hosts — ZCode plus one of Codex/Claude Code/Qwen Code — completing the same privacy and workflow scenarios.",
-        "Daily Top 10 labels are collected and feed M14.",
+        "Changed or uncertain Top-10 results are pairwise-labeled against the current baseline and feed M14; unchanged results are not repeatedly labeled.",
         "Source failures, duplicates, invalid links, and ranking bad cases are recorded.",
         "The field-trial report distinguishes observed facts from assumptions, and synthetic scores from real labels."
       ],

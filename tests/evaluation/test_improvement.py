@@ -79,6 +79,7 @@ def _report(
 def test_healthy_operational_runs_still_require_human_evidence() -> None:
     result = analyze_engineering_improvements(tuple(_report(i) for i in range(3)))
 
+    assert result.rapid_feedback_ready is True
     assert result.operational_evidence_ready is True
     assert result.human_evidence_ready is False
     assert result.ready_for_public_claim is False
@@ -113,6 +114,17 @@ def test_failures_generate_owned_engineering_actions_and_test_requirements() -> 
     } <= actions.keys()
     assert actions["SOURCE-RELIABILITY"].area == "connectors"
     assert actions["SOURCE-RELIABILITY"].required_tests
+    assert "immediate diagnosis" in actions["EVAL-COVERAGE"].recommendation
+    assert result.rapid_feedback_ready is True
+    assert result.operational_evidence_ready is False
+    assert result.ready_for_public_claim is False
+
+
+def test_no_live_run_cannot_claim_rapid_feedback_evidence() -> None:
+    result = analyze_engineering_improvements(())
+
+    assert result.rapid_feedback_ready is False
+    assert result.operational_evidence_ready is False
     assert result.ready_for_public_claim is False
 
 
