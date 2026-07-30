@@ -11,6 +11,38 @@ from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.importing.service import ImportSummary, JobImportService
 
 
+def _try_http_connector(
+    source: DiscoverySource,
+) -> object | None:
+    """Return an HTTP-based connector for *source*, or None to use DOM."""
+    from jobfindsme.connectors import ConnectorPolicy
+
+    policy = ConnectorPolicy(public_access=True, robots_allowed=True)
+    if source.kind is DiscoverySourceKind.WUYOU_CDP:
+        from jobfindsme.connectors.http_platforms import (
+            WuyouHttpConnector,
+        )
+
+        return WuyouHttpConnector(
+            source.query or "AI",
+            city=source.location or "",
+            policy=policy,
+            source_name=source.source_name,
+        )
+    if source.kind is DiscoverySourceKind.ZHILIAN_CDP:
+        from jobfindsme.connectors.http_platforms import (
+            ZhilianHttpConnector,
+        )
+
+        return ZhilianHttpConnector(
+            source.query or "AI",
+            city=source.location or "",
+            policy=policy,
+            source_name=source.source_name,
+        )
+    return None
+
+
 class JobDiscoveryService:
     def __init__(
         self,
@@ -67,6 +99,17 @@ class JobDiscoveryService:
                 DiscoverySourceKind.ZHILIAN_CDP: ZhilianConnector,
                 DiscoverySourceKind.WUYOU_CDP: WuyouConnector,
             }[source.kind]
+
+            # Try HTTP connector first (structured JSON, no DOM regex)
+            http_connector = _try_http_connector(source)
+            if http_connector is not None:
+                try:
+                    return self.imports.import_connector(
+                        workspace_id, http_connector
+                    )
+                except Exception:
+                    pass  # fall through to DOM connector
+
             connector = connector_cls(
                 source.query or "AI",
                 city=source.location or "",
