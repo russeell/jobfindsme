@@ -7,12 +7,14 @@ import pytest
 
 from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.china_platforms import (
+    CdpBlockedError,
     CdpFetchError,
     LagouConnector,
     LiepinConnector,
     WuyouConnector,
     ZhilianConnector,
     _cdp_fetch,
+    _sanitize_external_id,
 )
 
 
@@ -63,8 +65,9 @@ def test_platform_connector_maps_compact_job_records(
 
 
 class FakeCdp:
-    def __init__(self, *, fail: bool = False) -> None:
+    def __init__(self, *, fail: bool = False, blocked: bool = False) -> None:
         self.fail = fail
+        self.blocked = blocked
         self.target_closed = False
         self.closed = False
 
@@ -89,6 +92,16 @@ class FakeCdp:
             return "complete"
         if js == "document.body.innerText.length":
             return 1000
+        if js.startswith("JSON.stringify({url:location.href"):
+            return json.dumps(
+                {
+                    "url": "https://www.lagou.com/verify",
+                    "title": "安全验证",
+                    "text": "请完成滑动验证",
+                }
+            )
+        if self.blocked:
+            return "[]"
         return json.dumps([{"title": "AI应用工程师"}])
 
     def close(self) -> None:
@@ -128,3 +141,28 @@ def test_cdp_fetch_reports_extraction_failure_instead_of_empty_success() -> None
 
     assert len(sessions) == 2
     assert all(session.target_closed and session.closed for session in sessions)
+
+
+def test_cdp_fetch_reports_risk_control_instead_of_empty_success() -> None:
+    fake = FakeCdp(blocked=True)
+
+    with pytest.raises(CdpBlockedError, match="滑动验证"):
+        _cdp_fetch(
+            "https://www.lagou.com/wn/jobs",
+            "extract()",
+            session_factory=lambda _port: fake,
+            retries=0,
+        )
+
+    assert fake.target_closed is True
+    assert fake.closed is True
+
+
+def test_external_id_is_stable_and_avoids_long_url_prefix_collisions() -> None:
+    tracked = "https://jobs.example.com/detail/42?tracking=" + "x" * 300
+    assert _sanitize_external_id(tracked) == "https://jobs.example.com/detail/42"
+
+    first = "https://jobs.example.com/?job=1&tracking=" + "x" * 300
+    second = "https://jobs.example.com/?job=2&tracking=" + "x" * 300
+    assert _sanitize_external_id(first) != _sanitize_external_id(second)
+    assert len(_sanitize_external_id(first)) <= 256

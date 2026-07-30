@@ -46,10 +46,11 @@ class JobRepository:
                     job.source.fetched_at.isoformat(),
                 ),
             )
+            version_created = False
             if changed:
-                connection.execute(
+                cursor = connection.execute(
                     """
-                    INSERT INTO job_versions (
+                    INSERT OR IGNORE INTO job_versions (
                         workspace_id, job_id, content_hash, payload_json, observed_at
                     ) VALUES (?, ?, ?, ?, ?)
                     """,
@@ -61,6 +62,7 @@ class JobRepository:
                         job.source.fetched_at.isoformat(),
                     ),
                 )
+                version_created = cursor.rowcount == 1
             record_id = _source_record_id(
                 workspace_id,
                 job.source.source_name,
@@ -91,7 +93,7 @@ class JobRepository:
                     job.source.fetched_at.isoformat(),
                 ),
             )
-        return changed
+        return version_created
 
     def list(self, workspace_id: str) -> list[JobPosting]:
         with self.database.connect() as connection:

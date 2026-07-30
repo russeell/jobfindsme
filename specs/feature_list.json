@@ -1088,11 +1088,50 @@
         "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate."
       ],
       "checks": [
-        ["python3", "-m", "pytest", "tests/evaluation"],
-        ["python3", "-m", "jobfindsme.evaluation.run", "--dataset", "data/eval/v0.1.json", "--type", "synthetic", "--report", "reports/evaluation/v0.1.json"],
-        ["python3", "-m", "jobfindsme.evaluation.run", "--dataset", "data/eval/field_trial/chinese_real_v1.0.json", "--type", "chinese", "--require-claim-ready", "--report", "reports/evaluation/chinese_real_v1.0.json"],
-        ["ruff", "check", "src/jobfindsme/evaluation", "tests/evaluation", "scripts/build_chinese_synthetic_dataset.py"],
-        ["ruff", "format", "--check", "src/jobfindsme/evaluation", "tests/evaluation", "scripts/build_chinese_synthetic_dataset.py"]
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/evaluation"
+        ],
+        [
+          "python3",
+          "-m",
+          "jobfindsme.evaluation.run",
+          "--dataset",
+          "data/eval/v0.1.json",
+          "--type",
+          "synthetic",
+          "--report",
+          "reports/evaluation/v0.1.json"
+        ],
+        [
+          "python3",
+          "-m",
+          "jobfindsme.evaluation.run",
+          "--dataset",
+          "data/eval/field_trial/chinese_real_v1.0.json",
+          "--type",
+          "chinese",
+          "--require-claim-ready",
+          "--report",
+          "reports/evaluation/chinese_real_v1.0.json"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/evaluation",
+          "tests/evaluation",
+          "scripts/build_chinese_synthetic_dataset.py"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "src/jobfindsme/evaluation",
+          "tests/evaluation",
+          "scripts/build_chinese_synthetic_dataset.py"
+        ]
       ],
       "evidence_path": "reports/features/M14-001.json"
     },
@@ -1426,15 +1465,23 @@
       "id": "M22-001",
       "title": "5 CDP platform connectors (simplified from 12)",
       "status": "in_progress",
-      "blocked_by": ["M21-001"],
+      "blocked_by": [
+        "M21-001"
+      ],
       "allowed_paths": [
-        "README.md", "PROJECT_SPEC.md", "specs/feature_list.json",
-        "src/jobfindsme/contracts.py", "src/jobfindsme/source_catalog.py",
+        "README.md",
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/source_catalog.py",
         "src/jobfindsme/connectors/boss_zhipin.py",
         "src/jobfindsme/connectors/china_platforms.py",
         "src/jobfindsme/importing/discovery.py",
-        "tests/core/test_source_catalog.py", "tests/connectors/**",
-        "reports/features/M22-001.json"
+        "tests/core/test_source_catalog.py",
+        "tests/connectors/**",
+        "reports/features/M22-001.json",
+        "src/jobfindsme/importing/repository.py",
+        "tests/importing/test_importing.py"
       ],
       "acceptance": [
         "Default sources: BOSS直聘 + 猎聘 + 前程无忧 + 智联 + 拉勾.",
@@ -1442,11 +1489,24 @@
         "Deleted connectors: Playwright SPA (字节/美团/滴滴/B站), Baidu SSR, Greenhouse, Ashby, Lever, JsonLdCareerSite — all redundant with platforms or zero China output.",
         "source_catalog returns exactly 5 sources for China locations.",
         "Connector contract tests cover mapping, resource cleanup, and explicit extraction failure.",
-        "Each platform remains in_progress until a dated live Loop report proves a successful real extraction."
+        "Each platform remains in_progress until a dated live Loop report proves a successful real extraction.",
+        "Repeated job content is idempotent: A→B→A does not crash or create a duplicate version."
       ],
       "checks": [
-        ["python3", "-m", "pytest", "tests/connectors", "tests/core/test_source_catalog.py"],
-        ["ruff", "check", "src/jobfindsme/connectors", "tests/connectors"]
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors",
+          "tests/importing",
+          "tests/core/test_source_catalog.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme/connectors",
+          "tests/connectors"
+        ]
       ],
       "evidence_path": "reports/features/M22-001.json"
     },
@@ -1454,9 +1514,13 @@
       "id": "M22-002",
       "title": "AGENTS.md — framework-agnostic Agent instructions",
       "status": "done",
-      "blocked_by": ["M22-001"],
+      "blocked_by": [
+        "M22-001"
+      ],
       "allowed_paths": [
-        "AGENTS.md", "README.md", "docs/SKILL.md",
+        "AGENTS.md",
+        "README.md",
+        "docs/SKILL.md",
         "specs/feature_list.json",
         "reports/features/M22-002.json"
       ],
@@ -1472,10 +1536,15 @@
       "id": "M22-003",
       "title": "Generic MCP install + match score threshold",
       "status": "done",
-      "blocked_by": ["M22-002"],
+      "blocked_by": [
+        "M22-002"
+      ],
       "allowed_paths": [
-        "README.md", "PROJECT_SPEC.md", "specs/feature_list.json",
-        "src/jobfindsme/cli.py", "src/jobfindsme/installer/**",
+        "README.md",
+        "PROJECT_SPEC.md",
+        "specs/feature_list.json",
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/installer/**",
         "src/jobfindsme/matching/ranker.py",
         "tests/matching/**",
         "reports/features/M22-003.json"
@@ -1492,7 +1561,9 @@
       "id": "M23-001",
       "title": "Measured live-search Loop and field-trial telemetry",
       "status": "done",
-      "blocked_by": ["M3-002"],
+      "blocked_by": [
+        "M3-002"
+      ],
       "allowed_paths": [
         "AGENTS.md",
         "README.md",
@@ -1524,9 +1595,46 @@
         "Local-fixture success and source-failure paths are regression tested."
       ],
       "checks": [
-        ["python3", "-m", "pytest", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"],
-        ["ruff", "check", "--no-cache", "src/jobfindsme/contracts.py", "src/jobfindsme/core/app.py", "src/jobfindsme/connectors/boss_zhipin.py", "src/jobfindsme/evaluation/live_loop.py", "src/jobfindsme/privacy.py", "src/jobfindsme/storage.py", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"],
-        ["ruff", "format", "--check", "--no-cache", "src/jobfindsme/contracts.py", "src/jobfindsme/core/app.py", "src/jobfindsme/connectors/boss_zhipin.py", "src/jobfindsme/evaluation/live_loop.py", "src/jobfindsme/privacy.py", "src/jobfindsme/storage.py", "tests/evaluation/test_live_loop.py", "tests/connectors/test_china_platforms.py", "tests/core/test_privacy.py", "tests/test_storage.py"]
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/evaluation/test_live_loop.py",
+          "tests/connectors/test_china_platforms.py",
+          "tests/core/test_privacy.py",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "--no-cache",
+          "src/jobfindsme/contracts.py",
+          "src/jobfindsme/core/app.py",
+          "src/jobfindsme/connectors/boss_zhipin.py",
+          "src/jobfindsme/evaluation/live_loop.py",
+          "src/jobfindsme/privacy.py",
+          "src/jobfindsme/storage.py",
+          "tests/evaluation/test_live_loop.py",
+          "tests/connectors/test_china_platforms.py",
+          "tests/core/test_privacy.py",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "--no-cache",
+          "src/jobfindsme/contracts.py",
+          "src/jobfindsme/core/app.py",
+          "src/jobfindsme/connectors/boss_zhipin.py",
+          "src/jobfindsme/evaluation/live_loop.py",
+          "src/jobfindsme/privacy.py",
+          "src/jobfindsme/storage.py",
+          "tests/evaluation/test_live_loop.py",
+          "tests/connectors/test_china_platforms.py",
+          "tests/core/test_privacy.py",
+          "tests/test_storage.py"
+        ]
       ],
       "evidence_path": "reports/features/M23-001.json"
     },
@@ -1534,7 +1642,9 @@
       "id": "M24-001",
       "title": "Source truth, query planning, and catalog reconciliation",
       "status": "done",
-      "blocked_by": ["M23-001"],
+      "blocked_by": [
+        "M23-001"
+      ],
       "design_research_required": true,
       "research_refs": [
         {
@@ -1588,8 +1698,22 @@
         "Regression tests cover partial snapshots, location propagation, source-catalog upgrades, and unknown classification policy."
       ],
       "checks": [
-        ["python3", "-m", "pytest", "tests/core", "tests/importing", "tests/connectors"],
-        ["ruff", "check", "src/jobfindsme", "tests/core", "tests/importing", "tests/connectors"]
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core",
+          "tests/importing",
+          "tests/connectors"
+        ],
+        [
+          "ruff",
+          "check",
+          "src/jobfindsme",
+          "tests/core",
+          "tests/importing",
+          "tests/connectors"
+        ]
       ],
       "evidence_path": "reports/features/M24-001.json"
     },
@@ -1597,7 +1721,9 @@
       "id": "M25-001",
       "title": "Research-gated evaluation-driven engineering loop",
       "status": "done",
-      "blocked_by": ["M23-001"],
+      "blocked_by": [
+        "M23-001"
+      ],
       "design_research_required": true,
       "research_refs": [
         {
@@ -1662,9 +1788,34 @@
         "The analyzer never edits Spec, Feature status, or implementation code."
       ],
       "checks": [
-        ["python3", "-m", "pytest", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"],
-        ["ruff", "check", "--no-cache", "scripts/feature_harness.py", "scripts/check_feature.py", "src/jobfindsme/evaluation/improvement.py", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"],
-        ["ruff", "format", "--check", "--no-cache", "scripts/feature_harness.py", "scripts/check_feature.py", "src/jobfindsme/evaluation/improvement.py", "tests/evaluation/test_improvement.py", "tests/harness/test_feature_harness.py"]
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/evaluation/test_improvement.py",
+          "tests/harness/test_feature_harness.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "--no-cache",
+          "scripts/feature_harness.py",
+          "scripts/check_feature.py",
+          "src/jobfindsme/evaluation/improvement.py",
+          "tests/evaluation/test_improvement.py",
+          "tests/harness/test_feature_harness.py"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "--no-cache",
+          "scripts/feature_harness.py",
+          "scripts/check_feature.py",
+          "src/jobfindsme/evaluation/improvement.py",
+          "tests/evaluation/test_improvement.py",
+          "tests/harness/test_feature_harness.py"
+        ]
       ],
       "evidence_path": "reports/features/M25-001.json"
     }

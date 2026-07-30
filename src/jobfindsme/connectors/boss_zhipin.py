@@ -176,7 +176,7 @@ class _CDPSession:
         result = response.get("result", {}).get("result", {})
         if result.get("subtype") == "error":
             raise BossConnectorError(
-                f"BOSS page JavaScript failed: {result.get('description', result)}"
+                f"JavaScript evaluation failed: {result.get('description', result)}"
             )
         return result.get("value")
 

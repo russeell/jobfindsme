@@ -221,6 +221,32 @@ def test_import_deduplicates_and_versions_only_content_changes(tmp_path) -> None
     assert version_count == 2
 
 
+def test_reappearing_content_does_not_crash_or_create_duplicate_version(
+    tmp_path,
+) -> None:
+    database = Database(tmp_path / "jobs.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create("test")
+    service = JobImportService(JobRepository(database))
+
+    original = raw_job()
+    changed = raw_job(payload={"description": "Python RAG Agent，新增MCP能力"})
+    first = service.import_records(workspace.workspace_id, [original], fetched_at=NOW)
+    second = service.import_records(workspace.workspace_id, [changed], fetched_at=NOW)
+    reverted = service.import_records(
+        workspace.workspace_id, [original], fetched_at=NOW
+    )
+
+    assert first.versions_created == 1
+    assert second.versions_created == 1
+    assert reverted.versions_created == 0
+    with database.connect() as connection:
+        version_count = connection.execute(
+            "SELECT count(*) FROM job_versions"
+        ).fetchone()[0]
+    assert version_count == 2
+
+
 def test_cross_source_duplicate_keeps_two_source_records(tmp_path) -> None:
     database = Database(tmp_path / "jobs.db")
     database.migrate()

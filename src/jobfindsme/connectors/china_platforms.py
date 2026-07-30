@@ -10,6 +10,7 @@ Based on career-ops-cn (DavePenn, MIT) — Puppeteer + DOM extraction.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import time
 from collections.abc import Callable
@@ -34,6 +35,10 @@ class CdpSession(Protocol):
 
 class CdpFetchError(Exception):
     """Raised when CDP navigation or extraction fails after retries."""
+
+
+class CdpBlockedError(CdpFetchError):
+    """Raised when a platform returns a login, CAPTCHA, or risk-control page."""
 
 
 def _wait_for_selectors(
@@ -99,20 +104,34 @@ def _cdp_fetch(
             )
             cdp.send("Page.navigate", {"url": search_url}, sid)
 
-            # Poll for readyState + minimal content (not blind sleep)
+            # Poll for readyState + stable content (SPA pages populate
+            # job cards asynchronously after the initial shell renders).
             deadline = time.monotonic() + max(wait_ms / 1000, 8)
+            body_met_at: float | None = None
             while time.monotonic() < deadline:
                 state = cdp.eval_js("document.readyState", sid)
                 if state in {"interactive", "complete"}:
                     body_len = cdp.eval_js("document.body.innerText.length", sid)
                     if isinstance(body_len, (int, float)) and body_len > 200:
-                        break
+                        if body_met_at is None:
+                            body_met_at = time.monotonic()
+                        # Wait 2s after body threshold for SPA rendering
+                        if time.monotonic() - body_met_at >= 2.0:
+                            break
                 time.sleep(0.3)
 
             raw = cdp.eval_js(extract_js, sid)
             if isinstance(raw, str):
-                return json.loads(raw)
+                items = json.loads(raw)
+                if items:
+                    return items
+                blocked_reason = _blocked_page_reason(cdp, sid)
+                if blocked_reason:
+                    raise CdpBlockedError(blocked_reason)
+                return []
             return []
+        except CdpBlockedError:
+            raise
         except Exception as exc:
             last_error = exc
             if attempt < retries:
@@ -125,6 +144,44 @@ def _cdp_fetch(
     raise CdpFetchError(
         f"CDP extraction failed after {retries + 1} attempts: {last_error}"
     ) from last_error
+
+
+def _sanitize_external_id(url: str, fallback: str = "") -> str:
+    """Return a stable bounded ID without truncation collisions."""
+    from urllib.parse import urlparse
+
+    if not url:
+        return fallback
+    parsed = urlparse(url)
+    clean = parsed._replace(query="", fragment="").geturl()
+    if parsed.path not in {"", "/"} and len(clean) <= 256:
+        return clean
+    return f"url_{hashlib.sha256(url.encode()).hexdigest()}"
+
+
+def _blocked_page_reason(cdp: CdpSession, sid: str) -> str | None:
+    raw = cdp.eval_js(
+        "JSON.stringify({url:location.href,title:document.title,"
+        "text:(document.body&&document.body.innerText||'').slice(0,2000)})",
+        sid,
+    )
+    if not isinstance(raw, str):
+        return None
+    try:
+        page = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    haystack = " ".join(str(value) for value in page.values()).casefold()
+    markers = (
+        "滑动验证",
+        "安全验证",
+        "访问过于频繁",
+        "请完成验证",
+        "captcha",
+        "verify",
+    )
+    marker = next((value for value in markers if value in haystack), None)
+    return f"platform access blocked by {marker}" if marker else None
 
 
 # ── 猎聘 ─────────────────────────────────────────────────────────────────────
@@ -195,7 +252,9 @@ class LiepinConnector:
                 source_kind=SourceKind.CAREER_SITE,
                 source_name=self.source_name,
                 source_url=url,
-                external_id=item.get("url", "") or item.get("title", ""),
+                external_id=_sanitize_external_id(
+                    item.get("url", ""), item.get("title", "")
+                ),
                 payload={
                     "title": item.get("title", ""),
                     "company": item.get("company", ""),
@@ -279,7 +338,9 @@ class ZhilianConnector:
                 source_kind=SourceKind.CAREER_SITE,
                 source_name=self.source_name,
                 source_url=url,
-                external_id=item.get("url", "") or item.get("title", ""),
+                external_id=_sanitize_external_id(
+                    item.get("url", ""), item.get("title", "")
+                ),
                 payload={
                     "title": item.get("title", ""),
                     "company": item.get("company", ""),
@@ -356,7 +417,9 @@ class LagouConnector:
                 source_kind=SourceKind.CAREER_SITE,
                 source_name=self.source_name,
                 source_url=url,
-                external_id=item.get("url", "") or item.get("title", ""),
+                external_id=_sanitize_external_id(
+                    item.get("url", ""), item.get("title", "")
+                ),
                 payload={
                     "title": item.get("title", ""),
                     "company": item.get("company", ""),
@@ -374,7 +437,7 @@ class LagouConnector:
 
 # ── 前程无忧 (51job) ─────────────────────────────────────────────────────────
 
-_WUYOU_EXTRACT_JS = """  # noqa: E501
+_WUYOU_EXTRACT_JS = """
 (function(){
     var results = [];
     var items = document.querySelectorAll('.joblist-item');
@@ -395,7 +458,7 @@ _WUYOU_EXTRACT_JS = """  # noqa: E501
     });
     return JSON.stringify(results);
 })()
-"""
+"""  # noqa: E501
 
 _WUYOU_CITY_CODES = {
     "北京": "010000",
@@ -441,7 +504,9 @@ class WuyouConnector:
                 source_kind=SourceKind.CAREER_SITE,
                 source_name=self.source_name,
                 source_url=url,
-                external_id=item.get("url", "") or item.get("title", ""),
+                external_id=_sanitize_external_id(
+                    item.get("url", ""), item.get("title", "")
+                ),
                 payload={
                     "title": item.get("title", ""),
                     "company": item.get("company", ""),
