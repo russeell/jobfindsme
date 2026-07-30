@@ -11,6 +11,7 @@ from jobfindsme.connectors.boss_zhipin import (
     BossAuthenticationRequired,
     BossConnectorError,
     BossZhipinConnector,
+    _chrome_command,
 )
 from jobfindsme.importing.normalizer import normalize_job
 
@@ -156,3 +157,16 @@ def test_disallowed_policy_is_rejected() -> None:
             "AI",
             policy=ConnectorPolicy(public_access=True, robots_allowed=False),
         )
+
+
+def test_chrome_command_keeps_the_browser_sandbox_enabled() -> None:
+    command = _chrome_command(
+        "/Applications/Google Chrome",
+        "/tmp/jobfindsme-profile",
+        ["https://www.zhipin.com/web/user/"],
+    )
+
+    assert "--no-sandbox" not in command
+    assert "--disable-gpu-sandbox" not in command
+    assert "--disable-gpu" not in command
+    assert "--remote-debugging-port=9222" in command

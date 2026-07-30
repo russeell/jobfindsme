@@ -74,3 +74,47 @@ def test_doctor_reports_insecure_data_directory_permissions(tmp_path) -> None:
     assert report.ok is False
     assert permissions.ok is False
     assert "mode=755" in permissions.message
+
+
+def test_boss_login_probe_navigates_to_same_origin_and_closes_resources(
+    monkeypatch,
+) -> None:
+    class FakeCdp:
+        def __init__(self) -> None:
+            self.calls = []
+            self.closed = False
+
+        def send(self, method, params=None, sid=None):
+            self.calls.append((method, params or {}, sid))
+            if method == "Target.createTarget":
+                return {"result": {"targetId": "target-1"}}
+            if method == "Target.attachToTarget":
+                return {"result": {"sessionId": "session-1"}}
+            return {"result": {}}
+
+        def eval_js(self, script, _sid):
+            if script == "document.readyState":
+                return "complete"
+            return '{"jobs":[{"job_id":"job-1"}]}'
+
+        def close(self):
+            self.closed = True
+
+    fake = FakeCdp()
+    monkeypatch.setattr(
+        "jobfindsme.doctor.service._cdp_port_reachable",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession",
+        lambda _port: fake,
+    )
+
+    diagnostic = Doctor._boss_login()
+
+    methods = [method for method, _, _ in fake.calls]
+    navigate = next(call for call in fake.calls if call[0] == "Page.navigate")
+    assert diagnostic.ok is True
+    assert navigate[1]["url"].startswith("https://www.zhipin.com/")
+    assert methods[-1] == "Target.closeTarget"
+    assert fake.closed is True

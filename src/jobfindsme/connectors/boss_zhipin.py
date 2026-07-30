@@ -348,6 +348,17 @@ PLATFORM_LOGIN_URLS = {
 }
 
 
+def _chrome_command(chrome: str, profile: str, urls: list[str]) -> list[str]:
+    """Build the isolated browser command without weakening Chrome's sandbox."""
+    return [
+        chrome,
+        f"--remote-debugging-port={DEFAULT_CDP_PORT}",
+        "--remote-allow-origins=http://127.0.0.1:9222",
+        f"--user-data-dir={profile}",
+        *urls,
+    ]
+
+
 def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     """Launch an isolated Chrome profile for platform login.
 
@@ -392,14 +403,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     labels = [PLATFORM_LOGIN_URLS[p][1] for p in selected]
 
     subprocess.Popen(
-        [
-            chrome,
-            f"--remote-debugging-port={DEFAULT_CDP_PORT}",
-            "--remote-allow-origins=http://127.0.0.1:9222",
-            "--disable-gpu",
-            f"--user-data-dir={profile}",
-        ]
-        + urls,
+        _chrome_command(chrome, str(profile), urls),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )

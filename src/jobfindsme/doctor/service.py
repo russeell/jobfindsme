@@ -4,6 +4,7 @@ import os
 import stat
 import sys
 import urllib.request
+from contextlib import suppress
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -204,30 +205,40 @@ class Doctor:
             from jobfindsme.connectors.boss_zhipin import (
                 BOSS_API_PATH,
                 BOSS_ORIGIN,
+                BOSS_SEARCH_PAGE,
                 DEFAULT_CDP_PORT,
+                BossZhipinConnector,
                 _CDPSession,
             )
 
             cdp = _CDPSession(DEFAULT_CDP_PORT)
-            target = cdp.send(  # noqa: E501
-                "Target.createTarget", {"url": "about:blank", "background": True}
-            )
-            target_id = target["result"]["targetId"]
-            attached = cdp.send(  # noqa: E501
-                "Target.attachToTarget",
-                {"targetId": target_id, "flatten": True},
-            )
-            sid = attached["result"]["sessionId"]
-            cdp.send("Page.enable", sid=sid)
-            api_url = (
-                f"{BOSS_ORIGIN}{BOSS_API_PATH}"
-                f"?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
-            )
-            raw = cdp.eval_js(
-                _BOSS_PROBE_JS.replace("__API_URL__", _json.dumps(api_url)), sid
-            )
-            cdp.send("Target.closeTarget", {"targetId": target_id})
-            cdp.close()
+            target_id: str | None = None
+            try:
+                target = cdp.send(
+                    "Target.createTarget", {"url": "about:blank", "background": True}
+                )
+                target_id = target["result"]["targetId"]
+                attached = cdp.send(
+                    "Target.attachToTarget",
+                    {"targetId": target_id, "flatten": True},
+                )
+                sid = attached["result"]["sessionId"]
+                cdp.send("Page.enable", sid=sid)
+                cdp.send("Runtime.enable", sid=sid)
+                cdp.send("Page.navigate", {"url": BOSS_SEARCH_PAGE}, sid)
+                BossZhipinConnector._wait_until_ready(cdp, sid)
+                api_url = (
+                    f"{BOSS_ORIGIN}{BOSS_API_PATH}"
+                    f"?{urlencode({'query': '工程师', 'page': 1, 'pageSize': 1})}"
+                )
+                raw = cdp.eval_js(
+                    _BOSS_PROBE_JS.replace("__API_URL__", _json.dumps(api_url)), sid
+                )
+            finally:
+                if target_id is not None:
+                    with suppress(Exception):
+                        cdp.send("Target.closeTarget", {"targetId": target_id})
+                cdp.close()
             payload = _json.loads(raw) if isinstance(raw, str) else {}
             if payload.get("error") == "authentication_required":
                 return Diagnostic(
