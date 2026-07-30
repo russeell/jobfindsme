@@ -175,6 +175,13 @@ A new transport or source is not enabled by default until it has:
 Candidate HTTP implementations for Liepin, Zhaopin, and 51job should be tested
 behind this gate. They are not advertised before passing it.
 
+> Status (v0.2.1): 前程无忧 and 智联招聘 now use **passive CDP Network
+> interception** (`http_platforms.py`) — the SPA makes its own signed API call
+> and we read the JSON response, no signature reverse-engineering. DOM
+> extraction remains the fallback when interception fails. 猎聘 stays on DOM
+> + detail-page JD enrichment. The gate above still applies to any future
+> switch to pure-HTTP (self-computed signatures).
+
 ### 6.4 Search modes
 
 | Mode | Remote work | Purpose |

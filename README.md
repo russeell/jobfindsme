@@ -2,7 +2,7 @@
 
 # jobfindsme · AI 求职雷达
 
-**一次搜索多个招聘来源，根据本地简历筛选岗位；下次只看新机会。**
+**聚合 BOSS直聘 · 猎聘 · 前程无忧 · 智联招聘，根据本地简历筛选岗位；下次只看新机会。**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -50,6 +50,19 @@ WorkBuddy、ZCode、Qwen、Qoder 等 MCP Agent。
 不要克隆仓库或运行测试：
 https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
+
+### 一键安装（推荐 · 人类用户）
+
+把 `workbuddy` 换成你用的 Agent（`claude` / `codex` / `kimi` / `qwen` / `trae` /
+`zcode` / `qoder`）。依赖走清华镜像，GitHub 直连失败自动回退镜像源，可重复执行：
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
+  | bash -s -- workbuddy
+```
+
+脚本自动完成：检测 Python 3.11+ → 建独立运行时 → 装预编译 wheel → 接入指定 Agent
+的 MCP 配置 → 打印登录 BOSS 的下一步。装完重启 Agent 即可。
 
 ### 手动安装
 

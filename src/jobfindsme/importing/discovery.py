@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from jobfindsme.connectors import (
@@ -9,6 +10,8 @@ from jobfindsme.connectors.http import HttpTransport, UrllibTransport
 from jobfindsme.contracts import DiscoverySource, DiscoverySourceKind
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.importing.service import ImportSummary, JobImportService
+
+_log = logging.getLogger(__name__)
 
 
 def _try_http_connector(
@@ -100,13 +103,21 @@ class JobDiscoveryService:
                 DiscoverySourceKind.WUYOU_CDP: WuyouConnector,
             }[source.kind]
 
-            # Try HTTP connector first (structured JSON, no DOM regex)
+            # Try HTTP connector first (structured JSON, no DOM regex).
+            # On transport failure (InterceptionFailedError etc.) fall back
+            # to the DOM connector — but log it; silently swallowing HTTP
+            # failures here used to hide Chrome-not-running / page-changed
+            # bugs and silently degrade to 0 jobs.
             http_connector = _try_http_connector(source)
             if http_connector is not None:
                 try:
                     return self.imports.import_connector(workspace_id, http_connector)
-                except Exception:
-                    pass  # fall through to DOM connector
+                except Exception as error:
+                    _log.warning(
+                        "HTTP connector for %s failed (%s); falling back to DOM",
+                        source.source_name,
+                        error,
+                    )
 
             connector = connector_cls(
                 source.query or "AI",

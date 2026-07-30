@@ -25,6 +25,12 @@ from jobfindsme.connectors.boss_zhipin import (
 from jobfindsme.contracts import SourceKind
 
 
+class InterceptionFailedError(RuntimeError):
+    """Passive CDP interception failed at transport level (timeout, no Chrome,
+    page structure changed).  Distinct from a successful-but-empty API
+    response: discovery uses this to decide whether to fall back to DOM."""
+
+
 def _intercept_api_response(
     search_url: str,
     api_url_patterns: tuple[str, ...],
@@ -143,9 +149,12 @@ class WuyouHttpConnector:
         from urllib.parse import quote
 
         city_code = _WUYOU_CITY.get(self.city, "000000")
+        # NOTE: the SPA reads `jobArea`, not `location`.  Passing `location`
+        # silently ignores the filter and the page falls back to IP
+        # geolocation (e.g. 020000/上海 never applied → 深圳 results).
         search_url = (
             "https://we.51job.com/pc/search"
-            f"?keyword={quote(self.keyword)}&location={city_code}"
+            f"?keyword={quote(self.keyword)}&jobArea={city_code}"
         )
 
         data = _intercept_api_response(
@@ -153,6 +162,10 @@ class WuyouHttpConnector:
             ("search-pc",),
             port=self.cdp_port,
         )
+        if data is None:
+            raise InterceptionFailedError(
+                "51job search-pc interception failed (transport)"
+            )
         if not data:
             return []
 
@@ -206,6 +219,19 @@ class WuyouHttpConnector:
 
 # ── 智联招聘 ─────────────────────────────────────────────────────────────────
 
+# 智联搜索页 SPA 读取 `jl`（cityId），不是中文城市名。
+_ZHILIAN_CITY: dict[str, str] = {
+    "北京": "530",
+    "上海": "538",
+    "广州": "763",
+    "深圳": "765",
+    "杭州": "653",
+    "成都": "801",
+    "武汉": "736",
+    "南京": "635",
+    "苏州": "639",
+}
+
 
 class ZhilianHttpConnector:
     """Discover jobs from 智联招聘 via passive CDP Network interception."""
@@ -229,22 +255,29 @@ class ZhilianHttpConnector:
     def fetch(self) -> list[RawJobRecord]:
         from urllib.parse import quote
 
-        city_param = f"&city={quote(self.city)}" if self.city else ""
+        city_id = _ZHILIAN_CITY.get(self.city, "")
+        city_param = f"&jl={city_id}" if city_id else ""
         search_url = (
             f"https://sou.zhaopin.com/?kw={quote(self.keyword)}&p=1{city_param}"
         )
 
+        # 智联 SPA 实际调用 fe-api.zhaopin.com/c/i/sou（已验证 200 匿名可达）；
+        # 旧 pattern "portal/job/search" 返回 404，永远不会命中。
         data = _intercept_api_response(
             search_url,
-            ("portal/job/search",),
+            ("/c/i/sou",),
             port=self.cdp_port,
         )
+        if data is None:
+            raise InterceptionFailedError(
+                "zhilian fe-api /c/i/sou interception failed (transport)"
+            )
         if not data:
             return []
 
         jobs_raw = data.get("data", data)
         if isinstance(jobs_raw, dict):
-            jobs_raw = jobs_raw.get("list", jobs_raw.get("results", []))
+            jobs_raw = jobs_raw.get("results", jobs_raw.get("list", []))
         if isinstance(jobs_raw, dict):
             jobs: list[dict] = list(jobs_raw.values())
         elif isinstance(jobs_raw, list):
@@ -252,22 +285,39 @@ class ZhilianHttpConnector:
         else:
             return []
 
+        def _city_of(item: dict) -> str:
+            work_city = item.get("workCity")
+            if isinstance(work_city, dict):
+                return str(work_city.get("name", ""))
+            return str(work_city or item.get("cityName", item.get("city", "")))
+
         return [
             RawJobRecord(
                 source_kind=SourceKind.CAREER_SITE,
                 source_name=self.source_name,
                 source_url=search_url,
                 external_id=str(
-                    item.get("positionId", item.get("id", item.get("title", "")))
+                    item.get(
+                        "number",
+                        item.get("positionId", item.get("id", item.get("jobName", ""))),
+                    )
                 ),
                 payload={
                     "title": str(item.get("jobName", item.get("title", ""))),
                     "company": str(item.get("companyName", item.get("company", ""))),
                     "description": str(
-                        item.get("jobDescription", item.get("description", ""))
+                        item.get(
+                            "jobSummary",
+                            item.get("jobDescription", item.get("description", "")),
+                        )
                     ),
-                    "location": str(item.get("city", item.get("location", ""))),
-                    "salary": str(item.get("salaryDetail", item.get("salary", ""))),
+                    "location": _city_of(item),
+                    "salary": str(
+                        item.get(
+                            "salary60",
+                            item.get("salaryDetail", item.get("salary", "")),
+                        )
+                    ),
                     "url": str(item.get("positionURL", item.get("url", ""))),
                     "apply_url": str(item.get("positionURL", item.get("url", ""))),
                 },
