@@ -199,6 +199,25 @@ LIEPIN_CITY_CODES = {
 
 _LIEPIN_EXTRACT_JS = """
 (function(){
+    var COMPANY_SUFFIX_RE = /有限公司|股份有限公司|有限责任公司|集团有限公司|集团公司|分公司|支行|分行|事务所|中心|工作室|学校|医院|研究院|科技公司|科技|微电子|数据|网络|软件/;
+    function _extract_company(card) {
+        // Each liepin card has ellipsis-1 spans in fixed order:
+        //   [0]=title  [1]=city  [2]=company  [3]=industry+scale
+        // Try suffix match first, then fall back to positional.
+        var candidates = card.querySelectorAll('[class*="ellipsis-1"]');
+        for (var i = 0; i < candidates.length; i++) {
+            var text = candidates[i].textContent.trim();
+            if (text.length >= 4 && COMPANY_SUFFIX_RE.test(text)) {
+                return text;
+            }
+        }
+        // Fallback: the 3rd ellipsis-1 (index 2) is the company slot
+        if (candidates.length >= 3) {
+            var fallback = candidates[2].textContent.trim();
+            if (fallback.length >= 2) return fallback;
+        }
+        return '';
+    }
     var results = [];
     var cards = document.querySelectorAll('[class*="job-card-pc-container"]');
     cards.forEach(function(card) {
@@ -208,11 +227,10 @@ _LIEPIN_EXTRACT_JS = """
         var titleMatch = text.match(/^(.+?)(?:【|$)/);
         var salaryMatch = text.match(/(\\d+[-~·]\\d+[kK万](?:[·.]\\d+薪)?)/);
         var cityMatch = text.match(/【([^】]+)】/);
-        var companyMatch = text.match(/(?:统招本科|大专|硕士|博士|学历不限|经验不限)\\s*(.+?)(?:互联网|金融|教育|医疗|房地产|专业技术|机械|制造|消费品|汽车|电子|通信|游戏|文化|零售|物流|能源|农业|政府||[A-Z]轮|上市|融资|天使)/);
         if (titleMatch && titleMatch[1].trim()) {
             results.push({
                 title: titleMatch[1].trim(),
-                company: companyMatch ? companyMatch[1].trim() : '',
+                company: _extract_company(card),
                 salary: salaryMatch ? salaryMatch[1] : '',
                 city: cityMatch ? cityMatch[1] : '',
                 url: url
