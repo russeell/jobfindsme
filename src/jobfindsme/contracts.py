@@ -245,10 +245,15 @@ class DiscoverySourceKind(StrEnum):
     BOSS_CDP = "boss_cdp"
     LIEPIN_CDP = "liepin_cdp"
     ZHILIAN_CDP = "zhilian_cdp"
+    # Compatibility only: old workspaces may still contain this value.
     LAGOU_CDP = "lagou_cdp"
     WUYOU_CDP = "wuyou_cdp"
     JSON_FILE = "json_file"
     CSV_FILE = "csv_file"
+
+    @property
+    def retired(self) -> bool:
+        return self is self.LAGOU_CDP
 
     @property
     def uses_browser(self) -> bool:
@@ -256,7 +261,6 @@ class DiscoverySourceKind(StrEnum):
             self.BOSS_CDP,
             self.LIEPIN_CDP,
             self.ZHILIAN_CDP,
-            self.LAGOU_CDP,
             self.WUYOU_CDP,
         }
 

@@ -18,12 +18,10 @@ def test_china_search_gets_default_connectors() -> None:
         "猎聘·杭州",
         "智联招聘·上海",
         "智联招聘·杭州",
-        "拉勾·上海",
-        "拉勾·杭州",
         "前程无忧·上海",
         "前程无忧·杭州",
     }
-    assert len(sources) == 10
+    assert len(sources) == 8
     assert all(source.kind.uses_browser for source in sources)
     assert all(source.catalog_managed for source in sources)
     assert {source.location for source in sources} == {"上海", "杭州"}
@@ -61,7 +59,7 @@ def test_catalog_reconciliation_updates_queries_and_preserves_custom_source() ->
     )
 
     managed = [source for source in reconciled if source.catalog_managed]
-    assert len(managed) == 5
+    assert len(managed) == 4
     assert {source.query for source in managed} == {"RAG工程师"}
     assert {source.location for source in managed} == {"杭州"}
     assert custom in reconciled
@@ -81,6 +79,25 @@ def test_custom_browser_source_is_not_treated_as_catalog_plan() -> None:
     )
 
     assert reconciled == (custom,)
+
+
+def test_catalog_reconciliation_removes_retired_lagou_source() -> None:
+    existing = recommended_connectors(("上海",), ("AI应用工程师",))
+    retired = DiscoverySource(
+        kind="lagou_cdp",
+        source_name="拉勾",
+        catalog_managed=True,
+        location="上海",
+        query="AI应用工程师",
+    )
+
+    reconciled = reconcile_catalog_sources(
+        existing + (retired,),
+        locations=("上海",),
+        roles=("AI应用工程师",),
+    )
+
+    assert all(source.kind != "lagou_cdp" for source in reconciled)
 
 
 def test_source_links_returns_empty() -> None:

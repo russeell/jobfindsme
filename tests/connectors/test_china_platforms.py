@@ -9,7 +9,6 @@ from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
 from jobfindsme.connectors.china_platforms import (
     CdpBlockedError,
     CdpFetchError,
-    LagouConnector,
     LiepinConnector,
     WuyouConnector,
     ZhilianConnector,
@@ -30,7 +29,6 @@ def _policy() -> ConnectorPolicy:
     [
         (LiepinConnector, "猎聘"),
         (ZhilianConnector, "智联招聘"),
-        (LagouConnector, "拉勾"),
         (WuyouConnector, "前程无忧"),
     ],
 )
@@ -98,7 +96,7 @@ class FakeCdp:
         if js.startswith("JSON.stringify({url:location.href"):
             return json.dumps(
                 {
-                    "url": "https://www.lagou.com/verify",
+                    "url": "https://www.zhaopin.com/security-check",
                     "title": "安全验证",
                     "text": "请完成滑动验证",
                 }
@@ -151,7 +149,7 @@ def test_cdp_fetch_reports_risk_control_instead_of_empty_success() -> None:
 
     with pytest.raises(CdpBlockedError, match="滑动验证"):
         _cdp_fetch(
-            "https://www.lagou.com/wn/jobs",
+            "https://www.zhaopin.com/sou/",
             "extract()",
             session_factory=lambda _port: fake,
             retries=0,

@@ -1,146 +1,84 @@
-# jobfindsme · Your AI Job Search Radar
+# jobfindsme · AI Job Search Radar
 
-> **Search multiple job platforms at once, match against your resume, and focus
-> future searches on new opportunities.**
+**Search several job sources from one Agent, match jobs against a local resume,
+and focus later searches on new opportunities.**
 
-[![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
-[![MCP](https://img.shields.io/badge/MCP-stdio-111111)](https://modelcontextprotocol.io/)
-[![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
-[![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[Chinese](README.md) · [Install](INSTALL.md) · [Specification](PROJECT_SPEC.md)
 
-**jobfindsme** lets your AI agent search several job sources from one place,
-remove duplicates, explain matches, and remember what you have already seen.
+## What it does
 
-- 🔍 **Multi-source discovery** — connectors for BOSS Zhipin, Liepin, 51job, Zhaopin, and Lagou
-- 📄 **Local resume matching** — resume never leaves your machine
-- 📊 **Evidence-based results** — match percentage + skill comparison + reasons
-- 🧠 **Persistent state** — remember saved, dismissed, and applied jobs across agents
-- 🆕 **Incremental radar** — track new, changed, reopened, and closed jobs
-- 🔗 **Direct job links** — one click to the source platform's job page
-- 🔌 **Standard MCP** — works with any MCP-compatible agent
+- searches BOSS Zhipin, Liepin, Zhaopin, and 51job from one Agent;
+- filters location, salary, experience, recruitment track, and employment type;
+- returns a ranking score, resume evidence, gaps, and a direct job link;
+- remembers seen, saved, dismissed, and applied jobs;
+- reports new and materially changed jobs on later searches.
 
-## Quick Start
+## Install
 
-### 1. Install
+Ask the current Agent:
+
+```text
+Follow this installation recipe exactly. Detect which Agent host you are.
+Do not clone the repository or run its tests:
+https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+```
+
+Or install manually:
 
 ```bash
-pip install "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main"
+python3 -m venv ~/.jobfindsme/runtime
+~/.jobfindsme/runtime/bin/python -m pip install \
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.1/jobfindsme-0.2.1-py3-none-any.whl"
+~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
+~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
 
-### 2. Configure MCP
+Replace `claude` with `codex`, `workbuddy`, `kimi`, `trae`, `zcode`, `qwen`,
+`qoder`, or `trae-cn`. Every Agent uses the same runtime; only its MCP config
+path differs.
 
-**Option A: print the JSON and paste it (any agent)**
+## Use
 
-```bash
-jobfindsme config
+```text
+Use jobfindsme and my local resume at ~/Documents/resume.pdf
+to find full-time AI application engineer roles in Shanghai and Hangzhou,
+20K+ monthly salary, experienced hiring.
 ```
 
-Paste the output into any MCP-compatible agent's config file. Or write directly:
+Later:
 
-```bash
-jobfindsme install --path ~/.your-agent/mcp.json
+```text
+Find new jobs since my last search.
 ```
 
-**Option B: shortcut for known agents**
+## Sources
 
-```bash
-jobfindsme install zcode     # ZCode
-jobfindsme install claude    # Claude Code
-jobfindsme install codex     # Codex
-```
+| Source | Current transport | Role |
+|---|---|---|
+| BOSS Zhipin | authenticated local CDP | primary live source |
+| Liepin | CDP list + bounded detail enrichment | additional candidates |
+| Zhaopin | CDP list + bounded detail enrichment | additional candidates |
+| 51job | CDP list | additional discovery |
 
-### 3. Restart your agent and search
+Lagou was retired from live discovery because verification failures, incomplete
+fields, and latency outweighed its observed value. Existing historical records
+remain readable.
 
-```
-Use jobfindsme to find AI Engineer roles in Shanghai and Shenzhen,
-based on my local resume at ~/Documents/resume.pdf.
-```
+The target source strategy is layered: verified structured HTTP first, browser
+only when login or JavaScript is genuinely required, and explicit cached
+fallback on failure. The project does not treat signature reverse engineering
+or CAPTCHA bypass as a supported path.
 
-No workspace IDs or plan IDs needed — Core handles everything.
+## Privacy and limitations
 
-### 4. Enable platform search (one-time)
+- resumes, plans, and job state remain in local SQLite;
+- the Agent receives a resume path, not the complete resume text;
+- job descriptions are untrusted external content;
+- the ranking score is explainable and reproducible, not a hiring probability;
+- the project does not auto-apply or guarantee complete market coverage.
 
-```bash
-jobfindsme setup              # Start the isolated local Chrome bridge
-```
-
-> All five sources use the local Chrome CDP bridge. BOSS Zhipin additionally requires account login; public pages on other platforms may still present verification.
-
-## Job Sources
-
-| Platform | Current role | Access prerequisite |
-|----------|---------------------|----------|
-| **BOSS Zhipin** | Primary recommendation source | Login required |
-| **Liepin** | Searchable; full details available for some jobs | Usually no login |
-| **51job** | Searchable; some job fields may be incomplete | Usually no login |
-| **Zhaopin** | Searchable; full details available for some jobs | Usually no login |
-| **Lagou** | Experimental; verification may interrupt access | Depends on page state |
-
-Source availability and job completeness vary. jobfindsme skips unavailable
-sources, reports the limitation, and continues with the others. See
-[PROJECT_SPEC.md](PROJECT_SPEC.md) for implementation and quality criteria.
-
-## Prompt Templates
-
-**Full template (`[]` = optional, remove lines you don't need):**
-
-```
-Use jobfindsme,
-based on [resume path]                  ← include only if you have a resume
-to find [role] jobs in [cities]        ← required
-salary [min]K-[max]K or [amount]+      ← optional
-[campus / experienced]                  ← optional
-[internship / full-time]                ← optional
-[0-3 / 3-5 / …] years experience       ← optional
-exclude [keywords]                      ← optional
-```
-
-**Examples:**
-
-```bash
-# With resume, precise search
-Use jobfindsme, based on my local resume at ~/Documents/resume.pdf,
-to find AI Agent engineer jobs in Shanghai and Shenzhen, 25K+, experienced, full-time, 1-5 years.
-
-# With resume, broad search
-Use jobfindsme, based on my local resume at ~/Documents/resume.pdf,
-to find LLM application developer jobs in Hangzhou, campus recruitment.
-
-# Without resume, quick browse
-Use jobfindsme to search autonomous driving algorithm jobs in Beijing, 30K+, experienced.
-
-# Without resume, find internships
-Use jobfindsme to search AI product manager internships nationwide.
-
-# View details / save
-Use jobfindsme to show me the details of job #3.
-Use jobfindsme to save jobs #1, #4, and #6.
-```
-
-> Results include a ranking score, direct link, and evidence-based reasons when
-> the source provides sufficient fields. The score is not a hiring probability.
-
-## MCP Tools
-
-| Tool | Purpose |
-|------|---------|
-| `setup_profile` | Import resume |
-| `configure_search` | Set roles, cities, salary |
-| `search_jobs` | Discover + match |
-| `get_jobs` | Paginate results |
-| `get_job_details` | Single job detail |
-| `update_job_state` | Save/dismiss/applied |
-| `configure_monitor` | Recurring checks |
-| `export_local_data` | Export |
-| `delete_local_data` | Two-phase deletion |
-
-## Privacy
-
-- Resume stays local — agent never reads the full file
-- Only structured facts and minimum evidence retained
-- CDP connectors only attach to a local Chrome DevTools session
-- Two-phase deletion enforced by Core
+See [PROJECT_SPEC.md](PROJECT_SPEC.md) for architecture, evaluation, and source
+promotion gates.
 
 ## License
 

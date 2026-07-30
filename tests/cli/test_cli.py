@@ -1,6 +1,6 @@
 import json
 
-from jobfindsme.cli import run
+from jobfindsme.cli import _select_release_wheel, run
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
@@ -60,6 +60,21 @@ def test_cli_workspace_and_plan_flow(tmp_path, capsys) -> None:
     plans = json.loads(capsys.readouterr().out)
 
     assert plans == [created_plan]
+
+
+def test_self_update_selects_prebuilt_release_wheel() -> None:
+    url = _select_release_wheel(
+        {
+            "assets": [
+                {
+                    "name": "jobfindsme-0.2.1-py3-none-any.whl",
+                    "browser_download_url": "https://example.com/jobfindsme.whl",
+                }
+            ]
+        }
+    )
+
+    assert url == "https://example.com/jobfindsme.whl"
 
 
 def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(

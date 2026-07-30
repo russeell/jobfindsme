@@ -12,8 +12,8 @@ quality.
 
 ## First-Time Setup
 
-BOSS直聘 requires account login and the maintained platform sources currently
-use a dedicated local Chrome bridge. Do not begin with a technical questionnaire.
+BOSS直聘 requires account login and maintained live sources currently use a
+dedicated local Chrome bridge. Do not begin with a technical questionnaire.
 Proceed with the profile, plan, and search workflow. If diagnostics show that
 the browser is unavailable or BOSS is logged out, give the user one action:
 run `jobfindsme setup`, complete login if requested, keep that process running,
@@ -95,7 +95,6 @@ and suggest broadening the search criteria.
 - 猎聘 and 智联 — discovery sources with bounded detail enrichment for up to
   three candidates per source.
 - 前程无忧 — discovery source; SPA detail extraction is not complete.
-- 拉勾 — experimental and may present interactive verification.
 
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
 report that state briefly. Do not describe a zero-result source run as proof

@@ -34,7 +34,7 @@ from importlib.util import find_spec
 if find_spec("playwright") is not None:
     raise SystemExit("fast install unexpectedly included Playwright")
 PY
-"$temporary/venv/bin/python" -m jobfindsme install workbuddy \
+"$temporary/venv/bin/python" -m jobfindsme connect workbuddy \
   --home "$temporary/home"
 "$temporary/venv/bin/python" -m jobfindsme --version
 

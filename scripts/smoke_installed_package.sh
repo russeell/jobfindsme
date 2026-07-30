@@ -35,7 +35,7 @@ python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
 
 database="$temporary/jobfindsme.db"
-"$temporary/venv/bin/jobfindsme" install workbuddy --home "$temporary/home"
+"$temporary/venv/bin/jobfindsme" connect workbuddy --home "$temporary/home"
 "$temporary/venv/bin/jobfindsme" \
   --db "$database" \
   workspace init \

@@ -85,6 +85,13 @@ class HostInstaller:
             host, replace=True, action="upgrade", config_path=config_path
         )  # noqa: E501
 
+    def connect(self, host: str, *, config_path: Path | None = None) -> InstallResult:
+        """Idempotently connect jobfindsme to an Agent host."""
+
+        return self._write(
+            host, replace=True, action="connect", config_path=config_path
+        )
+
     def uninstall(self, host: str, *, config_path: Path | None = None) -> InstallResult:
         if host == "generic":
             if not config_path:

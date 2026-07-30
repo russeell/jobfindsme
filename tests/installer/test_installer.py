@@ -78,6 +78,19 @@ def test_install_refuses_to_silently_replace_existing_server(tmp_path) -> None:
         service.install("claude")
 
 
+def test_connect_is_idempotent_and_refreshes_existing_config(tmp_path) -> None:
+    service = installer(tmp_path)
+
+    first = service.connect("workbuddy")
+    second = service.connect("workbuddy")
+
+    assert first.action == "connect"
+    assert second.action == "connect"
+    assert second.backups
+    config = json.loads(Path(second.config_path).read_text())
+    assert "jobfindsme" in config["mcpServers"]
+
+
 def test_backup_names_do_not_collide_within_one_second(tmp_path) -> None:
     service = installer(tmp_path)
     service.install("qwen")

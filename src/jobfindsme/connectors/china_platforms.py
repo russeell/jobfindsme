@@ -1,4 +1,4 @@
-"""猎聘 / 智联招聘 / 拉勾 CDP connectors.
+"""猎聘、智联招聘和前程无忧 CDP connectors.
 
 Shares the same Chrome CDP session used by BossZhipinConnector.
 User logs into all platforms once via `jobfindsme boss-setup`;
@@ -525,85 +525,6 @@ class ZhilianConnector:
             limit=limit,
             port=self.cdp_port,
         )
-
-
-# ── 拉勾 ─────────────────────────────────────────────────────────────────────
-
-_LAGOU_EXTRACT_JS = """
-(function(){
-    var results = [];
-    var items = document.querySelectorAll('[class*="job-card"], [class*="position"], .job-item, li');
-    items.forEach(function(item) {
-        var text = (item.textContent || '').replace(/\\s+/g, ' ').trim();
-        var link = item.querySelector('a');
-        var titleEl = item.querySelector('[class*="title"], [class*="name"], h3, h2');
-        var title = titleEl ? titleEl.textContent.trim() : text.slice(0, 40);
-        if (title && title.length > 2 && title.length < 80) {
-            results.push({
-                title: title,
-                company: (text.match(/(.{2,20}?(?:科技|有限公司|集团|网络|软件))/) || [''])[0],
-                salary: (text.match(/(\\d+[-~]\\d+[kK])/) || [''])[0],
-                city: (text.match(/(北京|上海|深圳|广州|杭州|成都|武汉|南京)/) || [''])[0],
-                url: link ? link.href : ''
-            });
-        }
-    });
-    return JSON.stringify(results.slice(0, 15));
-})()
-"""  # noqa: E501
-
-
-class LagouConnector:
-    """Discover jobs from 拉勾 via Chrome CDP + DOM extraction."""
-
-    def __init__(
-        self,
-        keyword: str,
-        city: str = "",
-        *,
-        policy: ConnectorPolicy,
-        source_name: str = "拉勾",
-        cdp_port: int = DEFAULT_CDP_PORT,
-    ) -> None:
-        if not policy.can_fetch:
-            raise PermissionError("source policy does not allow fetching")
-        self.keyword = keyword.strip()
-        self.city = city.strip()
-        self.source_name = source_name
-        self.cdp_port = cdp_port
-
-    def fetch(self) -> list[RawJobRecord]:
-        city_code = {
-            "上海": "上海",
-            "北京": "北京",
-            "深圳": "深圳",
-            "杭州": "杭州",
-            "广州": "广州",
-        }.get(self.city, "")
-        city_param = f"&city={city_code}" if city_code else ""
-        url = f"https://www.lagou.com/wn/jobs?kd={self.keyword}{city_param}"
-        items = _cdp_fetch(url, _LAGOU_EXTRACT_JS, port=self.cdp_port, wait_ms=6000)
-        return [
-            RawJobRecord(
-                source_kind=SourceKind.CAREER_SITE,
-                source_name=self.source_name,
-                source_url=url,
-                external_id=_sanitize_external_id(
-                    item.get("url", ""), item.get("title", "")
-                ),
-                payload={
-                    "title": item.get("title", ""),
-                    "company": item.get("company", ""),
-                    "description": "",
-                    "location": item.get("city", ""),
-                    "salary": item.get("salary", ""),
-                    "url": item.get("url", ""),
-                    "apply_url": item.get("url", ""),
-                },
-            )
-            for item in items
-            if item.get("title")
-        ]
 
 
 # ── 前程无忧 (51job) ─────────────────────────────────────────────────────────

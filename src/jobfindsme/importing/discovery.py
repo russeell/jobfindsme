@@ -54,11 +54,9 @@ class JobDiscoveryService:
         if source.kind in {
             DiscoverySourceKind.LIEPIN_CDP,
             DiscoverySourceKind.ZHILIAN_CDP,
-            DiscoverySourceKind.LAGOU_CDP,
             DiscoverySourceKind.WUYOU_CDP,
         }:
             from jobfindsme.connectors.china_platforms import (
-                LagouConnector,
                 LiepinConnector,
                 WuyouConnector,
                 ZhilianConnector,
@@ -67,7 +65,6 @@ class JobDiscoveryService:
             connector_cls = {
                 DiscoverySourceKind.LIEPIN_CDP: LiepinConnector,
                 DiscoverySourceKind.ZHILIAN_CDP: ZhilianConnector,
-                DiscoverySourceKind.LAGOU_CDP: LagouConnector,
                 DiscoverySourceKind.WUYOU_CDP: WuyouConnector,
             }[source.kind]
             connector = connector_cls(
@@ -93,6 +90,8 @@ class JobDiscoveryService:
                 connector,
                 enrich_limit=enrich_limit,
             )
+        if source.kind.retired:
+            raise ValueError(f"{source.kind} is retired and cannot discover jobs")
 
         path = Path(source.path or "").expanduser().resolve(strict=True)
         content = path.read_text(encoding="utf-8")

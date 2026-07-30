@@ -23,7 +23,7 @@ python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   --timeout 20 --retries 1 --upgrade \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.0/jobfindsme-0.2.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.1/jobfindsme-0.2.1-py3-none-any.whl"
 ```
 
 Do not replace this command with `git clone`, an editable install, or
@@ -31,14 +31,17 @@ Do not replace this command with `git clone`, an editable install, or
 
 ## 3. Connect the current agent
 
-For WorkBuddy:
+Use the name of the Agent that is reading this file:
 
 ```bash
-~/.jobfindsme/runtime/bin/python -m jobfindsme upgrade workbuddy
+~/.jobfindsme/runtime/bin/python -m jobfindsme connect workbuddy
 ```
 
-Other built-in host names are `codex`, `claude`, `qwen`, `zcode`, `kimi`,
-`trae`, `trae-cn`, and `qoder`. For an unknown MCP client:
+Replace `workbuddy` with `codex`, `claude`, `qwen`, `zcode`, `kimi`, `trae`,
+`trae-cn`, or `qoder` when appropriate. The runtime is identical for every
+Agent; only the MCP configuration path changes. `connect` is safe to run again.
+
+For an unknown MCP client:
 
 ```bash
 ~/.jobfindsme/runtime/bin/python -m jobfindsme config

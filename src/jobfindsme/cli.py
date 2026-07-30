@@ -4,6 +4,8 @@ import argparse
 import dataclasses
 import json
 import os
+import sys
+import urllib.request
 from collections.abc import Sequence
 from datetime import datetime
 from enum import Enum
@@ -124,7 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     delete_confirm.add_argument("--token", required=True)
 
-    for action in ("install", "upgrade", "uninstall"):
+    for action in ("connect", "install", "upgrade", "uninstall"):
         host_action = groups.add_parser(action)
         host_action.add_argument(
             "host",
@@ -153,7 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup_parser.add_argument(
         "--platform",
         nargs="+",
-        choices=("boss", "liepin", "zhilian", "lagou"),
+        choices=("boss", "liepin", "zhilian"),
     )
     return parser
 
@@ -170,12 +172,28 @@ def _version() -> str:
 def _self_update() -> dict:
     import subprocess
 
+    request = urllib.request.Request(
+        "https://api.github.com/repos/russeell/jobfindsme/releases/latest",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "jobfindsme-updater",
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            release = json.load(response)
+        wheel_url = _select_release_wheel(release)
+    except Exception as error:
+        return {"ok": False, "output": f"could not resolve latest release: {error}"}
+
     result = subprocess.run(
         [
+            sys.executable,
+            "-m",
             "pip",
             "install",
             "--upgrade",
-            "jobfindsme @ git+https://github.com/russeell/jobfindsme.git@main",
+            f"jobfindsme[browser] @ {wheel_url}",
         ],
         capture_output=True,
         text=True,
@@ -184,6 +202,19 @@ def _self_update() -> dict:
         "ok": result.returncode == 0,
         "output": (result.stdout + result.stderr).strip(),
     }
+
+
+def _select_release_wheel(release: dict[str, Any]) -> str:
+    for asset in release.get("assets", []):
+        name = str(asset.get("name", ""))
+        url = str(asset.get("browser_download_url", ""))
+        if (
+            name.startswith("jobfindsme-")
+            and name.endswith("-py3-none-any.whl")
+            and url
+        ):
+            return url
+    raise ValueError("latest release has no compatible wheel")
 
 
 def _mcp_json_config() -> dict:
@@ -357,7 +388,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         result = setup_chrome(platforms)
         _emit(result, "markdown")
         return 0 if result["ok"] else 1
-    if args.group in {"install", "upgrade", "uninstall"}:
+    if args.group in {"connect", "install", "upgrade", "uninstall"}:
         installer = HostInstaller(home=args.home)
         custom_path = getattr(args, "path", None)
         if custom_path:

@@ -375,7 +375,6 @@ PLATFORM_LOGIN_URLS = {
     "boss": ("https://www.zhipin.com/web/user/", "BOSS直聘"),
     "liepin": ("https://www.liepin.com/login/", "猎聘"),
     "zhilian": ("https://www.zhaopin.com", "智联招聘"),
-    "lagou": ("https://www.lagou.com", "拉勾"),
 }
 
 
@@ -397,8 +396,8 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     once per platform; sessions persist in ~/.jobfindsme/chrome-profile.
 
     Args:
-        platforms: Which platforms to open (boss, liepin, zhilian, lagou).
-                   If empty, defaults to all four.
+        platforms: Which platforms to open (boss, liepin, zhilian).
+                   If empty, opens BOSS only.
     """
     import subprocess
     from pathlib import Path

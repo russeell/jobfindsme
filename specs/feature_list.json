@@ -2157,7 +2157,7 @@
           "Liepin and Zhilian list-card records support best-effort detail-page enrichment for at most three candidates per source.",
           "Detail enrichment has a total time budget, closes its temporary CDP target, and degrades to the original list-card record on failure.",
           "Normalized source evidence distinguishes list_card, detail_page, and structured_source descriptions and records detail provenance.",
-          "Wuyou and Lagou remain list discovery sources and are not advertised as detail-enriched."
+          "Wuyou remains a list discovery source and is not advertised as detail-enriched."
         ],
         "remaining": [
           "Declare transport class, maturity, completeness, recent yield, and latency for every source.",
@@ -2231,7 +2231,6 @@
       "allowed_paths": [
         "PROJECT_SPEC.md",
         "README.md",
-        "docs/SKILL.md",
         "integrations/shared/SKILL.md",
         "specs/feature_list.json",
         "src/jobfindsme/contracts.py",
@@ -2278,6 +2277,109 @@
         ]
       ],
       "evidence_path": "reports/features/M28-001.json"
+    },
+    {
+      "id": "M29-001",
+      "title": "Lean four-source architecture and unified Agent installation",
+      "status": "in_progress",
+      "blocked_by": [],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "mergedao/mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Keep Agent onboarding short and expose normalized multi-source search through MCP.",
+          "rejected_or_not_adopted": "A browser-first scraper does not prove that every source needs a browser or has equal result quality."
+        },
+        {
+          "category": "open_source",
+          "title": "speedyapply/JobSpy",
+          "url": "https://github.com/speedyapply/JobSpy",
+          "adopted_pattern": "Use independent source adapters, normalized records, retries, and parallel execution.",
+          "rejected_or_not_adopted": "Do not assume international job-board transports or anti-blocking techniques transfer safely to Chinese platforms."
+        },
+        {
+          "category": "open_source",
+          "title": "can4hou6joeng4/boss-agent-cli",
+          "url": "https://github.com/can4hou6joeng4/boss-agent-cli",
+          "adopted_pattern": "Keep authenticated BOSS access local and document platform-risk boundaries.",
+          "rejected_or_not_adopted": "Do not add application automation or recruiter messaging to the product scope."
+        },
+        {
+          "category": "official_guide",
+          "title": "RFC 5861",
+          "url": "https://www.rfc-editor.org/rfc/rfc5861",
+          "adopted_pattern": "Use explicit stale cache fallback so one slow source does not block interactive results.",
+          "rejected_or_not_adopted": "Cached jobs must never be presented as a successful live refresh."
+        },
+        {
+          "category": "paper_or_benchmark",
+          "title": "Help Me Find a Job: A Graph-based Approach for Job Recommendation at Scale",
+          "url": "https://arxiv.org/abs/1801.00377",
+          "adopted_pattern": "Evaluate recommendation usefulness under job and user cold-start constraints.",
+          "rejected_or_not_adopted": "Do not add collaborative filtering before the project has sufficient real interaction data."
+        }
+      ],
+      "allowed_paths": [
+        "README.md",
+        "README.en.md",
+        "INSTALL.md",
+        "PROJECT_SPEC.md",
+        "AGENTS.md",
+        "docs/SKILL.md",
+        "specs/feature_list.json",
+        "pyproject.toml",
+        "scripts/gen_demo_assets.py",
+        "scripts/smoke_fast_install.sh",
+        "scripts/smoke_installed_package.sh",
+        "src/jobfindsme/cli.py",
+        "src/jobfindsme/contracts.py",
+        "src/jobfindsme/connectors/**",
+        "src/jobfindsme/core/app.py",
+        "src/jobfindsme/doctor/service.py",
+        "src/jobfindsme/importing/discovery.py",
+        "src/jobfindsme/installer/service.py",
+        "src/jobfindsme/source_catalog.py",
+        "tests/cli/**",
+        "tests/connectors/**",
+        "tests/core/**",
+        "tests/doctor/**",
+        "tests/installer/**",
+        "reports/features/M29-001.json"
+      ],
+      "acceptance": [
+        "Lagou is absent from live discovery, setup, diagnostics, public source claims, and demo generation.",
+        "Legacy Lagou source values and historical jobs remain readable while live refresh is skipped.",
+        "Default China plans contain BOSS, Liepin, Zhaopin, and 51job only.",
+        "All supported Agent hosts install the same wheel and use one idempotent connect command.",
+        "Clean release installation plus WorkBuddy configuration stays within 180 seconds and does not install Playwright.",
+        "README, Agent instructions, and Product Spec describe the same four-source capability and evidence-gated transport strategy.",
+        "Unverified HTTP endpoints, signature reverse engineering, and CAPTCHA bypass are not claimed or added as default dependencies."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        [
+          "bash",
+          "scripts/smoke_installed_package.sh"
+        ]
+      ],
+      "evidence_path": "reports/features/M29-001.json"
     }
   ]
 }

@@ -352,6 +352,12 @@ class jobfindsmecore:
                 plan_id=context.plan.plan_id,
             )
         )
+        retired_sources = tuple(
+            source for source in effective_sources if source.kind.retired
+        )
+        effective_sources = tuple(
+            source for source in effective_sources if not source.kind.retired
+        )
         active_source_names = tuple(
             dict.fromkeys(source.source_name for source in effective_sources)
         )
@@ -375,6 +381,16 @@ class jobfindsmecore:
                 error="browser source requires explicit opt-in",
             )
             for source in skipped_sources
+        )
+        source_runs += tuple(
+            SourceRunStats(
+                source_name=source.source_name,
+                source_kind=source.kind,
+                status=SourceRunStatus.SKIPPED,
+                elapsed_seconds=0,
+                error="source retired; cached historical jobs remain available",
+            )
+            for source in retired_sources
         )
         refresh_sources, refresh_skipped = _select_refresh_sources(
             effective_sources,

@@ -124,7 +124,6 @@ class Doctor:
         try:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
             from jobfindsme.connectors.china_platforms import (
-                LagouConnector,
                 LiepinConnector,
                 WuyouConnector,
                 ZhilianConnector,
@@ -134,7 +133,6 @@ class Doctor:
                 BossZhipinConnector.__name__,
                 LiepinConnector.__name__,
                 ZhilianConnector.__name__,
-                LagouConnector.__name__,
                 WuyouConnector.__name__,
             )
         except ImportError as error:
@@ -172,7 +170,7 @@ class Doctor:
                 required=False,
                 message=(
                     "Chrome CDP (port 9222) not reachable — run "
-                    "'jobfindsme setup' to launch Chrome for BOSS/猎聘/智联/拉勾"
+                    "'jobfindsme setup' to launch Chrome for platform search"
                 ),
             )
         return Diagnostic(

@@ -214,6 +214,30 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
     assert result[0].status is SourceRunStatus.SUCCESS
 
 
+def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="lagou_cdp",
+                source_name="拉勾",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+
+    result = core.search_jobs_with_diagnostics(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        allow_browser_sources=True,
+    )
+
+    assert result.matches == ()
+    assert result.diagnostics.source_runs[0].status is SourceRunStatus.SKIPPED
+    assert "retired" in (result.diagnostics.source_runs[0].error or "")
+
+
 def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
     tmp_path,
     monkeypatch,
@@ -251,7 +275,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
             run.status is SourceRunStatus.SKIPPED
             for run in result.diagnostics.source_runs
         )
-        == 8
+        == 6
     )
 
 

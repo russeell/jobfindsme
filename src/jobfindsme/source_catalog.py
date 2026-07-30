@@ -9,11 +9,11 @@ def recommended_connectors(
     locations: tuple[str, ...],
     roles: tuple[str, ...] = (),
 ) -> tuple[DiscoverySource, ...]:
-    """Return the five recruitment platforms for broadest reach.
+    """Return the maintained recruitment platforms for broad China coverage.
 
     No single source covers every position — some roles may appear only on
-    company career sites or internal referral channels. These five platforms
-    together provide the widest coverage with minimal maintenance.
+    company career sites or internal referral channels. The catalog includes
+    only sources that currently pass the project's live-source quality bar.
     """
 
     if not _targets_china(locations):
@@ -24,7 +24,6 @@ def recommended_connectors(
         ("boss_cdp", "BOSS直聘"),
         ("liepin_cdp", "猎聘"),
         ("zhilian_cdp", "智联招聘"),
-        ("lagou_cdp", "拉勾"),
         ("wuyou_cdp", "前程无忧"),
     )
     multiple_locations = len(requested_locations) > 1
@@ -63,7 +62,8 @@ def reconcile_catalog_sources(
     custom = tuple(
         source
         for source in existing
-        if not source.catalog_managed
+        if not source.kind.retired
+        and not source.catalog_managed
         and (
             not legacy_managed or (source.kind, source.source_name) not in current_keys
         )
@@ -75,7 +75,7 @@ def source_links(
     roles: tuple[str, ...],
     locations: tuple[str, ...],
 ) -> tuple[SourceLink, ...]:
-    """Stub — auto-connectors now cover the major Chinese platforms via CDP."""
+    """Stub for future official career-site links."""
     return ()
 
 
