@@ -229,7 +229,14 @@ the active context automatically.
 
 当前平台 Connector 主要通过 Chrome CDP 实现：
 - **BOSS直聘**：注入 XHR 调用内部搜索 API（明文薪资）
-- **猎聘 / 前程无忧 / 智联 / 拉勾**：导航搜索页 → JS DOM 提取
+- **猎聘 / 智联**：导航搜索页 → JS DOM 提取 → 对最多 3 个候选做有界详情补全
+- **前程无忧**：导航搜索页 → JS DOM 提取；详情依赖 SPA 弹窗，当前仅保留列表证据
+- **拉勾**：导航搜索页 → JS DOM 提取；可能触发滑动验证，当前属于实验性来源
+
+任何列表卡片都必须标记为 `list_card`，不能伪装成完整 JD。详情补全成功后才可
+标记为 `detail_page`，并记录详情 URL 与抓取时间；结构化 API/ATS 直接提供完整描述时
+标记为 `structured_source`。详情补全是尽力而为的增强步骤，失败不得阻断其他来源或
+把空描述提升为完整候选。
 
 用户运行 `jobfindsme setup` 启动隔离 Chrome profile，并登录 BOSS。
 搜索期间浏览器桥必须运行。其他平台通常不要求账号，但可能触发验证或临时限制。

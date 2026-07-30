@@ -68,6 +68,12 @@ class JobLiveness(StrEnum):
     UNKNOWN = "unknown"
 
 
+class JobDetailLevel(StrEnum):
+    LIST_CARD = "list_card"
+    DETAIL_PAGE = "detail_page"
+    STRUCTURED_SOURCE = "structured_source"
+
+
 class SalaryPeriod(StrEnum):
     MONTH = "month"
     YEAR = "year"
@@ -108,6 +114,19 @@ class SourceEvidence(StrictModel):
     fetched_at: datetime
     published_at: datetime | None = None
     liveness: JobLiveness = JobLiveness.UNKNOWN
+    detail_level: JobDetailLevel = JobDetailLevel.LIST_CARD
+    description_source_url: str | None = None
+    description_fetched_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_detail_provenance(self) -> Self:
+        if self.detail_level is JobDetailLevel.DETAIL_PAGE and (
+            not self.description_source_url or self.description_fetched_at is None
+        ):
+            raise ValueError(
+                "detail_page evidence requires its source URL and fetched timestamp"
+            )
+        return self
 
 
 class JobPosting(StrictModel):

@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from jobfindsme.connectors.base import ConnectorPolicy
+from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
 from jobfindsme.connectors.china_platforms import (
     CdpBlockedError,
     CdpFetchError,
@@ -14,8 +14,11 @@ from jobfindsme.connectors.china_platforms import (
     WuyouConnector,
     ZhilianConnector,
     _cdp_fetch,
+    _cdp_fetch_detail,
     _sanitize_external_id,
+    enrich_job_descriptions,
 )
+from jobfindsme.contracts import SourceKind
 
 
 def _policy() -> ConnectorPolicy:
@@ -166,3 +169,79 @@ def test_external_id_is_stable_and_avoids_long_url_prefix_collisions() -> None:
     second = "https://jobs.example.com/?job=2&tracking=" + "x" * 300
     assert _sanitize_external_id(first) != _sanitize_external_id(second)
     assert len(_sanitize_external_id(first)) <= 256
+
+
+class DetailCdp(FakeCdp):
+    def eval_js(self, js: str, _sid: str) -> Any:
+        if self.fail:
+            raise RuntimeError("detail extraction failed")
+        if js == "document.readyState":
+            return "complete"
+        if js == "document.body.innerText.length":
+            return 1000
+        return "岗位职责：负责 RAG 与 Agent 开发。任职要求：熟悉 Python。" * 5
+
+
+def test_detail_fetch_returns_jd_and_closes_target() -> None:
+    fake = DetailCdp()
+
+    description = _cdp_fetch_detail(
+        "https://jobs.example.com/detail/1",
+        platform="liepin",
+        session_factory=lambda _port: fake,
+        dwell_seconds=0,
+    )
+
+    assert "岗位职责" in description
+    assert fake.target_closed is True
+    assert fake.closed is True
+
+
+def test_detail_fetch_degrades_to_empty_and_still_closes_resources() -> None:
+    fake = DetailCdp(fail=True)
+
+    description = _cdp_fetch_detail(
+        "https://jobs.example.com/detail/1",
+        platform="zhilian",
+        session_factory=lambda _port: fake,
+        dwell_seconds=0,
+    )
+
+    assert description == ""
+    assert fake.target_closed is True
+    assert fake.closed is True
+
+
+def test_description_enrichment_is_bounded_and_preserves_provenance() -> None:
+    records = [
+        RawJobRecord(
+            source_kind=SourceKind.CAREER_SITE,
+            source_name="猎聘",
+            source_url="https://www.liepin.com/search",
+            external_id=str(index),
+            payload={
+                "title": f"AI工程师{index}",
+                "company": "示例科技",
+                "url": f"https://www.liepin.com/job/{index}",
+                "description": "",
+            },
+        )
+        for index in range(5)
+    ]
+    calls = []
+
+    def fetch_detail(url: str, **_kwargs: object) -> str:
+        calls.append(url)
+        return "岗位职责与任职要求 " * 20
+
+    enriched = enrich_job_descriptions(
+        records,
+        platform="liepin",
+        limit=2,
+        detail_fetcher=fetch_detail,
+    )
+
+    assert len(calls) == 2
+    assert enriched[0].payload["detail_level"] == "detail_page"
+    assert enriched[0].payload["description_source_url"] == calls[0]
+    assert enriched[2].payload["description"] == ""

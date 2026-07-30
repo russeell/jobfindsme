@@ -2042,7 +2042,7 @@
     {
       "id": "M27-002",
       "title": "Effective cross-source coverage and bounded detail enrichment",
-      "status": "backlog",
+      "status": "in_progress",
       "blocked_by": [
         "M26-001"
       ],
@@ -2109,6 +2109,42 @@
         "Blocked or zero-yield sources are cooled down and cannot hold the interactive response open indefinitely.",
         "Evaluation compares BOSS-only, multi-source discovery, and multi-source enriched ranking using Qualified Unique Jobs@10 and non-primary-source incremental gain.",
         "README source claims are generated or manually gated from dated Live Loop and human-label evidence."
+      ],
+      "implementation_progress": {
+        "completed": [
+          "Liepin and Zhilian list-card records support best-effort detail-page enrichment for at most three candidates per source.",
+          "Detail enrichment has a total time budget, closes its temporary CDP target, and degrades to the original list-card record on failure.",
+          "Normalized source evidence distinguishes list_card, detail_page, and structured_source descriptions and records detail provenance.",
+          "Wuyou and Lagou remain list discovery sources and are not advertised as detail-enriched."
+        ],
+        "remaining": [
+          "Declare transport class, maturity, completeness, recent yield, and latency for every source.",
+          "Add source-specific recruitment track, employment type, and experience extraction contracts.",
+          "Implement cooldown for blocked or zero-yield sources.",
+          "Run the cross-source enriched ranking evaluation and gate public source claims with dated evidence."
+        ]
+      },
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/connectors/test_china_platforms.py",
+          "tests/importing/test_importing.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src",
+          "tests"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "src",
+          "tests"
+        ]
       ],
       "evidence_path": "reports/features/M27-002.json"
     },

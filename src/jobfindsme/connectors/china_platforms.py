@@ -159,6 +159,143 @@ def _sanitize_external_id(url: str, fallback: str = "") -> str:
     return f"url_{hashlib.sha256(url.encode()).hexdigest()}"
 
 
+def _detail_extract_js(platform: str) -> str:
+    selectors = {
+        "liepin": (
+            '[class*="job-intro"]',
+            '[class*="job-detail"]',
+            '[class*="job-require"]',
+        ),
+        "zhilian": (
+            '[class*="job-detail"]',
+            '[class*="describ"]',
+            '[class*="position-detail"]',
+        ),
+    }.get(platform, ())
+    selector_json = json.dumps(selectors, ensure_ascii=False)
+    return f"""
+(function(){{
+    var selectors = {selector_json};
+    var candidates = [];
+    selectors.forEach(function(selector) {{
+        document.querySelectorAll(selector).forEach(function(element) {{
+            candidates.push(element);
+        }});
+    }});
+    if (!candidates.length) {{
+        candidates = Array.from(
+            document.querySelectorAll('div, section, article, p, pre')
+        );
+    }}
+    var best = '';
+    candidates.forEach(function(element) {{
+        var text = (element.textContent || '').replace(/\\s+/g, ' ').trim();
+        var jd = /职责|要求|任职|岗位描述|职位描述|qualifications|requirements/i;
+        if (text.length > 100 && text.length < 12000
+            && jd.test(text) && text.length > best.length) {{
+            best = text;
+        }}
+    }});
+    return best;
+}})()
+"""
+
+
+def _cdp_fetch_detail(
+    detail_url: str,
+    *,
+    platform: str,
+    port: int = DEFAULT_CDP_PORT,
+    session_factory: Callable[[int], CdpSession] = _CDPSession,
+    timeout_seconds: float = 5.0,
+    dwell_seconds: float = 0.5,
+) -> str:
+    """Extract one detail page while always closing its target and session."""
+    cdp = session_factory(port)
+    target_id: str | None = None
+    try:
+        target = cdp.send(
+            "Target.createTarget",
+            {"url": "about:blank", "background": True},
+        )
+        target_id = target["result"]["targetId"]
+        attached = cdp.send(
+            "Target.attachToTarget",
+            {"targetId": target_id, "flatten": True},
+        )
+        sid = attached["result"]["sessionId"]
+        cdp.send("Page.enable", sid=sid)
+        cdp.send("Runtime.enable", sid=sid)
+        cdp.send("Page.navigate", {"url": detail_url}, sid=sid)
+
+        deadline = time.monotonic() + timeout_seconds
+        ready_at: float | None = None
+        while time.monotonic() < deadline:
+            state = cdp.eval_js("document.readyState", sid)
+            if state in {"interactive", "complete"}:
+                body_len = cdp.eval_js("document.body.innerText.length", sid)
+                if isinstance(body_len, (int, float)) and body_len > 200:
+                    ready_at = ready_at or time.monotonic()
+                    if time.monotonic() - ready_at >= dwell_seconds:
+                        break
+            time.sleep(0.2)
+
+        raw = cdp.eval_js(_detail_extract_js(platform), sid)
+        return raw.strip() if isinstance(raw, str) else ""
+    except Exception:
+        return ""
+    finally:
+        if target_id is not None:
+            with suppress(Exception):
+                cdp.send("Target.closeTarget", {"targetId": target_id})
+        cdp.close()
+
+
+def enrich_job_descriptions(
+    records: list[RawJobRecord],
+    *,
+    platform: str,
+    limit: int = 3,
+    budget_seconds: float = 12.0,
+    port: int = DEFAULT_CDP_PORT,
+    detail_fetcher: Callable[..., str] = _cdp_fetch_detail,
+) -> list[RawJobRecord]:
+    """Best-effort bounded enrichment for list-card records."""
+    enriched = list(records)
+    started = time.monotonic()
+    attempts = 0
+    for index, record in enumerate(records):
+        if attempts >= limit or time.monotonic() - started >= budget_seconds:
+            break
+        payload = dict(record.payload)
+        url = str(payload.get("url") or payload.get("apply_url") or "")
+        if not url or payload.get("description"):
+            continue
+        attempts += 1
+        remaining = max(0.1, budget_seconds - (time.monotonic() - started))
+        description = detail_fetcher(
+            url,
+            platform=platform,
+            port=port,
+            timeout_seconds=min(5.0, remaining),
+        )
+        if not description:
+            continue
+        enriched[index] = RawJobRecord(
+            source_kind=record.source_kind,
+            source_name=record.source_name,
+            source_url=record.source_url,
+            external_id=record.external_id,
+            payload={
+                **payload,
+                "description": description,
+                "description_source_url": url,
+                "detail_level": "detail_page",
+            },
+        )
+    return enriched
+
+
 def _blocked_page_reason(cdp: CdpSession, sid: str) -> str | None:
     raw = cdp.eval_js(
         "JSON.stringify({url:location.href,title:document.title,"
@@ -287,6 +424,14 @@ class LiepinConnector:
             if item.get("title")
         ]
 
+    def enrich(self, records: list[RawJobRecord], *, limit: int) -> list[RawJobRecord]:
+        return enrich_job_descriptions(
+            records,
+            platform="liepin",
+            limit=limit,
+            port=self.cdp_port,
+        )
+
 
 # ── 智联招聘 ─────────────────────────────────────────────────────────────────
 
@@ -372,6 +517,14 @@ class ZhilianConnector:
             for item in items
             if item.get("title")
         ]
+
+    def enrich(self, records: list[RawJobRecord], *, limit: int) -> list[RawJobRecord]:
+        return enrich_job_descriptions(
+            records,
+            platform="zhilian",
+            limit=limit,
+            port=self.cdp_port,
+        )
 
 
 # ── 拉勾 ─────────────────────────────────────────────────────────────────────

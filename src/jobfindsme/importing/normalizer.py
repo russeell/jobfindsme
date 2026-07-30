@@ -9,6 +9,7 @@ from typing import Any
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
     EmploymentType,
+    JobDetailLevel,
     JobLiveness,
     JobPosting,
     RecruitmentTrack,
@@ -99,6 +100,14 @@ def normalize_job(
     title = _text(payload.get("title") or payload.get("name"))
     company = _company(payload, raw.source_name)
     description = _text(payload.get("description") or payload.get("content"))
+    detail_level = JobDetailLevel(
+        payload.get("detail_level")
+        or (
+            JobDetailLevel.STRUCTURED_SOURCE
+            if description
+            else JobDetailLevel.LIST_CARD
+        )
+    )
     locations = _locations(payload)
     apply_url = _text(
         payload.get("apply_url") or payload.get("absolute_url") or payload.get("url")
@@ -186,6 +195,11 @@ def normalize_job(
             fetched_at=now,
             published_at=published_at,
             liveness=liveness,
+            detail_level=detail_level,
+            description_source_url=_text(payload.get("description_source_url")) or None,
+            description_fetched_at=(
+                now if detail_level is JobDetailLevel.DETAIL_PAGE else None
+            ),
         ),
     )
 

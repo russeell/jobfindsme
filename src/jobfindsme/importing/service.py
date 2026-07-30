@@ -28,10 +28,14 @@ class JobImportService:
         connector: Connector,
         *,
         fetched_at: datetime | None = None,
+        enrich_limit: int = 0,
     ) -> ImportSummary:
-        return self.import_records(
-            workspace_id, connector.fetch(), fetched_at=fetched_at
-        )
+        records = connector.fetch()
+        if enrich_limit > 0 and records:
+            enrich = getattr(connector, "enrich", None)
+            if callable(enrich):
+                records = enrich(records, limit=enrich_limit)
+        return self.import_records(workspace_id, records, fetched_at=fetched_at)
 
     def import_records(
         self,

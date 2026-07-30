@@ -79,7 +79,20 @@ class JobDiscoveryService:
                 ),
                 source_name=source.source_name,
             )
-            return self.imports.import_connector(workspace_id, connector)
+            enrich_limit = (
+                3
+                if source.kind
+                in {
+                    DiscoverySourceKind.LIEPIN_CDP,
+                    DiscoverySourceKind.ZHILIAN_CDP,
+                }
+                else 0
+            )
+            return self.imports.import_connector(
+                workspace_id,
+                connector,
+                enrich_limit=enrich_limit,
+            )
 
         path = Path(source.path or "").expanduser().resolve(strict=True)
         content = path.read_text(encoding="utf-8")

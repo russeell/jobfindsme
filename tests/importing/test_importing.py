@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
     DiscoverySource,
     EmploymentType,
+    JobDetailLevel,
     JobLiveness,
     RecruitmentTrack,
+    SourceEvidence,
     SourceKind,
 )
 from jobfindsme.importing.discovery import JobDiscoveryService
@@ -25,9 +29,10 @@ def test_discovery_passes_primary_location_to_platform_connector() -> None:
     captured: dict[str, object] = {}
 
     class RecordingImports:
-        def import_connector(self, workspace_id, connector):
+        def import_connector(self, workspace_id, connector, **kwargs):
             captured["workspace_id"] = workspace_id
             captured["connector"] = connector
+            captured["enrich_limit"] = kwargs.get("enrich_limit")
             return ImportSummary(0, 0, 0, ())
 
     service = JobDiscoveryService(RecordingImports())
@@ -44,6 +49,62 @@ def test_discovery_passes_primary_location_to_platform_connector() -> None:
     assert captured["workspace_id"] == "workspace"
     assert captured["connector"].keyword == "AI应用工程师"
     assert captured["connector"].city == "上海"
+    assert captured["enrich_limit"] == 3
+
+
+def test_import_connector_uses_optional_enricher_without_platform_dependency(
+    tmp_path,
+) -> None:
+    database = Database(tmp_path / "jobfindsme.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create("enrichment")
+    service = JobImportService(JobRepository(database))
+
+    class EnrichingConnector:
+        def fetch(self):
+            return [raw_job(payload={"description": ""})]
+
+        def enrich(self, records, *, limit):
+            assert limit == 1
+            record = records[0]
+            return [
+                record.model_copy(
+                    update={
+                        "payload": {
+                            **dict(record.payload),
+                            "description": "Python RAG Agent",
+                            "description_source_url": "https://careers.example.com/jobs/1",
+                            "detail_level": "detail_page",
+                        }
+                    }
+                )
+            ]
+
+    result = service.import_connector(
+        workspace.workspace_id,
+        EnrichingConnector(),
+        fetched_at=NOW,
+        enrich_limit=1,
+    )
+
+    assert result.jobs[0].description == "Python RAG Agent"
+    assert result.jobs[0].source.detail_level is JobDetailLevel.DETAIL_PAGE
+    assert (
+        result.jobs[0].source.description_source_url
+        == "https://careers.example.com/jobs/1"
+    )
+    assert result.jobs[0].source.description_fetched_at == NOW
+
+
+def test_detail_page_evidence_requires_url_and_timestamp() -> None:
+    with pytest.raises(ValueError, match="detail_page evidence requires"):
+        SourceEvidence(
+            source_kind=SourceKind.CAREER_SITE,
+            source_name="猎聘",
+            source_url="https://www.liepin.com/search",
+            fetched_at=NOW,
+            detail_level=JobDetailLevel.DETAIL_PAGE,
+        )
 
 
 def raw_job(**overrides: object) -> RawJobRecord:
@@ -91,6 +152,7 @@ def test_normalization_preserves_source_liveness_and_structured_ranges() -> None
     assert (job.salary_min_k, job.salary_max_k) == (20, 35)
     assert (job.experience_min_years, job.experience_max_years) == (1, 3)
     assert job.source.liveness == JobLiveness.ACTIVE
+    assert job.source.detail_level is JobDetailLevel.STRUCTURED_SOURCE
     assert job.source.source_url == "https://careers.example.com"
     assert job.salary is not None
     assert job.salary.raw_text == "20-35K"
