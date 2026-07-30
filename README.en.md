@@ -1,7 +1,7 @@
-# jobfindsme · Find More Jobs Worth Applying To
+# jobfindsme · Your AI Job Search Radar
 
-> **Search multiple job sources from one place, remove duplicates, rank with
-> evidence, and focus future searches on opportunities that actually changed.**
+> **Search multiple job platforms at once, match against your resume, and focus
+> future searches on new opportunities.**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -9,10 +9,8 @@
 [![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**jobfindsme** is a multi-source job discovery and recommendation engine exposed
-as a standard MCP Server. Local profiles, search plans, job versions, and
-application state support the user outcome: find more qualified jobs with less
-switching, less repeated reading, and fewer irrelevant recommendations.
+**jobfindsme** lets your AI agent search several job sources from one place,
+remove duplicates, explain matches, and remember what you have already seen.
 
 - 🔍 **Multi-source discovery** — connectors for BOSS Zhipin, Liepin, 51job, Zhaopin, and Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
@@ -69,47 +67,19 @@ jobfindsme setup              # Start the isolated local Chrome bridge
 
 > All five sources use the local Chrome CDP bridge. BOSS Zhipin additionally requires account login; public pages on other platforms may still present verification.
 
-## What Users Care About
-
-1. **Coverage** — find more valid, qualified, unique jobs across sources.
-2. **Time saved** — reduce app switching, repeated searches, and irrelevant JD reading.
-3. **Precision** — enforce hard constraints, then rank with resume and job evidence.
-4. **Simple operation** — first use needs only a resume path and one request;
-   later use should be as short as “find new jobs for me.”
-
-The north-star outcome is not connector count or raw records. It is the number
-of previously unseen, valid, qualified jobs that are genuinely worth opening.
-
-Every recommendation should consistently show the job facts, match score and
-evidence confidence, reasons, gaps or missing information, change state, and a
-direct source link. Match score is a deterministic ranking score, not a hiring
-probability.
-
-## Source Maturity
+## Job Sources
 
 | Platform | Current role | Access prerequisite |
 |----------|---------------------|----------|
-| **BOSS Zhipin** | Primary verified recommendation source | Browser bridge + login |
-| **Liepin** | Discovery + bounded detail enrichment (up to 3 candidates) | Browser bridge |
-| **51job** | Discovery; SPA detail extraction is not complete | Browser bridge |
-| **Zhaopin** | Discovery + bounded detail enrichment (up to 3 candidates) | Browser bridge |
-| **Lagou** | Experimental; verification may block access | Browser bridge |
+| **BOSS Zhipin** | Primary recommendation source | Login required |
+| **Liepin** | Searchable; full details available for some jobs | Usually no login |
+| **51job** | Searchable; some job fields may be incomplete | Usually no login |
+| **Zhaopin** | Searchable; full details available for some jobs | Usually no login |
+| **Lagou** | Experimental; verification may interrupt access | Depends on page state |
 
-Connecting a source does not mean it already provides equal recommendation
-quality. Live Loop reports measure latency, field completeness, valid links,
-and human relevance before a source is described as verified.
-
-The current five platform connectors still use the local browser bridge. The
-target source architecture is hybrid:
-
-```text
-structured API / ATS → public HTTP → authenticated browser request
-→ DOM extraction → local import
-```
-
-The browser remains appropriate for sources such as BOSS Zhipin that require a
-user-owned login session. A verified public JSON or ATS endpoint should use a
-lightweight HTTP connector instead of opening browser pages.
+Source availability and job completeness vary. jobfindsme skips unavailable
+sources, reports the limitation, and continues with the others. See
+[PROJECT_SPEC.md](PROJECT_SPEC.md) for implementation and quality criteria.
 
 ## Prompt Templates
 
