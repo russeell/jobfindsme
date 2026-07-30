@@ -1,7 +1,7 @@
-# jobfindsme · Your Local Job Radar
+# jobfindsme · Find More Jobs Worth Applying To
 
-> **Let your AI agent keep looking for jobs: discover across sources, focus on
-> what is new, and remember every decision locally.**
+> **Search multiple job sources from one place, remove duplicates, rank with
+> evidence, and focus future searches on opportunities that actually changed.**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -9,11 +9,10 @@
 [![latest](https://img.shields.io/badge/release-latest-blue)](https://github.com/russeell/jobfindsme/releases)
 [![License MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**jobfindsme** is a local-first job radar exposed as a standard MCP Server.
-It keeps your profile, search plans, job versions, and application state on
-your machine. The first search establishes a baseline; repeated searches are
-being evolved to focus on new and changed opportunities instead of returning
-the same list again.
+**jobfindsme** is a multi-source job discovery and recommendation engine exposed
+as a standard MCP Server. Local profiles, search plans, job versions, and
+application state support the user outcome: find more qualified jobs with less
+switching, less repeated reading, and fewer irrelevant recommendations.
 
 - 🔍 **Multi-source discovery** — connectors for BOSS Zhipin, Liepin, 51job, Zhaopin, and Lagou
 - 📄 **Local resume matching** — resume never leaves your machine
@@ -70,20 +69,30 @@ jobfindsme setup              # Start the isolated local Chrome bridge
 
 > All five sources use the local Chrome CDP bridge. BOSS Zhipin additionally requires account login; public pages on other platforms may still present verification.
 
-## Product Goals
+## What Users Care About
 
-1. Find more *qualified unique jobs*, not merely more raw records.
-2. Save time by removing app switching and repeated reading.
-3. Produce relevant recommendations with inspectable evidence.
+1. **Coverage** — find more valid, qualified, unique jobs across sources.
+2. **Time saved** — reduce app switching, repeated searches, and irrelevant JD reading.
+3. **Precision** — enforce hard constraints, then rank with resume and job evidence.
+4. **Simple operation** — first use needs only a resume path and one request;
+   later use should be as short as “find new jobs for me.”
+
+The north-star outcome is not connector count or raw records. It is the number
+of previously unseen, valid, qualified jobs that are genuinely worth opening.
+
+Every recommendation should consistently show the job facts, match score and
+evidence confidence, reasons, gaps or missing information, change state, and a
+direct source link. Match score is a deterministic ranking score, not a hiring
+probability.
 
 ## Source Maturity
 
 | Platform | Current role | Access prerequisite |
 |----------|---------------------|----------|
 | **BOSS Zhipin** | Primary verified recommendation source | Browser bridge + login |
-| **Liepin** | Discovery; detail enrichment pending | Browser bridge |
-| **51job** | Discovery; detail enrichment pending | Browser bridge |
-| **Zhaopin** | Discovery; parser quality under evaluation | Browser bridge |
+| **Liepin** | Discovery + bounded detail enrichment (up to 3 candidates) | Browser bridge |
+| **51job** | Discovery; SPA detail extraction is not complete | Browser bridge |
+| **Zhaopin** | Discovery + bounded detail enrichment (up to 3 candidates) | Browser bridge |
 | **Lagou** | Experimental; verification may block access | Browser bridge |
 
 Connecting a source does not mean it already provides equal recommendation

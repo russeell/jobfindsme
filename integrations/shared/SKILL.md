@@ -5,8 +5,9 @@ description: Find, compare, save, and track jobs with the local jobfindsme engin
 
 # jobfindsme
 
-Use jobfindsme when the user wants to discover, compare, save, track, export,
-monitor, or delete job-search data.
+Use jobfindsme to help the user find more qualified jobs across sources with
+less time, fewer irrelevant results, and minimal setup. It also compares,
+saves, tracks, exports, monitors, and deletes local job-search data.
 
 ## Privacy
 
@@ -40,9 +41,10 @@ monitor, or delete job-search data.
    `career_url`, `board_name`, `board_token`, or other connector internals.
 5. Call `search_jobs` without IDs in the same turn. Read matches from its
    `jobs` field. Use `get_jobs` only for later pagination or state filtering.
-   The maintained China sources use the local CDP browser bridge. Confirm that
-   the user has run `jobfindsme setup`, then set `allow_browser_sources: true`.
-   Never start or restart the browser without the user's knowledge.
+   Set `allow_browser_sources: true`. Do not begin by asking technical setup
+   questions. If diagnostics show that the browser is unavailable or BOSS is
+   logged out, give one recovery action: run `jobfindsme setup`, complete login
+   if needed, and retry once. Never start or restart it without the user's knowledge.
    Use the default `fast` refresh for interactive requests. Use `full` only
    when the user explicitly asks for exhaustive multi-platform refresh or for
    scheduled monitoring/evaluation. Use `cache` for instant follow-up sorting.
@@ -61,6 +63,12 @@ monitor, or delete job-search data.
 9. Use `configure_monitor` only after explicit opt-in.
 10. `export_local_data` writes a local file. Return the receipt; do not read the
     exported file back into model context unless the user explicitly requests it.
+
+The normal first-use flow should require at most one consolidated confirmation.
+Never expose Workspace IDs, Plan IDs, connector types, CDP ports, or source
+parameters. On later requests such as “继续帮我找”, reuse the active profile,
+plan, and job state. Present only qualified jobs and consistently include job
+facts, score, evidence confidence, reasons, gaps, change state, and direct link.
 
 ## Deletion
 

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "project": "JobFindsMe",
-  "product_baseline": "agent-native-local-first-incremental-job-radar",
+  "product_baseline": "outcome-first-multi-source-incremental-job-discovery",
   "research_policy": {
     "enforced_from_feature": "M24-001",
     "required_categories": [

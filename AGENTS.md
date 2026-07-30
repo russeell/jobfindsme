@@ -1,23 +1,23 @@
 # jobfindsme — Agent Instructions
 
-jobfindsme is a local-first job radar exposed as an MCP server. It discovers
-jobs across configured sources, matches them against a local profile, preserves
-job and application state, and returns evidence with direct apply links.
+jobfindsme helps users find more qualified jobs across sources with less time,
+fewer irrelevant results, and minimal setup. It matches jobs against a local
+profile, preserves job and application state, and returns inspectable evidence
+with direct apply links.
 
 The first search establishes a baseline. Later searches should focus on new or
 materially changed jobs and must not repeat unchanged results merely to fill a
 list. Never claim that every configured source has equal data or recommendation
 quality.
 
-## ⚠️ First-Time Setup (MUST check before first search)
+## First-Time Setup
 
-BOSS直聘 is the largest source and requires account login. All five CDP sources
-need the dedicated local Chrome bridge. Before the user's first search, ALWAYS:
-
-1. Ask whether the user has started the dedicated browser bridge and logged in
-   to BOSS. Do not invent a percentage of jobs that would otherwise be missed.
-2. If the user says yes or seems unsure, guide them: run `jobfindsme setup`, scan the QR code, and keep the dedicated Chrome process running during search.
-3. If the user says they've already logged in, proceed to search. If search returns 0 BOSS results, suggest setup again.
+BOSS直聘 requires account login and the maintained platform sources currently
+use a dedicated local Chrome bridge. Do not begin with a technical questionnaire.
+Proceed with the profile, plan, and search workflow. If diagnostics show that
+the browser is unavailable or BOSS is logged out, give the user one action:
+run `jobfindsme setup`, complete login if requested, keep that process running,
+and then retry once.
 
 > Login state persists, but the local browser bridge must be running during a search.
 
@@ -49,15 +49,22 @@ their resume or search constraints.
 
 ## Output Rules
 
-Every job result MUST include ALL FOUR of these:
+Every job result MUST include all of these:
 
 1. 岗位介绍 — title, company, location, salary, track (校招/社招), type (实习/正式)
-2. 匹配度 — match score as percentage (🎯 86%)
+2. 匹配度与证据置信度 — ranking score plus whether the source has a complete JD
 3. 投递链接 — the source platform's direct job URL on its own line, labeled with 🔗
-4. 推荐理由 — from evidence.reasons and evidence.warnings
+4. 推荐理由 — from evidence.reasons
+5. 主要差距 — from evidence.warnings and unknown required fields
+6. 状态 — new, changed, reopened, seen, saved, or applied when Core provides it
 
 Sort qualified results by score descending. Keep the response compact.
 Do not pad it with repeated or weak jobs to reach a fixed count.
+
+The ordinary first-use interaction should require at most one consolidated
+confirmation after the user's resume path and natural-language request. Never
+expose Workspace IDs, Plan IDs, connector types, CDP ports, or source parameters.
+On later requests such as “继续帮我找”, reuse the active profile, plan, and state.
 
 For later searches, prefer this summary:
 
@@ -85,8 +92,9 @@ and suggest broadening the search criteria.
 
 - BOSS直聘 — currently the primary verified recommendation source; requires a
   one-time Chrome login via `jobfindsme setup`.
-- 猎聘 and 前程无忧 — useful discovery sources; detail enrichment is pending.
-- 智联 — discovery parsing remains under evaluation.
+- 猎聘 and 智联 — discovery sources with bounded detail enrichment for up to
+  three candidates per source.
+- 前程无忧 — discovery source; SPA detail extraction is not complete.
 - 拉勾 — experimental and may present interactive verification.
 
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
