@@ -33,6 +33,17 @@ class DeterministicMatcher:
     # None = disabled. Production sets this to 7.
     stale_after_days: int | None = None
 
+    def eligible_count(self, plan: SearchPlan, jobs: list[JobPosting]) -> int:
+        """Count hard-filter survivors before the relevance threshold."""
+        return sum(
+            self._hard_filter(
+                plan,
+                job,
+                stale_after_days=self.stale_after_days,
+            )
+            for job in jobs
+        )
+
     def match(
         self,
         plan: SearchPlan,

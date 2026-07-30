@@ -17,7 +17,11 @@ from jobfindsme.mcp.schemas import (
     SetupProfileInput,
     UpdateJobStateInput,
 )
-from jobfindsme.presentation import format_job_list
+from jobfindsme.presentation import (
+    format_job_list,
+    format_search_empty,
+    format_search_results,
+)
 from jobfindsme.profiles.models import CandidateProfile, FactType
 
 
@@ -108,11 +112,14 @@ class ToolRegistry:
         ) as error:
             return _error(str(error))
         structured = _json_value(value)
-        text = (
-            format_job_list(value["jobs"])
-            if name in {"search_jobs", "get_jobs"}
-            else _compact_json(structured)
-        )
+        if name == "search_jobs" and not value["jobs"]:
+            text = format_search_empty(value["diagnostics"])
+        elif name == "search_jobs":
+            text = format_search_results(value["jobs"], value["changes"])
+        elif name in {"search_jobs", "get_jobs"}:
+            text = format_job_list(value["jobs"])
+        else:
+            text = _compact_json(structured)
         return {
             "content": [{"type": "text", "text": text}],
             "structuredContent": structured,
@@ -185,6 +192,7 @@ class ToolRegistry:
                 limit=request.limit,
                 allow_browser_sources=request.allow_browser_sources,
                 refresh_mode=request.refresh_mode,
+                include_seen=request.include_seen,
             )
             matches = result.matches
             summaries = {
@@ -200,12 +208,16 @@ class ToolRegistry:
                     "job": summaries[match.job.job_id],
                     "score": match.score,
                     "evidence": match.evidence,
+                    "state": match.state,
+                    "first_seen_at": match.first_seen_at,
+                    "change_type": match.change_type,
                 }
                 for match in matches
             ]
             return {
                 "jobs": jobs,
                 "count": len(jobs),
+                "changes": result.changes,
                 "diagnostics": result.diagnostics,
             }
         if name == "get_jobs":

@@ -1944,7 +1944,7 @@
     {
       "id": "M27-001",
       "title": "Persistent incremental job radar and novelty-aware results",
-      "status": "backlog",
+      "status": "done",
       "blocked_by": [
         "M26-001"
       ],
@@ -1989,6 +1989,8 @@
         "src/jobfindsme/contracts.py",
         "src/jobfindsme/core/**",
         "src/jobfindsme/importing/**",
+        "src/jobfindsme/job_impressions.py",
+        "src/jobfindsme/privacy.py",
         "src/jobfindsme/matching/**",
         "src/jobfindsme/resources/jobfindsme/SKILL.md",
         "src/jobfindsme/monitoring/**",
@@ -1996,6 +1998,7 @@
         "src/jobfindsme/presentation.py",
         "src/jobfindsme/migrations/**",
         "tests/core/**",
+        "tests/test_storage.py",
         "tests/importing/**",
         "tests/matching/**",
         "tests/monitoring/**",
@@ -2010,6 +2013,29 @@
         "Diagnostics expose new, changed, reopened, closed, repeated-suppressed, and low-relevance-filtered counts.",
         "The human-facing digest never pads the response with old or weak jobs merely to reach a count.",
         "Regression tests cover repeat searches, cross-Agent state reuse, job version changes, source failure, and explicit history requests."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/core/test_incremental_radar.py",
+          "tests/mcp/test_tools.py",
+          "tests/test_storage.py"
+        ],
+        [
+          "ruff",
+          "check",
+          "src",
+          "tests"
+        ],
+        [
+          "ruff",
+          "format",
+          "--check",
+          "src",
+          "tests"
+        ]
       ],
       "evidence_path": "reports/features/M27-001.json"
     },

@@ -77,6 +77,19 @@ The next product increment must complete:
 - a hybrid source layer that prefers structured HTTP/API connectors and starts
   or attaches to a browser only for sources that genuinely require it.
 
+### 2.1 Incremental search contract
+
+Every successful search is scoped to one Workspace and Search Plan. The Core,
+not the host Agent, persists which canonical jobs were actually shown. A later
+search classifies qualified jobs as `new`, `changed`, `reopened`, or
+`unchanged`; closed jobs appear in the changes summary instead of occupying a
+recommendation slot.
+
+The default response suppresses unchanged and rejected jobs. An explicit
+`include_seen=true` request returns historical qualified jobs, including their
+current saved or applied state. Search diagnostics distinguish a true
+no-qualified-delta result from source failure and an empty local cache.
+
 ## 3. Product Principles
 
 1. Job truth and liveness come before match scores.

@@ -69,6 +69,13 @@ class PrivacyService:
                 """,
                 (workspace_id,),
             ).fetchall()
+            impressions = connection.execute(
+                """
+                SELECT * FROM search_job_impressions
+                WHERE workspace_id = ? ORDER BY plan_id, first_shown_at, job_id
+                """,
+                (workspace_id,),
+            ).fetchall()
             facts = connection.execute(
                 """
                 SELECT fact_type, current_value, evidence_snippet, status
@@ -83,6 +90,7 @@ class PrivacyService:
             "jobs": [json.loads(row["payload_json"]) for row in jobs],
             "job_states": [dict(row) for row in states],
             "job_state_events": [dict(row) for row in state_events],
+            "search_job_impressions": [dict(row) for row in impressions],
             "profile_facts": [dict(row) for row in facts],
         }
 

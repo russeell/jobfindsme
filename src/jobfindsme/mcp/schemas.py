@@ -48,6 +48,7 @@ class SearchJobsInput(StrictModel):
     sources: tuple[DiscoverySource, ...] = ()
     allow_browser_sources: bool = True
     refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST
+    include_seen: bool = False
     limit: int = Field(default=20, ge=1, le=100)
 
 

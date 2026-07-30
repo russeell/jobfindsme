@@ -362,10 +362,62 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     text = result["content"][0]["text"]
 
     assert "匹配度" in text
+    assert "本轮变化：新增 1" in text
+    assert "[新增] AI应用工程师" in text
     assert "推荐理由：" in text
     assert "投递链接：https://example.com/jobs/match-1" in text
     assert result["structuredContent"]["diagnostics"]["refresh_mode"] == "cache"
     assert result["structuredContent"]["jobs"][0]["job"]["job_id"]
+    assert result["structuredContent"]["jobs"][0]["state"] == "discovered"
+    assert result["structuredContent"]["jobs"][0]["change_type"] == "new"
+    assert result["structuredContent"]["changes"]["new"] == 1
+
+
+def test_search_explains_when_only_previously_shown_jobs_remain(tmp_path) -> None:
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            '[{"id":"seen","title":"AI应用工程师",'
+            '"company":"示例科技","description":"Python RAG",'
+            '"url":"https://example.com/jobs/seen"}]',
+            source_name="fixture",
+        ),
+    )
+
+    first = registry.call("search_jobs", {"refresh_mode": "cache"})
+    second = registry.call("search_jobs", {"refresh_mode": "cache"})
+
+    assert first["structuredContent"]["count"] == 1
+    assert second["structuredContent"]["count"] == 0
+    assert second["structuredContent"]["changes"]["repeated_suppressed"] == 1
+    assert "此前展示过" in second["content"][0]["text"]
+
+
+def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    registry = ToolRegistry(core)
+    registry.call(
+        "configure_search",
+        {
+            "target_roles": ["AI应用工程师"],
+            "sources": [
+                {
+                    "kind": "json_file",
+                    "source_name": "损坏来源",
+                    "path": str(tmp_path / "missing.json"),
+                }
+            ],
+        },
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "full"})
+
+    assert result["isError"] is False
+    assert result["structuredContent"]["count"] == 0
+    assert "来源刷新失败" in result["content"][0]["text"]
 
 
 def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:

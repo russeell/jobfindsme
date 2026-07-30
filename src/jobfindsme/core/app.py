@@ -26,6 +26,7 @@ from jobfindsme.contracts import (
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
+from jobfindsme.job_impressions import JobImpressionService
 from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
 from jobfindsme.monitor_configs import MonitorConfig, MonitorConfigService
@@ -67,6 +68,7 @@ class jobfindsmecore:
         self.matcher = DeterministicMatcher()
         self.matcher.stale_after_days = 7  # auto-expire UNKNOWN jobs after 7 days
         self.job_states = JobStateService(self.database)
+        self.job_impressions = JobImpressionService(self.database)
         self.privacy = PrivacyService(self.database)
         self.monitor_configs = MonitorConfigService(self.database)
         self.source_subscriptions = SourceSubscriptionService(self.database)
@@ -294,6 +296,7 @@ class jobfindsmecore:
         limit: int = 20,
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
+        include_seen: bool = False,
     ) -> list[JobMatch]:
         return list(
             self.search_jobs_with_diagnostics(
@@ -303,6 +306,7 @@ class jobfindsmecore:
                 limit=limit,
                 allow_browser_sources=allow_browser_sources,
                 refresh_mode=refresh_mode,
+                include_seen=include_seen,
             ).matches
         )
 
@@ -315,6 +319,7 @@ class jobfindsmecore:
         limit: int = 20,
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
+        include_seen: bool = False,
     ) -> SearchRunResult:
         """Run discovery and matching while preserving operational evidence."""
 
@@ -382,13 +387,36 @@ class jobfindsmecore:
                 sources=refresh_sources,
             )
         matching_started = perf_counter()
-        matches = self.match_jobs(
+        all_jobs = self.jobs.list(context.workspace.workspace_id)
+        source_jobs = all_jobs
+        if active_source_names:
+            included = set(active_source_names)
+            source_jobs = [
+                job for job in source_jobs if job.source.source_name in included
+            ]
+        if browser_source_names:
+            source_jobs = [
+                job
+                for job in source_jobs
+                if job.source.source_name not in browser_source_names
+            ]
+        candidate_limit = max(100, limit * 5, len(source_jobs))
+        candidates = self.match_jobs(
             workspace_id=context.workspace.workspace_id,
             plan_id=context.plan.plan_id,
-            limit=limit,
+            limit=candidate_limit,
             excluded_source_names=tuple(browser_source_names),
             included_source_names=active_source_names,
         )
+        radar = self.job_impressions.select_and_record(
+            workspace_id=context.workspace.workspace_id,
+            plan_id=context.plan.plan_id,
+            candidates=candidates,
+            all_jobs=all_jobs,
+            limit=limit,
+            include_seen=include_seen,
+        )
+        matches = list(radar.matches)
         matching_seconds = perf_counter() - matching_started
         finished_at = datetime.now(UTC)
         total_discovered = sum(run.discovered for run in source_runs)
@@ -406,7 +434,18 @@ class jobfindsmecore:
                 total_unique=total_unique,
                 duplicates_removed=max(0, total_discovered - total_unique),
                 result_count=len(matches),
+                new_count=radar.changes.new,
+                changed_count=radar.changes.changed,
+                reopened_count=radar.changes.reopened,
+                closed_count=radar.changes.closed,
+                repeated_suppressed_count=radar.changes.repeated_suppressed,
+                low_relevance_filtered_count=max(
+                    0,
+                    self.matcher.eligible_count(context.plan, source_jobs)
+                    - len(candidates),
+                ),
             ),
+            changes=radar.changes,
         )
 
     def _discover_sources(

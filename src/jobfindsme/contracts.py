@@ -163,10 +163,27 @@ class EvidencePair(StrictModel):
     job_evidence: str
 
 
+class JobStateKind(StrEnum):
+    DISCOVERED = "discovered"
+    SAVED = "saved"
+    APPLIED = "applied"
+    REJECTED = "rejected"
+
+
+class JobChangeType(StrEnum):
+    NEW = "new"
+    CHANGED = "changed"
+    REOPENED = "reopened"
+    UNCHANGED = "unchanged"
+
+
 class JobMatch(StrictModel):
     job: JobPosting
     score: float = Field(ge=0, le=1)
     evidence: MatchEvidence
+    state: JobStateKind = JobStateKind.DISCOVERED
+    first_seen_at: datetime | None = None
+    change_type: JobChangeType | None = None
 
 
 class JobSummary(StrictModel):
@@ -195,13 +212,6 @@ class JobDetails(StrictModel):
     source_records: tuple[JobSourceRecord, ...] = ()
     untrusted_external_content: bool = True
     description_truncated: bool = False
-
-
-class JobStateKind(StrEnum):
-    DISCOVERED = "discovered"
-    SAVED = "saved"
-    APPLIED = "applied"
-    REJECTED = "rejected"
 
 
 class JobState(StrictModel):
@@ -303,6 +313,21 @@ class SearchRunDiagnostics(StrictModel):
     total_unique: int = Field(default=0, ge=0)
     duplicates_removed: int = Field(default=0, ge=0)
     result_count: int = Field(default=0, ge=0)
+    new_count: int = Field(default=0, ge=0)
+    changed_count: int = Field(default=0, ge=0)
+    reopened_count: int = Field(default=0, ge=0)
+    closed_count: int = Field(default=0, ge=0)
+    repeated_suppressed_count: int = Field(default=0, ge=0)
+    low_relevance_filtered_count: int = Field(default=0, ge=0)
+
+
+class SearchChanges(StrictModel):
+    new: int = Field(default=0, ge=0)
+    changed: int = Field(default=0, ge=0)
+    reopened: int = Field(default=0, ge=0)
+    closed: int = Field(default=0, ge=0)
+    repeated_suppressed: int = Field(default=0, ge=0)
+    closed_job_ids: tuple[str, ...] = ()
 
 
 class SearchRunResult(StrictModel):
@@ -310,6 +335,7 @@ class SearchRunResult(StrictModel):
 
     matches: tuple[JobMatch, ...]
     diagnostics: SearchRunDiagnostics
+    changes: SearchChanges = SearchChanges()
 
 
 class SourceHealth(StrEnum):
