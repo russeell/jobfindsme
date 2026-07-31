@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jobfindsme"
 version = "0.3.0"
-description = "AI求职雷达 | 聚合BOSS直聘、猎聘、前程无忧和智联 | 简历匹配、增量岗位与投递直达"
+description = "AI求职雷达 | 聚合BOSS直聘和猎聘 | 简历匹配、增量岗位与投递直达"
 readme = "README.md"
 license = "MIT"
 keywords = ["ai", "job-search", "recruitment", "mcp", "career", "resume", "china-jobs",
-            "求职", "招聘", "AI求职", "BOSS直聘", "猎聘", "前程无忧", "智联招聘"]
+            "求职", "招聘", "AI求职", "BOSS直聘", "猎聘"]
 requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 4 - Beta",

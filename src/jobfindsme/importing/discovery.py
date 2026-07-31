@@ -21,12 +21,7 @@ def _connector_chain(
 
     Strategy per platform — fastest first, most robust last:
     1. pure HTTP (curl_cffi, sub-second, no Chrome)   [pure_http.py]
-    2. passive CDP Network interception (needs Chrome) [http_platforms.py]
-    3. CDP DOM extraction (slowest, needs Chrome)      [china_platforms.py]
-
-    Each tier raises a typed error on transport failure and discovery
-    tries the next one, so a blocked pure-HTTP attempt costs ~0.3s and
-    never silently yields zero jobs.
+    2. CDP DOM extraction (slowest, needs Chrome)      [china_platforms.py]
     """
     from jobfindsme.connectors import ConnectorPolicy
 
@@ -34,60 +29,6 @@ def _connector_chain(
     query = source.query or "AI"
     city = source.location or ""
 
-    if source.kind is DiscoverySourceKind.WUYOU_CDP:
-        from jobfindsme.connectors.china_platforms import WuyouConnector
-        from jobfindsme.connectors.http_platforms import (
-            WuyouCdpInterceptionConnector,
-        )
-        from jobfindsme.connectors.pure_http import WuyouPureHttpConnector
-
-        return [
-            (
-                WuyouPureHttpConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                0,
-            ),
-            (
-                WuyouCdpInterceptionConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                0,
-            ),
-            (
-                WuyouConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                0,
-            ),
-        ]
-    if source.kind is DiscoverySourceKind.ZHILIAN_CDP:
-        from jobfindsme.connectors.china_platforms import ZhilianConnector
-        from jobfindsme.connectors.http_platforms import (
-            ZhilianCdpInterceptionConnector,
-        )
-        from jobfindsme.connectors.pure_http import ZhilianPureHttpConnector
-
-        return [
-            (
-                ZhilianPureHttpConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                0,
-            ),
-            (
-                ZhilianCdpInterceptionConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                0,
-            ),
-            (
-                ZhilianConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                3,
-            ),
-        ]
     if source.kind is DiscoverySourceKind.LIEPIN_CDP:
         from jobfindsme.connectors.china_platforms import LiepinConnector
         from jobfindsme.connectors.pure_http import LiepinPureHttpConnector
@@ -149,11 +90,7 @@ class JobDiscoveryService:
                 source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
-        if source.kind in {
-            DiscoverySourceKind.LIEPIN_CDP,
-            DiscoverySourceKind.ZHILIAN_CDP,
-            DiscoverySourceKind.WUYOU_CDP,
-        }:
+        if source.kind is DiscoverySourceKind.LIEPIN_CDP:
             # Walk the fallback chain: pure HTTP → CDP interception → DOM.
             # Every tier raises a typed error on transport failure; log each
             # fallback loudly — silently swallowing failures here used to

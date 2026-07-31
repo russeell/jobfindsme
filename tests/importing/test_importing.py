@@ -95,8 +95,8 @@ def test_discovery_raises_when_whole_chain_fails() -> None:
         service._discover_one(
             workspace_id="workspace",
             source=DiscoverySource(
-                kind="wuyou_cdp",
-                source_name="前程无忧",
+                kind="liepin_cdp",
+                source_name="猎聘",
                 query="AI",
             ),
         )

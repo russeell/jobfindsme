@@ -275,7 +275,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
             run.status is SourceRunStatus.SKIPPED
             for run in result.diagnostics.source_runs
         )
-        == 6
+        == 2
     )
 
 

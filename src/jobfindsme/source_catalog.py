@@ -23,9 +23,13 @@ def recommended_connectors(
     platforms = (
         ("boss_cdp", "BOSS直聘"),
         ("liepin_cdp", "猎聘"),
-        ("zhilian_cdp", "智联招聘"),
-        ("wuyou_cdp", "前程无忧"),
     )
+    # 前程无忧 and 智联招聘 are retired from defaults as of v0.3.1:
+    #   51job — WAF2 blocks pure HTTP, CDP interception works but requires
+    #     Chrome which is unstable in headless macOS environments
+    #   智联 — fe-api returns honeypot, DOM extraction had stale selectors
+    #     and produced ~30% dirty records
+    # Both connectors are kept in the codebase for explicit opt-in use.
     multiple_locations = len(requested_locations) > 1
     return tuple(
         DiscoverySource(
