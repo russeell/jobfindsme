@@ -438,36 +438,32 @@ class LiepinConnector:
 _ZHILIAN_EXTRACT_JS = """
 (function(){
     var results = [];
-    var cards = document.querySelectorAll('[class*="joblist-box"], [class*="positionlist"], .joblist-box__item, [class*="job-card"]');
-    if (!cards.length) {
-        // Fallback: search for any div containing job title patterns
-        var allDivs = document.querySelectorAll('div');
-        allDivs.forEach(function(div) {
-            var text = div.textContent.trim();
-            if (text.length > 20 && text.length < 500 && /工程师|经理|产品|研发|开发|设计|算法/.test(text)) {
-                var link = div.querySelector('a');
-                results.push({
-                    title: text.split(/\\s+/)[0] || text.slice(0,40),
-                    company: '',
-                    salary: (text.match(/(\\d+[-~]\\d+[Kk])/) || [''])[0],
-                    city: (text.match(/(北京|上海|深圳|广州|杭州|成都|武汉|南京|苏州|西安|重庆)/) || [''])[0],
-                    url: link ? link.href : ''
-                });
-            }
+    // Find job entry cards by their specific class structure
+    var cards = document.querySelectorAll('.joblist-box__item, [class*=\"joblist\"] > div');
+    var lastCompany = '';
+    cards.forEach(function(card) {
+        var titleEl = card.querySelector('.jobinfo__name');
+        var salaryEl = card.querySelector('.jobinfo__salary');
+        var linkEl = card.querySelector('a.jobinfo__name[href*=\"jobdetail\"]');
+        var companyEl = card.querySelector('.companyinfo__name');
+        var locationEl = card.querySelector('.jobinfo__other-info-item');
+
+        var title = titleEl ? titleEl.textContent.trim() : '';
+        // Skip cards that don't look like job entries
+        if (!title || title.length < 3 || title.length > 80) return;
+        // If this card has company info, remember it for next cards
+        if (companyEl) {
+            lastCompany = companyEl.textContent.trim();
+        }
+
+        results.push({
+            title: title,
+            company: companyEl ? companyEl.textContent.trim() : lastCompany,
+            salary: salaryEl ? salaryEl.textContent.trim() : '',
+            city: locationEl ? locationEl.textContent.trim() : '',
+            url: linkEl ? linkEl.href : ''
         });
-    } else {
-        cards.forEach(function(card) {
-            var text = (card.textContent || '').replace(/\\s+/g, ' ').trim();
-            var link = card.querySelector('a');
-            results.push({
-                title: text.split(/\\s+/)[0] || text.slice(0, 50),
-                company: (text.match(/(.{2,20}?(?:有限公司|科技|集团|网络|软件|信息|数据|云计算|人工智能|机器人))/) || [''])[0],
-                salary: (text.match(/(\\d+[-~]\\d+[Kk])/) || [''])[0],
-                city: (text.match(/(北京|上海|深圳|广州|杭州|成都|武汉|南京|苏州|西安|重庆)/) || [''])[0],
-                url: link ? link.href : ''
-            });
-        });
-    }
+    });
     return JSON.stringify(results.slice(0, 15));
 })()
 """  # noqa: E501
@@ -507,11 +503,19 @@ class ZhilianConnector:
                 payload={
                     "title": item.get("title", ""),
                     "company": item.get("company", ""),
-                    "description": "",
+                    "description": (
+                        item.get("title", "")
+                        + "；"
+                        + item.get("salary", "")
+                        + "；"
+                        + item.get("city", "")
+                    ),
                     "location": item.get("city", ""),
                     "salary": item.get("salary", ""),
                     "url": item.get("url", ""),
                     "apply_url": item.get("url", ""),
+                    "recruitment_track": "social",
+                    "employment_type": "full_time",
                 },
             )
             for item in items

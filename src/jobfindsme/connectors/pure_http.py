@@ -282,18 +282,25 @@ class LiepinPureHttpConnector:
                 continue
             job_id = str(job.get("jobId", ""))
             link = str(job.get("link", ""))
-            # The list API has no JD text; compose a light description from
-            # the structured requirement fields so the ranker has signal.
-            description = " · ".join(
-                part
-                for part in (
-                    str(job.get("requireWorkYears", "")),
-                    str(job.get("requireEduLevel", "")),
-                    "、".join(str(label) for label in job.get("labels") or []),
-                    str(comp.get("compIndustry", "")),
-                )
-                if part
-            )
+            # Compose description from structured requirement fields
+            # to give the ranker signal beyond the title alone.
+            desc_parts = [str(job.get("title", ""))]
+            work_years = str(job.get("requireWorkYears", ""))
+            if work_years:
+                desc_parts.append(f"经验要求:{work_years}")
+            edu = str(job.get("requireEduLevel", ""))
+            if edu:
+                desc_parts.append(f"学历要求:{edu}")
+            labels = job.get("labels") or []
+            if labels:
+                tag_text = "、".join(str(label) for label in labels[:8])
+                desc_parts.append("技能标签:" + tag_text)
+            industry = str(comp.get("compIndustry", ""))
+            if industry:
+                desc_parts.append(f"行业:{industry}")
+            description = "；".join(desc_parts)
+            if len(description) < 20:
+                description = title  # fallback: use title as description
             records.append(
                 RawJobRecord(
                     source_kind=SourceKind.CAREER_SITE,
@@ -308,6 +315,8 @@ class LiepinPureHttpConnector:
                         "salary": str(job.get("salary", "")),
                         "url": link,
                         "apply_url": link,
+                        "recruitment_track": "social",
+                        "employment_type": "full_time",
                     },
                 )
             )
