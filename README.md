@@ -12,9 +12,7 @@
 
 [快速开始](#快速开始) · [提示词模版](#提示词模版) · [岗位来源](#岗位来源) · [FAQ](#faq) · [English](README.en.md)
 
-<img src="docs/search-results.png" alt="jobfindsme 搜索结果" width="760" />
 
-</div>
 
 ---
 
@@ -49,9 +47,6 @@
 每个岗位的**事实、信号和链接由 Server 固定生成（任何 Agent 一致）**，
 推荐理由由 Agent 基于这些信号与你的简历生成。
 
-<div align="center">
-<img src="docs/demo.gif" alt="jobfindsme demo" width="860" />
-</div>
 
 ## 使用方式
 
