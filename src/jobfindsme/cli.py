@@ -134,13 +134,8 @@ def build_parser() -> argparse.ArgumentParser:
             choices=(
                 "codex",
                 "claude",
-                "qwen",
+                "cursor",
                 "zcode",
-                "kimi",
-                "trae",
-                "trae-cn",
-                "qoder",
-                "workbuddy",
             ),
         )
         host_action.add_argument("--home", type=Path)

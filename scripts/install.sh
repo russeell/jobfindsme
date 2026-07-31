@@ -7,7 +7,8 @@
 #   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
 #     | bash -s -- <agent>
 #
-#   <agent>: claude | codex | kimi | qwen | trae | trae-cn | zcode | qoder | workbuddy
+#   <agent>: codex | claude | cursor | zcode
+#   （其他 Agent 用 jobfindsme config 输出标准 JSON 手动配置）
 #
 # 也可直接: bash scripts/install.sh <agent>
 #
@@ -24,7 +25,7 @@ WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/j
 WHEEL_PROXY="https://mirror.ghproxy.com/${WHEEL_GH}"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
-AGENTS=(claude codex kimi qwen trae trae-cn zcode qoder workbuddy)
+AGENTS=(codex claude cursor zcode)
 AGENT="${1:-}"
 
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }

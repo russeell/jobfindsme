@@ -15,16 +15,16 @@ def test_primary_host_configs_launch_the_same_local_stdio_server() -> None:
     claude = json.loads((INTEGRATIONS / "claude" / ".mcp.json.template").read_text())[
         "mcpServers"
     ]["jobfindsme"]
-    qwen = json.loads((INTEGRATIONS / "qwen" / "settings.json.template").read_text())[
+    cursor = json.loads((INTEGRATIONS / "cursor" / ".mcp.json.template").read_text())[
         "mcpServers"
     ]["jobfindsme"]
 
-    for config in (codex, claude, qwen):
+    for config in (codex, claude, cursor):
         assert config["command"] == "__PYTHON__"
         assert config["args"] == ["-m", "jobfindsme.mcp"]
         assert config["env"]["PYTHONPATH"] == "__PROJECT_ROOT__/src"
         assert config["env"]["JOBFINDSME_DB_PATH"].endswith("jobfindsme.db")
-    assert qwen["trust"] is False
+    assert cursor["cwd"] == "__PROJECT_ROOT__"
     assert codex["default_tools_approval_mode"] == "prompt"
 
 
@@ -50,7 +50,7 @@ def test_each_primary_host_ships_a_discoverable_skill() -> None:
     paths = [
         INTEGRATIONS / "codex" / "skills" / "jobfindsme" / "SKILL.md",
         INTEGRATIONS / "claude" / "skills" / "jobfindsme" / "SKILL.md",
-        INTEGRATIONS / "qwen" / "skills" / "jobfindsme" / "SKILL.md",
+        INTEGRATIONS / "cursor" / "skills" / "jobfindsme" / "SKILL.md",
     ]
 
     for path in paths:

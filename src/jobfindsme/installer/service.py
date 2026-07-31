@@ -21,22 +21,14 @@ class InstallResult(StrictModel):
     commands: tuple[str, ...] = Field(default_factory=tuple)
 
 
-# Agents that use standard JSON with top-level "mcpServers" key.
-# Maps host name → (config_path, skills_dir).
+# Core hosts with code-level adapters (config formats differ).
+# Everything else: use `jobfindsme config` (standard mcpServers JSON) or
+# `jobfindsme connect --path <file>` for any client. Aligned with the
+# mainstream 2-4 client approach of popular MCP projects.
+# Claude covers both Claude Desktop and Claude Code (~/.claude.json).
 _STANDARD_JSON_HOSTS: dict[str, tuple[str, str]] = {
     "claude": (".claude.json", ".claude/skills"),
-    "qwen": (".qwen/settings.json", ".qwen/skills"),
-    "kimi": (".kimi/mcp.json", ".kimi/skills"),
-    "trae": (
-        "Library/Application Support/Trae/User/mcp.json",
-        ".trae/skills",
-    ),
-    "trae-cn": (
-        "Library/Application Support/Trae CN/User/mcp.json",
-        ".trae-cn/skills",
-    ),
-    "qoder": (".qoder/mcp.json", ".qoder/skills"),
-    "workbuddy": (".workbuddy/mcp.json", ".workbuddy/skills"),
+    "cursor": (".cursor/mcp.json", ".cursor/skills"),
 }
 
 
@@ -44,13 +36,8 @@ class HostInstaller:
     HOSTS = {
         "codex",
         "claude",
-        "qwen",
-        "zcode",
-        "kimi",
-        "trae",
-        "trae-cn",
-        "qoder",
-        "workbuddy",
+        "cursor",
+        "zcode",  # developer-host, kept for the project's own usage
     }
 
     def __init__(

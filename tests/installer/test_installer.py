@@ -34,9 +34,9 @@ def installer(home):
             ".claude/skills/jobfindsme/SKILL.md",
         ),
         (
-            "qwen",
-            ".qwen/settings.json",
-            ".qwen/skills/jobfindsme/SKILL.md",
+            "cursor",
+            ".cursor/mcp.json",
+            ".cursor/skills/jobfindsme/SKILL.md",
         ),
     ],
 )
@@ -56,17 +56,17 @@ def test_one_command_install_writes_config_and_full_skill(
 
 
 def test_json_install_preserves_existing_config_and_creates_backup(tmp_path) -> None:
-    config = tmp_path / ".qwen" / "settings.json"
+    config = tmp_path / ".cursor" / "mcp.json"
     config.parent.mkdir()
     config.write_text(json.dumps({"theme": "dark"}))
 
-    result = installer(tmp_path).install("qwen")
+    result = installer(tmp_path).install("cursor")
 
     document = json.loads(config.read_text())
     assert document["theme"] == "dark"
     assert "jobfindsme" in document["mcpServers"]
     assert len(result.backups) == 1
-    backup = config.with_name("settings.json.backup-20260728T000000Z")
+    backup = config.with_name("mcp.json.backup-20260728T000000Z")
     assert json.loads(backup.read_text()) == {"theme": "dark"}
 
 
@@ -81,8 +81,8 @@ def test_install_refuses_to_silently_replace_existing_server(tmp_path) -> None:
 def test_connect_is_idempotent_and_refreshes_existing_config(tmp_path) -> None:
     service = installer(tmp_path)
 
-    first = service.connect("workbuddy")
-    second = service.connect("workbuddy")
+    first = service.connect("cursor")
+    second = service.connect("cursor")
 
     assert first.action == "connect"
     assert second.action == "connect"
@@ -93,17 +93,17 @@ def test_connect_is_idempotent_and_refreshes_existing_config(tmp_path) -> None:
 
 def test_backup_names_do_not_collide_within_one_second(tmp_path) -> None:
     service = installer(tmp_path)
-    service.install("qwen")
+    service.install("cursor")
 
-    first = service.upgrade("qwen")
-    second = service.uninstall("qwen")
+    first = service.upgrade("cursor")
+    second = service.uninstall("cursor")
 
     assert first.backups[0] != second.backups[0]
     assert Path(first.backups[0]).exists()
     assert Path(second.backups[0]).exists()
 
 
-@pytest.mark.parametrize("host", ["codex", "claude", "qwen"])
+@pytest.mark.parametrize("host", ["codex", "claude", "cursor"])
 def test_upgrade_backs_up_and_uninstall_preserves_local_data(
     tmp_path,
     host,

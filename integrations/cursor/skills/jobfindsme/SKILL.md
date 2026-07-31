@@ -1,7 +1,6 @@
 ---
 name: jobfindsme
 description: Find, compare, save, and track jobs with the local jobfindsme engine.
-priority: 10
 ---
 
 # jobfindsme

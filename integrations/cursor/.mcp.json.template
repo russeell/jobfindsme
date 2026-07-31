@@ -1,7 +1,4 @@
 {
-  "mcp": {
-    "allowed": ["jobfindsme"]
-  },
   "mcpServers": {
     "jobfindsme": {
       "command": "__PYTHON__",
@@ -10,9 +7,7 @@
       "env": {
         "PYTHONPATH": "__PROJECT_ROOT__/src",
         "JOBFINDSME_DB_PATH": "__DATA_DIR__/jobfindsme.db"
-      },
-      "timeout": 60000,
-      "trust": false
+      }
     }
   }
 }

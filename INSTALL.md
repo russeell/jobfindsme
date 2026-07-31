@@ -61,17 +61,15 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 
 | Agent | 命令 |
 |-------|------|
-| Claude Code | `jobfindsme connect claude` |
 | Codex | `jobfindsme connect codex` |
-| ZCode | `jobfindsme connect zcode` |
-| Kimi | `jobfindsme connect kimi` |
-| Qwen Code | `jobfindsme connect qwen` |
-| TRAE | `jobfindsme connect trae` |
-| WorkBuddy | `jobfindsme connect workbuddy` |
-| Qoder | `jobfindsme connect qoder` |
-| 其他 MCP 客户端 | `jobfindsme config`（打印标准 JSON，手动粘贴） |
+| Claude（Desktop/Code 共用） | `jobfindsme connect claude` |
+| Cursor | `jobfindsme connect cursor` |
+| ZCode（开发者用） | `jobfindsme connect zcode` |
+| 其他 MCP 客户端 | `jobfindsme config`（打印标准 JSON，手动粘贴到任意客户端） |
 
 > `connect` 只写 MCP 配置文件路径，幂等可重复执行。每个 Agent 共用同一个运行时。
+> 其他客户端（Kimi/Qwen/TRAE/Cherry Studio 等）同样支持标准 JSON——用 `jobfindsme config`
+> 输出后粘贴到对应配置文件的 `mcpServers` 即可，或 `connect --path <配置文件路径>` 自动写入。
 
 ### 2. 登录 BOSS直聘（可选）
 

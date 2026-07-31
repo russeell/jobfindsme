@@ -90,7 +90,7 @@
 ### 🗣️ 最简单：和 Agent 聊天就能装（推荐）
 
 **什么都不用下载、不用敲命令。** 把这段话发给你的 AI Agent
-（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等）：
+（Claude Code / Codex / Cursor / ZCode 等任何 Agent）：
 
 ```text
 请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
