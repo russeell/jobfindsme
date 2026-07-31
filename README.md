@@ -165,12 +165,6 @@ Agent 分析：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
 | **BOSS直聘** | 本地 Chrome CDP，XHR 注入内部 API | ~0.9s | ✅ 需要（登录态） |
 | **猎聘** | `api-c.liepin.com` 纯 HTTP JSON API | ~1.2s | ❌ 不需要 |
 
-> 前程无忧和智联招聘已从默认来源中移除（51job 被阿里云 WAF2 拦截，智联 fe-api 返回蜜罐
-> 且 DOM 选择器频繁过时）。两者的连接器代码保留在仓库中，需要时可通过显式指定
-> `sources` 参数启用。
-
-拉勾已退出默认发现链路：验证码频繁、字段完整度低。
-
 ## 工作原理
 
 ```text
