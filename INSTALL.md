@@ -73,11 +73,8 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 
 ### 2. 登录 BOSS直聘（可选）
 
-```bash
-jobfindsme setup
-```
-
-在打开的**专用 Chrome 窗口**里扫码登录，保持窗口运行。
+对 Agent 说 **「帮我登录 BOSS直聘」**——Agent 会运行 `jobfindsme setup`，
+几秒内弹出**专用 Chrome 窗口**，扫码登录后保持窗口运行。
 
 > 💡 **跳过这步也能搜**——猎聘纯 HTTP 直连，不需要浏览器也不需要登录。
 > 先搜起来，觉得岗位不够再补 BOSS。

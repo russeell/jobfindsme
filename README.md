@@ -115,11 +115,14 @@ Agent 会自动完成检测环境、安装、写入自己的 MCP 配置。**你�
 
 ### 登录 BOSS直聘（可选）
 
-```bash
-~/.jobfindsme/runtime/bin/python -m jobfindsme setup
+直接对 Agent 说：
+
+```text
+帮我登录 BOSS直聘
 ```
 
-在打开的专用 Chrome 里扫码登录，保持窗口运行，然后重启 Agent。
+Agent 会运行 `jobfindsme setup`，几秒内弹出**专用 Chrome 窗口**。
+在窗口里扫码登录，保持窗口运行，然后重启 Agent。
 
 > 💡 **跳过这步也能用**——猎聘纯 HTTP 直连，不需要浏览器也不需要登录。
 > 先用猎聘看看结果，觉得岗位不够再补上 BOSS。

@@ -83,6 +83,23 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 10. `export_local_data` writes a local file. Return the receipt; do not read the
     exported file back into model context unless the user explicitly requests it.
 
+## BOSS 登录（jobfindsme setup）
+
+When the user says "登录 BOSS直聘" / "帮我登录" / "setup" — **run the command
+directly and fast**, do not ask for paths, do not re-explain, do not search:
+
+```bash
+jobfindsme setup          # runtime: ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
+```
+
+- Expected output within seconds: `Chrome 已启动（端口 9222）` plus the
+  platform list. It does NOT wait for the login — report immediately:
+  "专用 Chrome 已打开，请扫码登录 BOSS直聘，登录后保持窗口运行".
+- If Chrome is already running (port 9222 reachable), do NOT relaunch —
+  tell the user "Chrome 已在运行，直接扫码即可（如需重开：先关掉专用窗口再 setup）".
+- After login, do not force a re-search unless the user asks. The login state
+  persists locally; future searches use it automatically.
+
 ## Output Contract (输出契约 — 固定五段结构)
 
 Every search result MUST be presented in exactly these five sections, in
