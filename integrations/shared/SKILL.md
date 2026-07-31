@@ -83,10 +83,10 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 10. `export_local_data` writes a local file. Return the receipt; do not read the
     exported file back into model context unless the user explicitly requests it.
 
-## Output Contract (输出契约 — 固定四段结构)
+## Output Contract (输出契约 — 固定五段结构)
 
-Every search result MUST be presented in exactly these four sections, in
-this order. Sections 2–4 are always present; section 1 is skipped entirely
+Every search result MUST be presented in exactly these five sections, in
+this order. Sections 2–5 are always present; section 1 is skipped entirely
 when there is no profile (no-resume mode).
 
 ### 第 1 段 · 简历解析（无简历时整段跳过）
@@ -123,11 +123,30 @@ Each job as a deterministic block (see block rules below), in this order:
 
 ```text
 1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
-   匹配度：68%（信号匹配，非录用概率）      ← only when score > 0
+   匹配度：68%（信号匹配，非录用概率）      ← with profile: score_signals
+   匹配度：条件符合 4/5（角色/薪资/经验/地点）← no profile: stated-condition hit rate
    技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
    投递链接：https://www.liepin.com/job/xxx
    推荐理由：...
 ```
+
+- **匹配度 rule**: with a confirmed profile, show `score_signals` percent
+  (signal match, labeled 非录用概率). Without a profile, show
+  `条件符合 X/Y` — the number of user-stated conditions (role, salary,
+  experience, location, degree) the job satisfies out of those that are
+  decidable from the returned signals. Never fabricate a percentage.
+
+### 第 5 段 · 说明
+
+Always end with a brief 说明 section covering, as applicable:
+
+- **结果说明**: 本次新增 N 个（or 无新增，已展示历史）；来源降级/缺失情况；
+  applied/rejected 岗位不重复出现。
+- **建议**: which jobs to prioritize (top 2-3) and why; suggest setting a
+  scheduled push (`每天早上 9 点推送新岗位给我`) to track new jobs.
+- **平台缺失解决方案**: for any source that failed/skipped, give the exact
+  recovery action — e.g. BOSS直聘: `jobfindsme setup` 登录后重启 Agent 重搜.
+  Never pretend a failed source has no jobs.
 
 ### Block rules (岗位块规则)
 
