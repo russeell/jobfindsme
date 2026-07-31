@@ -98,12 +98,11 @@ Rules — every Agent must follow these exactly:
 1. **Never alter or drop the block's facts**: keep the fact line and the
    signal line (技能/经验/学历) exactly as returned. These are the
    deterministic contract — identical on every Agent host.
-2. **Render the 投递链接 as a clickable Markdown link**: replace the plain
-   `投递链接：https://...` line with `🔗 [投递链接](https://...)` (or
-   `[打开岗位](https://...)`). Keep the exact URL — never shorten, rewrite,
-   or wrap it. The URL must remain visible/copyable in the rendered text.
-   If the host client cannot render Markdown links, keep the raw URL on its
-   own line instead.
+2. **Keep the apply link as a BARE URL on its own line** —
+   `投递链接：https://...` — exactly as returned. Do NOT wrap it in
+   Markdown (`[链接](url)`), HTML, or code fences: most terminal clients
+   auto-link bare URLs, and wrapping breaks clickability and copyability.
+   The URL must stay visible and unmodified.
 3. **Always append your own 推荐理由** below the block, one line starting
    with `推荐理由：`. Base it ONLY on the returned signals vs the user's
    confirmed profile (skill overlap, experience fit, degree match). Never
