@@ -119,14 +119,19 @@ when there is no profile (no-resume mode).
 
 ### 第 4 段 · 岗位列表
 
-Each job as a deterministic block (see block rules below), in this order:
+Each job as a deterministic block (see block rules below), in this order.
+**Separate the three visual groups with BLANK LINES** — fact+match line,
+apply link, recommendation — otherwise Markdown merges them into one
+paragraph and the link gets buried:
 
 ```text
 1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
    匹配度：68%（信号匹配，非录用概率）      ← with profile: score_signals
    匹配度：条件符合 4/5（角色/薪资/经验/地点）← no profile: stated-condition hit rate
    技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
+
    投递链接：https://www.liepin.com/job/xxx
+
    推荐理由：...
 ```
 
