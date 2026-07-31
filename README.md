@@ -8,7 +8,6 @@
   <a href="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml"><img src="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/MCP-stdio-111111" alt="MCP stdio">
-  <a href="https://github.com/russeell/jobfindsme/releases"><img src="https://github.com/russeell/jobfindsme/releases/badge.svg" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
   <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
 </p>
