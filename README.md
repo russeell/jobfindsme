@@ -100,8 +100,8 @@ Agent 会自动完成检测环境、安装、写入自己的 MCP 配置。**你�
 用 jobfindsme，根据我的简历找上海的 AI 应用工程师，20K以上，社招。
 ```
 
-> 想自己动手？也可以一行命令安装（`curl ... | bash -s -- codex`）或
-> `pip install jobfindsme[browser]`——完整说明见 [INSTALL.md](INSTALL.md)。
+> 想自己动手？也可以一行命令安装（`curl ... | bash -s -- codex`），
+> 完整说明见 [INSTALL.md](INSTALL.md)。
 
 ### 登录 BOSS直聘（可选）
 

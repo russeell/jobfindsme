@@ -103,8 +103,7 @@ if [ -z "$AGENT" ]; then
   echo "  │    用 jobfindsme 根据简历找上海 AI 应用工程师           │"
   echo "  └─────────────────────────────────────────────────────┘"
   echo
-  dim  "已安装 Python 3.11+ 的用户也可以: pip install jobfindsme[browser]"
-  dim  "或: uvx jobfindsme mcp"
+  dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
   exit 0
 fi
 

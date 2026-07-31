@@ -53,20 +53,11 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 装包（清华镜像加速，GitHub 直连失败自动回退）→ 写入该 Agent 的 MCP 配置 →
 打印下一步。可重复执行。
 
-## 方式三：pip（已有 Python 3.11+ 的开发者）
-
-```bash
-pip install jobfindsme[browser]
-jobfindsme connect claude        # 换成你的 Agent，自动写 MCP 配置
-```
-
-有 uv 的用户可零配置体验：`uvx jobfindsme mcp`（不写配置，先试用）。
-
 ---
 
 ## 安装后三步启动
 
-### 1. 接入 Agent（方式一/二已自动完成；方式三需手动执行）
+### 1. 接入 Agent（脚本已自动完成）
 
 | Agent | 命令 |
 |-------|------|
@@ -139,32 +130,17 @@ python3 --version
 需要 3.11 及以上。不满足则停止并告知用户（macOS: `brew install python@3.12`；
 Ubuntu: `sudo apt install python3.12 python3.12-venv`）。
 
-### 第 2 步：安装（二选一，优先 A）
-
-**A. 有网络条件装 PyPI 包**（推荐，版本自动最新）：
-
-```bash
-python3 -m venv ~/.jobfindsme/runtime
-~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
-  "jobfindsme[browser]"
-```
-
-国内网络较慢时加镜像：
-
-```bash
-~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
-  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser]"
-```
-
-**B. 回退：GitHub Release wheel**：
+### 第 2 步：安装（GitHub Release wheel）
 
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.4.0/jobfindsme-0.4.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.5.0/jobfindsme-0.5.0-py3-none-any.whl"
 ```
+
+> 版本号与仓库最新 Release 保持一致（当前 v0.5.0）。PyPI 安装会在项目
+> 成熟后开放，届时此配方自动切换到 `pip install jobfindsme[browser]`。
 
 ### 第 3 步：接入当前 Agent
 
@@ -206,7 +182,7 @@ GitHub 直连慢会自动切镜像源（`mirror.ghproxy.com`），依赖走清�
 仍失败时重试一次，或改用方式三的 pip 安装。
 
 **Q：可以用 conda / pyenv 的 Python 吗？**
-可以。脚本用系统 `python3` 建独立 venv，不干扰现有环境；pip/uvx 方式同理。
+可以。脚本用系统 `python3` 建独立 venv，不干扰现有环境。
 
 **Q：macOS 提示 Chrome 无法打开？**
 `jobfindsme setup` 会启动专用 Chrome profile（`~/.jobfindsme/chrome-profile`），
@@ -221,12 +197,9 @@ GitHub 直连慢会自动切镜像源（`mirror.ghproxy.com`），依赖走清�
 ## 更新
 
 ```bash
-# curl 安装的用户：重跑原命令即可（脚本带 --upgrade）
+# 重跑原命令即可（脚本带 --upgrade）
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
   | bash -s -- codex
-
-# pip 安装的用户：
-pip install --upgrade "jobfindsme[browser]"
 ```
 
 数据库自动迁移，历史岗位、状态和搜索计划全部保留。
