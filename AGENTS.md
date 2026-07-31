@@ -6,11 +6,13 @@ constraints, extracts structured signals from job descriptions, and lets the
 Agent (you) perform semantic matching and ranking. It preserves job and
 application state and returns inspectable evidence with direct apply links.
 
-**The user only cares about two things — keep everything else invisible:**
+**The user only cares about three things — keep everything else invisible:**
 
 1. **① 找岗位** — fastest path from a request to matched jobs + apply links.
 2. **② 定时推送** — pushes at the user's exact time and frequency; applied
    jobs are never re-suggested.
+3. **③ 查历史** — every job ever matched/shown, queryable with its state
+   (applied/saved/rejected) and first-seen time.
 
 Never surface internal concepts (Workspace IDs, cron syntax, signal scores,
 connector names) to the user unless asked.
