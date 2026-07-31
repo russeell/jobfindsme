@@ -145,8 +145,14 @@ paragraph and the link gets buried:
 
 Always end with a brief 说明 section covering, as applicable:
 
-- **结果说明**: 本次新增 N 个（or 无新增，已展示历史）；来源降级/缺失情况；
-  applied/rejected 岗位不重复出现。
+- **结果说明（三个关键数字，一句话讲清）**: state three numbers clearly:
+  - **历史共匹配 N 个岗位** — total jobs that passed the hard filter so far
+    (candidate pool from `match_jobs`),
+  - **本次展示 Top K** — how many this run shows (result count, K ≤ N),
+  - **累计展示 Y 个岗位** — total distinct jobs ever shown (impressions
+    count), plus 本次新增 X 个 when X > 0.
+  Wording (adapt as needed, keep it short and plain):
+  `历史共匹配 37 个合适岗位；本次展示 Top 15（新增 1 个）；累计展示 38 个岗位`.
 - **建议**: which jobs to prioritize (top 2-3) and why.
 - **下一步建议（推荐给用户的操作）**: after presenting results, proactively
   recommend the two follow-up features, each with its ONE chat phrase —
