@@ -62,7 +62,9 @@ class DeterministicMatcher:
     ) -> int:
         """Count jobs that pass hard filters (used for diagnostics)."""
         return sum(
-            1 for job in jobs if _hard_filter(plan, job, stale_after_days=self.stale_after_days)
+            1
+            for job in jobs
+            if _hard_filter(plan, job, stale_after_days=self.stale_after_days)
         )
 
     @staticmethod
@@ -234,7 +236,9 @@ def _score_signals(
             details.append("经验满足")
         elif profile_exp_years >= job.experience_min_years - 2:
             score += 0.10
-            details.append(f"经验略低(要求{job.experience_min_years}年,简历{profile_exp_years}年)")
+            details.append(
+                f"经验略低(要求{job.experience_min_years}年,简历{profile_exp_years}年)"
+            )
     elif profile_exp_years is not None:
         score += 0.12  # unknown requirement → partial credit
         details.append("经验要求未标注")
