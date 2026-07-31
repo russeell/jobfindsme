@@ -219,9 +219,11 @@ filters:
 - user exclusions;
 - liveness (closed/stale jobs excluded).
 
-Unknown data is reported, not invented. All jobs passing these filters are
-returned to the Agent, along with **structured signals** extracted from
-each Job Description:
+Unknown data is reported, not invented.
+
+### 7.2 Signal extraction and coarse ranking (MCP Server)
+
+All jobs passing hard filters go through structured signal extraction:
 
 - `required_skills` — canonical skill names detected in the JD
 - `required_experience` — e.g. "3-5年"
@@ -230,36 +232,46 @@ each Job Description:
 - `liveness` — source freshness indicator
 - `salary_range` — formatted salary string
 
-These signals are carried in `MatchEvidence.extracted_signals`. The Server
-assigns `score=0.0` to every result — the Agent is responsible for semantic
-ranking.
+These signals are carried in `MatchEvidence.extracted_signals`.
 
-### 7.2 Agent-side matching
+When a confirmed profile is available, the Server computes a deterministic
+signal-match score (0.0–1.0):
 
-The Agent (Claude/GPT/Qwen) receives hard-filtered jobs with extracted
-signals and the user's confirmed profile facts. It is responsible for:
+| Signal | Max weight |
+|---|---|
+| Skill overlap (JD skills ∩ profile skills) | 0.50 |
+| Experience alignment (profile ≥ JD min) | 0.25 |
+| Degree match (profile ≥ JD requirement) | 0.10 |
+| Source liveness (active/stale) | 0.05 |
+| Salary presence (disclosed vs hidden) | 0.05 |
+
+Results are sorted by this score. If the eligible pool exceeds 20 jobs,
+only the top 20 are returned. If ≤20, all pass through with no truncation.
+
+### 7.3 Agent-side semantic ranking
+
+The Agent receives pre-filtered, coarse-ranked jobs with extracted signals
+and the user's confirmed profile facts. It is responsible for:
 
 - Semantic comparison of JD skills vs profile skills
 - Experience-fit assessment
-- Ordering/ranking results
+- Final ordering/ranking (may override the signal score)
 - Producing human-readable reasons and warnings
 
-This separation was chosen because:
+This separation combines the best of both worlds:
 
-- LLMs are far better than BM25 at semantic understanding of Chinese job
-  descriptions and skill taxonomies
-- The MCP Server stays deterministic, testable, and privacy-preserving
-- It follows the pattern of successful MCP servers (mcp-jobs, Context7,
-  Brave Search, Tavily) that provide structured data for Agent reasoning
+- The Server provides fast, deterministic coarse ranking with no LLM cost
+- The Agent applies semantic understanding where it matters (top candidates)
+- Token consumption is bounded (max 20 jobs, each ~100 tokens of signals)
 
-### 7.3 Legacy BM25 (evaluation only)
+### 7.4 Legacy BM25 (evaluation only)
 
 The `DeterministicMatcher` with BM25 scoring is retained in
 `src/jobfindsme/matching/ranker.py` for evaluation backward compatibility
 only (`_legacy_match`). It is not used by the production `search_jobs` or
 `match_jobs` paths.
 
-### 7.4 Incremental radar
+### 7.5 Incremental radar
 
 Search records impressions. The next run compares canonical identity, content
 hash, liveness, and user state to classify:

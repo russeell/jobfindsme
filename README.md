@@ -125,12 +125,13 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 
 ## 返回结果
 
-Agent 基于 MCP Server 提供的结构化岗位信号做语义分析，每次推荐包含：
+Agent 基于 MCP Server 提供的结构化岗位信号和粗筛分数做语义分析，每次推荐包含：
 
 ```text
 大模型应用开发工程师｜示例科技｜上海｜25-40K｜社招·正式
 Agent 分析：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
-需要注意：JD 要求 Kubernetes 经验，简历中未找到直接证据（JD 原文提及）
+（Server 粗筛：技能命中 3/4，经验满足，学历匹配）
+需要注意：JD 要求 Kubernetes 经验，简历中未找到直接证据
 投递：https://example.com/jobs/123
 ```
 
@@ -155,7 +156,7 @@ Agent 分析：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
 ## 工作原理
 
 ```text
-Agent (Claude/GPT/Qwen — 负责语义匹配和排序)
+Agent (Claude/GPT/Qwen — 负责语义精排)
   → MCP Server (本地 stdio)
   → 本地 Core
       → 纯 HTTP 直连（猎聘亚秒级）
@@ -163,14 +164,15 @@ Agent (Claude/GPT/Qwen — 负责语义匹配和排序)
       → 快速模式：刷新主来源，复用其他来源缓存
       → 全量模式：并行刷新双平台
   → 标准化 → 跨来源去重 → 硬过滤（城市/薪资/校招社招/实习正式）
-  → 提取结构化信号（技能、经验、学历、活跃度）
+  → 信号提取 + 加权粗筛（技能/经验/学历/活跃度/薪资）
   → 增量雷达（新增/变化/重开/关闭识别）
-  → Agent 收到的是结构化岗位数据，自己做语义匹配和排序
+  → Agent 收到 Top-20 粗筛后的结构化岗位数据，自己做语义精排
 ```
 
-MCP Server 不做评分和排序——它只做确定性的硬过滤和信号提取。
-Agent (LLM) 负责语义理解和排序，这遵循了 mcp-jobs、Context7、Brave Search
-等优秀 MCP Server 的架构模式。
+MCP Server 做三件事：硬过滤、结构化信号提取、确定性粗筛（技能权重 50%、
+经验 25%、学历 10%、活跃度 5%、薪资 5%）。Agent 用自己的 LLM 做最终语义排序。
+这遵循了 MCP 架构最佳实践：Server 提供结构化数据，Agent 负责理解决策。
+若合格岗位 ≤20 个，跳过粗筛，全量交给 Agent。
 
 简历、岗位状态和搜索计划全部保存在本地 SQLite。Core 不需要模型 API。
 

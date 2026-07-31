@@ -1,11 +1,14 @@
-"""Job filtering — hard constraints only, no subjective scoring.
+"""Job filtering and signal-based coarse ranking.
 
-Since v0.4 the matcher no longer produces BM25 scores.  The Agent
-owns semantic understanding and ranking; the MCP Server provides
-hard-filtered, structured data for the Agent to work with.
+Since v0.4 the matcher no longer produces BM25 scores.  The pipeline is:
+
+1. Hard filter — remove jobs that violate objective constraints
+2. Signal extraction — pull skills, experience, degree from each JD
+3. Coarse rank (v0.4.1) — deterministic signal-match score, Top-20 cut
+4. Agent — semantic understanding and final ranking of the top candidates
 
 ``DeterministicMatcher`` is kept for backward compatibility with the
-evaluation pipeline only.  New code should use ``filter_jobs``.
+evaluation pipeline only.
 """
 
 from __future__ import annotations
@@ -33,6 +36,10 @@ from jobfindsme.taxonomy import (
     extract_skills,
     is_target_role_candidate,
 )
+
+# ── Degree ordering for comparison ──────────────────────────────────────────
+
+_DEGREE_ORDER = {"大专": 1, "本科": 2, "硕士": 3, "博士": 4, "不限": 0}
 
 
 class DeterministicMatcher:
@@ -75,20 +82,31 @@ def filter_jobs(
     plan: SearchPlan,
     jobs: list[JobPosting],
     *,
-    limit: int = 50,
+    profile: ProfileSummary | None = None,
+    limit: int = 20,
     stale_after_days: int | None = 7,
 ) -> list[JobPosting]:
-    """Return jobs that pass all hard filters, in natural order.
+    """Return hard-filter-passing jobs, coarse-ranked by signal match.
 
-    No scoring, no ranking.  The calling Agent is responsible for
-    semantic matching, ordering, and explanation.
+    If *profile* is provided, jobs are scored against profile facts
+    (skills, experience, degree) and sorted descending.  The top
+    *limit* are returned.
+
+    If the eligible pool is ≤ *limit* (or no profile), all pass
+    through in natural order — there is no need to rank.
     """
     eligible = [
         job
         for job in jobs
         if _hard_filter(plan, job, stale_after_days=stale_after_days)
     ]
-    return eligible[:limit]
+    if len(eligible) <= limit or profile is None:
+        return eligible[:limit]
+
+    # Coarse ranking: deterministic signal-match score
+    scored = [(job, _score_signals(job, profile)) for job in eligible]
+    scored.sort(key=lambda item: item[1], reverse=True)
+    return [job for job, _ in scored[:limit]]
 
 
 def extract_job_signals(job: JobPosting) -> dict:
@@ -151,6 +169,112 @@ def extract_job_signals(job: JobPosting) -> dict:
             f"{job.salary_min_k}K-{job.salary_max_k}K" if job.salary_min_k else ""
         ),
     }
+
+
+# ── Signal-match scoring (v0.4.1) ────────────────────────────────────────────
+
+
+def score_signals(
+    job: JobPosting,
+    profile: ProfileSummary | None,
+) -> float:
+    """Deterministic signal-match score, 0.0–1.0.
+
+    Weights are chosen so that skill overlap dominates, with smaller
+    contributions from experience alignment, degree match, and title
+    relevance.  The result is a coarse sort key — the Agent still
+    owns the final semantic ranking.
+
+    Returns 0.0 when *profile* is None (no scoring without a profile).
+    """
+    if profile is None:
+        return 0.0
+    return _score_signals(job, profile)
+
+
+def _score_signals(
+    job: JobPosting,
+    profile: ProfileSummary,
+) -> float:
+    """Deterministic signal-match score, 0.0–1.0.
+
+    Weights are chosen so that skill overlap dominates, with smaller
+    contributions from experience alignment, degree match, and title
+    relevance.  The result is a coarse sort key — the Agent still
+    owns the final semantic ranking.
+    """
+    signals = extract_job_signals(job)
+
+    profile_skills = {
+        fact.value.casefold()
+        for fact in profile.facts
+        if fact.fact_type is FactType.SKILL
+    }
+    profile_degree = _profile_highest_degree(profile)
+    profile_exp_years = _profile_experience_years(profile)
+
+    score = 0.0
+    details: list[str] = []
+
+    # ── Skill overlap (up to 0.50) ──
+    if signals["required_skills"] and profile_skills:
+        jd_set = {s.casefold() for s in signals["required_skills"]}
+        overlap = jd_set & profile_skills
+        if jd_set:
+            skill_ratio = len(overlap) / len(jd_set)
+            skill_score = min(0.50, skill_ratio * 0.50)
+            score += skill_score
+            if overlap:
+                details.append(f"技能命中{len(overlap)}/{len(jd_set)}")
+
+    # ── Experience alignment (up to 0.25) ──
+    if profile_exp_years is not None and job.experience_min_years is not None:
+        if profile_exp_years >= job.experience_min_years:
+            score += 0.25
+            details.append("经验满足")
+        elif profile_exp_years >= job.experience_min_years - 2:
+            score += 0.10
+            details.append(f"经验略低(要求{job.experience_min_years}年,简历{profile_exp_years}年)")
+    elif profile_exp_years is not None:
+        score += 0.12  # unknown requirement → partial credit
+        details.append("经验要求未标注")
+
+    # ── Degree match (up to 0.10) ──
+    jd_degree = signals["required_degree"]
+    if jd_degree and profile_degree:
+        jd_level = _DEGREE_ORDER.get(jd_degree, 0)
+        pf_level = _DEGREE_ORDER.get(profile_degree, 0)
+        if pf_level >= jd_level and jd_level > 0:
+            score += 0.10
+            details.append(f"学历匹配({profile_degree}≥{jd_degree})")
+        elif pf_level > 0:
+            score += 0.03
+            details.append(f"学历略低(要求{jd_degree},简历{profile_degree})")
+
+    # ── Liveness bonus (up to 0.05) ──
+    if job.source.liveness is JobLiveness.ACTIVE:
+        score += 0.05
+    elif job.source.liveness is JobLiveness.UNKNOWN:
+        score += 0.01
+
+    # ── Salary presence (up to 0.05) ──
+    if job.salary_min_k or (job.salary and job.salary.raw_text):
+        score += 0.05
+
+    return round(min(1.0, score), 4)
+
+
+def _profile_highest_degree(profile: ProfileSummary) -> str | None:
+    """Walk profile facts for the highest education level."""
+    best = ""
+    best_order = 0
+    for fact in profile.facts:
+        if fact.fact_type is FactType.EDUCATION:
+            for label, order in _DEGREE_ORDER.items():
+                if label in fact.value and order > best_order:
+                    best = label
+                    best_order = order
+    return best or None
 
 
 # ── Hard filter (unchanged from previous version) ─────────────────────────────

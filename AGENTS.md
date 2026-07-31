@@ -47,12 +47,17 @@ their resume or search constraints.
 3. **search_jobs** — call in the same turn. Set `allow_browser_sources: true`.
    Read results from the `jobs` field. Each job includes:
    - `job` — title, company, location, salary, apply URL
+   - `score` — deterministic signal-match score (0.0–1.0), useful for
+     coarse ordering. Higher = more signal overlap. Agent does final ranking.
    - `evidence.extracted_signals` — structured JD signals (see below)
    - `state`, `change_type`, `first_seen_at`
 
-4. **Agent-side matching (v0.4+)** — The MCP Server does NOT score or rank.
-   You receive `score: 0.0` on every result. Your job is to:
+4. **Agent-side matching (v0.4.1+)** — The Server hard-filters then coarse-ranks
+   using deterministic signal matching. You receive pre-sorted results with a
+   useful `score`. Your job:
 
+   - Use `score` as a starting point. It combines: skill overlap (50%),
+     experience fit (25%), degree match (10%), liveness (5%), salary presence (5%).
    - Read `evidence.extracted_signals` for each job:
      - `required_skills` — canonical skill names found in the JD
      - `required_experience` — e.g. "3-5年"
@@ -60,9 +65,11 @@ their resume or search constraints.
      - `employment_type` / `recruitment_track` — detected from JD
      - `liveness` — "active", "stale", "closed", "unknown"
      - `salary_range` — e.g. "20K-30K"
-   - Compare these signals against the user's confirmed profile facts and
-     stated preferences.
-   - Rank results semantically and explain your reasoning in Chinese.
+   - Compare these signals against the user's profile and stated preferences.
+   - Do the final semantic ranking yourself — override `score` ordering when
+     your reading of the JD suggests a different ranking than the signal score.
+   - ≤20 eligible jobs: Server passes all through, no ranking applied.
+     >20 eligible jobs: Server returns top-20 by signal score.
 
 5. Use **get_jobs** only for pagination. Use **get_job_details** only when
    the user asks about one specific job.
@@ -79,9 +86,10 @@ Every job result MUST include all of these:
 5. 主要差距 — missing skills, unknown required fields, stale source warnings
 6. 状态 — new, changed, reopened, seen, saved, or applied when Core provides it
 
-Sort results by your own semantic assessment. Keep the response compact.
+Sort results by your own semantic assessment. Use the Server's `score` as a
+starting point — it reflects deterministic signal overlap — but your reading
+of the JD is the final authority. Keep the response compact.
 Do not pad it with repeated or weak jobs to reach a fixed count.
-Never display the raw `score` value (it is always 0.0 in v0.4+).
 
 The ordinary first-use interaction should require at most one consolidated
 confirmation after the user's resume path and natural-language request. Never

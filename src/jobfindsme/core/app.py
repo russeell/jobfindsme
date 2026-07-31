@@ -31,7 +31,7 @@ from jobfindsme.importing.service import JobImportService
 from jobfindsme.job_impressions import JobImpressionService
 from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
-from jobfindsme.matching.ranker import extract_job_signals, filter_jobs
+from jobfindsme.matching.ranker import extract_job_signals, filter_jobs, score_signals
 from jobfindsme.monitor_configs import MonitorConfig, MonitorConfigService
 from jobfindsme.plan_suggestions import suggest_search_plan
 from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
@@ -276,16 +276,18 @@ class jobfindsmecore:
         *,
         workspace_id: str | None = None,
         plan_id: str | None = None,
-        limit: int = 50,
+        limit: int = 20,
         excluded_source_names: Sequence[str] = (),
         included_source_names: Sequence[str] = (),
     ) -> list[JobMatch]:
-        """Return hard-filtered jobs with structured signals — no scoring.
+        """Return hard-filtered, coarse-ranked jobs with structured signals.
 
-        Since v0.4 the matcher does not produce BM25 scores.  The Agent
-        owns semantic understanding and ranking.  Each result carries
-        ``evidence`` with ``extracted_signals`` (skills, experience,
-        degree, etc.) for the Agent to use in its own evaluation.
+        Pipeline: hard filter → signal extraction → deterministic scoring
+        → top-*limit* cut.  The Agent still owns semantic ranking of
+        these candidates.
+
+        If the eligible pool is ≤ *limit*, no scoring is applied —
+        all pass through with score 0.0.
         """
         context = self.context.resolve(
             workspace_id=workspace_id,
@@ -293,6 +295,9 @@ class jobfindsmecore:
         )
         if context.plan is None:
             raise ValueError("no active Search Plan — run configure_search first")
+        profile = self.profiles.latest_confirmed_summary(
+            workspace_id=context.workspace.workspace_id
+        )
         jobs = self.jobs.list(context.workspace.workspace_id)
         if included_source_names:
             included = set(included_source_names)
@@ -300,11 +305,13 @@ class jobfindsmecore:
         if excluded_source_names:
             excluded = set(excluded_source_names)
             jobs = [job for job in jobs if job.source.source_name not in excluded]
-        passed = filter_jobs(context.plan, jobs, limit=limit)
+
+        # filter_jobs handles scoring internally when a profile is available
+        passed = filter_jobs(context.plan, jobs, profile=profile, limit=limit)
         return [
             JobMatch(
                 job=job,
-                score=0.0,
+                score=score_signals(job, profile),
                 evidence=MatchEvidence(
                     hard_filter_passed=True,
                     extracted_signals=extract_job_signals(job),
