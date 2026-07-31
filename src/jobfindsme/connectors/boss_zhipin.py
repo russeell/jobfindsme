@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections.abc import Callable
 from contextlib import suppress
@@ -490,12 +491,15 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     urls = [PLATFORM_LOGIN_URLS[p][0] for p in selected]
     labels = [PLATFORM_LOGIN_URLS[p][1] for p in selected]
 
-    subprocess.Popen(
+    proc = subprocess.Popen(
         _chrome_command(chrome, str(profile), urls),
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+    # Save PID so we can kill only this Chrome, not the user's own browser
+    pid_file = profile / "chrome.pid"
+    pid_file.write_text(str(proc.pid))
     label_list = "\n".join(f"  • {label}" for label in labels)
     return {
         "ok": True,
@@ -508,3 +512,31 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             f"Profile: {profile}"
         ),
     }
+
+
+def stop_chrome() -> dict:
+    """Stop the isolated Chrome launched by ``setup_chrome``.
+
+    Only kills the process recorded in ``chrome.pid`` — never touches
+    the user's everyday Chrome windows.
+    """
+    import signal
+    from pathlib import Path
+
+    profile = Path(BOSS_PROFILE_DIR).expanduser()
+    pid_file = profile / "chrome.pid"
+    if not pid_file.is_file():
+        return {
+            "ok": False,
+            "message": "chrome.pid not found — Chrome may not be running",
+        }
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, signal.SIGTERM)
+        pid_file.unlink()
+        return {"ok": True, "message": f"Chrome (PID {pid}) 已停止"}
+    except ProcessLookupError:
+        pid_file.unlink(missing_ok=True)
+        return {"ok": True, "message": "Chrome 进程已经不存在"}
+    except Exception as exc:
+        return {"ok": False, "message": str(exc)}
