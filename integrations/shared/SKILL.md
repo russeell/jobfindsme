@@ -153,12 +153,16 @@ Always end with a brief 说明 section covering, as applicable:
 1. **Never alter or drop the block's facts**: keep the fact line and the
    signal line (技能/经验/学历) exactly as returned. These are the
    deterministic contract — identical on every Agent host.
-2. **Keep the apply link as a BARE URL on its own line** —
+2. **Output blocks as PLAIN TEXT — never inside a fenced code block**
+   (no ```text``` or any other fence). Code-block rendering turns the URL
+   into non-clickable text on terminal clients. Use plain paragraphs or
+   simple lists; keep every line of the block intact.
+3. **Keep the apply link as a BARE URL on its own line** —
    `投递链接：https://...` — exactly as returned. Do NOT wrap it in
    Markdown (`[链接](url)`), HTML, or code fences: most terminal clients
-   auto-link bare URLs, and wrapping breaks clickability and copyability.
-   The URL must stay visible and unmodified.
-3. **Always append your own 推荐理由** below the block, one line starting
+   auto-link bare URLs in plain text, and any wrapping breaks
+   clickability and copyability. The URL must stay visible and unmodified.
+4. **Always append your own 推荐理由** below the block, one line starting
    with `推荐理由：`. Base it ONLY on the returned signals vs the user's
    confirmed profile (skill overlap, experience fit, degree match). Never
    invent facts not present in the block or profile.
@@ -166,9 +170,9 @@ Always end with a brief 说明 section covering, as applicable:
    user's stated preferences (role, location, salary, track) — e.g.
    "标题与目标角色一致，薪资符合 20K+ 要求，学历本科满足" — and never
    claim resume-based skill matches.
-4. If the block lacks a field (e.g. no salary), say so briefly rather than
+5. If the block lacks a field (e.g. no salary), say so briefly rather than
    guessing.
-5. When presenting several jobs, keep this block order; your reasoning lines
+6. When presenting several jobs, keep this block order; your reasoning lines
    go under each block. Do not merge blocks or re-word the fact line.
 
 This contract guarantees the user sees the same job facts and links no
