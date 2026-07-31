@@ -3,19 +3,23 @@
 ## 1. Product Goal
 
 JobFindsMe is a local-first job discovery and tracking engine for AI Agents.
-It helps a user find more qualified jobs with less repeated work:
+It closes the full job-search loop — search, push, apply, record, dedupe:
 
 ```text
 local resume + natural-language constraints
 → multi-source discovery
 → normalization and deduplication
-→ hard filters and evidence-based ranking
+→ hard filters + signal extraction + coarse ranking
+→ Agent semantic ranking
 → direct apply links
-→ later searches report only useful changes
+→ applied/rejected state recorded
+→ later searches (or scheduled pushes) report only useful changes
+→ applied jobs are never re-suggested
 ```
 
 The product is successful when users discover previously unseen, relevant,
-valid jobs faster. Connector count and raw crawl count are not product goals.
+valid jobs faster, never re-apply to the same job, and spend zero time on
+repeated lookups. Connector count and raw crawl count are not product goals.
 
 ## 2. Scope
 
@@ -24,10 +28,15 @@ valid jobs faster. Connector count and raw crawl count are not product goals.
 - local resume parsing and confirmed profile facts;
 - reusable search plans;
 - job discovery from maintained sources and user imports;
-- deterministic filtering, ranking, evidence, and gap explanation;
+- deterministic hard filtering, signal extraction, coarse ranking, and
+  Agent-side semantic matching;
 - canonical jobs, source provenance, liveness, and version history;
-- seen, saved, dismissed, and applied state;
-- incremental search, monitoring, and Feishu notification;
+- seen, saved, applied, and rejected state — applied jobs excluded from
+  future pushes, history always queryable;
+- incremental radar: new/changed/reopened/closed detection;
+- periodic push at arbitrary user-defined time and frequency
+  (`schedule_cron` 5-field cron or `interval_hours`), plus Feishu
+  notification;
 - CLI, local stdio MCP, Agent Skills, diagnostics, and export/delete;
 - reproducible evaluation and bad-case regression.
 

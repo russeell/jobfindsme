@@ -735,6 +735,7 @@ class jobfindsmecore:
         plan_id: str,
         enabled: bool,
         interval_hours: int = 24,
+        schedule_cron: str | None = None,
         notification_channel: str | None = None,
     ) -> MonitorConfig:
         return self.monitor_configs.configure(
@@ -742,6 +743,7 @@ class jobfindsmecore:
             plan_id=plan_id,
             enabled=enabled,
             interval_hours=interval_hours,
+            schedule_cron=schedule_cron,
             notification_channel=notification_channel,
         )
 

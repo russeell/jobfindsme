@@ -73,6 +73,23 @@ their resume or search constraints.
 
 5. Use **get_jobs** only for pagination. Use **get_job_details** only when
    the user asks about one specific job.
+6. **Job state & history queries**:
+   - Applied: `get_jobs` with `states: ["applied"]` — everything the user
+     already applied to (with notes).
+   - Rejected: `get_jobs` with `states: ["rejected"]`.
+   - History (everything ever pushed): `search_jobs` with `include_seen: true`.
+7. **Periodic push setup** — record the user's exact time and frequency:
+   - `configure_monitor` with `schedule_cron` (5-field cron, arbitrary time/
+     frequency, e.g. `"0 9 * * *"` daily 09:00, `"0 20 * * 1"` Mondays 20:00,
+     `"0 8 */2 * *"` every 2 days) or `interval_hours` for simple intervals.
+   - Never invent a schedule — use exactly what the user said.
+   - For Agent-host scheduling, create the host's scheduled task with the
+     user's exact cron expression.
+8. **Daily push execution** — `search_jobs` (limit 10-15); radar suppresses
+   seen jobs and never re-suggests applied/rejected jobs. Prioritize
+   new > changed > reopened. If `count` is 0 say briefly "今天暂无新增岗位";
+   never fabricate jobs. Record `applied`/`rejected`/`saved` immediately after
+   the user decides — never apply on their behalf.
 
 ## Output Rules
 

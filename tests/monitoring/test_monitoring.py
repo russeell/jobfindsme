@@ -120,3 +120,80 @@ def test_missed_intervals_run_only_the_latest_slot(tmp_path) -> None:
 
     assert result.status == "success"
     assert result.scheduled_for == datetime(2026, 8, 2, tzinfo=UTC)
+
+
+# ── v0.5.0: arbitrary schedule (schedule_cron) ────────────────────────────────
+
+
+def test_monitor_runs_only_when_cron_matches(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "cron.db")
+    workspace = core.create_workspace("cron")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="AI",
+        target_roles=["AI应用工程师"],
+    )
+    core.configure_monitor(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+        enabled=True,
+        schedule_cron="0 9 * * *",  # daily 09:00
+    )
+    runner = LocalMonitorRunner(core.database)
+    runs: list[str] = []
+
+    def search(workspace_id, plan_id):
+        runs.append("searched")
+        return ()
+
+    # 08:59 — cron not matched
+    before = runner.run_due(
+        now=datetime(2026, 8, 1, 8, 59, tzinfo=UTC), search=search
+    )[0]
+    assert before.status == "skipped"
+    assert "cron" in (before.reason or "")
+    assert runs == []
+
+    # 09:00 — cron matched, runs
+    at = runner.run_due(
+        now=datetime(2026, 8, 1, 9, 0, tzinfo=UTC), search=search
+    )[0]
+    assert at.status == "success"
+    assert runs == ["searched"]
+
+
+def test_monitor_cron_supports_lists_steps_and_ranges() -> None:
+    from jobfindsme.monitoring.service import _cron_matches
+
+    now = datetime(2026, 8, 3, 10, 15, tzinfo=UTC)  # Monday 10:15
+    assert _cron_matches("15 10 * * 1", now)  # Mondays 10:15
+    assert not _cron_matches("15 10 * * 2", now)  # Tuesdays — no
+    assert _cron_matches("*/15 * * * *", now)  # every 15 min
+    assert _cron_matches("10-20 9-11 * * *", now)  # ranges
+    assert _cron_matches("0 8 */2 * *", datetime(2026, 8, 2, 8, 0, tzinfo=UTC))  # even days
+    assert not _cron_matches("0 8 */2 * *", datetime(2026, 8, 3, 8, 0, tzinfo=UTC))
+    assert not _cron_matches("not a cron", now)  # invalid never fires
+
+
+def test_configure_monitor_persists_schedule_cron(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "cron-persist.db")
+    workspace = core.create_workspace("cron")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="AI",
+        target_roles=["AI应用工程师"],
+    )
+
+    config = core.configure_monitor(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+        enabled=True,
+        schedule_cron="0 20 * * 1",
+    )
+
+    assert config.schedule_cron == "0 20 * * 1"
+    with core.database.connect() as connection:
+        row = connection.execute(
+            "SELECT schedule_cron FROM monitor_configs"
+        ).fetchone()
+    assert row["schedule_cron"] == "0 20 * * 1"

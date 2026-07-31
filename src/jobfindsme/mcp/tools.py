@@ -186,7 +186,8 @@ TOOL_DEFINITIONS = (
         (
             "Enable or disable periodic background search.  "
             "When enabled, the monitor runs at the configured interval_hours "
-            "(1-168) and reports new/changed/closed jobs.  "
+            "(1-168) or at an arbitrary schedule_cron (5-field cron, e.g. "
+            "'0 9 * * *' daily 09:00 — takes precedence).  "
             "No runs occur until explicitly enabled.  "
             "notification_channel is optional (e.g. 'feishu')."
         ),

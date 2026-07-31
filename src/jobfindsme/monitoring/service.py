@@ -49,7 +49,7 @@ class LocalMonitorRunner:
         with self.database.connect() as connection:
             configs = connection.execute(
                 """
-                SELECT workspace_id, plan_id, interval_hours
+                SELECT workspace_id, plan_id, interval_hours, schedule_cron
                 FROM monitor_configs WHERE enabled = 1
                 ORDER BY workspace_id, plan_id
                 """
@@ -59,6 +59,7 @@ class LocalMonitorRunner:
                 workspace_id=row["workspace_id"],
                 plan_id=row["plan_id"],
                 interval_hours=row["interval_hours"],
+                schedule_cron=row["schedule_cron"],
                 now=now,
                 search=search,
                 notify=notify,
@@ -72,11 +73,25 @@ class LocalMonitorRunner:
         workspace_id: str,
         plan_id: str,
         interval_hours: int,
+        schedule_cron: str | None,
         now: datetime,
         search: SearchAction,
         notify: NotifyAction | None,
     ) -> MonitorRunResult:
-        scheduled_for = _latest_slot(now, interval_hours)
+        if schedule_cron:
+            # Arbitrary time/frequency: run only when the cron expression
+            # matches the current minute.  An invalid expression never runs.
+            if not _cron_matches(schedule_cron, now):
+                return MonitorRunResult(
+                    workspace_id=workspace_id,
+                    plan_id=plan_id,
+                    scheduled_for=now.replace(second=0, microsecond=0),
+                    status="skipped",
+                    reason="cron schedule not matched",
+                )
+            scheduled_for = now.replace(second=0, microsecond=0)
+        else:
+            scheduled_for = _latest_slot(now, interval_hours)
         if not self._claim(workspace_id, plan_id, scheduled_for, now):
             return MonitorRunResult(
                 workspace_id=workspace_id,
@@ -242,5 +257,65 @@ class LocalMonitorRunner:
 
 def _latest_slot(now: datetime, interval_hours: int) -> datetime:
     interval = interval_hours * 3600
-    timestamp = int(now.timestamp())
+    timestamp = now.timestamp()
     return datetime.fromtimestamp(timestamp - timestamp % interval, tz=UTC)
+
+
+# ── 5-field cron matching (no external dependency) ────────────────────────────
+
+
+def _cron_matches(expression: str, now: datetime) -> bool:
+    """Match a 5-field cron (minute hour dom month dow) against *now*.
+
+    Supports ``*``, lists (``1,15``), ranges (``9-17``) and steps
+    (``*/15``, ``1-30/5``).  Day-of-week uses cron numbering where 0 and 7
+    are Sunday.  Invalid expressions return False and never fire.
+    """
+    fields = expression.strip().split()
+    if len(fields) != 5:
+        return False
+    minute, hour, dom, month, dow = fields
+    cron_dow = now.isoweekday() % 7  # cron: 0=Sunday; isoweekday 7=Sunday
+    return (
+        _field_matches(minute, now.minute)
+        and _field_matches(hour, now.hour)
+        and _field_matches(dom, now.day)
+        and _field_matches(month, now.month)
+        and _field_matches(dow, cron_dow)
+    )
+
+
+def _field_matches(field: str, value: int) -> bool:
+    if field == "*":
+        return True
+    for part in field.split(","):
+        if "/" in part:
+            base, _, step_text = part.partition("/")
+            try:
+                step = int(step_text)
+            except ValueError:
+                continue
+            if base == "*":
+                if value % step == 0:
+                    return True
+            else:
+                try:
+                    start = int(base)
+                except ValueError:
+                    continue
+                if value >= start and (value - start) % step == 0:
+                    return True
+        elif "-" in part:
+            lo, _, hi = part.partition("-")
+            try:
+                if int(lo) <= value <= int(hi):
+                    return True
+            except ValueError:
+                continue
+        else:
+            try:
+                if int(part) == value:
+                    return True
+            except ValueError:
+                continue
+    return False

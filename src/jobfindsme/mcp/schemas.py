@@ -265,6 +265,17 @@ class ConfigureMonitorInput(StrictModel):
         le=168,
         description="Hours between auto searches (1–168, default 24 = daily)",
     )
+    schedule_cron: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Optional 5-field cron for arbitrary time and frequency — "
+            "takes precedence over interval_hours. "
+            "Examples: '0 9 * * *' (daily 09:00), '0 20 * * 1' (Mondays 20:00), "
+            "'0 8 */2 * *' (every 2 days 08:00). "
+            "Omit to keep interval_hours."
+        ),
+    )
     notification_channel: str | None = Field(
         default=None,
         description="Optional notification channel, e.g. 'feishu'",
