@@ -94,6 +94,10 @@ def run_live_search_loop(
         refresh_mode=SearchRefreshMode.FULL,
         limit=limit,
     )
+    from jobfindsme.matching.ranker import score_signals
+
+    # v0.4+: JobMatch.score is always 0.0 (Agent owns ranking).  Report the
+    # deterministic signal score so averages have operational meaning.
     jobs = tuple(
         LoopJob(
             rank=index,
@@ -102,7 +106,7 @@ def run_live_search_loop(
             title=match.job.title,
             company=match.job.company,
             location=" / ".join(match.job.locations),
-            score=match.score,
+            score=score_signals(match.job, profile),
             recruitment_track=match.job.recruitment_track,
             employment_type=match.job.employment_type,
             apply_url=match.job.apply_url,
@@ -194,7 +198,9 @@ def _assess_quality(
 
 
 def _rate(jobs: tuple[LoopJob, ...], predicate) -> float:
-    return sum(1 for job in jobs if predicate(job)) / len(jobs) if jobs else 0
+    # Vacuous truth: no jobs → no violations, rate is 1.0.  Reporting 0.0
+    # here used to mislead "no results" into "all results invalid".
+    return sum(1 for job in jobs if predicate(job)) / len(jobs) if jobs else 1.0
 
 
 def _valid_http_url(value: str) -> bool:
