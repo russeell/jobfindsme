@@ -42,15 +42,24 @@ def _connector_chain(
         from jobfindsme.connectors.pure_http import WuyouPureHttpConnector
 
         return [
-            (WuyouPureHttpConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
-            (WuyouCdpInterceptionConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
-            (WuyouConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
+            (
+                WuyouPureHttpConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
+            (
+                WuyouCdpInterceptionConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
+            (
+                WuyouConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
         ]
     if source.kind is DiscoverySourceKind.ZHILIAN_CDP:
         from jobfindsme.connectors.china_platforms import ZhilianConnector
@@ -60,27 +69,42 @@ def _connector_chain(
         from jobfindsme.connectors.pure_http import ZhilianPureHttpConnector
 
         return [
-            (ZhilianPureHttpConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
-            (ZhilianCdpInterceptionConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
-            (ZhilianConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 3),
+            (
+                ZhilianPureHttpConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
+            (
+                ZhilianCdpInterceptionConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
+            (
+                ZhilianConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                3,
+            ),
         ]
     if source.kind is DiscoverySourceKind.LIEPIN_CDP:
         from jobfindsme.connectors.china_platforms import LiepinConnector
         from jobfindsme.connectors.pure_http import LiepinPureHttpConnector
 
         return [
-            (LiepinPureHttpConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 0),
-            (LiepinConnector(
-                query, city=city, policy=policy, source_name=source.source_name
-            ), 3),
+            (
+                LiepinPureHttpConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            ),
+            (
+                LiepinConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                3,
+            ),
         ]
     return []
 

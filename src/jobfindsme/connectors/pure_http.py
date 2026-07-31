@@ -98,10 +98,46 @@ def _default_session_factory() -> _Session:
 # stable and widely re-implemented in open-source 51job crawlers.
 
 _ACW_BOX = [
-    0xF, 0x23, 0x1D, 0x18, 0x21, 0x10, 0x1, 0x26, 0xA, 0x9,
-    0x13, 0x1F, 0x28, 0x1B, 0x16, 0x17, 0x19, 0xD, 0x6, 0xB,
-    0x27, 0x12, 0x14, 0x8, 0xE, 0x15, 0x20, 0x1A, 0x2, 0x1E,
-    0x7, 0x4, 0x11, 0x5, 0x3, 0x1C, 0x22, 0x25, 0xC, 0x24,
+    0xF,
+    0x23,
+    0x1D,
+    0x18,
+    0x21,
+    0x10,
+    0x1,
+    0x26,
+    0xA,
+    0x9,
+    0x13,
+    0x1F,
+    0x28,
+    0x1B,
+    0x16,
+    0x17,
+    0x19,
+    0xD,
+    0x6,
+    0xB,
+    0x27,
+    0x12,
+    0x14,
+    0x8,
+    0xE,
+    0x15,
+    0x20,
+    0x1A,
+    0x2,
+    0x1E,
+    0x7,
+    0x4,
+    0x11,
+    0x5,
+    0x3,
+    0x1C,
+    0x22,
+    0x25,
+    0xC,
+    0x24,
 ]
 _ACW_KEY = "3000176000856006061501533003690027800375"
 
@@ -159,9 +195,7 @@ class LiepinPureHttpConnector:
 
         session = self._session_factory()
         try:
-            session.get(
-                search_url, headers={"User-Agent": _UA}, timeout=_TIMEOUT
-            )
+            session.get(search_url, headers={"User-Agent": _UA}, timeout=_TIMEOUT)
             xsrf = session.cookies.get("XSRF-TOKEN", "")
             if not xsrf:
                 raise PureHttpBlockedError(
@@ -463,9 +497,7 @@ class ZhilianPureHttpConnector:
 
         session = self._session_factory()
         try:
-            session.get(
-                search_url, headers={"User-Agent": _UA}, timeout=_TIMEOUT
-            )
+            session.get(search_url, headers={"User-Agent": _UA}, timeout=_TIMEOUT)
             response = session.get(
                 _ZHILIAN_API,
                 params={

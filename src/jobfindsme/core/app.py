@@ -747,6 +747,8 @@ def _select_refresh_sources(
 ) -> tuple[tuple[DiscoverySource, ...], tuple[DiscoverySource, ...]]:
     """Keep interactive search quick while retaining cached broad coverage."""
 
+    if isinstance(mode, str):
+        mode = SearchRefreshMode(mode)
     if mode is SearchRefreshMode.FULL:
         return sources, ()
     if mode is SearchRefreshMode.CACHE:
