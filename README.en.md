@@ -27,7 +27,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.3.0/jobfindsme-0.3.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.5.0/jobfindsme-0.5.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
@@ -52,24 +52,18 @@ Find new jobs since my last search.
 
 ## Sources
 
-Each source uses a three-tier fallback chain — pure HTTP first (sub-second),
-then CDP interception, then DOM extraction:
+Two platforms only — **BOSS直聘** and **猎聘 (Liepin)**, covering the large
+majority of China's tech hiring market. The focus keeps maintenance cost and
+failure rate low.
 
-| Source | Pure HTTP | Browser fallback | Role |
+| Source | Method | Speed | Browser needed? |
 |---|---|---|---|
-| BOSS Zhipin | — | authenticated local CDP | primary live source |
-| Liepin | ✅ `api-c.liepin.com` JSON, ~0.9s | CDP → DOM | sub-second, no browser |
-| Zhaopin | ⚠️ honeypot-detected | CDP interception → DOM | additional candidates |
-| 51job | ⚠️ WAF2-detected | CDP interception → DOM | additional discovery |
+| BOSS Zhipin | local Chrome CDP, XHR-injected internal API | ~0.5s | ✅ yes (login session) |
+| Liepin | `api-c.liepin.com` pure HTTP JSON API | ~1.0s | ❌ no |
 
-Lagou was retired from live discovery because verification failures, incomplete
-fields, and latency outweighed its observed value. Existing historical records
-remain readable.
-
-The source strategy is layered: pure HTTP direct API first (sub-second,
-no Chrome), CDP passive interception when the platform's anti-bot wall blocks
-direct HTTP, and DOM extraction as the final fallback. The project does not
-treat signature reverse engineering or CAPTCHA bypass as a supported path.
+Liepin prefers pure HTTP (sub-second, no browser). When Chrome is available,
+the browser tier additionally enriches job detail pages with JD text for stronger
+matching signals. BOSS requires an authenticated local Chrome session.
 
 ## Privacy and limitations
 

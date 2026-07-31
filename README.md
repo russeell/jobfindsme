@@ -215,16 +215,16 @@ Agent 按固定五段结构输出（简历解析 / 检索概览 / 过滤说明 /
 
 ## 🌐 岗位来源
 
-**默认双平台**：从 v0.3.1 起精简为 BOSS直聘 + 猎聘。两者覆盖了中国技术岗位市场的绝大部分，
-维护成本与稳定性远优于四平台并存。
+**只搜两个平台**：BOSS直聘 + 猎聘。两者覆盖了中国技术岗位市场的绝大部分，
+专注覆盖最广、稳定性最好的两个来源，把维护成本和失败率压到最低。
 
 | 来源 | 方式 | 速度 | 需要浏览器？ |
 |---|---|---|---|
 | **BOSS直聘** | 本地 Chrome CDP，XHR 注入内部 API | ~0.5s | ✅ 需要（登录态） |
 | **猎聘** | `api-c.liepin.com` 纯 HTTP JSON API | ~1.0s | ❌ 不需要 |
 
-旧版本曾支持 前程无忧 / 智联招聘 / 拉勾，前两者因 WAF / 蜜罐稳定性不足被默认移除，
-拉勾因字段完整度过低被下线；连接器仍在仓库中保留，可手动 `--sources` 启用。
+猎聘优先纯 HTTP 直连（亚秒级、无需浏览器）；本机已运行 Chrome 时，
+再自动用浏览器补充岗位详情页的 JD 文本，进一步丰富匹配信号。
 
 ---
 
@@ -306,16 +306,6 @@ ruff check . && ruff format --check .
   自行承担，与作者无关；
 - 禁止用于商业转售、大规模爬取或绕过平台限制；
 - 平台页面结构随时可能变化导致某个来源失效，请通过 Issue 反馈，作者会尽力跟进。
-
----
-
-## 🙏 致谢
-
-本 README 的写法借鉴了一大批优秀的个人开源项目，受 [lazygit](https://github.com/jesseduffield/lazygit) / [bat](https://github.com/sharkdp/bat) 的「一图胜千言」启发最深。
-特别感谢（不分先后）：
-
-- 国内：[Molunerfinn/PicGo](https://github.com/Molunerfinn/PicGo) · [lencx/ChatGPT](https://github.com/lencx/ChatGPT) · [qishibo/AnotherRedisDesktopManager](https://github.com/qishibo/AnotherRedisDesktopManager) · [eryajf/awesome-navigation](https://github.com/eryajf/awesome-navigation) · [lepture/authlib](https://github.com/lepture/authlib) · [qiurunze123/miaosha](https://github.com/qiurunze123/miaosha) · [eastmonning/iptv-api](https://github.com/eastmonning/iptv-api) · [zhongyang123/-vue-music](https://github.com/zhongyang123/-vue-music) · [shidahuilang/shidahuilang](https://github.com/shidahuilang/shidahuilang) · [laxians/iptv-m3u](https://github.com/laxians/iptv-m3u) · [zhongfly/StreamCap](https://github.com/zhongfly/StreamCap)
-- 国外：[jesseduffield/lazygit](https://github.com/jesseduffield/lazygit) · [sharkdp/bat](https://github.com/sharkdp/bat) · [junegunn/fzf](https://github.com/junegunn/fzf) · [sharkdp/fd](https://github.com/sharkdp/fd) · [BurntSushi/ripgrep](https://github.com/BurntSushi/ripgrep) · [ogham/exa](https://github.com/ogham/exa) · [ajeetdsouza/zoxide](https://github.com/ajeetdsouza/zoxide) · [bootandy/dust](https://github.com/bootandy/dust) · [Canop/dysk](https://github.com/Canop/dysk) · [Peltoche/lsd](https://github.com/Peltoche/lsd)
 
 ---
 
