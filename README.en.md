@@ -1,17 +1,16 @@
 # jobfindsme · AI Job Search Radar
 
-**Search several job sources from one Agent, match jobs against a local resume,
-and focus later searches on new opportunities.**
+**One sentence searches BOSS直聘 and 猎聘 (Liepin) together, matching jobs against your resume.**
 
 [Chinese](README.md) · [Install](INSTALL.md) · [Specification](PROJECT_SPEC.md)
 
 ## What it does
 
-- searches BOSS Zhipin, Liepin, Zhaopin, and 51job from one Agent;
-- filters location, salary, experience, recruitment track, and employment type;
-- returns a ranking score, resume evidence, gaps, and a direct job link;
-- remembers seen, saved, dismissed, and applied jobs;
-- reports new and materially changed jobs on later searches.
+- searches **BOSS直聘** and **猎聘 (Liepin)** from one Agent;
+- matches jobs against your resume (Agent-side semantic ranking);
+- returns matching jobs with direct apply links;
+- optional scheduled push at any time/frequency; applied jobs are never re-suggested;
+- query every job ever matched, with its state.
 
 ## Install
 
