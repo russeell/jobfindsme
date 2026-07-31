@@ -18,8 +18,14 @@ def test_china_search_gets_default_connectors() -> None:
         "猎聘·杭州",
     }
     assert len(sources) == 4
-    assert all(source.kind.uses_browser for source in sources if "BOSS" in source.source_name)
-    assert all(not source.kind.uses_browser for source in sources if "猎聘" in source.source_name)
+    assert all(
+        source.kind.uses_browser for source in sources if "BOSS" in source.source_name
+    )
+    assert all(
+        not source.kind.uses_browser
+        for source in sources
+        if "猎聘" in source.source_name
+    )
     assert all(source.catalog_managed for source in sources)
     assert {source.location for source in sources} == {"上海", "杭州"}
 

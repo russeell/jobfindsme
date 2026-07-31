@@ -399,9 +399,10 @@ def test_score_signals_degree_match() -> None:
     bachelor_profile = _profile("Python", degree="上海大学 计算机科学 本科")
     phd_required = job("phd", description="AI应用工程师，博士学历，1-3年，25-40K")
 
-    assert score_signals(phd_required, master_profile) < score_signals(
-        phd_required, bachelor_profile
-    ) + 0.5  # 两者都在低分区，只验证不报错且有序可比较
+    assert (
+        score_signals(phd_required, master_profile)
+        < score_signals(phd_required, bachelor_profile) + 0.5
+    )  # 两者都在低分区，只验证不报错且有序可比较
 
 
 def test_score_signals_returns_zero_without_profile() -> None:
