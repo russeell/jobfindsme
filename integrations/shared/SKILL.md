@@ -37,15 +37,23 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    exclusions from the user's request. Ask only when a missing constraint
    would make the search unusably broad; do not turn every optional field into
    a question.
-3. Call `setup_profile` with `action: import`. It confirms parsed facts
-   automatically by default so the first search can continue in the same turn.
-   Its response includes `suggested_plan`. Merge that proposal with constraints
-   the user stated explicitly, show the inferred fields and
-   `requires_confirmation`, and ask for one concise confirmation before saving
-   the plan. Explicit user input always overrides resume-derived hints. Never
-   infer a salary floor when the proposal leaves it empty.
-   Set `auto_confirm: false` only when the user asks to review or edit facts,
-   then use paginated review and explicit confirmation.
+3. **Resume is optional, not required.** Branch on what the user provides:
+   - **With a resume path**: call `setup_profile` with `action: import`. It
+     confirms parsed facts automatically by default so the first search can
+     continue in the same turn. Its response includes `suggested_plan`. Merge
+     that proposal with constraints the user stated explicitly, show the
+     inferred fields and `requires_confirmation`, and ask for one concise
+     confirmation before saving the plan. Explicit user input always overrides
+     resume-derived hints. Never infer a salary floor when the proposal leaves
+     it empty. Set `auto_confirm: false` only when the user asks to review or
+     edit facts, then use paginated review and explicit confirmation.
+   - **Without a resume** (user has none, or prefers not to share one): skip
+     `setup_profile` entirely. Go straight to `configure_search` with the
+     user's stated constraints, then `search_jobs`. Matching then relies on
+     the user's stated role/location/salary/track requirements plus JD
+     signals; recommendation reasons must be based on the job's own
+     requirements vs the user's stated preferences — never claim a
+     resume-based skill match that has no profile behind it.
 4. Call `configure_search` with the extracted constraints and omit `sources`
    unless the user explicitly provides a source. Core selects maintained
    sources and returns official search links. Never ask ordinary users for
@@ -94,6 +102,10 @@ Rules — every Agent must follow these exactly:
    with `推荐理由：`. Base it ONLY on the returned signals vs the user's
    confirmed profile (skill overlap, experience fit, degree match). Never
    invent facts not present in the block or profile.
+   **No-profile mode**: base the reason on the job's own signals vs the
+   user's stated preferences (role, location, salary, track) — e.g.
+   "标题与目标角色一致，薪资符合 20K+ 要求，学历本科满足" — and never
+   claim resume-based skill matches.
 3. If the block lacks a field (e.g. no salary), say so briefly rather than
    guessing.
 4. When presenting several jobs, keep this block order; your reasoning lines

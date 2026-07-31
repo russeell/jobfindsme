@@ -39,9 +39,12 @@ On first use, follow this sequence. Never ask for Workspace or Search Plan IDs.
 On later searches, reuse the active profile and plan unless the user changes
 their resume or search constraints.
 
-1. **setup_profile** — call with `action: "import"` and the user's resume path
-   only on first use or when the resume changes.
-   Set `auto_confirm: true` unless the user asked to review.
+1. **setup_profile (optional)** — a resume is NOT required. Call with
+   `action: "import"` and the user's resume path only when the user provides
+   one (first use or resume change). If the user has no resume or prefers not
+   to share it, skip this step entirely and go straight to `configure_search`.
+   Without a profile, matching uses the user's stated constraints + JD
+   signals; never claim resume-based skill matches.
 
 2. **configure_search** — create or update the plan when constraints change.
    Extract these from the user's request. Only `target_roles`
