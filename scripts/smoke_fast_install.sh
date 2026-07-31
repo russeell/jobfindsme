@@ -34,14 +34,14 @@ from importlib.util import find_spec
 if find_spec("playwright") is not None:
     raise SystemExit("fast install unexpectedly included Playwright")
 PY
-"$temporary/venv/bin/python" -m jobfindsme connect workbuddy \
+"$temporary/venv/bin/python" -m jobfindsme connect cursor \
   --home "$temporary/home"
 "$temporary/venv/bin/python" -m jobfindsme --version
 
-config="$temporary/home/.workbuddy/mcp.json"
+config="$temporary/home/.cursor/mcp.json"
 test -f "$config"
 
 elapsed="$(( $(date +%s) - started_at ))"
-printf 'clean install + WorkBuddy setup: %ss (limit: %ss)\n' \
+printf 'clean install + Cursor setup: %ss (limit: %ss)\n' \
   "$elapsed" "$max_seconds"
 test "$elapsed" -le "$max_seconds"

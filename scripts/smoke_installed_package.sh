@@ -35,7 +35,7 @@ python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
 
 database="$temporary/jobfindsme.db"
-"$temporary/venv/bin/jobfindsme" connect workbuddy --home "$temporary/home"
+"$temporary/venv/bin/jobfindsme" connect cursor --home "$temporary/home"
 "$temporary/venv/bin/jobfindsme" \
   --db "$database" \
   workspace init \
@@ -90,7 +90,7 @@ structured = response["result"]["structuredContent"]
 if not isinstance(structured, dict) or structured.get("jobs") != []:
     raise SystemExit(f"invalid installed MCP empty result: {structured!r}")
 
-config = os.path.join(os.path.dirname(database), "home", ".workbuddy", "mcp.json")
+config = os.path.join(os.path.dirname(database), "home", ".cursor", "mcp.json")
 if not os.path.exists(config):
     raise SystemExit("installed wheel could not configure WorkBuddy")
 PY

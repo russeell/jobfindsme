@@ -217,7 +217,9 @@ def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) ->
                         "id": "1",
                         "title": "AI应用工程师",
                         "company": "示例科技",
-                        "description": "社会招聘，全职正式，Python RAG Agent，1-3年，25-40K",
+                        "description": (
+                            "社会招聘，全职正式，Python RAG Agent，1-3年，25-40K"
+                        ),
                         "location": "杭州",
                         "url": "https://example.com/jobs/1",
                     }
