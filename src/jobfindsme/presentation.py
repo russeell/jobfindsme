@@ -30,7 +30,12 @@ _EMPLOYMENT_LABELS = {
 
 
 def format_job_list(items: Sequence[Any]) -> str:
-    """Render stable, evidence-based recommendation blocks."""
+    """Render stable, evidence-based recommendation blocks.
+
+    This text is the deterministic part of the Agent contract: every Agent
+    receives the identical block (facts + signals + link).  Agents append
+    their own semantic 推荐理由 on top of these facts.
+    """
     if not items:
         return "未找到符合条件的岗位。"
 
@@ -47,18 +52,36 @@ def format_job_list(items: Sequence[Any]) -> str:
         ]
         if job.salary and job.salary.raw_text:
             fields.append(job.salary.raw_text)
-        if score is not None:
-            fields.append(f"匹配度 {round(score * 100)}%")
         lines = ["｜".join(fields)]
-        reasons = tuple(getattr(evidence, "reasons", ())) if evidence else ()
+
+        # Structured signals — deterministic facts for the Agent's reasoning
+        signals = _extracted_signals(evidence)
+        signal_parts = []
+        skills = signals.get("required_skills") or []
+        if skills:
+            signal_parts.append("技能：" + "、".join(skills[:6]))
+        if signals.get("required_experience"):
+            signal_parts.append(f"经验：{signals['required_experience']}")
+        if signals.get("required_degree"):
+            signal_parts.append(f"学历：{signals['required_degree']}")
+        if signal_parts:
+            lines.append("   " + " ｜ ".join(signal_parts))
+
         warnings = tuple(getattr(evidence, "warnings", ())) if evidence else ()
-        if reasons:
-            lines.append("推荐理由：" + "；".join(reasons[:3]))
         if warnings:
-            lines.append("注意事项：" + "；".join(warnings[:2]))
+            lines.append("   注意：" + "；".join(warnings[:2]))
         lines.append(f"   投递链接：{job.apply_url}")
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
+
+
+def _extracted_signals(evidence: Any | None) -> dict:
+    if evidence is None:
+        return {}
+    raw = getattr(evidence, "extracted_signals", None)
+    if isinstance(raw, dict):
+        return raw
+    return {}
 
 
 def format_search_results(items: Sequence[Any], changes: SearchChanges) -> str:

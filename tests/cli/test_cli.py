@@ -122,7 +122,7 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
                         "id": "1",
                         "title": "AI应用工程师",
                         "company": "示例科技",
-                        "description": "社会招聘，全职正式岗位",
+                        "description": "社会招聘，全职正式岗位，Python RAG Agent，1-3年，25-40K",
                         "location": "杭州",
                         "url": "https://example.com/jobs/1",
                     }
@@ -152,7 +152,10 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
     )
 
     output = capsys.readouterr().out
-    assert output.startswith("1. AI应用工程师｜示例科技｜杭州｜社招｜正式｜匹配度 ")
+    # v0.5: deterministic block = facts + signals + link
+    assert output.startswith("1. AI应用工程师｜示例科技｜杭州｜社招｜正式｜")
+    assert "技能：" in output
+    assert "经验：" in output
     assert output.endswith("   投递链接：https://example.com/jobs/1\n")
 
 

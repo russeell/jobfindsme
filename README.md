@@ -30,13 +30,24 @@
 ✅ BOSS直聘·上海 ✓ · 猎聘·上海 ✓ (4.2s)
 🆕 新增 6 个匹配岗位（已过滤 42 → 20）
 
-1. AI应用工程师（Agent开发）｜某知名公司｜上海｜40K-60K
-2. AI应用工程师 ｜上汽云计算中心 ｜上海｜25K-40K
-3. AI应用工程师（CAD方向）｜极芯拓方 ｜上海浦东｜40K-70K
-4. AI应用工程师 ｜某上海基金公司 ｜上海｜20K-28K
+1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40K-60K
+   技能：Agent、Python ｜ 经验：3-5年 ｜ 学历：本科
+   推荐理由：JD 要求 Agent 开发与你的 LangGraph 项目经历直接匹配
+   投递链接：https://www.liepin.com/job/1980438233.shtml
 
-投递链接：https://www.liepin.com/job/1980438233.shtml
+2. AI应用工程师 ｜上汽云计算中心 ｜上海｜社招｜正式｜25K-40K
+   技能：RAG、Python ｜ 经验：3-5年 ｜ 学历：本科
+   推荐理由：RAG 技能与你的知识库项目高度重叠，薪资符合预期
+   投递链接：https://www.liepin.com/job/1965405095.shtml
+
+3. AI应用工程师（CAD方向）｜极芯拓方 ｜上海浦东｜社招｜正式｜40K-70K
+   技能：Python ｜ 经验：1-3年 ｜ 学历：本科
+   推荐理由：方向略偏 CAD，但薪资上限高、可考虑
+   投递链接：https://www.liepin.com/job/1981816455.shtml
 ```
+
+每个岗位的**事实、信号和链接由 Server 固定生成（任何 Agent 一致）**，
+推荐理由由 Agent 基于这些信号与你的简历生成。
 
 <div align="center">
 <img src="docs/demo.gif" alt="jobfindsme demo" width="860" />
@@ -147,12 +158,16 @@ Agent 会自动完成检测环境、安装、写入自己的 MCP 配置。**你�
 Agent 基于 MCP Server 提供的结构化岗位信号和粗筛分数做语义分析，每次推荐包含：
 
 ```text
-大模型应用开发工程师｜示例科技｜上海｜25-40K｜社招·正式
-Agent 分析：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
-（Server 粗筛：技能命中 3/4，经验满足，学历匹配）
+大模型应用开发工程师｜示例科技｜上海｜社招｜正式｜25-40K
+技能：RAG、Agent、FastAPI ｜ 经验：3-5年 ｜ 学历：本科
+推荐理由：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
 需要注意：JD 要求 Kubernetes 经验，简历中未找到直接证据
-投递：https://example.com/jobs/123
+投递链接：https://example.com/jobs/123
 ```
+
+每个岗位固定包含：**事实行 + 信号行 + 推荐理由 + 投递链接**。
+其中事实、信号和链接由 Server 确定生成（任何 Agent 完全一致）；推荐理由
+由 Agent 基于信号与简历生成（措辞因模型而异，但依据相同）。
 
 结果不足时 Agent 不会用弱匹配岗位凑数；来源字段不完整时会明确标注。
 

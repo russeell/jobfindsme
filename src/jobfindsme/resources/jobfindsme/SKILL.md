@@ -1,13 +1,24 @@
 ---
 name: jobfindsme
-description: Find, compare, save, and track jobs with the local jobfindsme engine.
+description: Find, compare, save, and track jobs with the local jobfindsme engine. Two user-facing scenarios: find matching jobs fast, and schedule pushes at any time/frequency.
 ---
 
 # jobfindsme
 
 Use jobfindsme to help the user find more qualified jobs across sources with
-less time, fewer irrelevant results, and minimal setup. It also compares,
-saves, tracks, exports, monitors, and deletes local job-search data.
+less time, fewer irrelevant results, and minimal setup.
+
+**The user only cares about three things — keep everything else invisible:**
+
+1. **① 找岗位** — fastest path from a request to matched jobs with apply links.
+2. **② 定时推送** — jobs pushed at the user's exact time and frequency;
+   applied jobs are never re-suggested.
+3. **③ 查历史** — every job ever matched/shown, queryable at any time with
+   its state (applied/saved/rejected) and when it first appeared.
+
+Everything else (dedup, incremental radar, signal extraction, state, export)
+runs automatically. The user interacts only by chatting — never surface
+Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 
 ## Privacy
 
@@ -63,6 +74,71 @@ saves, tracks, exports, monitors, and deletes local job-search data.
 9. Use `configure_monitor` only after explicit opt-in.
 10. `export_local_data` writes a local file. Return the receipt; do not read the
     exported file back into model context unless the user explicitly requests it.
+
+## Output Contract (输出契约 — 硬约束)
+
+The Server returns each job as a **deterministic block** in `content[0].text`:
+
+```text
+1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40K-60K
+   技能：Agent、Python ｜ 经验：3-5年 ｜ 学历：本科
+   投递链接：https://www.liepin.com/job/xxx
+```
+
+Rules — every Agent must follow these exactly:
+
+1. **Never alter or drop the block**: keep the fact line, the signal line
+   (技能/经验/学历), and the 投递链接 exactly as returned. These are the
+   deterministic contract — identical on every Agent host.
+2. **Always append your own 推荐理由** below the block, one line starting
+   with `推荐理由：`. Base it ONLY on the returned signals vs the user's
+   confirmed profile (skill overlap, experience fit, degree match). Never
+   invent facts not present in the block or profile.
+3. If the block lacks a field (e.g. no salary), say so briefly rather than
+   guessing.
+4. When presenting several jobs, keep this block order; your reasoning lines
+   go under each block. Do not merge blocks or re-word the fact line.
+
+This contract guarantees the user sees the same job facts and links no
+matter which Agent host they use; only the 推荐理由 wording may differ.
+
+## Daily Push Workflow (定时推送)
+
+### 设置推送时间（用户任意指定）
+
+When the user asks for periodic push (e.g. "每天早上9点推岗位" / "每周一晚上8点" /
+"每两天一次"), record their exact time and frequency:
+
+1. `configure_monitor` with `enabled: true` and:
+   - `schedule_cron` for arbitrary time/frequency (5-field cron, takes
+     precedence over interval_hours): `"0 9 * * *"` daily 09:00,
+     `"0 20 * * 1"` Mondays 20:00, `"0 8 */2 * *"` every 2 days 08:00.
+   - or `interval_hours` (1-168) for a simple interval.
+2. Never invent a time — ask or use exactly what the user said.
+3. For Agent-host scheduling (ZCode/Claude cron), create the host's
+   scheduled task with the user's exact cron expression.
+
+### 执行每日推送
+
+1. Call `search_jobs` with `limit: 10-15`. The incremental radar already
+   suppresses seen jobs and never re-suggests applied/rejected jobs — do not
+   re-recommend anything already shown or marked.
+2. Prioritize by `change_type`: new > changed > reopened.
+3. For each job show: title, company, location, salary, your semantic match
+   assessment (from `extracted_signals` vs profile), and the apply link.
+4. If `count` is 0, say briefly "今天暂无新增岗位" — never fabricate jobs.
+5. After the user applies or dismisses, record it immediately with
+   `update_job_state` (`applied` / `rejected` / `saved`) so tomorrow's push
+   stays deduplicated. Never apply on the user's behalf.
+
+### 查询已投递 / 历史推送
+
+- **History (everything ever matched/shown)**: `search_jobs` with
+  `include_seen: true` — order by `first_seen_at` descending so recent jobs
+  come first; show each job's `state` (applied/saved/rejected) alongside.
+- Applied jobs: `get_jobs` with `states: ["applied"]` — see everything the
+  user already applied to, with notes.
+- Rejected: `get_jobs` with `states: ["rejected"]`.
 
 The normal first-use flow should require at most one consolidated confirmation.
 Never expose Workspace IDs, Plan IDs, connector types, CDP ports, or source
