@@ -102,6 +102,60 @@ def test_discovery_raises_when_whole_chain_fails() -> None:
         )
 
 
+def test_liepin_http_skips_cdp_tier_when_browser_forbidden() -> None:
+    """liepin_http is pure HTTP: allow_browser=False must not drop it."""
+    attempted: list[str] = []
+
+    class RecordingImports:
+        def import_connector(self, workspace_id, connector, **kwargs):
+            attempted.append(type(connector).__name__)
+            return ImportSummary(0, 0, 0, ())
+
+    service = JobDiscoveryService(RecordingImports())
+    service._discover_one(
+        workspace_id="workspace",
+        source=DiscoverySource(
+            kind="liepin_http",
+            source_name="猎聘",
+            query="AI应用工程师",
+            location="上海",
+        ),
+        allow_browser=False,
+    )
+
+    assert attempted == ["LiepinPureHttpConnector"]  # no CDP fallback
+
+
+def test_liepin_http_allows_cdp_fallback_when_browser_permitted() -> None:
+    attempted: list[tuple[str, int]] = []
+
+    class FlakyImports:
+        def import_connector(self, workspace_id, connector, **kwargs):
+            name = type(connector).__name__
+            enrich_limit = kwargs.get("enrich_limit", 0)
+            attempted.append((name, enrich_limit))
+            if name != "LiepinConnector":
+                raise RuntimeError("blocked")
+            return ImportSummary(0, 0, 0, ())
+
+    service = JobDiscoveryService(FlakyImports())
+    service._discover_one(
+        workspace_id="workspace",
+        source=DiscoverySource(
+            kind="liepin_http",
+            source_name="猎聘",
+            query="AI",
+            location="上海",
+        ),
+        allow_browser=True,
+    )
+
+    assert attempted == [
+        ("LiepinPureHttpConnector", 0),
+        ("LiepinConnector", 3),
+    ]
+
+
 def test_import_connector_uses_optional_enricher_without_platform_dependency(
     tmp_path,
 ) -> None:

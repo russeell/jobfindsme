@@ -16,12 +16,17 @@ _log = logging.getLogger(__name__)
 
 def _connector_chain(
     source: DiscoverySource,
+    *,
+    allow_browser: bool,
 ) -> list[tuple[object, int]]:
     """Ordered ``(connector, enrich_limit)`` fallbacks for *source*.
 
     Strategy per platform — fastest first, most robust last:
     1. pure HTTP (curl_cffi, sub-second, no Chrome)   [pure_http.py]
     2. CDP DOM extraction (slowest, needs Chrome)      [china_platforms.py]
+
+    When *allow_browser* is False the CDP fallback tier is dropped, so
+    browser-free hosts still get Liepin results over pure HTTP.
     """
     from jobfindsme.connectors import ConnectorPolicy
 
@@ -29,24 +34,28 @@ def _connector_chain(
     query = source.query or "AI"
     city = source.location or ""
 
-    if source.kind is DiscoverySourceKind.LIEPIN_CDP:
+    if source.kind in {DiscoverySourceKind.LIEPIN_HTTP, DiscoverySourceKind.LIEPIN_CDP}:
         from jobfindsme.connectors.china_platforms import LiepinConnector
         from jobfindsme.connectors.pure_http import LiepinPureHttpConnector
 
-        return [
+        chain = [
             (
                 LiepinPureHttpConnector(
                     query, city=city, policy=policy, source_name=source.source_name
                 ),
                 0,
             ),
-            (
-                LiepinConnector(
-                    query, city=city, policy=policy, source_name=source.source_name
-                ),
-                3,
-            ),
         ]
+        if allow_browser:
+            chain.append(
+                (
+                    LiepinConnector(
+                        query, city=city, policy=policy, source_name=source.source_name
+                    ),
+                    3,
+                )
+            )
+        return chain
     return []
 
 
@@ -65,9 +74,14 @@ class JobDiscoveryService:
         *,
         workspace_id: str,
         sources: tuple[DiscoverySource, ...],
+        allow_browser: bool = True,
     ) -> tuple[ImportSummary, ...]:
         return tuple(
-            self._discover_one(workspace_id=workspace_id, source=source)
+            self._discover_one(
+                workspace_id=workspace_id,
+                source=source,
+                allow_browser=allow_browser,
+            )
             for source in sources
         )
 
@@ -76,6 +90,7 @@ class JobDiscoveryService:
         *,
         workspace_id: str,
         source: DiscoverySource,
+        allow_browser: bool = True,
     ) -> ImportSummary:
         if source.kind is DiscoverySourceKind.BOSS_CDP:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
@@ -90,13 +105,16 @@ class JobDiscoveryService:
                 source_name=source.source_name,
             )
             return self.imports.import_connector(workspace_id, connector)
-        if source.kind is DiscoverySourceKind.LIEPIN_CDP:
+        if source.kind in {
+            DiscoverySourceKind.LIEPIN_HTTP,
+            DiscoverySourceKind.LIEPIN_CDP,
+        }:
             # Walk the fallback chain: pure HTTP → CDP interception → DOM.
             # Every tier raises a typed error on transport failure; log each
             # fallback loudly — silently swallowing failures here used to
             # hide Chrome-not-running / page-changed bugs and degrade to
             # 0 jobs with no trace.
-            chain = _connector_chain(source)
+            chain = _connector_chain(source, allow_browser=allow_browser)
             last_error: Exception | None = None
             for index, (connector, enrich_limit) in enumerate(chain):
                 if index > 0:

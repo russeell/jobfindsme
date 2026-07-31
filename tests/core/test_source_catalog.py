@@ -18,7 +18,8 @@ def test_china_search_gets_default_connectors() -> None:
         "猎聘·杭州",
     }
     assert len(sources) == 4
-    assert all(source.kind.uses_browser for source in sources)
+    assert all(source.kind.uses_browser for source in sources if "BOSS" in source.source_name)
+    assert all(not source.kind.uses_browser for source in sources if "猎聘" in source.source_name)
     assert all(source.catalog_managed for source in sources)
     assert {source.location for source in sources} == {"上海", "杭州"}
 
@@ -37,7 +38,10 @@ def test_partial_snapshot_sources_flag_browser_access() -> None:
     """M24-001: browser-backed sources are identifiable as partial snapshots."""
     sources = recommended_connectors(("上海", "杭州"))
     for source in sources:
-        assert source.kind.uses_browser
+        if "BOSS" in source.source_name:
+            assert source.kind.uses_browser
+        else:  # Liepin is pure HTTP — no browser needed
+            assert not source.kind.uses_browser
 
 
 def test_catalog_reconciliation_updates_queries_and_preserves_custom_source() -> None:

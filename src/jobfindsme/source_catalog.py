@@ -22,7 +22,7 @@ def recommended_connectors(
     requested_locations = tuple(dict.fromkeys(locations)) or (None,)
     platforms = (
         ("boss_cdp", "BOSS直聘"),
-        ("liepin_cdp", "猎聘"),
+        ("liepin_http", "猎聘"),
     )
     # 前程无忧 and 智联招聘 are retired from defaults as of v0.3.1:
     #   51job — WAF2 blocks pure HTTP, CDP interception works but requires

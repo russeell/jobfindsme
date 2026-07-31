@@ -244,6 +244,8 @@ class JobState(StrictModel):
 
 class DiscoverySourceKind(StrEnum):
     BOSS_CDP = "boss_cdp"
+    LIEPIN_HTTP = "liepin_http"
+    # Compatibility only: pre-v0.4.3 workspaces may still contain this value.
     LIEPIN_CDP = "liepin_cdp"
     ZHILIAN_CDP = "zhilian_cdp"
     # Compatibility only: old workspaces may still contain this value.
@@ -258,6 +260,7 @@ class DiscoverySourceKind(StrEnum):
 
     @property
     def uses_browser(self) -> bool:
+        # Liepin is pure HTTP (curl_cffi, no Chrome); CDP is only a fallback.
         return self in {
             self.BOSS_CDP,
             self.LIEPIN_CDP,
@@ -283,6 +286,7 @@ class DiscoverySource(StrictModel):
     def validate_kind_fields(self) -> Self:
         required = {
             DiscoverySourceKind.BOSS_CDP: self.query,
+            DiscoverySourceKind.LIEPIN_HTTP: self.query,
             DiscoverySourceKind.LIEPIN_CDP: self.query,
             DiscoverySourceKind.ZHILIAN_CDP: self.query,
             DiscoverySourceKind.LAGOU_CDP: self.query,

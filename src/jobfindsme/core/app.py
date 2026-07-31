@@ -434,6 +434,7 @@ class jobfindsmecore:
                 workspace_id=context.workspace.workspace_id,
                 plan_id=context.plan.plan_id,
                 sources=refresh_sources,
+                allow_browser=allow_browser_sources,
             )
         matching_started = perf_counter()
         all_jobs = self.jobs.list(context.workspace.workspace_id)
@@ -503,6 +504,7 @@ class jobfindsmecore:
         workspace_id: str,
         plan_id: str,
         sources: Sequence[DiscoverySource],
+        allow_browser: bool = True,
     ) -> tuple[SourceRunStats, ...]:
         import logging
         from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -537,6 +539,7 @@ class jobfindsmecore:
                 summary = self.discovery.discover(
                     workspace_id=workspace_id,
                     sources=(source,),
+                    allow_browser=allow_browser,
                 )[0]
                 if source.kind.uses_browser and cached and summary.discovered == 0:
                     error = "browser refresh returned no jobs; using cached records"
