@@ -96,7 +96,7 @@ jobfindsme setup          # runtime: ~/.jobfindsme/runtime/bin/python -m jobfind
   platform list. It does NOT wait for the login — report immediately:
   "专用 Chrome 已打开，请扫码登录 BOSS直聘，登录后保持窗口运行".
 - If Chrome is already running (port 9222 reachable), do NOT relaunch —
-  tell the user "Chrome 已在运行，直接扫码即可（如需重开：先关掉专用窗口再 setup）".
+  tell the user "Chrome 已在运行，直接扫码即可（如需重开：jobfindsme stop 后再 setup）".
 - After login, do not force a re-search unless the user asks. The login state
   persists locally; future searches use it automatically.
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -8,10 +9,12 @@ import pytest
 from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.boss_zhipin import (
     BOSS_ORIGIN,
+    BOSS_PROFILE_DIR,
     BossAuthenticationRequired,
     BossConnectorError,
     BossZhipinConnector,
     _chrome_command,
+    setup_chrome,
 )
 from jobfindsme.importing.normalizer import normalize_job
 
@@ -209,3 +212,30 @@ def test_chrome_command_keeps_the_browser_sandbox_enabled() -> None:
     assert "--disable-gpu-sandbox" not in command
     assert "--disable-gpu" not in command
     assert "--remote-debugging-port=9222" in command
+
+
+def test_setup_chrome_skips_launch_when_cdp_already_reachable(
+    monkeypatch,
+) -> None:
+    """setup when the bridge is already up must NOT launch a new Chrome."""
+    launched = []
+
+    def fake_reachable(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._cdp_reachable", fake_reachable
+    )
+    monkeypatch.setattr("subprocess.Popen", lambda *a, **k: launched.append(a))
+
+    result = setup_chrome()
+
+    assert result["ok"] is True
+    assert "已在运行" in result["message"]
+    assert launched == []  # no new Chrome process
+
+    # PID file must not be touched by the already-running path
+    profile = Path(BOSS_PROFILE_DIR).expanduser()
+    pid_file = profile / "chrome.pid"
+    before = pid_file.read_text() if pid_file.exists() else None
+    assert before is None or pid_file.read_text() == before

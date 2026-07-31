@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import time
 from collections.abc import Callable
 from contextlib import suppress
@@ -448,11 +449,26 @@ def _chrome_command(chrome: str, profile: str, urls: list[str]) -> list[str]:
     ]
 
 
+def _cdp_reachable(
+    port: int = DEFAULT_CDP_PORT,
+    timeout: float = 1.0,
+) -> bool:
+    """True when the local Chrome CDP bridge is already listening."""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
 def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     """Launch an isolated Chrome profile for platform login.
 
     Opens the login page for each selected platform. The user logs in
     once per platform; sessions persist in ~/.jobfindsme/chrome-profile.
+
+    If the CDP port is already reachable the bridge is already running —
+    never launch a second instance (that would orphan the PID file).
 
     Args:
         platforms: Which platforms to open (boss, liepin, zhilian).
@@ -463,6 +479,16 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
 
     profile = Path(BOSS_PROFILE_DIR).expanduser()
     profile.mkdir(parents=True, exist_ok=True)
+
+    if _cdp_reachable():
+        return {
+            "ok": True,
+            "message": (
+                f"Chrome 已在运行（端口 {DEFAULT_CDP_PORT}）。\n"
+                "直接在弹出的窗口扫码登录 BOSS直聘即可；\n"
+                "如无窗口或需要重新登录，先运行 jobfindsme stop 再执行本命令。"
+            ),
+        }
 
     chrome_paths = [
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
