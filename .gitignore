@@ -10,3 +10,4 @@ build/
 *.egg-info/
 .jobfindsme/
 reports/
+build/

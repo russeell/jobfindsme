@@ -1,14 +1,7 @@
-"""Passive Network-interception connectors for 前程无忧 and 智联招聘.
+"""[DEPRECATED v0.3.1] 51job/Zhilian CDP interception connectors.
 
-Instead of fragile DOM regex extraction, these connectors navigate to the
-search page, let the SPA make its own API calls, and intercept the JSON
-responses via CDP Network monitoring.  The page's own JavaScript handles
-all signing, cookies, and CORS — we just read the response body.
-
-The fixed _CDPSession (read/write separation with background reader thread)
-makes this possible: CDP events (Network.responseReceived etc.) are buffered
-in a queue that we drain, while send() waits on its own future.
-"""
+Removed from defaults — kept for explicit opt-in use only.
+See source_catalog.py for the current default platforms."""
 
 from __future__ import annotations
 
