@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write  # needed for PyPI trusted publishing
 
 jobs:
   wheel:
@@ -33,3 +34,24 @@ jobs:
         with:
           files: dist/*.whl
           generate_release_notes: true
+      - name: Store wheel for PyPI publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-wheel
+          path: dist/*.whl
+
+  publish-pypi:
+    needs: wheel
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/jobfindsme
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-wheel
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
