@@ -105,4 +105,4 @@ def test_initialize_instructions_carry_the_output_contract(tmp_path) -> None:
     assert "投递链接" in instructions
     assert "resume is not required" in instructions
     assert "include_seen=true" in instructions
-    assert "Never paste complete resumes" in instructions
+    assert "never paste complete resumes" in instructions
