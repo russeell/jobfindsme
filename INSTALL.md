@@ -1,62 +1,251 @@
-# Install jobfindsme
+# jobfindsme 安装指南
 
-This file is an installation recipe for coding agents. Complete only the steps
-below. Do not clone the repository, inspect the source, run the test suite,
-install development dependencies, or download a separate browser.
+> jobfindsme 是本地 MCP Server：聚合 BOSS直聘 + 猎聘，提取结构化岗位信号，
+> 交给 Agent 做语义匹配。**不需要注册任何服务、不需要 API Key。**
+>
+> - 猎聘：纯 HTTP 直连，**不需要浏览器、不需要登录**
+> - BOSS直聘：需要一次扫码登录（可选，见 [第 3 步](#3-登录-boss直聘可选)）
 
-## 1. Check Python
+本文同时服务两类读者：
+
+- **人类用户**：按「快速开始」三选一安装即可
+- **AI Agent**：请按「Agent 安装配方」执行，**不要克隆仓库、不要跑测试、不要装开发依赖**
+
+---
+
+## 快速开始（三选一）
+
+### 方式 A：让 Agent 帮你装（推荐）
+
+把下面这段话发给你的 Agent（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等）：
+
+```text
+请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
+不要克隆仓库或运行测试：
+https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+```
+
+Agent 会：检测 Python → 建独立运行时 → 安装 → 自动写入 MCP 配置 → 告诉你下一步。
+
+### 方式 B：一行命令
+
+把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
+`trae-cn` / `zcode` / `qoder`）：
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
+  | bash -s -- codex
+```
+
+脚本自动完成：检测 Python 3.11+ → 建独立 venv（`~/.jobfindsme/runtime`）→
+装预编译 wheel（清华镜像加速，GitHub 直连失败自动回退）→ 写入该 Agent 的
+MCP 配置。可重复执行。
+
+### 方式 C：pip / uvx（已有 Python 环境的用户）
+
+```bash
+# pip
+pip install jobfindsme[browser]
+jobfindsme connect claude        # 换成你的 Agent，自动写 MCP 配置
+
+# 或 uv（零配置运行，适合先用起来看看）
+uvx jobfindsme mcp
+```
+
+---
+
+## 安装后三步启动
+
+### 1. 接入 Agent（方式 C 已自动完成）
+
+| Agent | 命令 |
+|-------|------|
+| Claude Code | `jobfindsme connect claude` |
+| Codex | `jobfindsme connect codex` |
+| ZCode | `jobfindsme connect zcode` |
+| Kimi | `jobfindsme connect kimi` |
+| Qwen Code | `jobfindsme connect qwen` |
+| TRAE | `jobfindsme connect trae` |
+| WorkBuddy | `jobfindsme connect workbuddy` |
+| Qoder | `jobfindsme connect qoder` |
+| 其他 MCP 客户端 | `jobfindsme config`（打印标准 JSON，手动粘贴） |
+
+> `connect` 只写 MCP 配置文件路径，幂等可重复执行。每个 Agent 共用同一个运行时。
+
+### 2. 登录 BOSS直聘（可选）
+
+```bash
+jobfindsme setup
+```
+
+在打开的**专用 Chrome 窗口**里扫码登录，保持窗口运行。
+
+> 💡 **跳过这步也能搜**——猎聘纯 HTTP 直连，不需要浏览器也不需要登录。
+> 先搜起来，觉得岗位不够再补 BOSS。
+
+### 3. 开始搜
+
+**重启 Agent**，然后对它说：
+
+```text
+用 jobfindsme，根据我的简历找上海的 AI 应用工程师，20K以上，社招。
+```
+
+---
+
+## 验证安装
+
+```bash
+# 版本检查
+jobfindsme --version            # 期望输出 jobfindsme 0.4.0+
+
+# 自检
+jobfindsme doctor
+```
+
+`doctor` 输出 JSON，关注两个字段：
+
+```json
+{"name": "python", "ok": true, "required": true}
+{"name": "mcp", "ok": true, "message": "10 tools", "required": true}
+```
+
+- `required: true` 的项必须全为 `ok: true`（版本、Python、数据库、权限、MCP、连接器）
+- `browser_connectors` / `boss_login` 为 `ok: false` 且 `required: false` 属**正常**
+  —— 表示 BOSS 浏览器尚未启动，安装不算失败，猎聘搜索不受影响
+
+---
+
+## Agent 安装配方（给 AI Agent 的严格指令）
+
+只做以下步骤，**不要**克隆仓库、查看源码、运行测试套件、安装开发依赖或下载浏览器。
+
+### 第 1 步：检查 Python
 
 ```bash
 python3 --version
 ```
 
-Python 3.11 or newer is required. If it is unavailable, stop and tell the user.
+需要 3.11 及以上。不满足则停止并告知用户（macOS: `brew install python@3.12`；
+Ubuntu: `sudo apt install python3.12 python3.12-venv`）。
 
-## 2. Install
+### 第 2 步：安装（二选一，优先 A）
 
-Create a dedicated runtime and install the prebuilt release package. The mirror
-keeps dependency downloads fast on networks where the default Python index is
-slow.
+**A. 有网络条件装 PyPI 包**（推荐，版本自动最新）：
 
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
-~/.jobfindsme/runtime/bin/python -m pip install \
+~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
+  "jobfindsme[browser]"
+```
+
+国内网络较慢时加镜像：
+
+```bash
+~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  --timeout 20 --retries 1 --upgrade \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.3.0/jobfindsme-0.3.0-py3-none-any.whl"
+  "jobfindsme[browser]"
 ```
 
-Do not replace this command with `git clone`, an editable install, or
-`playwright install`.
-
-## 3. Connect the current agent
-
-Use the name of the Agent that is reading this file:
+**B. 回退：GitHub Release wheel**：
 
 ```bash
-~/.jobfindsme/runtime/bin/python -m jobfindsme connect workbuddy
+python3 -m venv ~/.jobfindsme/runtime
+~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
+  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.4.0/jobfindsme-0.4.0-py3-none-any.whl"
 ```
 
-Replace `workbuddy` with `codex`, `claude`, `qwen`, `zcode`, `kimi`, `trae`,
-`trae-cn`, or `qoder` when appropriate. The runtime is identical for every
-Agent; only the MCP configuration path changes. `connect` is safe to run again.
+### 第 3 步：接入当前 Agent
 
-For an unknown MCP client:
+识别正在读本文件的 Agent 名称，用 `connect` 写入 MCP 配置（如正在读的是
+Codex，则用 `codex`）：
 
 ```bash
-~/.jobfindsme/runtime/bin/python -m jobfindsme config
+~/.jobfindsme/runtime/bin/python -m jobfindsme connect codex
 ```
 
-## 4. Verify
+Agent 名与上表一致。未知客户端用 `config` 输出 JSON。
+
+### 第 4 步：验证
 
 ```bash
 ~/.jobfindsme/runtime/bin/python -m jobfindsme --version
 ~/.jobfindsme/runtime/bin/python -m jobfindsme doctor
 ```
 
-The browser and BOSS login checks may be marked optional until the user runs
-`jobfindsme setup`. They do not make installation fail.
+BOSS 登录检查标为"可选/未配置"不构成失败，不要因此重试安装。
 
-Restart the agent after configuration. Installation should normally finish
-within three minutes. If one command runs for more than five minutes, stop it
-and report the command and its latest output instead of trying unrelated fixes.
+### 第 5 步：告知用户
+
+告诉用户：重启 Agent 后说第一句话（见「开始搜」）。BOSS 登录是可选增强。
+
+> 时间预算：正常 3 分钟内完成。任一命令超过 5 分钟，停止并上报该命令及其
+> 最后输出，不要尝试无关的修复。
+
+---
+
+## 常见问题
+
+**Q：搜索结果为什么是 0？**
+先 `jobfindsme doctor`。看来源状态：猎聘直连失败通常是被限流，稍后再试；
+BOSS 显示"未登录"就去 `jobfindsme setup` 扫码。系统不会把失败伪装成"没有岗位"。
+
+**Q：安装脚本卡在下载？**
+GitHub 直连慢会自动切镜像源（`mirror.ghproxy.com`），依赖走清华 PyPI 镜像。
+仍失败时重试一次，或改用方式 C 的 pip 安装。
+
+**Q：可以用 conda / pyenv 的 Python 吗？**
+可以。脚本用系统 `python3` 建独立 venv，不干扰现有环境；pip/uvx 方式同理。
+
+**Q：macOS 提示 Chrome 无法打开？**
+`jobfindsme setup` 会启动专用 Chrome profile（`~/.jobfindsme/chrome-profile`），
+与你的个人 Chrome 完全隔离。若系统拦截，到「系统设置 → 隐私与安全性」允许。
+
+**Q：会关闭我自己的 Chrome 吗？**
+不会。连接器只管理自己启动的专用 profile 进程（PID 记录在
+`~/.jobfindsme/chrome-profile/chrome.pid`），绝不触碰其他 Chrome 窗口。
+
+---
+
+## 更新
+
+```bash
+# curl 安装的用户：重跑原命令即可（脚本带 --upgrade）
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
+  | bash -s -- codex
+
+# pip 安装的用户：
+pip install --upgrade "jobfindsme[browser]"
+```
+
+数据库自动迁移，历史岗位、状态和搜索计划全部保留。
+
+---
+
+## 卸载
+
+```bash
+# ① 移除 Agent 的 MCP 配置（各 Agent 配置文件中的 jobfindsme 条目被清除）
+jobfindsme uninstall codex        # 换成你接入的 Agent
+
+# ② 删除运行时与全部本地数据（岗位、状态、简历事实）
+rm -rf ~/.jobfindsme
+```
+
+> `jobfindsme uninstall <agent>` 只移除配置、**保留全部数据**；想彻底清除数据
+> 再执行第二步 `rm -rf ~/.jobfindsme`。删除后不可恢复，先 `jobfindsme export`
+> 备份。
+
+---
+
+## 数据与隐私
+
+- 简历只在本地解析，完整文本不进 Agent 上下文，只存结构化事实到本地 SQLite
+- 岗位描述按不可信外部数据处理，不作为指令执行
+- 不自动投递、不绕过验证码、不做批量抓取
+- 所有数据可随时导出与清除：`jobfindsme export --workspace <id>`（或让 Agent 调用
+  `export_local_data` / `delete_local_data`）
+
+有问题或发现失效来源，请到
+[Issues](https://github.com/russeell/jobfindsme/issues) 反馈。
