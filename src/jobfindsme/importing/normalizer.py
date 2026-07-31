@@ -124,11 +124,9 @@ def normalize_job(
         liveness = JobLiveness.STALE
     elif published_at:
         liveness = JobLiveness.ACTIVE
-    elif fetched_at:
-        # Freshly fetched without explicit timestamp → assume active
-        liveness = JobLiveness.ACTIVE
     else:
-        liveness = JobLiveness.UNKNOWN
+        # Freshly fetched via connector → assume active until proven otherwise
+        liveness = JobLiveness.ACTIVE
 
     combined = f"{title} {description}"
     salary_match = _SALARY_RE.search(combined)
