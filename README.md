@@ -2,7 +2,7 @@
 
 # jobfindsme · AI 求职雷达
 
-**一句话同时搜 BOSS直聘、猎聘、前程无忧、智联招聘；按本地简历打分排序；之后只看新增和变化。**
+**一句话同时搜 BOSS直聘、猎聘；按本地简历打分排序；之后只看新增和变化。**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -67,8 +67,7 @@
 
 ## 快速开始
 
-jobfindsme 是本地 MCP Server，可接入 Claude Code、Codex、Kimi、TRAE、
-WorkBuddy、ZCode、Qwen、Qoder 等 MCP Agent。
+jobfindsme 是本地 MCP Server，可接入 Claude Code、Codex等 MCP Agent。
 
 ### 第 1 步：安装（二选一）
 
@@ -80,12 +79,12 @@ WorkBuddy、ZCode、Qwen、Qoder 等 MCP Agent。
 https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-**或一行命令装**——把 `workbuddy` 换成你的 Agent（`claude` / `codex` / `kimi` /
+**或一行命令装**——把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` /
 `qwen` / `trae` / `zcode` / `qoder`）：
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
-  | bash -s -- workbuddy
+  | bash -s -- codex
 ```
 
 > [!NOTE]
@@ -146,16 +145,9 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 |---|---|---|---|
 | BOSS直聘 | — | 本地登录态浏览器（CDP） | 主要实时推荐来源 |
 | 猎聘 | ✅ `api-c.liepin.com` JSON API，~0.9s | CDP 拦截 → DOM | 亚秒级，无需浏览器 |
-| 智联招聘 | ⚠️ 蜜罐检测中 | CDP 被动拦截 JSON → DOM | 补充候选 |
-| 前程无忧 | ⚠️ WAF 检测中 | CDP 被动拦截 JSON → DOM | 补充发现 |
 
 > [!NOTE]
-> 猎聘纯 HTTP 已验证可用（42 岗位 / 0.96s）。智联和前程无忧的纯 HTTP 探测会
-> 在 ~0.3s 内检测到反爬（蜜罐响应 / WAF2 挑战），自动降级到浏览器拦截——
-> 降级对用户透明，只是从亚秒级变成多秒级。
-
-拉勾已退出默认发现链路：验证码频繁、字段完整度低、持续拖慢全量搜索。旧数据库中的
-历史岗位仍可查看。
+> 猎聘纯 HTTP 已验证可用（42 岗位 / 0.96s）。
 
 > [!IMPORTANT]
 > 来源采用分层策略：能用公开结构化接口就不用浏览器，必须登录或执行 JavaScript 时
@@ -168,7 +160,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 Agent
   → MCP Server
   → 本地 Core
-      → 纯 HTTP 直连（猎聘亚秒级；智联/51job 检测反爬 ~0.3s 后降级）
+      → 纯 HTTP 直连（猎聘亚秒级）
       → 浏览器 CDP 拦截（SPA 自带签名，被动读取 JSON）
       → DOM 提取（最终兜底）
       → 快速模式：刷新主来源，复用其他来源缓存
@@ -189,9 +181,8 @@ Agent
 
 ## FAQ
 
-**Q：四个平台都要登录吗？**
+**Q：平台都要登录吗？**
 只有 BOSS 需要（扫码一次，后续复用本地登录态）。猎聘纯 HTTP 直连，不需要浏览器；
-智联和前程无忧优先尝试纯 HTTP，被反爬挡住时降级到浏览器读取公开搜索页。
 
 **Q：会不会封号？**
 它做的是低频、拟人节奏的读取，不批量抓取、不自动操作。但自动化访问在平台条款里
