@@ -77,3 +77,32 @@ def test_unknown_rpc_method_returns_json_rpc_error(tmp_path) -> None:
     response = server.handle({"jsonrpc": "2.0", "id": 1, "method": "unsupported"})
 
     assert response["error"]["code"] == -32601
+
+
+def test_initialize_instructions_carry_the_output_contract(tmp_path) -> None:
+    """Spec-compliant clients inject server instructions into the context —
+    the strongest default-skill guarantee. They must cover the contract."""
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    server = StdioMcpServer(ToolRegistry(core))
+
+    response = server.handle(
+        json.loads(
+            request(
+                1,
+                "initialize",
+                {
+                    "protocolVersion": "2025-11-25",
+                    "clientInfo": {"name": "test", "version": "1"},
+                    "capabilities": {},
+                },
+            )
+        )
+    )
+
+    instructions = response["result"]["instructions"]
+    assert "five-section" in instructions
+    assert "BARE URL" in instructions
+    assert "投递链接" in instructions
+    assert "resume is not required" in instructions
+    assert "include_seen=true" in instructions
+    assert "never paste complete resumes" in instructions
