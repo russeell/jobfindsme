@@ -14,6 +14,7 @@ from jobfindsme.contracts import (
     JobState,
     JobStateKind,
     JobSummary,
+    MatchEvidence,
     SearchConfiguration,
     SearchPlan,
     SearchRefreshMode,
@@ -30,6 +31,7 @@ from jobfindsme.importing.service import JobImportService
 from jobfindsme.job_impressions import JobImpressionService
 from jobfindsme.job_states import JobStateService
 from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.matching.ranker import extract_job_signals, filter_jobs
 from jobfindsme.monitor_configs import MonitorConfig, MonitorConfigService
 from jobfindsme.plan_suggestions import suggest_search_plan
 from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
@@ -274,19 +276,23 @@ class jobfindsmecore:
         *,
         workspace_id: str | None = None,
         plan_id: str | None = None,
-        limit: int = 20,
+        limit: int = 50,
         excluded_source_names: Sequence[str] = (),
         included_source_names: Sequence[str] = (),
     ) -> list[JobMatch]:
+        """Return hard-filtered jobs with structured signals — no scoring.
+
+        Since v0.4 the matcher does not produce BM25 scores.  The Agent
+        owns semantic understanding and ranking.  Each result carries
+        ``evidence`` with ``extracted_signals`` (skills, experience,
+        degree, etc.) for the Agent to use in its own evaluation.
+        """
         context = self.context.resolve(
             workspace_id=workspace_id,
             plan_id=plan_id,
         )
         if context.plan is None:
             raise ValueError("no active Search Plan — run configure_search first")
-        profile = self.profiles.latest_confirmed_summary(
-            workspace_id=context.workspace.workspace_id
-        )
         jobs = self.jobs.list(context.workspace.workspace_id)
         if included_source_names:
             included = set(included_source_names)
@@ -294,12 +300,18 @@ class jobfindsmecore:
         if excluded_source_names:
             excluded = set(excluded_source_names)
             jobs = [job for job in jobs if job.source.source_name not in excluded]
-        return self.matcher.match(
-            context.plan,
-            jobs,
-            profile=profile,
-            limit=limit,
-        )
+        passed = filter_jobs(context.plan, jobs, limit=limit)
+        return [
+            JobMatch(
+                job=job,
+                score=0.0,
+                evidence=MatchEvidence(
+                    hard_filter_passed=True,
+                    extracted_signals=extract_job_signals(job),
+                ),
+            )
+            for job in passed
+        ]
 
     def search_jobs(
         self,

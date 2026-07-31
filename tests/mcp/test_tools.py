@@ -364,16 +364,18 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "匹配度" in text
     assert "本轮变化：新增 1" in text
     assert "[新增] AI应用工程师" in text
-    assert "推荐理由：" in text
     assert "投递链接：https://example.com/jobs/match-1" in text
     assert result["structuredContent"]["diagnostics"]["refresh_mode"] == "cache"
     assert result["structuredContent"]["jobs"][0]["job"]["job_id"]
     assert result["structuredContent"]["jobs"][0]["state"] == "discovered"
     assert result["structuredContent"]["jobs"][0]["change_type"] == "new"
     assert result["structuredContent"]["changes"]["new"] == 1
+    # v0.4: evidence carries extracted_signals for Agent-side matching
+    assert "extracted_signals" in result["structuredContent"]["jobs"][0]["evidence"]
+    sig = result["structuredContent"]["jobs"][0]["evidence"]["extracted_signals"]
+    assert isinstance(sig["required_skills"], list)
 
 
 def test_search_explains_when_only_previously_shown_jobs_remain(tmp_path) -> None:

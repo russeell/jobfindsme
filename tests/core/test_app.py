@@ -130,8 +130,14 @@ def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
 
     matches = core.match_jobs()
 
-    assert matches[0].job.external_id == "python"
-    assert matches[0].evidence.evidence_pairs
+    # v0.4: filter-only, no BM25 ranking — both jobs pass hard filter.
+    # Order is insertion order; the Agent owns ranking.
+    external_ids = {match.job.external_id for match in matches}
+    assert external_ids == {"python", "java"}
+    # Both jobs carry extracted_signals
+    for match in matches:
+        assert match.evidence.extracted_signals
+        assert "required_skills" in match.evidence.extracted_signals
 
 
 def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared(

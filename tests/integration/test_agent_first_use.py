@@ -70,12 +70,16 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
     matches = search_result["jobs"]
 
     assert search_result["count"] == 2
-    assert matches[0]["job"]["company"] == "甲公司"
-    assert matches[0]["evidence"]["matched_profile_skills"] == [
-        "FastAPI",
-        "Python",
-        "RAG",
-    ]
+    # v0.4: filter-only, no BM25 ranking — both jobs pass hard filter.
+    # Order is insertion order; the Agent owns ranking.
+    companies = {m["job"]["company"] for m in matches}
+    assert companies == {"甲公司", "乙公司"}
+    # v0.4: evidence carries extracted_signals for Agent-side matching,
+    # not BM25 profile-based evidence_pairs/matched_profile_skills.
+    for m in matches:
+        assert "extracted_signals" in m["evidence"]
+        sig = m["evidence"]["extracted_signals"]
+        assert isinstance(sig["required_skills"], list)
     assert "description" not in matches[0]["job"]
     assert matches[0]["job"]["untrusted_external_content"] is True
 

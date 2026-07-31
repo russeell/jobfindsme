@@ -76,16 +76,17 @@ Scores are deterministic ranking scores, never hiring probabilities.
 ## 4. Architecture
 
 ```text
-Agent hosts
+Agent hosts (Claude/GPT/Qwen/...)
   └── stdio MCP adapter
         └── Core API
               ├── Profile and Search Plan
               ├── Source Scheduler
-              │     ├── structured HTTP connector
-              │     ├── browser connector
+              │     ├── structured HTTP connector (猎聘, ~0.9s)
+              │     ├── browser connector (BOSS直聘 CDP)
               │     └── file import
               ├── Normalization and Canonical Job
-              ├── Filtering and Matching
+              ├── Hard Filtering + Signal Extraction
+              │     └── (Agent owns semantic matching & ranking)
               ├── Incremental Radar
               └── Monitoring and Notifications
                     └── SQLite
@@ -99,6 +100,14 @@ CLI / MCP / scheduler → Core → domain services → storage and connector por
 
 Core must not import MCP, FastAPI, an Agent SDK, or a hosted model provider.
 Agent hosts are adapters, not separate product implementations.
+
+Since v0.4, the MCP Server no longer produces BM25 scores or ranks jobs.
+It performs hard filtering (location, salary, track, type, exclusions, role)
+and extracts structured signals (skills, experience, degree, employment type,
+liveness) from each JD. The Agent — which has the LLM — owns semantic
+understanding, matching, and ranking. This follows the pattern of mcp-jobs,
+Context7, Brave Search, and other MCP servers that provide structured data
+for the Agent to reason over.
 
 ## 5. Core Contracts
 
@@ -197,19 +206,60 @@ All outputs expose source status, elapsed time, cache age, and degraded state.
 
 ## 7. Matching and Incremental Radar
 
-Hard filters run before ranking:
+### 7.1 Hard filtering (MCP Server)
+
+Before results reach the Agent, the Server applies **only** hard, objective
+filters:
 
 - target role family;
 - location;
 - salary when reliably normalized;
 - experience when known;
 - campus/social and internship/full-time;
-- user exclusions.
+- user exclusions;
+- liveness (closed/stale jobs excluded).
 
-Unknown data is reported, not invented. Remaining jobs are ranked with title
-signals, BM25-style text relevance, confirmed profile skills, and evidence
-coverage. Cross-source records are merged into a canonical job while preserving
-every source link.
+Unknown data is reported, not invented. All jobs passing these filters are
+returned to the Agent, along with **structured signals** extracted from
+each Job Description:
+
+- `required_skills` — canonical skill names detected in the JD
+- `required_experience` — e.g. "3-5年"
+- `required_degree` — e.g. "本科"
+- `employment_type` / `recruitment_track` — detected from JD text
+- `liveness` — source freshness indicator
+- `salary_range` — formatted salary string
+
+These signals are carried in `MatchEvidence.extracted_signals`. The Server
+assigns `score=0.0` to every result — the Agent is responsible for semantic
+ranking.
+
+### 7.2 Agent-side matching
+
+The Agent (Claude/GPT/Qwen) receives hard-filtered jobs with extracted
+signals and the user's confirmed profile facts. It is responsible for:
+
+- Semantic comparison of JD skills vs profile skills
+- Experience-fit assessment
+- Ordering/ranking results
+- Producing human-readable reasons and warnings
+
+This separation was chosen because:
+
+- LLMs are far better than BM25 at semantic understanding of Chinese job
+  descriptions and skill taxonomies
+- The MCP Server stays deterministic, testable, and privacy-preserving
+- It follows the pattern of successful MCP servers (mcp-jobs, Context7,
+  Brave Search, Tavily) that provide structured data for Agent reasoning
+
+### 7.3 Legacy BM25 (evaluation only)
+
+The `DeterministicMatcher` with BM25 scoring is retained in
+`src/jobfindsme/matching/ranker.py` for evaluation backward compatibility
+only (`_legacy_match`). It is not used by the production `search_jobs` or
+`match_jobs` paths.
+
+### 7.4 Incremental radar
 
 Search records impressions. The next run compares canonical identity, content
 hash, liveness, and user state to classify:

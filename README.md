@@ -2,7 +2,7 @@
 
 # jobfindsme · AI 求职雷达
 
-**一句话同时搜 BOSS直聘、猎聘；按本地简历打分排序；之后只看新增和变化。**
+**一句话同时搜 BOSS直聘、猎聘；Agent 基于结构化信号做语义匹配排序；之后只看新增和变化。**
 
 [![CI](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg)](https://github.com/russeell/jobfindsme/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB)](https://www.python.org/)
@@ -25,7 +25,9 @@
 找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。
 ```
 
-它同时搜四个平台，按你的简历逐条打分，附上推荐理由和投递链接。
+它同时搜两个平台，提取 JD 中的技能、经验、学历等结构化信号，
+传递给 Agent。Agent（不是 MCP Server）基于你的简历做语义匹配和排序，
+附上推荐理由和投递链接。
 
 以后，你只需要说：
 
@@ -48,10 +50,10 @@
 
 | 每天找工作时的重复劳动 | jobfindsme 的做法 |
 |---|---|
-| 在四个 App 之间来回切换 | 对 Agent 说一句话，四个平台一起搜 |
+| 在四个 App 之间来回切换 | 对 Agent 说一句话，两个平台一起搜 |
 | 反复刷到同一个岗位 | 跨平台去重，记住已看、收藏、投递和忽略 |
 | 不知道今天有什么新岗位 | 只汇报新增、变更、重开和关闭 |
-| 推荐理由是黑盒 | 每条都有匹配分、命中证据、技能缺口和投递链接 |
+| 推荐理由是黑盒 | Agent 基于提取的技能/经验/学历信号做语义匹配，附证据和投递链接 |
 | 求职状态散落在各平台 | 本地 SQLite 统一记录，随时导出、随时删除 |
 | 不想注册一堆服务、配 API Key | 本地 Core 不需要任何模型 API Key |
 
@@ -123,17 +125,16 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 
 ## 返回结果
 
-每条推荐固定包含：
+Agent 基于 MCP Server 提供的结构化岗位信号做语义分析，每次推荐包含：
 
 ```text
 大模型应用开发工程师｜示例科技｜上海｜25-40K｜社招·正式
-匹配度：86%（排序分，不是录用概率）
-适合你：RAG、Agent、FastAPI 与项目经历匹配
-需要注意：岗位要求 Kubernetes，简历中未找到直接证据
+Agent 分析：JD 要求 RAG、Agent、FastAPI，与你的简历高度重叠
+需要注意：JD 要求 Kubernetes 经验，简历中未找到直接证据（JD 原文提及）
 投递：https://example.com/jobs/123
 ```
 
-结果不足时不会用弱匹配岗位凑数；来源字段不完整时会明确标注。
+结果不足时 Agent 不会用弱匹配岗位凑数；来源字段不完整时会明确标注。
 
 ## 岗位来源
 
@@ -154,18 +155,22 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 ## 工作原理
 
 ```text
-Agent
-  → MCP Server
+Agent (Claude/GPT/Qwen — 负责语义匹配和排序)
+  → MCP Server (本地 stdio)
   → 本地 Core
       → 纯 HTTP 直连（猎聘亚秒级）
-      → 浏览器 CDP 拦截（SPA 自带签名，被动读取 JSON）
-      → DOM 提取（最终兜底）
+      → 浏览器 CDP 拦截（BOSS直聘 SPA 自带签名，被动读取 JSON）
       → 快速模式：刷新主来源，复用其他来源缓存
       → 全量模式：并行刷新双平台
   → 标准化 → 跨来源去重 → 硬过滤（城市/薪资/校招社招/实习正式）
-  → 简历证据匹配 → 新增/变化识别
-  → 推荐理由 + 差距 + 投递链接
+  → 提取结构化信号（技能、经验、学历、活跃度）
+  → 增量雷达（新增/变化/重开/关闭识别）
+  → Agent 收到的是结构化岗位数据，自己做语义匹配和排序
 ```
+
+MCP Server 不做评分和排序——它只做确定性的硬过滤和信号提取。
+Agent (LLM) 负责语义理解和排序，这遵循了 mcp-jobs、Context7、Brave Search
+等优秀 MCP Server 的架构模式。
 
 简历、岗位状态和搜索计划全部保存在本地 SQLite。Core 不需要模型 API。
 

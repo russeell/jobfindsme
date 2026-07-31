@@ -174,6 +174,7 @@ class MatchEvidence(StrictModel):
     matched_profile_skills: tuple[str, ...] = ()
     missing_job_skills: tuple[str, ...] = ()
     missing_required_skills: tuple[str, ...] = ()
+    extracted_signals: dict = Field(default_factory=dict)
 
 
 class EvidencePair(StrictModel):
