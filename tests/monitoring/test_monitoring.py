@@ -147,17 +147,15 @@ def test_monitor_runs_only_when_cron_matches(tmp_path) -> None:
         return ()
 
     # 08:59 — cron not matched
-    before = runner.run_due(
-        now=datetime(2026, 8, 1, 8, 59, tzinfo=UTC), search=search
-    )[0]
+    before = runner.run_due(now=datetime(2026, 8, 1, 8, 59, tzinfo=UTC), search=search)[
+        0
+    ]
     assert before.status == "skipped"
     assert "cron" in (before.reason or "")
     assert runs == []
 
     # 09:00 — cron matched, runs
-    at = runner.run_due(
-        now=datetime(2026, 8, 1, 9, 0, tzinfo=UTC), search=search
-    )[0]
+    at = runner.run_due(now=datetime(2026, 8, 1, 9, 0, tzinfo=UTC), search=search)[0]
     assert at.status == "success"
     assert runs == ["searched"]
 
@@ -170,7 +168,8 @@ def test_monitor_cron_supports_lists_steps_and_ranges() -> None:
     assert not _cron_matches("15 10 * * 2", now)  # Tuesdays — no
     assert _cron_matches("*/15 * * * *", now)  # every 15 min
     assert _cron_matches("10-20 9-11 * * *", now)  # ranges
-    assert _cron_matches("0 8 */2 * *", datetime(2026, 8, 2, 8, 0, tzinfo=UTC))  # even days
+    assert _cron_matches("0 8 */2 * *", datetime(2026, 8, 2, 8, 0, tzinfo=UTC))
+    # 上面: 偶数日 8 点命中
     assert not _cron_matches("0 8 */2 * *", datetime(2026, 8, 3, 8, 0, tzinfo=UTC))
     assert not _cron_matches("not a cron", now)  # invalid never fires
 
@@ -193,7 +192,5 @@ def test_configure_monitor_persists_schedule_cron(tmp_path) -> None:
 
     assert config.schedule_cron == "0 20 * * 1"
     with core.database.connect() as connection:
-        row = connection.execute(
-            "SELECT schedule_cron FROM monitor_configs"
-        ).fetchone()
+        row = connection.execute("SELECT schedule_cron FROM monitor_configs").fetchone()
     assert row["schedule_cron"] == "0 20 * * 1"
