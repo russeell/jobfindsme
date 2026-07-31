@@ -19,8 +19,8 @@ from jobfindsme.connectors import http_platforms
 from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.http_platforms import (
     InterceptionFailedError,
-    WuyouHttpConnector,
-    ZhilianHttpConnector,
+    WuyouCdpInterceptionConnector,
+    ZhilianCdpInterceptionConnector,
 )
 from jobfindsme.contracts import SourceKind
 
@@ -59,7 +59,7 @@ def _stub_intercept(payload: Any):
     ],
 )
 def test_wuyou_city_mapping(city: str, expected_code: str) -> None:
-    assert http_platforms._WUYOU_CITY[city] == expected_code
+    assert http_platforms.WUYOU_CITY_CODES[city] == expected_code
 
 
 def test_wuyou_search_url_uses_jobarea_not_location(
@@ -68,7 +68,7 @@ def test_wuyou_search_url_uses_jobarea_not_location(
     fake, calls = _stub_intercept({"resultbody": {"job": {"items": []}}})
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    WuyouHttpConnector("AI", city="上海", policy=_policy()).fetch()
+    WuyouCdpInterceptionConnector("AI", city="上海", policy=_policy()).fetch()
 
     assert calls, "intercept was never called"
     url = calls[0]
@@ -82,7 +82,7 @@ def test_wuyou_unknown_city_falls_back_to_nationwide(
     fake, calls = _stub_intercept({"resultbody": {"job": {"items": []}}})
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    WuyouHttpConnector("AI", city="未知城市", policy=_policy()).fetch()
+    WuyouCdpInterceptionConnector("AI", city="未知城市", policy=_policy()).fetch()
     assert "jobArea=000000" in calls[0]
 
 
@@ -92,7 +92,7 @@ def test_wuyou_raises_on_transport_failure(monkeypatch: pytest.MonkeyPatch) -> N
     )
 
     with pytest.raises(InterceptionFailedError):
-        WuyouHttpConnector("AI", policy=_policy()).fetch()
+        WuyouCdpInterceptionConnector("AI", policy=_policy()).fetch()
 
 
 def test_wuyou_parses_structured_items(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -116,7 +116,7 @@ def test_wuyou_parses_structured_items(monkeypatch: pytest.MonkeyPatch) -> None:
     fake, _ = _stub_intercept(payload)
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    records = WuyouHttpConnector("AI", city="上海", policy=_policy()).fetch()
+    records = WuyouCdpInterceptionConnector("AI", city="上海", policy=_policy()).fetch()
     assert len(records) == 1
     r = records[0]
     assert r.source_kind is SourceKind.CAREER_SITE
@@ -134,7 +134,7 @@ def test_wuyou_empty_but_successful_returns_empty(
     fake, _ = _stub_intercept({"resultbody": {"job": {"items": []}}})
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    assert WuyouHttpConnector("稀有关键词", policy=_policy()).fetch() == []
+    assert WuyouCdpInterceptionConnector("稀有关键词", policy=_policy()).fetch() == []
 
 
 # ── 智联招聘 ─────────────────────────────────────────────────────────────────
@@ -151,14 +151,14 @@ def test_wuyou_empty_but_successful_returns_empty(
     ],
 )
 def test_zhilian_city_mapping(city: str, expected_id: str) -> None:
-    assert http_platforms._ZHILIAN_CITY[city] == expected_id
+    assert http_platforms.ZHILIAN_CITY_CODES[city] == expected_id
 
 
 def test_zhilian_search_url_uses_jl_cityid(monkeypatch: pytest.MonkeyPatch) -> None:
     fake, calls = _stub_intercept({"data": {"results": []}})
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    ZhilianHttpConnector("python", city="上海", policy=_policy()).fetch()
+    ZhilianCdpInterceptionConnector("python", city="上海", policy=_policy()).fetch()
 
     assert calls
     url = calls[0]
@@ -178,7 +178,7 @@ def test_zhilian_intercept_pattern_is_real_endpoint(
         return {"data": {"results": []}}
 
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
-    ZhilianHttpConnector("python", city="上海", policy=_policy()).fetch()
+    ZhilianCdpInterceptionConnector("python", city="上海", policy=_policy()).fetch()
     assert captured
     assert any("/c/i/sou" in p for p in captured[0])
 
@@ -189,7 +189,7 @@ def test_zhilian_raises_on_transport_failure(monkeypatch: pytest.MonkeyPatch) ->
     )
 
     with pytest.raises(InterceptionFailedError):
-        ZhilianHttpConnector("AI", policy=_policy()).fetch()
+        ZhilianCdpInterceptionConnector("AI", policy=_policy()).fetch()
 
 
 def test_zhilian_parses_sou_api_items(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -211,7 +211,9 @@ def test_zhilian_parses_sou_api_items(monkeypatch: pytest.MonkeyPatch) -> None:
     fake, _ = _stub_intercept(payload)
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    records = ZhilianHttpConnector("python", city="上海", policy=_policy()).fetch()
+    records = ZhilianCdpInterceptionConnector(
+        "python", city="上海", policy=_policy()
+    ).fetch()
     assert len(records) == 1
     r = records[0]
     assert r.payload["title"] == "Python 后端"
@@ -238,5 +240,7 @@ def test_zhilian_workcity_dict_handled(monkeypatch: pytest.MonkeyPatch) -> None:
     fake, _ = _stub_intercept(payload)
     monkeypatch.setattr(http_platforms, "_intercept_api_response", fake)
 
-    records = ZhilianHttpConnector("全栈", city="杭州", policy=_policy()).fetch()
+    records = ZhilianCdpInterceptionConnector(
+        "全栈", city="杭州", policy=_policy()
+    ).fetch()
     assert records[0].payload["location"] == "杭州"

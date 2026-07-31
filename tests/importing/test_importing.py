@@ -46,10 +46,60 @@ def test_discovery_passes_primary_location_to_platform_connector() -> None:
         ),
     )
 
+    # The pure-HTTP connector runs first (sub-second, no Chrome) and
+    # receives the same query/city as the browser connectors did before.
     assert captured["workspace_id"] == "workspace"
+    assert type(captured["connector"]).__name__ == "LiepinPureHttpConnector"
     assert captured["connector"].keyword == "AI应用工程师"
     assert captured["connector"].city == "上海"
-    assert captured["enrich_limit"] == 3
+
+
+def test_discovery_falls_back_through_connector_chain() -> None:
+    """When the pure-HTTP tier is blocked, the CDP/DOM tiers must be tried
+    in order, with the final DOM tier keeping its enrich_limit."""
+    attempted: list[tuple[str, int]] = []
+
+    class FlakyImports:
+        def import_connector(self, workspace_id, connector, **kwargs):
+            name = type(connector).__name__
+            enrich_limit = kwargs.get("enrich_limit", 0)
+            attempted.append((name, enrich_limit))
+            if name != "LiepinConnector":
+                raise RuntimeError("blocked")
+            return ImportSummary(0, 0, 0, ())
+
+    service = JobDiscoveryService(FlakyImports())
+    service._discover_one(
+        workspace_id="workspace",
+        source=DiscoverySource(
+            kind="liepin_cdp",
+            source_name="猎聘",
+            query="AI",
+            location="上海",
+        ),
+    )
+
+    assert attempted == [
+        ("LiepinPureHttpConnector", 0),
+        ("LiepinConnector", 3),
+    ]
+
+
+def test_discovery_raises_when_whole_chain_fails() -> None:
+    class AlwaysFailImports:
+        def import_connector(self, workspace_id, connector, **kwargs):
+            raise RuntimeError("blocked")
+
+    service = JobDiscoveryService(AlwaysFailImports())
+    with pytest.raises(RuntimeError, match="all connectors failed"):
+        service._discover_one(
+            workspace_id="workspace",
+            source=DiscoverySource(
+                kind="wuyou_cdp",
+                source_name="前程无忧",
+                query="AI",
+            ),
+        )
 
 
 def test_import_connector_uses_optional_enricher_without_platform_dependency(

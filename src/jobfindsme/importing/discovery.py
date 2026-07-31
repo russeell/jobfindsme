@@ -14,36 +14,75 @@ from jobfindsme.importing.service import ImportSummary, JobImportService
 _log = logging.getLogger(__name__)
 
 
-def _try_http_connector(
+def _connector_chain(
     source: DiscoverySource,
-) -> object | None:
-    """Return an HTTP-based connector for *source*, or None to use DOM."""
+) -> list[tuple[object, int]]:
+    """Ordered ``(connector, enrich_limit)`` fallbacks for *source*.
+
+    Strategy per platform — fastest first, most robust last:
+    1. pure HTTP (curl_cffi, sub-second, no Chrome)   [pure_http.py]
+    2. passive CDP Network interception (needs Chrome) [http_platforms.py]
+    3. CDP DOM extraction (slowest, needs Chrome)      [china_platforms.py]
+
+    Each tier raises a typed error on transport failure and discovery
+    tries the next one, so a blocked pure-HTTP attempt costs ~0.3s and
+    never silently yields zero jobs.
+    """
     from jobfindsme.connectors import ConnectorPolicy
 
     policy = ConnectorPolicy(public_access=True, robots_allowed=True)
+    query = source.query or "AI"
+    city = source.location or ""
+
     if source.kind is DiscoverySourceKind.WUYOU_CDP:
+        from jobfindsme.connectors.china_platforms import WuyouConnector
         from jobfindsme.connectors.http_platforms import (
-            WuyouHttpConnector,
+            WuyouCdpInterceptionConnector,
         )
+        from jobfindsme.connectors.pure_http import WuyouPureHttpConnector
 
-        return WuyouHttpConnector(
-            source.query or "AI",
-            city=source.location or "",
-            policy=policy,
-            source_name=source.source_name,
-        )
+        return [
+            (WuyouPureHttpConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+            (WuyouCdpInterceptionConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+            (WuyouConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+        ]
     if source.kind is DiscoverySourceKind.ZHILIAN_CDP:
+        from jobfindsme.connectors.china_platforms import ZhilianConnector
         from jobfindsme.connectors.http_platforms import (
-            ZhilianHttpConnector,
+            ZhilianCdpInterceptionConnector,
         )
+        from jobfindsme.connectors.pure_http import ZhilianPureHttpConnector
 
-        return ZhilianHttpConnector(
-            source.query or "AI",
-            city=source.location or "",
-            policy=policy,
-            source_name=source.source_name,
-        )
-    return None
+        return [
+            (ZhilianPureHttpConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+            (ZhilianCdpInterceptionConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+            (ZhilianConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 3),
+        ]
+    if source.kind is DiscoverySourceKind.LIEPIN_CDP:
+        from jobfindsme.connectors.china_platforms import LiepinConnector
+        from jobfindsme.connectors.pure_http import LiepinPureHttpConnector
+
+        return [
+            (LiepinPureHttpConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 0),
+            (LiepinConnector(
+                query, city=city, policy=policy, source_name=source.source_name
+            ), 3),
+        ]
+    return []
 
 
 class JobDiscoveryService:
@@ -91,57 +130,33 @@ class JobDiscoveryService:
             DiscoverySourceKind.ZHILIAN_CDP,
             DiscoverySourceKind.WUYOU_CDP,
         }:
-            from jobfindsme.connectors.china_platforms import (
-                LiepinConnector,
-                WuyouConnector,
-                ZhilianConnector,
-            )
-
-            connector_cls = {
-                DiscoverySourceKind.LIEPIN_CDP: LiepinConnector,
-                DiscoverySourceKind.ZHILIAN_CDP: ZhilianConnector,
-                DiscoverySourceKind.WUYOU_CDP: WuyouConnector,
-            }[source.kind]
-
-            # Try HTTP connector first (structured JSON, no DOM regex).
-            # On transport failure (InterceptionFailedError etc.) fall back
-            # to the DOM connector — but log it; silently swallowing HTTP
-            # failures here used to hide Chrome-not-running / page-changed
-            # bugs and silently degrade to 0 jobs.
-            http_connector = _try_http_connector(source)
-            if http_connector is not None:
-                try:
-                    return self.imports.import_connector(workspace_id, http_connector)
-                except Exception as error:
+            # Walk the fallback chain: pure HTTP → CDP interception → DOM.
+            # Every tier raises a typed error on transport failure; log each
+            # fallback loudly — silently swallowing failures here used to
+            # hide Chrome-not-running / page-changed bugs and degrade to
+            # 0 jobs with no trace.
+            chain = _connector_chain(source)
+            last_error: Exception | None = None
+            for index, (connector, enrich_limit) in enumerate(chain):
+                if index > 0:
                     _log.warning(
-                        "HTTP connector for %s failed (%s); falling back to DOM",
+                        "%s: %s failed (%s); falling back to %s",
                         source.source_name,
-                        error,
+                        type(chain[index - 1][0]).__name__,
+                        last_error,
+                        type(connector).__name__,
                     )
-
-            connector = connector_cls(
-                source.query or "AI",
-                city=source.location or "",
-                policy=ConnectorPolicy(
-                    public_access=True,
-                    robots_allowed=True,
-                ),
-                source_name=source.source_name,
-            )
-            enrich_limit = (
-                3
-                if source.kind
-                in {
-                    DiscoverySourceKind.LIEPIN_CDP,
-                    DiscoverySourceKind.ZHILIAN_CDP,
-                }
-                else 0
-            )
-            return self.imports.import_connector(
-                workspace_id,
-                connector,
-                enrich_limit=enrich_limit,
-            )
+                try:
+                    return self.imports.import_connector(
+                        workspace_id,
+                        connector,
+                        enrich_limit=enrich_limit,
+                    )
+                except Exception as error:
+                    last_error = error
+            raise RuntimeError(
+                f"all connectors failed for {source.source_name}"
+            ) from last_error
         if source.kind.retired:
             raise ValueError(f"{source.kind} is retired and cannot discover jobs")
 

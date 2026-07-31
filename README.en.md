@@ -28,7 +28,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.1/jobfindsme-0.2.1-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.3.0/jobfindsme-0.3.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
@@ -53,21 +53,24 @@ Find new jobs since my last search.
 
 ## Sources
 
-| Source | Current transport | Role |
-|---|---|---|
-| BOSS Zhipin | authenticated local CDP | primary live source |
-| Liepin | CDP list + bounded detail enrichment | additional candidates |
-| Zhaopin | CDP list + bounded detail enrichment | additional candidates |
-| 51job | CDP list | additional discovery |
+Each source uses a three-tier fallback chain — pure HTTP first (sub-second),
+then CDP interception, then DOM extraction:
+
+| Source | Pure HTTP | Browser fallback | Role |
+|---|---|---|---|
+| BOSS Zhipin | — | authenticated local CDP | primary live source |
+| Liepin | ✅ `api-c.liepin.com` JSON, ~0.9s | CDP → DOM | sub-second, no browser |
+| Zhaopin | ⚠️ honeypot-detected | CDP interception → DOM | additional candidates |
+| 51job | ⚠️ WAF2-detected | CDP interception → DOM | additional discovery |
 
 Lagou was retired from live discovery because verification failures, incomplete
 fields, and latency outweighed its observed value. Existing historical records
 remain readable.
 
-The target source strategy is layered: verified structured HTTP first, browser
-only when login or JavaScript is genuinely required, and explicit cached
-fallback on failure. The project does not treat signature reverse engineering
-or CAPTCHA bypass as a supported path.
+The source strategy is layered: pure HTTP direct API first (sub-second,
+no Chrome), CDP passive interception when the platform's anti-bot wall blocks
+direct HTTP, and DOM extraction as the final fallback. The project does not
+treat signature reverse engineering or CAPTCHA bypass as a supported path.
 
 ## Privacy and limitations
 

@@ -23,7 +23,7 @@ python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
   --timeout 20 --retries 1 --upgrade \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.2.1/jobfindsme-0.2.1-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.3.0/jobfindsme-0.3.0-py3-none-any.whl"
 ```
 
 Do not replace this command with `git clone`, an editable install, or

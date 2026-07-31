@@ -126,9 +126,9 @@ Historical records from retired sources remain readable.
 | Source | Current transport | Quality role |
 |---|---|---|
 | BOSS Zhipin | user-authorized local CDP | primary live recommendation source |
-| Liepin | CDP list and bounded details | candidate discovery |
-| Zhaopin | CDP list and bounded details | candidate discovery |
-| 51job | CDP list | candidate discovery |
+| Liepin | **pure HTTP** (`api-c.liepin.com`, curl_cffi, ~0.9s) → CDP → DOM | candidate discovery |
+| Zhaopin | **pure HTTP attempt** (honeypot-detected) → CDP passive interception → DOM | candidate discovery |
+| 51job | **pure HTTP attempt** (WAF2-detected) → CDP passive interception → DOM | candidate discovery |
 
 Lagou is retired from live discovery. Frequent interactive verification,
 incomplete fields, and added latency did not justify its observed contribution.
@@ -175,12 +175,15 @@ A new transport or source is not enabled by default until it has:
 Candidate HTTP implementations for Liepin, Zhaopin, and 51job should be tested
 behind this gate. They are not advertised before passing it.
 
-> Status (v0.2.1): 前程无忧 and 智联招聘 now use **passive CDP Network
-> interception** (`http_platforms.py`) — the SPA makes its own signed API call
-> and we read the JSON response, no signature reverse-engineering. DOM
-> extraction remains the fallback when interception fails. 猎聘 stays on DOM
-> + detail-page JD enrichment. The gate above still applies to any future
-> switch to pure-HTTP (self-computed signatures).
+> Status (v0.3.0): Liepin now uses **pure HTTP** via `curl_cffi` with Chrome
+> TLS impersonation — verified live at ~0.9s for 40+ jobs, no browser needed.
+> 51job and Zhaopin attempt pure HTTP first (~0.3s) but are blocked by
+> Aliyun WAF2 and honeypot detection respectively; they raise typed
+> `PureHttpBlockedError` and fall back to CDP passive interception
+> (`http_platforms.py`) where the SPA computes its own signed request.
+> DOM extraction remains the final fallback. The `curl_cffi` dependency
+> is included in the default `[browser]` extra. The gate above still
+> applies to any future source.
 
 ### 6.4 Search modes
 
@@ -306,9 +309,9 @@ before implementation:
   source scrapers, normalized output, retries, and parallel source execution.
 - [can4hou6joeng4/boss-agent-cli](https://github.com/can4hou6joeng4/boss-agent-cli):
   local authenticated BOSS workflows and explicit platform-risk boundaries.
-- [curl_cffi](https://github.com/lexiforest/curl_cffi): optional TLS
-  impersonation capability; deliberately not a default dependency without a
-  verified source need.
+- [curl_cffi](https://github.com/lexiforest/curl_cffi): TLS impersonation for
+  the pure-HTTP tier (`pure_http.py`); now a default dependency in the
+  `[browser]` extra, used by Liepin/51job/Zhaopin direct API connectors.
 - [RFC 5861](https://www.rfc-editor.org/rfc/rfc5861): stale-while-revalidate and
   stale-if-error concepts used for explicit cache degradation.
 - [Anthropic: Demystifying evals for AI agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents):

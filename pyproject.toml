@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jobfindsme"
-version = "0.2.1"
+version = "0.3.0"
 description = "AI求职雷达 | 聚合BOSS直聘、猎聘、前程无忧和智联 | 简历匹配、增量岗位与投递直达"
 readme = "README.md"
 license = "MIT"
@@ -31,6 +31,7 @@ dependencies = [
 browser = [
   "requests>=2.32,<3",
   "websocket-client>=1.8,<2",
+  "curl_cffi>=0.7,<1",
 ]
 dev = [
   "pytest>=8,<10",

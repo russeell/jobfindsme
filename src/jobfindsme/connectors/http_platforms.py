@@ -113,7 +113,8 @@ def _intercept_api_response(
 
 # ── 前程无忧 (51job) ─────────────────────────────────────────────────────────
 
-_WUYOU_CITY: dict[str, str] = {
+# Public: also used by connectors/pure_http.py (WuyouPureHttpConnector).
+WUYOU_CITY_CODES: dict[str, str] = {
     "北京": "010000",
     "上海": "020000",
     "深圳": "040000",
@@ -126,8 +127,13 @@ _WUYOU_CITY: dict[str, str] = {
 }
 
 
-class WuyouHttpConnector:
-    """Discover jobs from 前程无忧 via passive CDP Network interception."""
+class WuyouCdpInterceptionConnector:
+    """Discover jobs from 前程无忧 via passive CDP Network interception.
+
+    NOTE: despite living in ``http_platforms.py`` this is NOT a pure-HTTP
+    connector — it drives Chrome.  The real pure-HTTP implementation is
+    ``connectors.pure_http.WuyouPureHttpConnector``.
+    """
 
     def __init__(
         self,
@@ -148,7 +154,7 @@ class WuyouHttpConnector:
     def fetch(self) -> list[RawJobRecord]:
         from urllib.parse import quote
 
-        city_code = _WUYOU_CITY.get(self.city, "000000")
+        city_code = WUYOU_CITY_CODES.get(self.city, "000000")
         # NOTE: the SPA reads `jobArea`, not `location`.  Passing `location`
         # silently ignores the filter and the page falls back to IP
         # geolocation (e.g. 020000/上海 never applied → 深圳 results).
@@ -220,7 +226,8 @@ class WuyouHttpConnector:
 # ── 智联招聘 ─────────────────────────────────────────────────────────────────
 
 # 智联搜索页 SPA 读取 `jl`（cityId），不是中文城市名。
-_ZHILIAN_CITY: dict[str, str] = {
+# Public: also used by connectors/pure_http.py (ZhilianPureHttpConnector).
+ZHILIAN_CITY_CODES: dict[str, str] = {
     "北京": "530",
     "上海": "538",
     "广州": "763",
@@ -233,8 +240,12 @@ _ZHILIAN_CITY: dict[str, str] = {
 }
 
 
-class ZhilianHttpConnector:
-    """Discover jobs from 智联招聘 via passive CDP Network interception."""
+class ZhilianCdpInterceptionConnector:
+    """Discover jobs from 智联招聘 via passive CDP Network interception.
+
+    NOT pure HTTP — see ``connectors.pure_http.ZhilianPureHttpConnector``
+    for the browser-free attempt.
+    """
 
     def __init__(
         self,
@@ -255,7 +266,7 @@ class ZhilianHttpConnector:
     def fetch(self) -> list[RawJobRecord]:
         from urllib.parse import quote
 
-        city_id = _ZHILIAN_CITY.get(self.city, "")
+        city_id = ZHILIAN_CITY_CODES.get(self.city, "")
         city_param = f"&jl={city_id}" if city_id else ""
         search_url = (
             f"https://sou.zhaopin.com/?kw={quote(self.keyword)}&p=1{city_param}"
