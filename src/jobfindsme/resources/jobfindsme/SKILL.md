@@ -95,10 +95,16 @@ The Server returns each job as a **deterministic block** in `content[0].text`:
 
 Rules — every Agent must follow these exactly:
 
-1. **Never alter or drop the block**: keep the fact line, the signal line
-   (技能/经验/学历), and the 投递链接 exactly as returned. These are the
+1. **Never alter or drop the block's facts**: keep the fact line and the
+   signal line (技能/经验/学历) exactly as returned. These are the
    deterministic contract — identical on every Agent host.
-2. **Always append your own 推荐理由** below the block, one line starting
+2. **Render the 投递链接 as a clickable Markdown link**: replace the plain
+   `投递链接：https://...` line with `🔗 [投递链接](https://...)` (or
+   `[打开岗位](https://...)`). Keep the exact URL — never shorten, rewrite,
+   or wrap it. The URL must remain visible/copyable in the rendered text.
+   If the host client cannot render Markdown links, keep the raw URL on its
+   own line instead.
+3. **Always append your own 推荐理由** below the block, one line starting
    with `推荐理由：`. Base it ONLY on the returned signals vs the user's
    confirmed profile (skill overlap, experience fit, degree match). Never
    invent facts not present in the block or profile.
@@ -106,9 +112,9 @@ Rules — every Agent must follow these exactly:
    user's stated preferences (role, location, salary, track) — e.g.
    "标题与目标角色一致，薪资符合 20K+ 要求，学历本科满足" — and never
    claim resume-based skill matches.
-3. If the block lacks a field (e.g. no salary), say so briefly rather than
+4. If the block lacks a field (e.g. no salary), say so briefly rather than
    guessing.
-4. When presenting several jobs, keep this block order; your reasoning lines
+5. When presenting several jobs, keep this block order; your reasoning lines
    go under each block. Do not merge blocks or re-word the fact line.
 
 This contract guarantees the user sees the same job facts and links no

@@ -112,7 +112,10 @@ Every job result MUST include all of these:
 1. 岗位介绍 — title, company, location, salary, track (校招/社招), type (实习/正式)
 2. 匹配分析 — your semantic assessment: which profile skills overlap, experience
    fit, degree match, source freshness (from extracted_signals.liveness)
-3. 投递链接 — the source platform's direct job URL on its own line, labeled with 🔗
+3. 投递链接 — the source platform's direct job URL, rendered as a
+   **clickable Markdown link** `🔗 [投递链接](url)` (keep the exact URL;
+   fall back to the raw URL on its own line if the client cannot render
+   Markdown links)
 4. 推荐理由 — your evidence-based reasons (skill overlap, role match, etc.)
 5. 主要差距 — missing skills, unknown required fields, stale source warnings
 6. 状态 — new, changed, reopened, seen, saved, or applied when Core provides it
