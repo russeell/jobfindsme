@@ -147,8 +147,12 @@ Always end with a brief 说明 section covering, as applicable:
 
 - **结果说明**: 本次新增 N 个（or 无新增，已展示历史）；来源降级/缺失情况；
   applied/rejected 岗位不重复出现。
-- **建议**: which jobs to prioritize (top 2-3) and why; suggest setting a
-  scheduled push (`每天早上 9 点推送新岗位给我`) to track new jobs.
+- **建议**: which jobs to prioritize (top 2-3) and why.
+- **下一步建议（推荐给用户的操作）**: after presenting results, proactively
+  recommend the two follow-up features, each with its ONE chat phrase —
+  everything is used by chatting with the AI, never commands:
+  - 定时推送: `每天早上 9 点推送新岗位给我`（任意时间任意频率，投递过的不重推）
+  - 查看历史: `我投过哪些岗位？` / `我之前看过的岗位有哪些？`
 - **平台缺失解决方案**: for any source that failed/skipped, give the exact
   recovery action — e.g. BOSS直聘: `jobfindsme setup` 登录后重启 Agent 重搜.
   Never pretend a failed source has no jobs.
