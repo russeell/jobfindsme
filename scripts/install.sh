@@ -51,25 +51,29 @@ if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)' 2
 fi
 green "✓ Python $(python3 --version 2>&1)"
 
-# ── 2. 选 wheel 源（GitHub 直连优先，失败回退 ghproxy）────────────────────────
+# ── 2. 选 wheel 源（GitHub 直连优先，失败回退 ghproxy，再失败回退直连）────────
 WHEEL_URL="$WHEEL_GH"
 if ! curl -fsSLI --max-time 8 -o /dev/null "$WHEEL_GH" 2>/dev/null; then
   yellow "· GitHub 直连较慢，切换镜像源"
   WHEEL_URL="$WHEEL_PROXY"
+  if ! curl -fsSLI --max-time 8 -o /dev/null "$WHEEL_URL" 2>/dev/null; then
+    yellow "· 镜像也不可达，回退 GitHub 直连"
+    WHEEL_URL="$WHEEL_GH"
+  fi
 fi
 
 # ── 3. 建运行时 + 装包（uv 加速 if available）─────────────────────────────────
 mkdir -p "$HOME/.jobfindsme"
 python3 -m venv "$RUNTIME" >/dev/null 2>&1 || python3 -m venv "$RUNTIME"
 
-PIP=( "$RUNTIME/bin/python" -m pip )
+PIP=( "$RUNTIME/bin/python" -m pip install )
 if command -v uv >/dev/null 2>&1; then
   green "✓ 检测到 uv，加速依赖下载"
-  PIP=( uv pip --python "$RUNTIME/bin/python" )
+  PIP=( uv pip install --python "$RUNTIME/bin/python" )
 fi
 
 yellow "· 安装 jobfindsme[browser]（依赖走清华镜像）…"
-"${PIP[@]}" install --quiet \
+"${PIP[@]}" --quiet \
   --index-url "$MIRROR" --upgrade \
   "jobfindsme[browser] @ $WHEEL_URL"
 
