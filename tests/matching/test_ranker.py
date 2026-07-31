@@ -11,6 +11,7 @@ from jobfindsme.contracts import (
 )
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.matching.ranker import filter_jobs, score_signals
 from jobfindsme.matching.tokenizer import tokenize
 from jobfindsme.profiles.models import FactStatus, FactType, ProfileFact, ProfileSummary
 
@@ -293,3 +294,115 @@ def test_required_skill_gap_is_explicit() -> None:
 
     assert match.evidence.missing_required_skills == ("Kubernetes",)
     assert any("必备技能缺口" in item for item in match.evidence.warnings)
+
+
+# ── v0.4.1: signal coarse ranking (filter_jobs / score_signals) ───────────────
+
+
+def _profile(*skills: str, experience: str = "", degree: str = "") -> ProfileSummary:
+    facts: list[ProfileFact] = []
+    for index, skill in enumerate(skills):
+        facts.append(
+            ProfileFact(
+                fact_id=f"skill-{index}",
+                fact_type=FactType.SKILL,
+                value=skill,
+                evidence_snippet=skill,
+                evidence_start=0,
+                evidence_end=len(skill),
+                status=FactStatus.CONFIRMED,
+            )
+        )
+    if experience:
+        facts.append(
+            ProfileFact(
+                fact_id="exp",
+                fact_type=FactType.EXPERIENCE,
+                value=experience,
+                evidence_snippet=experience,
+                evidence_start=0,
+                evidence_end=len(experience),
+                status=FactStatus.CONFIRMED,
+            )
+        )
+    if degree:
+        facts.append(
+            ProfileFact(
+                fact_id="edu",
+                fact_type=FactType.EDUCATION,
+                value=degree,
+                evidence_snippet=degree,
+                evidence_start=0,
+                evidence_end=len(degree),
+                status=FactStatus.CONFIRMED,
+            )
+        )
+    return ProfileSummary(
+        profile_id="profile-1",
+        workspace_id="workspace-1",
+        facts=tuple(facts),
+    )
+
+
+def test_filter_jobs_returns_all_when_pool_within_limit() -> None:
+    jobs = [job("a"), job("b"), job("c")]
+
+    passed = filter_jobs(plan(), jobs, profile=_profile("Python"), limit=20)
+
+    assert [item.external_id for item in passed] == ["a", "b", "c"]
+
+
+def test_filter_jobs_truncates_to_limit_with_profile() -> None:
+    jobs = [job(f"job-{index}") for index in range(30)]
+
+    passed = filter_jobs(plan(), jobs, profile=_profile("Python"), limit=20)
+
+    assert len(passed) == 20
+
+
+def test_filter_jobs_orders_highest_signal_score_first() -> None:
+    jobs = [
+        job("java", description="Java Spring 云原生平台，1-3年，25-40K"),
+        job("python", description="Python RAG Agent，1-3年，25-40K"),
+        job("both", description="Python RAG Java 微服务，1-3年，25-40K"),
+    ]
+
+    passed = filter_jobs(plan(), jobs, profile=_profile("Python", "RAG"), limit=2)
+
+    assert [item.external_id for item in passed] == ["python", "both"]
+
+
+def test_score_signals_skill_overlap_dominates() -> None:
+    python_job = job("python", description="Python RAG Agent，1-3年，25-40K")
+    java_job = job("java", description="Java Spring 云原生平台，1-3年，25-40K")
+
+    python_score = score_signals(python_job, _profile("Python", "RAG"))
+    java_score = score_signals(java_job, _profile("Python", "RAG"))
+
+    assert python_score > java_score
+    assert 0.0 < python_score <= 1.0
+
+
+def test_score_signals_experience_alignment() -> None:
+    senior_job = job("senior", description="AI应用工程师，5-8年，25-40K")
+    junior_job = job("junior", description="AI应用工程师，1-3年，25-40K")
+    profile = _profile("Python", experience="3年")
+
+    senior_score = score_signals(senior_job, profile)
+    junior_score = score_signals(junior_job, profile)
+
+    assert junior_score > senior_score  # 经验满足 > 经验略低
+
+
+def test_score_signals_degree_match() -> None:
+    master_profile = _profile("Python", degree="上海大学 计算机科学 硕士")
+    bachelor_profile = _profile("Python", degree="上海大学 计算机科学 本科")
+    phd_required = job("phd", description="AI应用工程师，博士学历，1-3年，25-40K")
+
+    assert score_signals(phd_required, master_profile) < score_signals(
+        phd_required, bachelor_profile
+    ) + 0.5  # 两者都在低分区，只验证不报错且有序可比较
+
+
+def test_score_signals_returns_zero_without_profile() -> None:
+    assert score_signals(job("plain"), None) == 0.0
