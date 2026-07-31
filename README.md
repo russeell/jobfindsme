@@ -70,37 +70,24 @@
 
 jobfindsme 是本地 MCP Server，可接入 Claude Code、Codex 等 MCP Agent。
 
-### 第 1 步：安装（三选一）
+### 安装
 
-**A. 一行命令（推荐）**——把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` /
-`qwen` / `trae` / `zcode` / `qoder`）：
+把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
+`zcode` / `qoder`）：
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
   | bash -s -- codex
 ```
 
-**B. pip 安装**——已装 Python 3.11+ 的用户：
+脚本自动完成：检测 Python → 建独立运行时 → 装包（清华镜像加速）→ 写入该
+Agent 的 MCP 配置 → 打印下一步。可重复执行。
 
-```bash
-pip install jobfindsme[browser]
-jobfindsme connect claude   # 自动写入 MCP 配置
-```
+> 已有 Python 3.11+ 的开发者可跳过脚本：`pip install jobfindsme[browser]` 后
+> 执行 `jobfindsme connect claude`。也可从 [Smithery](https://smithery.ai)
+> 发现安装。完整多路径说明见 [INSTALL.md](INSTALL.md)。
 
-**C. uvx 零依赖运行**——有 uv 的用户：
-
-```bash
-uvx jobfindsme mcp
-```
-
-> [!NOTE]
-> curl 脚本自动完成：检测 Python → 建独立 venv → 装预编译 wheel（清华镜像加速，
-> GitHub 直连失败自动回退）→ 写入 MCP 配置。可重复执行。pip/uvx 方式适合已有
-> Python 环境的用户。
-
-也可从 [Smithery](https://smithery.ai) 发现和安装。
-
-### 第 2 步：登录 BOSS直聘（可选）
+### 登录 BOSS直聘（可选）
 
 ```bash
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
@@ -111,7 +98,7 @@ uvx jobfindsme mcp
 > 💡 **跳过这步也能用**——猎聘纯 HTTP 直连，不需要浏览器也不需要登录。
 > 先用猎聘看看结果，觉得岗位不够再补上 BOSS。
 
-### 第 3 步：开始搜
+### 开始搜
 
 把这句话发给 Agent：
 

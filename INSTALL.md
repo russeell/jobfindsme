@@ -13,21 +13,9 @@
 
 ---
 
-## 快速开始（三选一）
+## 快速开始
 
-### 方式 A：让 Agent 帮你装（推荐）
-
-把下面这段话发给你的 Agent（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等）：
-
-```text
-请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
-不要克隆仓库或运行测试：
-https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
-```
-
-Agent 会：检测 Python → 建独立运行时 → 安装 → 自动写入 MCP 配置 → 告诉你下一步。
-
-### 方式 B：一行命令
+### 方式 A：一行命令（推荐，自动处理一切）
 
 把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
 `trae-cn` / `zcode` / `qoder`）：
@@ -38,19 +26,20 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 ```
 
 脚本自动完成：检测 Python 3.11+ → 建独立 venv（`~/.jobfindsme/runtime`）→
-装预编译 wheel（清华镜像加速，GitHub 直连失败自动回退）→ 写入该 Agent 的
-MCP 配置。可重复执行。
+装包（清华镜像加速，GitHub 直连失败自动回退）→ 写入该 Agent 的 MCP 配置 →
+打印下一步。可重复执行。
 
-### 方式 C：pip / uvx（已有 Python 环境的用户）
+> 不想自己敲命令？把本文开头的链接发给 Agent，让它按「Agent 安装配方」
+> 执行，效果相同。
+
+### 方式 B：pip（已有 Python 3.11+ 的开发者）
 
 ```bash
-# pip
 pip install jobfindsme[browser]
 jobfindsme connect claude        # 换成你的 Agent，自动写 MCP 配置
-
-# 或 uv（零配置运行，适合先用起来看看）
-uvx jobfindsme mcp
 ```
+
+有 uv 的用户可零配置体验：`uvx jobfindsme mcp`（不写配置，先试用）。
 
 ---
 
