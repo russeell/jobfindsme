@@ -75,6 +75,9 @@ class JobImpressionService:
                 item
                 for item in classified
                 if item.state is not JobStateKind.REJECTED
+                and (  # daily push: never re-suggest applied jobs
+                    include_seen or item.state is not JobStateKind.APPLIED
+                )
                 and (include_seen or item.change_type is not JobChangeType.UNCHANGED)
             ][:limit]
 

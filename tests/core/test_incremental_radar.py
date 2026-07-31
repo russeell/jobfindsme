@@ -164,3 +164,39 @@ def test_closed_then_reopened_job_is_reported_once_per_transition(tmp_path) -> N
 
     assert reopened.matches[0].change_type is JobChangeType.REOPENED
     assert reopened.changes.reopened == 1
+
+
+def test_applied_job_is_never_re_suggested_in_daily_push(tmp_path) -> None:
+    """Daily-push scenario: jobs marked applied must not be re-suggested,
+    even when they were applied before ever being shown by search."""
+    _, core, workspace, plan = _core_with_job(tmp_path)
+    first = core.search_jobs(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+        refresh_mode="cache",
+    )[0]
+    core.update_job_state(
+        workspace_id=workspace.workspace_id,
+        job_id=first.job.job_id,
+        state=JobStateKind.APPLIED,
+    )
+
+    # Simulate a fresh process/day: impressions for this job exist but the
+    # APPLIED state must suppress it from the daily push regardless.
+    daily = core.search_jobs_with_diagnostics(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+        refresh_mode="cache",
+    )
+
+    assert daily.matches == ()
+    assert daily.changes.repeated_suppressed == 1
+    # History view still shows the applied job for review
+    history = core.search_jobs(
+        workspace_id=workspace.workspace_id,
+        plan_id=plan.plan_id,
+        refresh_mode="cache",
+        include_seen=True,
+    )
+    assert history[0].state is JobStateKind.APPLIED
+    assert history[0].change_type is JobChangeType.UNCHANGED
