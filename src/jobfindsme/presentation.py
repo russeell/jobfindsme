@@ -54,6 +54,11 @@ def format_job_list(items: Sequence[Any]) -> str:
             fields.append(job.salary.raw_text)
         lines = ["｜".join(fields)]
 
+        # Match degree = deterministic signal score; shown only when a
+        # confirmed profile exists (score_signals returns 0 without one).
+        if score and score > 0:
+            lines.append(f"   匹配度：{round(score * 100)}%（信号匹配，非录用概率）")
+
         # Structured signals — deterministic facts for the Agent's reasoning
         signals = _extracted_signals(evidence)
         signal_parts = []

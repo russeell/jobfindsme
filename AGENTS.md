@@ -107,18 +107,24 @@ their resume or search constraints.
 
 ## Output Rules
 
-Every job result MUST include all of these:
+Every search result MUST use the fixed four-section structure (SKILL.md
+Output Contract), in order:
 
-1. 岗位介绍 — title, company, location, salary, track (校招/社招), type (实习/正式)
-2. 匹配分析 — your semantic assessment: which profile skills overlap, experience
-   fit, degree match, source freshness (from extracted_signals.liveness)
-3. 投递链接 — the source platform's direct job URL on its own line as a
-   **bare URL** (`投递链接：https://...`), exactly as returned. Do NOT wrap
-   it in Markdown/HTML/code fences — terminal clients auto-link bare URLs,
-   wrapping breaks clickability.
-4. 推荐理由 — your evidence-based reasons (skill overlap, role match, etc.)
-5. 主要差距 — missing skills, unknown required fields, stale source warnings
-6. 状态 — new, changed, reopened, seen, saved, or applied when Core provides it
+1. **第 1 段 · 简历解析** (skip entirely in no-resume mode) — counts only:
+   `简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士` — never list actual
+   skills/experience content or institutions.
+2. **第 2 段 · 检索概览** — per source from `diagnostics.source_runs`:
+   `猎聘·上海 ✓(42) · BOSS直聘·上海 ✗(原因)` + 共检索 N 个岗位.
+3. **第 3 段 · 过滤说明** — the plan constraints applied →
+   `→ 给出 N 个` (N = `diagnostics.result_count`).
+4. **第 4 段 · 岗位列表** — each job as a deterministic block:
+   fact line (+ 匹配度 X% when score > 0), signal line, bare-URL
+   投递链接, and your 推荐理由.
+
+Block rules: keep fact/signal lines verbatim; apply link is a BARE URL on
+its own line (no Markdown/HTML wrapping — terminal clients auto-link bare
+URLs); 推荐理由 derives ONLY from returned signals vs profile (or vs the
+user's stated constraints in no-profile mode); never invent facts.
 
 Sort results by your own semantic assessment. Use the Server's `score` as a
 starting point — it reflects deterministic signal overlap — but your reading

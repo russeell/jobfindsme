@@ -190,3 +190,59 @@ def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> N
     )
 
     assert capsys.readouterr().out == "未找到符合条件的岗位。\n"
+
+
+def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) -> None:
+    database = tmp_path / "jobfindsme.db"
+    core = jobfindsmecore(database)
+    workspace = core.create_workspace("CLI")
+    plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="AI",
+        target_roles=["AI应用工程师"],
+    )
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG、Agent", encoding="utf-8")
+    imported = core.import_resume(source_path=str(resume))
+    core.confirm_profile(
+        profile_id=imported.profile_id,
+        accepted_fact_ids=[f.fact_id for f in imported.facts],
+    )
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "社会招聘，全职正式，Python RAG Agent，1-3年，25-40K",
+                        "location": "杭州",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    run(
+        [
+            "--db",
+            str(database),
+            "--output",
+            "markdown",
+            "jobs",
+            "search",
+            "--workspace",
+            workspace.workspace_id,
+            "--plan",
+            plan.plan_id,
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert "匹配度：" in output  # profile exists → signal score shown
+    assert "投递链接：https://example.com/jobs/1" in output

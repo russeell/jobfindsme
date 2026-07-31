@@ -83,17 +83,53 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 10. `export_local_data` writes a local file. Return the receipt; do not read the
     exported file back into model context unless the user explicitly requests it.
 
-## Output Contract (输出契约 — 硬约束)
+## Output Contract (输出契约 — 固定四段结构)
 
-The Server returns each job as a **deterministic block** in `content[0].text`:
+Every search result MUST be presented in exactly these four sections, in
+this order. Sections 2–4 are always present; section 1 is skipped entirely
+when there is no profile (no-resume mode).
+
+### 第 1 段 · 简历解析（无简历时整段跳过）
 
 ```text
-1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40K-60K
-   技能：Agent、Python ｜ 经验：3-5年 ｜ 学历：本科
-   投递链接：https://www.liepin.com/job/xxx
+简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士
 ```
 
-Rules — every Agent must follow these exactly:
+- Numbers only + the highest degree name. NEVER list the actual skills,
+  experience details, or education institutions — just counts and degree.
+
+### 第 2 段 · 检索概览
+
+```text
+检索：猎聘·上海 ✓(42) · 猎聘·深圳 ✓(42) · BOSS直聘·上海 ✗(Chrome未连接)
+共检索 84 个岗位
+```
+
+- One line per attempted source from `diagnostics.source_runs`:
+  `来源名 ✓(discovered数)` or `✗(原因)`; sum discovered as 共检索 N 个岗位.
+
+### 第 3 段 · 过滤说明
+
+```text
+过滤：角色匹配 + 城市(上海/深圳) + 薪资20K+ + 社招 + 正式 + 经验≤3年 → 给出 15 个
+```
+
+- List the plan constraints actually applied, then `→ 给出 N 个`
+  (N = result count from diagnostics.result_count).
+
+### 第 4 段 · 岗位列表
+
+Each job as a deterministic block (see block rules below), in this order:
+
+```text
+1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
+   匹配度：68%（信号匹配，非录用概率）      ← only when score > 0
+   技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
+   投递链接：https://www.liepin.com/job/xxx
+   推荐理由：...
+```
+
+### Block rules (岗位块规则)
 
 1. **Never alter or drop the block's facts**: keep the fact line and the
    signal line (技能/经验/学历) exactly as returned. These are the
