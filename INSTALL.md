@@ -4,18 +4,42 @@
 > 交给 Agent 做语义匹配。**不需要注册任何服务、不需要 API Key。**
 >
 > - 猎聘：纯 HTTP 直连，**不需要浏览器、不需要登录**
-> - BOSS直聘：需要一次扫码登录（可选，见 [第 3 步](#3-登录-boss直聘可选)）
-
-本文同时服务两类读者：
-
-- **人类用户**：按「快速开始」三选一安装即可
-- **AI Agent**：请按「Agent 安装配方」执行，**不要克隆仓库、不要跑测试、不要装开发依赖**
+> - BOSS直聘：需要一次扫码登录（可选，见 [登录 BOSS直聘](#登录-boss直聘可选)）
 
 ---
 
-## 快速开始
+## ✨ 最简单的方式：和 Agent 聊天安装（推荐）
 
-### 方式 A：一行命令（推荐，自动处理一切）
+**你什么都不用装。** 把下面这段话复制，发给你的 AI Agent
+（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等任何一个）：
+
+```text
+请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
+不要克隆仓库或运行测试：
+https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+```
+
+**Agent 会自动完成：**
+
+```text
+① 检测 Python 环境
+② 创建独立运行空间（~/.jobfindsme/runtime）
+③ 安装 jobfindsme 本体
+④ 自动写入它自己的 MCP 配置
+⑤ 告诉你下一步
+```
+
+**你只需要做两件事：**
+
+1. **重启 Agent**
+2. 对 Agent 说：`用 jobfindsme，根据我的简历找上海的 AI 应用工程师，20K以上，社招。`
+
+> 整个过程通常 3 分钟内完成。你不需要打开终端、不需要了解 MCP 是什么、
+> 不需要手动编辑任何配置文件——全部由 Agent 代劳。
+
+---
+
+## 方式二：一行命令（想自己动手）
 
 把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
 `trae-cn` / `zcode` / `qoder`）：
@@ -29,10 +53,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 装包（清华镜像加速，GitHub 直连失败自动回退）→ 写入该 Agent 的 MCP 配置 →
 打印下一步。可重复执行。
 
-> 不想自己敲命令？把本文开头的链接发给 Agent，让它按「Agent 安装配方」
-> 执行，效果相同。
-
-### 方式 B：pip（已有 Python 3.11+ 的开发者）
+## 方式三：pip（已有 Python 3.11+ 的开发者）
 
 ```bash
 pip install jobfindsme[browser]
@@ -45,7 +66,7 @@ jobfindsme connect claude        # 换成你的 Agent，自动写 MCP 配置
 
 ## 安装后三步启动
 
-### 1. 接入 Agent（方式 C 已自动完成）
+### 1. 接入 Agent（方式一/二已自动完成；方式三需手动执行）
 
 | Agent | 命令 |
 |-------|------|
@@ -182,7 +203,7 @@ BOSS 显示"未登录"就去 `jobfindsme setup` 扫码。系统不会把失败�
 
 **Q：安装脚本卡在下载？**
 GitHub 直连慢会自动切镜像源（`mirror.ghproxy.com`），依赖走清华 PyPI 镜像。
-仍失败时重试一次，或改用方式 C 的 pip 安装。
+仍失败时重试一次，或改用方式三的 pip 安装。
 
 **Q：可以用 conda / pyenv 的 Python 吗？**
 可以。脚本用系统 `python3` 建独立 venv，不干扰现有环境；pip/uvx 方式同理。
@@ -223,8 +244,8 @@ rm -rf ~/.jobfindsme
 ```
 
 > `jobfindsme uninstall <agent>` 只移除配置、**保留全部数据**；想彻底清除数据
-> 再执行第二步 `rm -rf ~/.jobfindsme`。删除后不可恢复，先 `jobfindsme export`
-> 备份。
+> 再执行第二步 `rm -rf ~/.jobfindsme`。删除后不可恢复，先 `jobfindsme export
+> --workspace <id>` 备份。
 
 ---
 

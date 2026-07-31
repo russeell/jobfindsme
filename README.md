@@ -68,24 +68,26 @@
 
 ## 快速开始
 
-jobfindsme 是本地 MCP Server，可接入 Claude Code、Codex 等 MCP Agent。
+### 🗣️ 最简单：和 Agent 聊天就能装（推荐）
 
-### 安装
+**什么都不用下载、不用敲命令。** 把这段话发给你的 AI Agent
+（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等）：
 
-把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
-`zcode` / `qoder`）：
-
-```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
-  | bash -s -- codex
+```text
+请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
+不要克隆仓库或运行测试：
+https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 ```
 
-脚本自动完成：检测 Python → 建独立运行时 → 装包（清华镜像加速）→ 写入该
-Agent 的 MCP 配置 → 打印下一步。可重复执行。
+Agent 会自动完成检测环境、安装、写入自己的 MCP 配置。**你只需要重启 Agent**，
+然后对它说：
 
-> 已有 Python 3.11+ 的开发者可跳过脚本：`pip install jobfindsme[browser]` 后
-> 执行 `jobfindsme connect claude`。也可从 [Smithery](https://smithery.ai)
-> 发现安装。完整多路径说明见 [INSTALL.md](INSTALL.md)。
+```text
+用 jobfindsme，根据我的简历找上海的 AI 应用工程师，20K以上，社招。
+```
+
+> 想自己动手？也可以一行命令安装（`curl ... | bash -s -- codex`）或
+> `pip install jobfindsme[browser]`——完整说明见 [INSTALL.md](INSTALL.md)。
 
 ### 登录 BOSS直聘（可选）
 
@@ -97,14 +99,6 @@ Agent 的 MCP 配置 → 打印下一步。可重复执行。
 
 > 💡 **跳过这步也能用**——猎聘纯 HTTP 直连，不需要浏览器也不需要登录。
 > 先用猎聘看看结果，觉得岗位不够再补上 BOSS。
-
-### 开始搜
-
-把这句话发给 Agent：
-
-```text
-用 jobfindsme，根据我的简历找上海的 AI 应用工程师，20K以上，社招。
-```
 
 ## 提示词模版
 
