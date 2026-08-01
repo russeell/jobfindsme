@@ -62,13 +62,17 @@ class SearchOrchestrator:
         limit: int = 20,
         excluded_source_names: Sequence[str] = (),
         included_source_names: Sequence[str] = (),
+        use_profile: bool = True,
     ) -> list[JobMatch]:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError("no active Search Plan — run configure_search first")
-        profile = self.profiles.latest_confirmed_summary(
-            workspace_id=context.workspace.workspace_id
-        )
+        if use_profile:
+            profile = self.profiles.latest_confirmed_summary(
+                workspace_id=context.workspace.workspace_id
+            )
+        else:
+            profile = None
         jobs = self.jobs.list(context.workspace.workspace_id)
         if included_source_names:
             included = set(included_source_names)
@@ -109,6 +113,7 @@ class SearchOrchestrator:
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
         include_seen: bool = False,
+        use_profile: bool = True,
     ) -> list[JobMatch]:
         return list(
             self.search_jobs_with_diagnostics(
@@ -119,6 +124,7 @@ class SearchOrchestrator:
                 allow_browser_sources=allow_browser_sources,
                 refresh_mode=refresh_mode,
                 include_seen=include_seen,
+                use_profile=use_profile,
             ).matches
         )
 
@@ -132,6 +138,7 @@ class SearchOrchestrator:
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
         include_seen: bool = False,
+        use_profile: bool = True,
     ) -> SearchRunResult:
         started_at = datetime.now(UTC)
         started = perf_counter()
@@ -234,6 +241,7 @@ class SearchOrchestrator:
             limit=candidate_limit,
             excluded_source_names=tuple(browser_source_names),
             included_source_names=active_source_names,
+            use_profile=use_profile,
         )
         radar = self.impressions.select_and_record(
             workspace_id=context.workspace.workspace_id,

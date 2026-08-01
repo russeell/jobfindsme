@@ -298,13 +298,17 @@ class jobfindsmecore:
         *,
         workspace_id: str | None = None,
         plan_id: str | None = None,
+        use_profile: bool = True,
     ) -> SearchPresentationContext:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError("no active Search Plan — run configure_search first")
-        profile = self.profiles.latest_confirmed_summary(
-            workspace_id=context.workspace.workspace_id
-        )
+        if use_profile:
+            profile = self.profiles.latest_confirmed_summary(
+                workspace_id=context.workspace.workspace_id
+            )
+        else:
+            profile = None
         counts = {fact_type: 0 for fact_type in FactType}
         highest_degree = None
         degree_order = {"大专": 1, "本科": 2, "硕士": 3, "博士": 4}

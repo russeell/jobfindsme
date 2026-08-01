@@ -87,7 +87,7 @@ def format_job_list(
             lines.append("   " + " ｜ ".join(signal_parts))
 
         warnings = list(getattr(evidence, "warnings", ())) if evidence else []
-        if include_recommendation and (not job.salary or not job.salary.raw_text):
+        if include_recommendation and not _has_disclosed_salary(job):
             warnings.append("薪资未注明")
         if include_recommendation and job.recruitment_track is RecruitmentTrack.UNKNOWN:
             warnings.append("招聘类型未注明")
@@ -148,9 +148,14 @@ def format_search_results(
             source_parts.append(f"{run.source_name} -({_short_error(run.error)})")
     source_line = "检索：" + (" · ".join(source_parts) if source_parts else "本地缓存")
     if diagnostics.refresh_mode is SearchRefreshMode.CACHE:
-        source_line += "\n本轮未刷新外部来源，使用本地缓存。"
+        source_line += (
+            f"\n本轮未刷新外部来源，从本地缓存匹配到 {diagnostics.result_count} 条。"
+        )
     else:
-        source_line += f"\n本轮来源返回 {diagnostics.total_discovered} 条记录。"
+        source_line += (
+            f"\n本轮远程发现 {diagnostics.total_discovered} 条，"
+            f"本地岗位库匹配到 {diagnostics.result_count} 条。"
+        )
     filters = " + ".join(context.applied_filters) or "未设置额外条件"
     filter_line = f"过滤：{filters} → 给出 {diagnostics.result_count} 个"
     if diagnostics.undisclosed_salary_filtered_count:
@@ -255,12 +260,60 @@ def _recommendation_reason(
     skills = signals.get("required_skills") or []
     if skills:
         parts.append("JD 明确涉及 " + "、".join(skills[:4]))
-    if job.salary and job.salary.raw_text:
+    if _has_disclosed_salary(job):
         parts.append("薪资信息明确")
     return "；".join(parts) + "。"
 
 
+def _has_disclosed_salary(job: JobSummary) -> bool:
+    """Return whether salary is both numeric and actually disclosed.
+
+    Some source parsers can retain numeric fields while the source card says
+    "面议".  The user-facing explanation must follow the source text in that
+    conflict instead of claiming that an undisclosed salary is explicit.
+    """
+    salary = job.salary
+    if salary is None or not salary.raw_text.strip():
+        return False
+    normalized = salary.raw_text.casefold().replace(" ", "")
+    undisclosed_markers = ("面议", "未公开", "未注明", "保密", "negotiable")
+    if any(marker in normalized for marker in undisclosed_markers):
+        return False
+    return (
+        salary.min_amount is not None
+        or salary.max_amount is not None
+        or salary.normalized_annual_min is not None
+        or salary.normalized_annual_max is not None
+    )
+
+
 def _short_error(error: str | None) -> str:
+    """Normalize source-run errors to safe, short categories.
+
+    Chrome/CDP/9222 errors are unified to a single recovery message so the
+    user never sees raw commands, port numbers, or stack traces.  Other
+    errors are classified into short safe labels.
+    """
     if not error:
         return "无结果"
-    return error.replace("\n", " ")[:80]
+    lowered = error.lower()
+    chrome_markers = (
+        "chrome",
+        "cdp",
+        "9222",
+        "remote-debugging-port",
+        "chrome-debug",
+        "devtools",
+        "websocket",
+    )
+    if any(marker in lowered for marker in chrome_markers):
+        return "Chrome 未连接，请运行 jobfindsme setup"
+    if "timeout" in lowered or "timed out" in lowered:
+        return "来源响应超时"
+    if "connection" in lowered or "refused" in lowered or "unreachable" in lowered:
+        return "来源无法连接"
+    if "auth" in lowered or "login" in lowered or "未登录" in lowered:
+        return "来源需要登录"
+    if "parse" in lowered or "json" in lowered or "decode" in lowered:
+        return "来源返回数据无法解析"
+    return error.replace("\n", " ")[:60]

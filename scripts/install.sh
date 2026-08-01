@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-VERSION="0.7.1"
+VERSION="0.7.2"
 WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
 WHEEL_PROXY="https://mirror.ghproxy.com/${WHEEL_GH}"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
