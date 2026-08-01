@@ -92,6 +92,6 @@ if not isinstance(structured, dict) or structured.get("jobs") != []:
 
 config = os.path.join(os.path.dirname(database), "home", ".cursor", "mcp.json")
 if not os.path.exists(config):
-    raise SystemExit("installed wheel could not configure WorkBuddy")
+    raise SystemExit("installed wheel could not configure Cursor")
 PY
 )

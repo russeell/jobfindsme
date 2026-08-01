@@ -144,13 +144,13 @@ class _CDPSession:
         try:
             response = requests.get(
                 f"http://127.0.0.1:{port}/json/version",
-                timeout=10,
+                timeout=3,
             )
             response.raise_for_status()
             websocket_url = response.json()["webSocketDebuggerUrl"]
             self.ws = create_connection(
                 websocket_url,
-                timeout=60,
+                timeout=15,
                 origin=f"http://127.0.0.1:{port}",
             )
         except (OSError, ValueError, TimeoutError) as exc:
@@ -216,8 +216,8 @@ class _CDPSession:
             self._futures[mid] = event
         self.ws.send(json.dumps(message))
 
-        if not event.wait(timeout=30):
-            raise BossConnectorError(f"CDP {method} timed out after 30s")
+        if not event.wait(timeout=12):
+            raise BossConnectorError(f"CDP {method} timed out after 12s")
         with self._lock:
             response = self._results.pop(mid, None)
         if response is None:
@@ -334,7 +334,7 @@ class BossZhipinConnector:
         cdp: CdpSession,
         session_id: str,
         *,
-        timeout_seconds: float = 15,
+        timeout_seconds: float = 8,
     ) -> None:
         deadline = time.monotonic() + timeout_seconds
         while time.monotonic() < deadline:
@@ -434,7 +434,6 @@ BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
 PLATFORM_LOGIN_URLS = {
     "boss": ("https://www.zhipin.com/web/user/", "BOSS直聘"),
     "liepin": ("https://www.liepin.com/login/", "猎聘"),
-    "zhilian": ("https://www.zhaopin.com", "智联招聘"),
 }
 
 
@@ -471,7 +470,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     never launch a second instance (that would orphan the PID file).
 
     Args:
-        platforms: Which platforms to open (boss, liepin, zhilian).
+        platforms: Which platforms to open (boss, liepin).
                    If empty, opens BOSS only.
     """
     import subprocess

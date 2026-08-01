@@ -1,14 +1,4 @@
-"""Tests for the pure-HTTP connectors (猎聘 / 51job / 智联).
-
-These cover the anti-bot boundaries observed live (2026-07-31):
-- 猎聘: XSRF cookie + X-Fscp headers → flag=1 JSON; flag!=1 means blocked.
-- 51job: Aliyun WAF v1 (arg1) is solved locally; WAF2 JS challenge is not
-  solvable and must raise PureHttpBlockedError so discovery falls back.
-- 智联: honeypot signature (results=[] + numFound=999999) must raise
-  PureHttpBlockedError; a genuine empty result (numFound=0) returns [].
-
-Sessions are fakes — no network, no curl_cffi needed.
-"""
+"""Tests for the maintained pure-HTTP 猎聘 connector."""
 
 from __future__ import annotations
 
@@ -20,9 +10,6 @@ from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.pure_http import (
     LiepinPureHttpConnector,
     PureHttpBlockedError,
-    WuyouPureHttpConnector,
-    ZhilianPureHttpConnector,
-    acw_sc_v2,
 )
 from jobfindsme.contracts import SourceKind
 
@@ -84,23 +71,6 @@ class FakeSession:
         if not self._posts:
             raise AssertionError("unexpected POST " + url)
         return self._posts.pop(0)
-
-
-# ── acw_sc__v2 solver ────────────────────────────────────────────────────────
-
-
-def test_acw_sc_v2_shape_and_determinism() -> None:
-    arg1 = "0A1B2C3D4E5F60718293A4B5C6D7E8F901234567"
-    first = acw_sc_v2(arg1)
-    assert len(first) == 40
-    assert all(c in "0123456789abcdef" for c in first)
-    assert first == acw_sc_v2(arg1)  # deterministic
-    assert first != arg1.lower()  # actually transforms
-
-
-def test_acw_sc_v2_rejects_bad_length() -> None:
-    with pytest.raises(ValueError):
-        acw_sc_v2("ABCD")
 
 
 # ── 猎聘 ─────────────────────────────────────────────────────────────────────
@@ -194,136 +164,3 @@ def test_liepin_flag_not_one_is_blocked() -> None:
         LiepinPureHttpConnector(
             "Python", policy=_policy(), session_factory=lambda: session
         ).fetch()
-
-
-# ── 前程无忧 ─────────────────────────────────────────────────────────────────
-
-_WUYOU_ITEMS = {
-    "resultbody": {
-        "job": {
-            "items": [
-                {
-                    "jobId": "123",
-                    "jobName": "大模型应用工程师",
-                    "fullCompanyName": "示例科技",
-                    "jobDescribe": "RAG/Agent",
-                    "jobAreaString": "上海·浦东",
-                    "provideSalaryString": "25-40K",
-                    "jobHref": "https://we.51job.com/j/123",
-                }
-            ]
-        }
-    }
-}
-
-
-def test_wuyou_direct_json_response() -> None:
-    session = FakeSession(
-        get_responses=[
-            FakeResponse(
-                json_data=_WUYOU_ITEMS,
-                headers={"Content-Type": "application/json"},
-            )
-        ]
-    )
-    records = WuyouPureHttpConnector(
-        "AI", city="上海", policy=_policy(), session_factory=lambda: session
-    ).fetch()
-    assert len(records) == 1
-    assert records[0].payload["title"] == "大模型应用工程师"
-    assert records[0].external_id == "123"
-
-
-def test_wuyou_solves_waf_v1_then_gets_json() -> None:
-    arg1 = "0A1B2C3D4E5F60718293A4B5C6D7E8F901234567"
-    challenge = FakeResponse(
-        text=f"<script>var arg1='{arg1}';</script>",
-        headers={"Content-Type": "text/html"},
-    )
-    json_resp = FakeResponse(
-        json_data=_WUYOU_ITEMS, headers={"Content-Type": "application/json"}
-    )
-    session = FakeSession(get_responses=[challenge, json_resp])
-
-    records = WuyouPureHttpConnector(
-        "AI", city="上海", policy=_policy(), session_factory=lambda: session
-    ).fetch()
-
-    assert len(records) == 1
-    assert session.cookies.get("acw_sc__v2") == acw_sc_v2(arg1)
-    assert len(session.get_urls) == 2  # challenge + retry
-
-
-def test_wuyou_waf2_challenge_is_blocked_not_silent() -> None:
-    waf2 = FakeResponse(
-        text='<textarea id="renderData">{"_waf_abc":"..."}</textarea>'
-        '<meta name="aliyun_waf_aa" content="...">',
-        headers={"Content-Type": "text/html"},
-    )
-    session = FakeSession(get_responses=[waf2, waf2, waf2])
-    with pytest.raises(PureHttpBlockedError):
-        WuyouPureHttpConnector(
-            "AI", policy=_policy(), session_factory=lambda: session
-        ).fetch()
-
-
-# ── 智联招聘 ─────────────────────────────────────────────────────────────────
-
-
-def test_zhilian_honeypot_is_blocked_not_empty() -> None:
-    honeypot = {
-        "code": 200,
-        "data": {"results": [], "numTotal": 0, "numFound": 999999},
-    }
-    session = FakeSession(
-        get_responses=[
-            FakeResponse(text="landing"),
-            FakeResponse(json_data=honeypot),
-        ]
-    )
-    with pytest.raises(PureHttpBlockedError):
-        ZhilianPureHttpConnector(
-            "Python", city="深圳", policy=_policy(), session_factory=lambda: session
-        ).fetch()
-
-
-def test_zhilian_genuine_empty_result_is_trusted() -> None:
-    empty = {"code": 200, "data": {"results": [], "numTotal": 0, "numFound": 0}}
-    session = FakeSession(
-        get_responses=[FakeResponse(text="landing"), FakeResponse(json_data=empty)]
-    )
-    records = ZhilianPureHttpConnector(
-        "极稀有关键词", policy=_policy(), session_factory=lambda: session
-    ).fetch()
-    assert records == []
-
-
-def test_zhilian_parses_results() -> None:
-    payload = {
-        "code": 200,
-        "data": {
-            "results": [
-                {
-                    "number": "CC001",
-                    "jobName": "Python 后端",
-                    "companyName": "示例智能",
-                    "jobSummary": "FastAPI",
-                    "workCity": {"name": "深圳"},
-                    "salary60": "20-35K",
-                    "positionURL": "https://jobs.zhaopin.com/CC001",
-                }
-            ],
-            "numFound": 1,
-        },
-    }
-    session = FakeSession(
-        get_responses=[FakeResponse(text="landing"), FakeResponse(json_data=payload)]
-    )
-    records = ZhilianPureHttpConnector(
-        "Python", city="深圳", policy=_policy(), session_factory=lambda: session
-    ).fetch()
-    assert len(records) == 1
-    assert records[0].payload["title"] == "Python 后端"
-    assert records[0].payload["location"] == "深圳"
-    # full param set incl. lastUrlQuery was sent to the real endpoint
-    assert session.get_urls[-1].startswith("https://fe-api.zhaopin.com/c/i/sou")

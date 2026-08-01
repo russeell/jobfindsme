@@ -10,8 +10,6 @@ from jobfindsme.connectors.china_platforms import (
     CdpBlockedError,
     CdpFetchError,
     LiepinConnector,
-    WuyouConnector,
-    ZhilianConnector,
     _cdp_fetch,
     _cdp_fetch_detail,
     _sanitize_external_id,
@@ -24,18 +22,8 @@ def _policy() -> ConnectorPolicy:
     return ConnectorPolicy(public_access=True, robots_allowed=True)
 
 
-@pytest.mark.parametrize(
-    ("connector_type", "source_name"),
-    [
-        (LiepinConnector, "猎聘"),
-        (ZhilianConnector, "智联招聘"),
-        (WuyouConnector, "前程无忧"),
-    ],
-)
 def test_platform_connector_maps_compact_job_records(
     monkeypatch: pytest.MonkeyPatch,
-    connector_type,
-    source_name: str,
 ) -> None:
     def fake_fetch(*_args, **_kwargs):
         return [
@@ -52,14 +40,14 @@ def test_platform_connector_maps_compact_job_records(
         "jobfindsme.connectors.china_platforms._cdp_fetch",
         fake_fetch,
     )
-    records = connector_type(
+    records = LiepinConnector(
         "AI应用工程师",
         city="上海",
         policy=_policy(),
     ).fetch()
 
     assert len(records) == 1
-    assert records[0].source_name == source_name
+    assert records[0].source_name == "猎聘"
     assert records[0].external_id == "https://jobs.example.com/ai-1"
     assert records[0].payload["title"] == "AI应用工程师"
     assert records[0].payload["apply_url"] == "https://jobs.example.com/ai-1"
@@ -200,7 +188,7 @@ def test_detail_fetch_degrades_to_empty_and_still_closes_resources() -> None:
 
     description = _cdp_fetch_detail(
         "https://jobs.example.com/detail/1",
-        platform="zhilian",
+        platform="liepin",
         session_factory=lambda _port: fake,
         dwell_seconds=0,
     )

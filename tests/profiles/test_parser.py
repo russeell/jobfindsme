@@ -7,7 +7,7 @@ def test_parser_returns_deduplicated_facts_with_exact_evidence() -> None:
 Python, FastAPI, Python, RAG
 
 # Projects
-- JobFindsMe uses MCP for local job search
+- jobfindsme uses MCP for local job search
 """
 
     facts = DeterministicResumeParser().parse(text)
@@ -20,7 +20,7 @@ Python, FastAPI, Python, RAG
 
 def test_parser_v3_groups_wrapped_resume_sections_without_line_noise() -> None:
     text = """独立实践与工作经历
-2025.01-2025.06 JobFindsMe
+2025.01-2025.06 jobfindsme
 负责 Agent 与 MCP 工具设计，
 并使用 Pydantic、pytest 和 RRF 完成质量门禁。
 教育背景

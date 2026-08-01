@@ -1,13 +1,12 @@
 {
-  "schema_version": "1.0",
-  "project": "JobFindsMe",
-  "product_baseline": "outcome-first-multi-source-incremental-job-discovery",
+  "schema_version": "2.0",
+  "project": "jobfindsme",
+  "product_baseline": "local-first-dual-source-mcp-server",
   "research_policy": {
-    "enforced_from_feature": "M24-001",
+    "enforced_from_feature": "MCP-001",
     "required_categories": [
-      "open_source",
       "official_guide",
-      "paper_or_benchmark"
+      "open_source"
     ]
   },
   "status_values": [
@@ -17,581 +16,131 @@
     "done",
     "blocked"
   ],
+  "quality_gates": [
+    "python3 -m pytest",
+    "python3 -m ruff check .",
+    "python3 -m ruff format --check ."
+  ],
   "features": [
     {
-      "id": "M0-001",
-      "title": "Product and architecture baseline",
+      "id": "MCP-001",
+      "title": "Converge jobfindsme into a focused dual-source MCP Server",
       "status": "done",
       "blocked_by": [],
       "allowed_paths": [
-        "README.md",
-        "PROJECT_SPEC.md",
-        "INSTALL.md",
+        ".gitignore",
         "AGENTS.md",
-        "specs/feature_list.json"
+        "INSTALL.md",
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "integrations/**",
+        "pyproject.toml",
+        "scripts/smoke_installed_package.sh",
+        "specs/feature_list.json",
+        "src/**",
+        "tests/**",
+        "reports/features/*.json"
       ],
       "acceptance": [
-        "V0.1 is explicitly agent-native and local-first.",
-        "The product targets technical job seekers and AI tool users.",
-        "Public Web SaaS and a custom agent runtime are out of scope.",
-        "Resume and deletion safety are enforced by Core boundaries."
-      ]
+        "Only BOSS直聘 and 猎聘 remain executable and documented sources.",
+        "Built-in scheduling, Feishu delivery, and notification configuration are removed.",
+        "The core facade delegates search orchestration instead of owning the entire pipeline.",
+        "The stdio MCP Server exposes nine focused tools with strict input and output schemas.",
+        "Tool annotations, structured output, bounded context, deletion safety, and stderr logging follow MCP guidance.",
+        "A built wheel can initialize SQLite, configure a host, and answer an MCP call.",
+        "User-visible product naming is lowercase jobfindsme."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "python3",
+          "-m",
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "python3",
+          "-m",
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        [
+          "bash",
+          "scripts/smoke_installed_package.sh"
+        ]
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "official_guide",
+          "title": "Model Context Protocol architecture",
+          "url": "https://modelcontextprotocol.io/specification/2025-06-18/architecture",
+          "adopted_pattern": "Keep the domain server focused and let the host own orchestration.",
+          "rejected_or_not_adopted": "Do not put host scheduling or notification delivery inside the server."
+        },
+        {
+          "category": "official_guide",
+          "title": "Model Context Protocol tools schema",
+          "url": "https://modelcontextprotocol.io/specification/2025-11-25/schema",
+          "adopted_pattern": "Expose strict inputSchema, outputSchema, structuredContent, and annotations.",
+          "rejected_or_not_adopted": "Do not return unbounded resume or JD payloads by default."
+        },
+        {
+          "category": "open_source",
+          "title": "mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Use a small job-search tool surface and host-native interaction.",
+          "rejected_or_not_adopted": "Do not copy unsupported source coverage claims or lose local state and privacy guarantees."
+        }
+      ],
+      "local_constraints": [
+        "Core behavior works without a model API key.",
+        "BOSS直聘 requires user-authorized local Chrome state.",
+        "猎聘 remains useful without Chrome through HTTP discovery.",
+        "Historical SQLite migrations and retired enum values remain readable.",
+        "The host Agent owns scheduling, notification, conversation, and final semantic ranking."
+      ],
+      "evidence_path": "reports/features/MCP-001.json"
     },
     {
-      "id": "M0-002",
-      "title": "Executable Spec and Loop Harness",
+      "id": "UX-001",
+      "title": "Enforce a host-independent search result contract",
       "status": "done",
       "blocked_by": [
-        "M0-001"
+        "MCP-001"
       ],
       "allowed_paths": [
-        "README.md",
-        "PROJECT_SPEC.md",
+        ".gitignore",
         "AGENTS.md",
-        "specs/feature_list.json",
+        "INSTALL.md",
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "integrations/**",
+        "pyproject.toml",
         "scripts/**",
-        "tests/harness/**",
-        "reports/features/M0-002.json"
-      ],
-      "acceptance": [
-        "The next executable feature is selected from status and dependencies.",
-        "Feature checks enforce allowed paths and declared commands.",
-        "Done status requires passing machine-readable evidence."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/harness"
-        ],
-        [
-          "ruff",
-          "check",
-          "scripts",
-          "tests/harness"
-        ]
-      ],
-      "evidence_path": "reports/features/M0-002.json"
-    },
-    {
-      "id": "M1-001",
-      "title": "Local Workspace and multiple Search Plans",
-      "status": "done",
-      "blocked_by": [
-        "M0-001"
-      ],
-      "allowed_paths": [
-        "pyproject.toml",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/storage.py",
-        "src/jobfindsme/workspaces.py",
-        "src/jobfindsme/search_plans.py",
-        "src/jobfindsme/migrations/**",
-        "tests/test_contracts.py",
-        "tests/test_storage.py",
-        "tests/test_workspaces.py",
-        "tests/test_search_plans.py",
+        "integrations/shared/SKILL.md",
         "specs/feature_list.json",
-        "reports/features/M1-001.json"
-      ],
-      "acceptance": [
-        "Every personal record belongs to an explicit workspace.",
-        "One workspace can store multiple isolated Search Plans.",
-        "SQLite migrations are repeatable and foreign keys are enforced.",
-        "Workspace isolation and deletion scope have automated tests."
-      ],
-      "checks": [
-        "pytest tests/test_contracts.py tests/test_storage.py tests/test_workspaces.py tests/test_search_plans.py"
-      ]
-    },
-    {
-      "id": "M1-002",
-      "title": "Core API independent from FastAPI",
-      "status": "done",
-      "blocked_by": [
-        "M1-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/doctor/**",
-        "tests/core/**",
-        "specs/feature_list.json",
-        "reports/features/M1-002.json"
-      ],
-      "acceptance": [
-        "Core imports no FastAPI, MCP SDK, agent SDK, or UI package.",
-        "Core services expose typed use-case methods.",
-        "Adapters can be replaced without changing domain behavior."
-      ]
-    },
-    {
-      "id": "M1-003",
-      "title": "CLI adapter foundation",
-      "status": "done",
-      "blocked_by": [
-        "M1-002"
-      ],
-      "allowed_paths": [
-        "pyproject.toml",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/__main__.py",
-        "tests/cli/**",
-        "specs/feature_list.json",
-        "reports/features/M1-003.json"
-      ],
-      "acceptance": [
-        "CLI calls Core directly without FastAPI.",
-        "CLI can create a Workspace and multiple Search Plans.",
-        "CLI output is machine-readable JSON."
-      ]
-    },
-    {
-      "id": "M2-001",
-      "title": "Local resume lifecycle and confirmed profile",
-      "status": "done",
-      "blocked_by": [
-        "M1-003"
-      ],
-      "allowed_paths": [
-        "pyproject.toml",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/migrations/**",
-        "src/jobfindsme/profiles/**",
-        "src/jobfindsme/secrets/**",
-        "tests/profiles/**",
-        "tests/security/**",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M2-001.json"
-      ],
-      "acceptance": [
-        "The host agent does not need to read the complete resume.",
-        "Reference, managed, and forget-source modes are implemented.",
-        "Only confirmed facts and minimum evidence are returned to adapters.",
-        "Temporary full text and sources follow the selected retention policy."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/profiles",
-          "tests/security",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/profiles",
-          "src/jobfindsme/core",
-          "tests/profiles",
-          "tests/security"
-        ]
-      ],
-      "evidence_path": "reports/features/M2-001.json"
-    },
-    {
-      "id": "M3-001",
-      "title": "Official-source discovery and deterministic matching",
-      "status": "done",
-      "blocked_by": [
-        "M2-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/doctor/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/matching/**",
-        "src/jobfindsme/migrations/**",
-        "tests/core/**",
-        "tests/connectors/**",
-        "tests/importing/**",
-        "tests/matching/**",
-        "tests/test_contracts.py",
-        "tests/test_storage.py",
-        "data/fixtures/**",
-        "specs/feature_list.json",
-        "reports/features/M3-001.json"
-      ],
-      "acceptance": [
-        "URL, CSV, JSON, one public ATS, and one official career site are covered.",
-        "Recruitment platform data is used only through public, exported, or explicitly authorized paths.",
-        "No connector bypasses login, CAPTCHA, anti-bot controls, robots policy, or platform terms.",
-        "Normalization, deduplication, freshness, filters, and ranking need no model.",
-        "Every result retains source, liveness, and match evidence."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors",
-          "tests/importing",
-          "tests/matching",
-          "tests/core",
-          "tests/test_contracts.py",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/connectors",
-          "src/jobfindsme/importing",
-          "src/jobfindsme/matching",
-          "src/jobfindsme/contracts.py",
-          "src/jobfindsme/core",
-          "tests/connectors",
-          "tests/importing",
-          "tests/matching"
-        ]
-      ],
-      "evidence_path": "reports/features/M3-001.json"
-    },
-    {
-      "id": "M3-002",
-      "title": "Offline evaluation and release gates",
-      "status": "done",
-      "blocked_by": [
-        "M3-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/evaluation/**",
-        "tests/evaluation/**",
-        "data/eval/**",
-        "reports/evaluation/**",
-        "specs/feature_list.json",
-        "reports/features/M3-002.json"
-      ],
-      "acceptance": [
-        "A versioned 100 to 300 case dataset covers matching, freshness, and deduplication.",
-        "All product quality claims are generated by scripts.",
-        "Bad cases become regression tests."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/evaluation"
-        ],
-        [
-          "env",
-          "PYTHONPATH=src",
-          "python3",
-          "-m",
-          "jobfindsme.evaluation.run",
-          "--dataset",
-          "data/eval/v0.1.json",
-          "--report",
-          "reports/evaluation/v0.1.json"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/evaluation",
-          "tests/evaluation"
-        ]
-      ],
-      "evidence_path": "reports/features/M3-002.json"
-    },
-    {
-      "id": "M4-001",
-      "title": "Product-grade CLI adapter",
-      "status": "done",
-      "blocked_by": [
-        "M3-002"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/__main__.py",
-        "src/jobfindsme/job_states.py",
-        "src/jobfindsme/privacy.py",
-        "src/jobfindsme/migrations/**",
-        "tests/cli/**",
-        "tests/core/**",
-        "tests/integration/**",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M4-001.json"
-      ],
-      "acceptance": [
-        "CLI completes profile, plan, search, state, export, and deletion workflows.",
-        "CLI calls Core directly and supports Markdown and JSON output.",
-        "CLI remains the fallback when MCP or host path access fails."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/cli",
-          "tests/integration",
-          "tests/core",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/cli.py",
-          "src/jobfindsme/core",
-          "src/jobfindsme/job_states.py",
-          "src/jobfindsme/privacy.py",
-          "tests/cli",
-          "tests/integration"
-        ]
-      ],
-      "evidence_path": "reports/features/M4-001.json"
-    },
-    {
-      "id": "M5-001",
-      "title": "Local stdio MCP server",
-      "status": "done",
-      "blocked_by": [
-        "M4-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/monitor_configs.py",
-        "src/jobfindsme/migrations/**",
-        "tests/mcp/**",
-        "tests/core/**",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M5-001.json"
-      ],
-      "acceptance": [
-        "Seven high-level tools use strict schemas and call Core.",
-        "MCP contains no matching or persistence rules.",
-        "Deletion requires Core-enforced preview and confirm phases.",
-        "Malicious or approval-free clients cannot bypass safety."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/mcp",
-          "tests/core",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/mcp",
-          "src/jobfindsme/monitor_configs.py",
-          "tests/mcp"
-        ]
-      ],
-      "evidence_path": "reports/features/M5-001.json"
-    },
-    {
-      "id": "M6-001",
-      "title": "Qwen Code, Codex and Claude Code integrations",
-      "status": "done",
-      "blocked_by": [
-        "M5-001"
-      ],
-      "allowed_paths": [
-        "integrations/shared/**",
-        "integrations/qwen/**",
-        "integrations/codex/**",
-        "integrations/claude/**",
-        "tests/integrations/**",
-        "specs/feature_list.json",
-        "reports/features/M6-001.json"
-      ],
-      "acceptance": [
-        "Skills do not read complete resumes and use the seven MCP tools correctly.",
-        "Skills ask only for missing constraints that change search results.",
-        "Qwen Code, Codex and Claude Code pass the same integration scenarios."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/integrations/test_primary_hosts.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M6-001.json"
-    },
-    {
-      "id": "M6-002",
-      "title": "Mainstream Agent MCP compatibility matrix",
-      "status": "done",
-      "blocked_by": [
-        "M6-001"
-      ],
-      "allowed_paths": [
-        "integrations/compatibility/**",
-        "tests/integrations/**",
-        "reports/compatibility/**",
-        "specs/feature_list.json",
-        "reports/features/M6-002.json"
-      ],
-      "acceptance": [
-        "Only tested clients are listed as officially supported.",
-        "Cherry Studio, Cursor, Cline, Roo Code and OpenCode are evaluated against one shared scenario suite.",
-        "Unsupported schema, approval and transport behavior is documented without platform-specific business logic."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/integrations/test_compatibility_matrix.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M6-002.json"
-    },
-    {
-      "id": "M7-001",
-      "title": "One-command install and doctor",
-      "status": "done",
-      "blocked_by": [
-        "M6-002"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/installer/**",
-        "src/jobfindsme/doctor/**",
-        "tests/installer/**",
-        "tests/doctor/**",
-        "specs/feature_list.json",
-        "reports/features/M7-001.json"
-      ],
-      "acceptance": [
-        "Qwen Code, Codex and Claude Code installations require one explicit command each.",
-        "Existing host configuration is backed up and never silently overwritten.",
-        "Doctor diagnoses database, permissions, MCP, connectors, and secret storage."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/installer",
-          "tests/doctor"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/installer",
-          "src/jobfindsme/doctor",
-          "tests/installer",
-          "tests/doctor"
-        ]
-      ],
-      "evidence_path": "reports/features/M7-001.json"
-    },
-    {
-      "id": "M8-001",
-      "title": "Initial real official-source validation",
-      "status": "done",
-      "blocked_by": [
-        "M7-001"
-      ],
-      "allowed_paths": [
-        "data/fixtures/**",
-        "data/eval/**",
-        "tests/integration/**",
-        "reports/field-trials/**",
-        "specs/feature_list.json",
-        "reports/features/M8-001.json"
-      ],
-      "acceptance": [
-        "The complete flow is exercised against a provenance-preserving snapshot from a real public official source.",
-        "The initial run records discovery, matching, source links, and bad cases.",
-        "One to two weeks of personal use remains a separate release claim and is not fabricated.",
-        "No product claim is made without field or evaluation evidence."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/integration/test_real_source_snapshot.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M8-001.json"
-    },
-    {
-      "id": "M9-001",
-      "title": "Local scheduler and Feishu summaries",
-      "status": "done",
-      "blocked_by": [
-        "M8-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/migrations/**",
-        "src/jobfindsme/monitoring/**",
-        "src/jobfindsme/notifications/**",
-        "tests/monitoring/**",
-        "tests/notifications/**",
-        "tests/test_storage.py",
-        "integrations/schedulers/**",
-        "specs/feature_list.json",
-        "reports/features/M9-001.json"
-      ],
-      "acceptance": [
-        "Monitoring runs only with explicit consent and documented online requirements.",
-        "Runs are idempotent and recover safely after missed schedules.",
-        "Feishu summaries are signed, bounded, pausable, and revocable."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/monitoring",
-          "tests/notifications",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/monitoring",
-          "src/jobfindsme/notifications",
-          "tests/monitoring",
-          "tests/notifications"
-        ]
-      ],
-      "evidence_path": "reports/features/M9-001.json"
-    },
-    {
-      "id": "M10-001",
-      "title": "Release hardening and contract alignment",
-      "status": "done",
-      "blocked_by": [
-        "M9-001"
-      ],
-      "allowed_paths": [
-        ".github/**",
-        "LICENSE",
-        "README.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "src/jobfindsme/**",
-        "integrations/**",
+        "src/**",
         "tests/**",
-        "specs/feature_list.json",
-        "reports/release/**",
-        "reports/features/M10-001.json"
+        "reports/features/*.json"
       ],
       "acceptance": [
-        "MCP can confirm a locally parsed profile without adding an eighth tool.",
-        "search_jobs can discover from explicit public or local sources before matching.",
-        "Job state changes retain append-only history.",
-        "Install, upgrade, uninstall, and doctor work from an installed package.",
-        "README, specification, CI, package metadata, and implementation agree.",
-        "A clean-environment package smoke test passes."
+        "Every search response contains the same ordered five-section text on every Agent host.",
+        "Every displayed job contains facts, match explanation, warnings when needed, a bare apply URL, and a grounded recommendation reason.",
+        "Strict salary searches exclude jobs whose salary cannot be verified.",
+        "An empty incremental result remains successful and never becomes a duplicate claim or automatic full refresh.",
+        "A missing resume path causes one direct question and never a directory scan.",
+        "MCP failure produces a bounded doctor action instead of invented CLI search syntax or internal identifiers.",
+        "Maintained sources refresh concurrently within bounded connector timeouts."
       ],
       "checks": [
         [
@@ -600,431 +149,15 @@
           "pytest"
         ],
         [
+          "python3",
+          "-m",
           "ruff",
           "check",
           "."
         ],
         [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ]
-      ],
-      "evidence_path": "reports/features/M10-001.json"
-    },
-    {
-      "id": "M11-001",
-      "title": "Zero-ID onboarding and active search configuration",
-      "status": "done",
-      "blocked_by": [
-        "M10-001"
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/context.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/search_plans.py",
-        "src/jobfindsme/workspaces.py",
-        "src/jobfindsme/migrations/**",
-        "src/jobfindsme/resources/**",
-        "integrations/**",
-        "tests/**",
-        "reports/features/M11-001.json"
-      ],
-      "acceptance": [
-        "setup_profile works without a user-managed workspace ID.",
-        "configure_search creates or updates an active Search Plan and source subscriptions.",
-        "search_jobs works without a user-managed workspace or plan ID.",
-        "Explicit IDs remain available for advanced multi-workspace use."
-      ],
-      "checks": [
-        [
           "python3",
           "-m",
-          "pytest",
-          "tests/core",
-          "tests/mcp",
-          "tests/test_workspaces.py",
-          "tests/test_search_plans.py",
-          "tests/test_storage.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M11-001.json"
-    },
-    {
-      "id": "M11-002",
-      "title": "Profile-grounded deterministic matching",
-      "status": "done",
-      "blocked_by": [
-        "M11-001"
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/matching/**",
-        "src/jobfindsme/profiles/**",
-        "tests/core/**",
-        "tests/matching/**",
-        "tests/profiles/**",
-        "reports/features/M11-002.json"
-      ],
-      "acceptance": [
-        "Confirmed profile facts change ranking for otherwise identical Search Plans.",
-        "Match explanations link profile evidence to job evidence.",
-        "Missing required skills and experience gaps are explicit warnings.",
-        "Chinese role aliases and word or n-gram tokens have regression tests."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/core",
-          "tests/matching",
-          "tests/profiles"
-        ]
-      ],
-      "evidence_path": "reports/features/M11-002.json"
-    },
-    {
-      "id": "M12-001",
-      "title": "Subscription-backed discovery monitoring",
-      "status": "done",
-      "blocked_by": [
-        "M11-002"
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/monitoring/**",
-        "src/jobfindsme/monitor_configs.py",
-        "src/jobfindsme/migrations/**",
-        "tests/importing/**",
-        "tests/monitoring/**",
-        "tests/integration/**",
-        "tests/test_storage.py",
-        "reports/features/M12-001.json"
-      ],
-      "acceptance": [
-        "Search Plan source subscriptions persist connector configuration and health.",
-        "Every monitor run discovers before matching.",
-        "Missing source records can transition to closed only after a successful source refresh.",
-        "Notifications contain only newly matched jobs."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/importing",
-          "tests/monitoring",
-          "tests/integration",
-          "tests/test_storage.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M12-001.json"
-    },
-    {
-      "id": "M12-002",
-      "title": "Bounded MCP output and source security",
-      "status": "done",
-      "blocked_by": [
-        "M12-001"
-      ],
-      "allowed_paths": [
-        ".github/**",
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "integrations/**",
-        "src/jobfindsme/**",
-        "tests/**",
-        "data/eval/**",
-        "reports/**"
-      ],
-      "acceptance": [
-        "MCP list and search calls return bounded summaries instead of full descriptions.",
-        "Single-job details are explicit and marked as untrusted external content.",
-        "MCP export writes locally and returns metadata rather than private records.",
-        "Every HTTP redirect target is validated before a connection is made.",
-        "Salary and cross-source identity preserve raw evidence and normalized fields.",
-        "README describes actual capabilities and evidence without synthetic quality claims."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ]
-      ],
-      "evidence_path": "reports/features/M12-002.json"
-    },
-    {
-      "id": "M13-001",
-      "title": "Ashby public job-board connector (removed — 0 China AI jobs)",
-      "status": "done",
-      "blocked_by": [
-        "M12-002"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/doctor/**",
-        "tests/connectors/**",
-        "tests/importing/**",
-        "tests/doctor/**",
-        "data/fixtures/ashby_jobs.json",
-        "reports/features/M13-001.json",
-        "reports/release/v0.2.0-rc.1.json"
-      ],
-      "acceptance": [
-        "Ashby's documented public job-board API is supported without credentials.",
-        "Only listed jobs are imported and source evidence is retained.",
-        "Locations, published time, plain description, apply URL, and salary evidence are normalized.",
-        "The connector is contract-tested without claiming live regional validation."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors",
-          "tests/importing",
-          "tests/doctor",
-          "tests/test_contracts.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/connectors",
-          "src/jobfindsme/importing",
-          "src/jobfindsme/contracts.py",
-          "src/jobfindsme/doctor",
-          "tests/connectors",
-          "tests/importing"
-        ]
-      ],
-      "evidence_path": "reports/features/M13-001.json"
-    },
-    {
-      "id": "M13-002",
-      "title": "China official-career source validation",
-      "status": "done",
-      "blocked_by": [
-        "M13-001"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/importing/**",
-        "tests/connectors/**",
-        "tests/integration/**",
-        "data/fixtures/**",
-        "reports/field-trials/**",
-        "reports/release/v0.2.0-rc.1.json",
-        "reports/features/M13-002.json"
-      ],
-      "acceptance": [
-        "At least one stable public China enterprise career source is validated without login or anti-bot bypass.",
-        "The validation fixture preserves provenance and a retrieval date.",
-        "Active, closed, changed, and duplicate job behavior is covered.",
-        "The field-trial report distinguishes observed facts from assumptions."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors",
-          "tests/importing",
-          "tests/integration"
-        ]
-      ],
-      "evidence_path": "reports/features/M13-002.json"
-    },
-    {
-      "id": "M13-003",
-      "title": "V0.2 RC release semantics and China location aliases",
-      "status": "done",
-      "blocked_by": [
-        "M13-002"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "src/jobfindsme/mcp/server.py",
-        "src/jobfindsme/taxonomy.py",
-        "src/jobfindsme/matching/**",
-        "tests/matching/**",
-        "reports/release/**",
-        "reports/field-trials/**",
-        "reports/features/M13-003.json"
-      ],
-      "acceptance": [
-        "Package, MCP server, release report, and Git tag use V0.2 RC semantics.",
-        "Chinese city filters match equivalent English locations from public sources.",
-        "M14 benchmark labeling and M15 field use can proceed in parallel.",
-        "The seven-day trial only counts China-located roles and observed behavior."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/matching",
-          "tests/integration",
-          "tests/mcp"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/taxonomy.py",
-          "src/jobfindsme/matching",
-          "src/jobfindsme/mcp",
-          "tests/matching"
-        ]
-      ],
-      "evidence_path": "reports/features/M13-003.json"
-    },
-    {
-      "id": "M13-004",
-      "title": "China recommendation quality gate and source catalog",
-      "status": "done",
-      "blocked_by": [
-        "M13-003"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "integrations/**",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/matching/**",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/profiles/**",
-        "src/jobfindsme/resources/**",
-        "src/jobfindsme/source_catalog.py",
-        "src/jobfindsme/source_subscriptions.py",
-        "src/jobfindsme/taxonomy.py",
-        "tests/**",
-        "data/fixtures/**",
-        "reports/field-trials/**",
-        "src/jobfindsme/doctor/service.py",
-        "reports/features/M13-004.json",
-        "reports/release/v0.2.0-rc.2.json"
-      ],
-      "acceptance": [
-        "Resume Parser V3 groups wrapped resume sections into skills, projects, experience, and education.",
-        "Location-only non-technical jobs cannot enter AI-role candidates.",
-        "Remote fetch supports gzip, bounded retries, and last-successful-snapshot fallback.",
-        "China searches receive maintained connectors and official company/platform search links without ATS parameters.",
-        "Baidu public social-job search returns real China AI candidates through a maintained Connector.",
-        "Profile import and review use bounded pagination instead of returning every fact."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ]
-      ],
-      "evidence_path": "reports/features/M13-004.json"
-    },
-    {
-      "id": "M13-005",
-      "title": "Installed-package and two-call first-use recovery",
-      "status": "done",
-      "blocked_by": [
-        "M13-004"
-      ],
-      "allowed_paths": [
-        ".github/workflows/ci.yml",
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "scripts/smoke_installed_package.sh",
-        "integrations/**",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/resources/**",
-        "tests/cli/test_cli.py",
-        "tests/integration/test_agent_first_use.py",
-        "tests/integrations/test_primary_hosts.py",
-        "tests/mcp/**",
-        "reports/features/M13-005.json",
-        "reports/release/v0.2.0-rc.3.json"
-      ],
-      "acceptance": [
-        "The built wheel contains every ordered SQL migration and initializes all required tables.",
-        "CI installs the built wheel and completes workspace, doctor, and MCP empty-result smoke checks.",
-        "Every successful MCP tool result uses an object-valued structuredContent payload.",
-        "The default Agent path auto-confirms parsed facts, configures maintained sources, and searches in one user turn.",
-        "Users are not asked for Workspace, Plan, ATS, board, or career connector internals."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
           "ruff",
           "format",
           "--check",
@@ -1035,1351 +168,141 @@
           "scripts/smoke_installed_package.sh"
         ]
       ],
-      "evidence_path": "reports/features/M13-005.json"
-    },
-    {
-      "id": "M13-006",
-      "title": "Migration reconciliation for upgraded databases",
-      "status": "done",
-      "blocked_by": [
-        "M13-005"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/storage.py",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M13-006.json"
-      ],
-      "acceptance": [
-        "Databases with pre-existing tables reconcile without re-running SQL.",
-        "Fresh installs create all tables and record every migration version.",
-        "Partial table state raises a clear MigrationConflict error.",
-        "Reconciliation does not modify existing data in pre-existing tables.",
-        "Schema migrations skip CREATE TABLE and CREATE INDEX that already exist."
-      ],
-      "checks": [
-        "pytest tests/test_storage.py -v"
-      ],
-      "evidence_path": "reports/features/M13-006.json"
-    },
-    {
-      "id": "M14-001",
-      "title": "Real Chinese job matching evidence and metrics",
-      "status": "in_progress",
-      "blocked_by": [
-        "M13-006"
-      ],
       "design_research_required": true,
       "research_refs": [
         {
+          "category": "official_guide",
+          "title": "MCP client best practices",
+          "url": "https://modelcontextprotocol.io/docs/develop/clients/client-best-practices",
+          "adopted_pattern": "Return bounded structured data and a directly usable human-facing result instead of relying on every host to reconstruct presentation.",
+          "rejected_or_not_adopted": "Do not expose internal workspace identifiers or raw unbounded records to compensate for host differences."
+        },
+        {
           "category": "open_source",
-          "title": "langchain-ai/openevals",
-          "url": "https://github.com/langchain-ai/openevals",
-          "adopted_pattern": "Start with a small domain-specific evaluation set and combine deterministic evaluators with human judgment where necessary.",
-          "rejected_or_not_adopted": "Do not require an LLM judge, hosted service, or model API for the default evaluation loop."
-        },
-        {
-          "category": "official_guide",
-          "title": "Anthropic: Demystifying evals for AI agents",
-          "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
-          "adopted_pattern": "Separate capability from regression evals, inspect traces, and feed production failures back into continuously run offline datasets.",
-          "rejected_or_not_adopted": "Do not wait for statistically powered A/B tests when one deterministic failure or one live trace already identifies an actionable defect."
-        },
-        {
-          "category": "official_guide",
-          "title": "LangSmith Evaluation Concepts",
-          "url": "https://docs.langchain.com/langsmith/evaluation-concepts",
-          "adopted_pattern": "Combine offline regression and backtesting with online monitoring, then turn production feedback into versioned offline examples.",
-          "rejected_or_not_adopted": "Do not require LangSmith hosting; implement the lifecycle locally with versioned JSON reports and pytest."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Navigating the Evaluation Funnel to Optimize Iteration Speed for Recommender Systems",
-          "url": "https://arxiv.org/abs/2404.08671",
-          "adopted_pattern": "Use a staged evaluation funnel that rejects unsuccessful changes with cheap necessary criteria before expensive online or human evaluation.",
-          "rejected_or_not_adopted": "Do not use one offline metric or a fixed seven-day waiting period as the universal release decision."
+          "title": "mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Keep job discovery callable through a compact Agent tool surface.",
+          "rejected_or_not_adopted": "Do not leave links, recommendation evidence, incremental semantics, or output shape entirely to the host Agent."
         }
       ],
       "local_constraints": [
-        "Real Chinese job sources change independently and may share one browser failure, so repeated runs are not automatically independent evidence.",
-        "One owner can provide rapid pairwise labels, but public quality claims need broader, versioned evidence and a holdout set.",
-        "The default evaluation loop must run locally without a model API or hosted evaluation service.",
-        "Temporal novelty can be tested quickly with timestamped snapshot pairs; natural multi-day use remains useful for release confidence."
+        "The Server-rendered text is the cross-host presentation baseline.",
+        "A match score is an explainable signal, never a hiring probability.",
+        "Unknown salary cannot satisfy an explicit salary threshold.",
+        "No model API key is required for the stable output contract."
+      ],
+      "evidence_path": "reports/features/UX-001.json"
+    },
+    {
+      "id": "EVAL-001",
+      "title": "Validate real dual-source quality and incremental behavior",
+      "status": "ready",
+      "blocked_by": [
+        "UX-001"
       ],
       "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/evaluation/**",
-        "tests/evaluation/**",
         "data/eval/**",
         "reports/evaluation/**",
-        "reports/field-trials/**",
-        "reports/features/M14-001.json",
-        "scripts/build_chinese_synthetic_dataset.py",
-        "src/jobfindsme/taxonomy.py",
-        "tests/matching/test_ranker.py"
-      ],
-      "acceptance": [
-        "A single real Live Loop can generate rapid engineering feedback immediately; it is explicitly insufficient for public quality claims.",
-        "Each candidate change passes deterministic regression and saved-snapshot replay before a live source run.",
-        "Rapid recommendation review compares baseline and candidate on the same jobs and labels only changed or uncertain Top-10 results.",
-        "Temporal novelty is verified with at least two timestamped snapshots or deterministic snapshot-pair replay; no seven-day wait is required.",
-        "Public-claim readiness requires at least 50 human-labeled Chinese jobs and 3 independent real snapshots spanning at least 2 source-refresh windows.",
-        "Metrics (P@10, NDCG@10, FNR, valid-link rate, duplicates caught, source uptime) are script-generated from labeled data.",
-        "Seven qualitative evidence items are recorded: jobs found, valid link rate, dedup count, source reliability ranking, best/worst match examples, hard-filter false negatives, actual applications submitted.",
-        "Regression, comparison, holdout, and live datasets are versioned separately with provenance and annotation guidance.",
-        "Metrics serve as internal baselines — no threshold gate is set. Synthetic regression metrics remain separate.",
-        "Every human-labeled hard-filter error is converted into a deterministic regression test before the next candidate comparison or live smoke run."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/evaluation",
-          "tests/matching"
-        ],
-        [
-          "python3",
-          "-m",
-          "jobfindsme.evaluation.run",
-          "--dataset",
-          "data/eval/v0.1.json",
-          "--type",
-          "synthetic",
-          "--report",
-          "reports/evaluation/v0.1.json"
-        ],
-        [
-          "python3",
-          "-m",
-          "jobfindsme.evaluation.run",
-          "--dataset",
-          "data/eval/field_trial/chinese_real_v1.0.json",
-          "--type",
-          "chinese",
-          "--require-claim-ready",
-          "--report",
-          "reports/evaluation/chinese_real_v1.0.json"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/evaluation",
-          "tests/evaluation",
-          "scripts/build_chinese_synthetic_dataset.py",
-          "src/jobfindsme/taxonomy.py",
-          "tests/matching"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "src/jobfindsme/evaluation",
-          "tests/evaluation",
-          "scripts/build_chinese_synthetic_dataset.py",
-          "src/jobfindsme/taxonomy.py",
-          "tests/matching"
-        ]
-      ],
-      "evidence_path": "reports/features/M14-001.json"
-    },
-    {
-      "id": "M15-001",
-      "title": "Personal field trial and supported Agent matrix",
-      "status": "in_progress",
-      "blocked_by": [
-        "M13-006"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
+        "reports/loops/**",
+        "reports/features/EVAL-001.json",
         "specs/feature_list.json",
-        "integrations/**",
-        "tests/integrations/**",
-        "reports/field-trials/**",
-        "reports/compatibility/**",
-        "reports/features/M15-001.json",
-        "reports/release/**"
-      ],
-      "acceptance": [
-        "Rapid compatibility and recommendation feedback may be completed in one session and must not wait for a fixed seven-day window.",
-        "Release evidence uses at least 3 independent sessions across at least 2 dates; a seven-day soak is optional for stable-release and retention research.",
-        "Only roles located in mainland China or explicitly serving the China market count toward trial metrics.",
-        "JobFindsMe is used through at least two Agent hosts — ZCode plus one of Codex/Claude Code/Qwen Code — completing the same privacy and workflow scenarios.",
-        "Changed or uncertain Top-10 results are pairwise-labeled against the current baseline and feed M14; unchanged results are not repeatedly labeled.",
-        "Source failures, duplicates, invalid links, and ranking bad cases are recorded.",
-        "The field-trial report distinguishes observed facts from assumptions, and synthetic scores from real labels."
-      ],
-      "evidence_path": "reports/features/M15-001.json"
-    },
-    {
-      "id": "M16-001",
-      "title": "SPA Connector hardening (removed — redundant with 5 CDP platforms)",
-      "status": "done",
-      "blocked_by": [
-        "M13-006"
-      ],
-      "allowed_paths": [
-        "pyproject.toml",
-        "src/jobfindsme/connectors/playwright.py",
-        "src/jobfindsme/doctor/**",
-        "src/jobfindsme/doctor/**",
-        "tests/connectors/test_playwright_connector.py",
-        "tests/core/test_source_catalog.py",
-        "tests/doctor/**",
-        "tests/importing/test_discovery.py",
-        "specs/feature_list.json",
-        "reports/features/M16-001.json",
-        "reports/field-trials/spa-*.json"
-      ],
-      "acceptance": [
-        "SPA browser behavior is dependency-injected and contract-tested without live network access.",
-        "ByteDance, Meituan, Didi, and Bilibili payload variants normalize into valid job records.",
-        "Browser failures preserve cached jobs and update source health instead of breaking the search.",
-        "The browser extra installs declared Playwright, requests, and websocket dependencies.",
-        "Doctor distinguishes optional browser readiness from required Core readiness.",
-        "Every source advertised as verified has a dated live field-trial report."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors/test_playwright_connector.py",
-          "tests/importing/test_discovery.py",
-          "tests/core/test_source_catalog.py",
-          "tests/doctor"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/connectors/playwright.py",
-          "src/jobfindsme/doctor",
-          "tests/connectors/test_playwright_connector.py",
-          "tests/doctor"
-        ]
-      ],
-      "evidence_path": "reports/features/M16-001.json"
-    },
-    {
-      "id": "M17-001",
-      "title": "BOSS CDP browser bridge hardening",
-      "status": "done",
-      "blocked_by": [
-        "M16-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/connectors/boss_zhipin.py",
-        "tests/connectors/test_boss_zhipin.py",
-        "tests/importing/test_discovery.py",
-        "specs/feature_list.json",
-        "reports/features/M17-001.json",
-        "reports/field-trials/boss-*.json"
-      ],
-      "acceptance": [
-        "The CDP bridge navigates to a BOSS origin before invoking the same-origin search endpoint.",
-        "CDP target and WebSocket resources are closed on success and failure.",
-        "API, authentication, protocol, and empty-result behavior are distinguishable.",
-        "BOSS payload mapping and discovery fallback have deterministic automated tests.",
-        "BOSS is advertised as verified only after a dated logged-in field trial."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors/test_boss_zhipin.py",
-          "tests/importing/test_discovery.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/connectors/boss_zhipin.py",
-          "tests/connectors/test_boss_zhipin.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M17-001.json"
-    },
-    {
-      "id": "M18-001",
-      "title": "Schema-aware migration reconciliation",
-      "status": "done",
-      "blocked_by": [
-        "M17-001"
-      ],
-      "allowed_paths": [
-        "src/jobfindsme/storage.py",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M18-001.json"
-      ],
-      "acceptance": [
-        "Migration reconciliation validates required columns before recording a version.",
-        "Missing indexes are created when existing tables have a compatible schema.",
-        "Same-name tables with incompatible schemas raise a clear MigrationConflict.",
-        "Fresh install, compatible upgrade, incompatible upgrade, and repeat execution are tested."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/storage.py",
-          "tests/test_storage.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M18-001.json"
-    },
-    {
-      "id": "M19-001",
-      "title": "RC5 release truth and documentation alignment",
-      "status": "done",
-      "blocked_by": [
-        "M18-001"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "README.en.md",
-        "INSTALL.md",
-        "PROJECT_SPEC.md",
-        "pyproject.toml",
-        "specs/feature_list.json",
-        "src/jobfindsme/source_catalog.py",
-        "src/jobfindsme/doctor/**",
-        "tests/core/test_source_catalog.py",
-        "tests/doctor/**",
-        "reports/release/v0.2.0-rc.5.json",
-        "reports/features/M19-001.json"
-      ],
-      "acceptance": [
-        "README lists 5 CDP platform connectors (BOSS/Liepin/51job/Zhaopin/Lagou).",
-        "Deleted connectors (Playwright/SSR/ATS) are documented with removal reasons.",
-        "Package, Spec, README, release evidence, Git tag, and prerelease version agree.",
-        "The RC5 install command references an existing Git tag.",
-        "M14 and M15 remain open until real Chinese recommendation evidence is complete."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ],
-        [
-          "bash",
-          "scripts/smoke_installed_package.sh"
-        ]
-      ],
-      "evidence_path": "reports/features/M19-001.json"
-    },
-    {
-      "id": "M20-001",
-      "title": "Stable job classification and list presentation",
-      "status": "done",
-      "blocked_by": [
-        "M19-001"
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "README.md",
-        "README.en.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/presentation.py",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/mcp/tools.py",
-        "src/jobfindsme/importing/normalizer.py",
-        "src/jobfindsme/connectors/**",
-        "tests/test_contracts.py",
-        "tests/cli/**",
-        "tests/mcp/**",
-        "reports/field-trials/**",
-        "tests/doctor/**",
-        "tests/importing/**",
-        "tests/connectors/**",
-        "reports/features/M20-001.json"
-      ],
-      "acceptance": [
-        "Recruitment track (campus/social/unknown) and employment type (internship/full-time/part-time/contract/unknown) are independent typed fields.",
-        "Explicit source data wins over conservative text inference; unknown values are never presented as formal full-time roles.",
-        "Job summaries always include both classification fields and the official apply URL.",
-        "MCP text output uses one stable, human-readable block per job with the apply URL immediately after the job line.",
-        "MCP structuredContent remains machine-readable and retains job IDs, evidence, scores, classifications, and URLs.",
-        "CLI markdown output uses the same stable job presentation.",
-        "Connector, normalization, Core, MCP, and CLI regression tests cover campus/social and internship/full-time examples."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/test_contracts.py",
-          "tests/importing",
-          "tests/connectors",
-          "tests/mcp",
-          "tests/cli"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ]
-      ],
-      "evidence_path": "reports/features/M20-001.json"
-    },
-    {
-      "id": "M21-001",
-      "title": "Browser connector crash containment",
-      "status": "done",
-      "blocked_by": [
-        "M20-001"
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "INSTALL.md",
-        "README.md",
-        "README.en.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/source_catalog.py",
-        "src/jobfindsme/connectors/playwright.py",
-        "src/jobfindsme/doctor/**",
-        "src/jobfindsme/mcp/schemas.py",
-        "src/jobfindsme/mcp/tools.py",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "integrations/shared/SKILL.md",
-        "tests/core/**",
-        "tests/connectors/**",
-        "tests/importing/**",
-        "tests/mcp/**",
-        "reports/features/M21-001.json"
-      ],
-      "acceptance": [
-        "Default source discovery never launches Playwright, Chrome, or a CDP browser session.",
-        "Previously persisted browser source subscriptions are skipped unless the current search explicitly enables browser sources.",
-        "Playwright does not fall back to the user's system Google Chrome when its managed Chromium is unavailable.",
-        "Browser sources remain available through explicit opt-in and preserve cached-result degradation behavior.",
-        "README and source catalog clearly separate default HTTP sources from opt-in browser sources.",
-        "Regression tests prove default searches cannot call SPA or BOSS browser connectors."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/core",
-          "tests/connectors",
-          "tests/importing",
-          "tests/mcp"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ]
-      ],
-      "evidence_path": "reports/features/M21-001.json"
-    },
-    {
-      "id": "M22-001",
-      "title": "5 CDP platform connectors (simplified from 12)",
-      "status": "in_progress",
-      "blocked_by": [
-        "M21-001"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/source_catalog.py",
-        "src/jobfindsme/connectors/boss_zhipin.py",
-        "src/jobfindsme/connectors/china_platforms.py",
-        "src/jobfindsme/importing/discovery.py",
-        "tests/core/test_source_catalog.py",
-        "tests/connectors/**",
-        "reports/features/M22-001.json",
-        "src/jobfindsme/importing/repository.py",
-        "tests/importing/test_importing.py"
-      ],
-      "acceptance": [
-        "Default sources: BOSS直聘 + 猎聘 + 前程无忧 + 智联 + 拉勾.",
-        "All five sources use the local CDP browser bridge; BOSS additionally requires account login.",
-        "Deleted connectors: Playwright SPA (字节/美团/滴滴/B站), Baidu SSR, Greenhouse, Ashby, Lever, JsonLdCareerSite — all redundant with platforms or zero China output.",
-        "source_catalog returns exactly 5 sources for China locations.",
-        "Connector contract tests cover mapping, resource cleanup, and explicit extraction failure.",
-        "Each platform remains in_progress until a dated live Loop report proves a successful real extraction.",
-        "Repeated job content is idempotent: A→B→A does not crash or create a duplicate version."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/connectors",
-          "tests/importing",
-          "tests/core/test_source_catalog.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme/connectors",
-          "tests/connectors"
-        ]
-      ],
-      "evidence_path": "reports/features/M22-001.json"
-    },
-    {
-      "id": "M22-002",
-      "title": "AGENTS.md — framework-agnostic Agent instructions",
-      "status": "done",
-      "blocked_by": [
-        "M22-001"
-      ],
-      "allowed_paths": [
-        "AGENTS.md",
-        "README.md",
-        "docs/SKILL.md",
-        "specs/feature_list.json",
-        "reports/features/M22-002.json"
-      ],
-      "acceptance": [
-        "AGENTS.md contains workflow, output rules, privacy, and BOSS login check.",
-        "Works for Claude Code, Codex, Hermes, OpenClaw, ZCode, and any MCP agent.",
-        "Proactive BOSS login check before first search.",
-        "Score threshold and output format enforced."
-      ],
-      "evidence_path": "reports/features/M22-002.json"
-    },
-    {
-      "id": "M22-003",
-      "title": "Generic MCP install + match score threshold",
-      "status": "done",
-      "blocked_by": [
-        "M22-002"
-      ],
-      "allowed_paths": [
-        "README.md",
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/installer/**",
-        "src/jobfindsme/matching/ranker.py",
-        "tests/matching/**",
-        "reports/features/M22-003.json"
-      ],
-      "acceptance": [
-        "jobfindsme config outputs standard MCP JSON for any agent.",
-        "jobfindsme install --path supports arbitrary config paths.",
-        "RankingMatcher.match() accepts min_score (default 0.10).",
-        "Results below threshold are silently filtered."
-      ],
-      "evidence_path": "reports/features/M22-003.json"
-    },
-    {
-      "id": "M23-001",
-      "title": "Measured live-search Loop and field-trial telemetry",
-      "status": "done",
-      "blocked_by": [
-        "M3-002"
-      ],
-      "allowed_paths": [
-        "AGENTS.md",
-        "README.md",
-        "README.en.md",
-        "PROJECT_SPEC.md",
-        "docs/SKILL.md",
-        "integrations/shared/SKILL.md",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/connectors/boss_zhipin.py",
-        "src/jobfindsme/evaluation/live_loop.py",
-        "src/jobfindsme/privacy.py",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "src/jobfindsme/storage.py",
-        "tests/connectors/test_china_platforms.py",
-        "tests/core/test_privacy.py",
-        "tests/evaluation/test_live_loop.py",
-        "tests/test_storage.py",
-        "specs/feature_list.json",
-        "reports/features/M23-001.json"
-      ],
-      "acceptance": [
-        "Core returns typed per-source status, elapsed time, discovered/unique/version counts, cache degradation, matching time, and end-to-end time.",
-        "The Loop writes a privacy-minimized local report without resume text or full job descriptions.",
-        "Automatic quality checks cover source success, URL shape, required fields, unknown classifications, duplicate URLs, and average score.",
-        "A search only returns jobs from its active source configuration; cached jobs from removed sources cannot pollute a run.",
-        "A Loop run can generate the existing M14/M15 pending Top-10 human-label template.",
-        "Automatic checks explicitly do not claim human relevance or real link validity.",
-        "Local-fixture success and source-failure paths are regression tested."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/evaluation/test_live_loop.py",
-          "tests/connectors/test_china_platforms.py",
-          "tests/core/test_privacy.py",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "--no-cache",
-          "src/jobfindsme/contracts.py",
-          "src/jobfindsme/core/app.py",
-          "src/jobfindsme/connectors/boss_zhipin.py",
-          "src/jobfindsme/evaluation/live_loop.py",
-          "src/jobfindsme/privacy.py",
-          "src/jobfindsme/storage.py",
-          "tests/evaluation/test_live_loop.py",
-          "tests/connectors/test_china_platforms.py",
-          "tests/core/test_privacy.py",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "--no-cache",
-          "src/jobfindsme/contracts.py",
-          "src/jobfindsme/core/app.py",
-          "src/jobfindsme/connectors/boss_zhipin.py",
-          "src/jobfindsme/evaluation/live_loop.py",
-          "src/jobfindsme/privacy.py",
-          "src/jobfindsme/storage.py",
-          "tests/evaluation/test_live_loop.py",
-          "tests/connectors/test_china_platforms.py",
-          "tests/core/test_privacy.py",
-          "tests/test_storage.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M23-001.json"
-    },
-    {
-      "id": "M24-001",
-      "title": "Source truth, query planning, and catalog reconciliation",
-      "status": "done",
-      "blocked_by": [
-        "M23-001"
-      ],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "Career-Ops",
-          "url": "https://github.com/santifer/career-ops",
-          "adopted_pattern": "Treat configured portals and observed listings as explicit, inspectable source state.",
-          "rejected_or_not_adopted": "Do not let a host Agent's browser reasoning become the canonical source of truth."
-        },
-        {
-          "category": "official_guide",
-          "title": "Playwright Locators and Auto-waiting",
-          "url": "https://playwright.dev/docs/locators",
-          "adopted_pattern": "Prefer current user-facing or explicit selector contracts and bounded waiting for dynamic pages.",
-          "rejected_or_not_adopted": "Do not depend on long DOM-coupled CSS or XPath chains."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Data Cascades in High-Stakes AI",
-          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
-          "adopted_pattern": "Measure and repair source and data truth before tuning downstream ranking.",
-          "rejected_or_not_adopted": "Do not treat a ranking improvement as compensation for incomplete or stale source records."
-        }
-      ],
-      "local_constraints": [
-        "Chinese recruitment pages change frequently and may require a user-owned browser session.",
-        "A partial search page cannot prove that an absent job is closed.",
-        "The default path must not require a model API or a hosted evaluation service.",
-        "User-customized source subscriptions must survive catalog upgrades."
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/source_catalog.py",
-        "src/jobfindsme/source_subscriptions.py",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/connectors/**",
-        "tests/core/**",
-        "tests/importing/**",
-        "tests/connectors/**",
-        "reports/features/M24-001.json"
-      ],
-      "acceptance": [
-        "Discovery distinguishes complete snapshots from partial search pages; only complete snapshots may close absent jobs.",
-        "Platform queries preserve one primary role and the requested city instead of concatenating multiple roles into one brittle keyword.",
-        "Existing default Search Plans can reconcile a newer maintained source catalog without overwriting explicitly customized sources.",
-        "Catalog-managed sources refresh their query when the primary target role changes; custom sources remain unchanged.",
-        "Recruitment track and employment type extraction is measured per source; unknown values remain visible and never silently satisfy strict filters.",
-        "Regression tests cover partial snapshots, location propagation, source-catalog upgrades, and unknown classification policy."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/core",
-          "tests/importing",
-          "tests/connectors"
-        ],
-        [
-          "ruff",
-          "check",
-          "src/jobfindsme",
-          "tests/core",
-          "tests/importing",
-          "tests/connectors"
-        ]
-      ],
-      "evidence_path": "reports/features/M24-001.json"
-    },
-    {
-      "id": "M25-001",
-      "title": "Research-gated evaluation-driven engineering loop",
-      "status": "done",
-      "blocked_by": [
-        "M23-001"
-      ],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "OpenAI Evals",
-          "url": "https://github.com/openai/evals",
-          "adopted_pattern": "Keep versioned, use-case-specific evaluation data and custom deterministic graders.",
-          "rejected_or_not_adopted": "Do not require an OpenAI API or copy the framework when local Pydantic reports and pytest cover the current need."
-        },
-        {
-          "category": "official_guide",
-          "title": "Anthropic: Demystifying evals for AI agents",
-          "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
-          "adopted_pattern": "Define capabilities with evals, retain traces, and combine code, human, and later model graders.",
-          "rejected_or_not_adopted": "Do not treat an automatic grader or a saturated regression suite as proof of user value."
-        },
-        {
-          "category": "official_guide",
-          "title": "LangSmith Evaluation Concepts",
-          "url": "https://docs.langchain.com/langsmith/evaluation-concepts",
-          "adopted_pattern": "Turn online failures into offline cases, validate fixes offline, then confirm with new live runs.",
-          "rejected_or_not_adopted": "Do not introduce LangSmith as a mandatory hosted dependency."
-        },
-        {
-          "category": "official_guide",
-          "title": "Google Rules of Machine Learning",
-          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
-          "adopted_pattern": "Keep the end-to-end pipeline solid, log serving-time evidence, and optimize measured product goals.",
-          "rejected_or_not_adopted": "Do not add complex ranking models before simple data and pipeline failures are resolved."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "RAGAS: Automated Evaluation of Retrieval Augmented Generation",
-          "url": "https://arxiv.org/abs/2309.15217",
-          "adopted_pattern": "Evaluate system dimensions separately instead of hiding failures behind one composite score.",
-          "rejected_or_not_adopted": "Do not apply RAG-specific metrics directly to job discovery or replace job-domain human labels."
-        }
-      ],
-      "local_constraints": [
-        "Core evaluation must work without a model API or hosted evaluation platform.",
-        "Reports cannot contain resume text, full job descriptions, cookies, or browser credentials.",
-        "Chinese platform anti-bot behavior and page changes require dated live evidence in addition to fixtures.",
-        "Human labels are scarce, so automatic operational checks and human recommendation labels must remain separate.",
-        "Generated engineering actions are proposals and cannot mutate Spec, Feature status, or code automatically."
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "specs/feature_list.json",
-        "scripts/feature_harness.py",
-        "scripts/check_feature.py",
-        "src/jobfindsme/evaluation/improvement.py",
-        "tests/evaluation/test_improvement.py",
-        "tests/harness/test_feature_harness.py",
-        "reports/features/M25-001.json"
-      ],
-      "acceptance": [
-        "High-risk design features can declare a machine-checked Research Gate covering an open-source implementation, an official guide, and a paper or benchmark.",
-        "Each research reference records both the adopted pattern and the rejected or deferred pattern, plus project-local constraints.",
-        "Multiple Live Loop reports and an optional human benchmark aggregate into separate runtime, data-truth, and recommendation signals.",
-        "Measured failures map to owned engineering proposals with priority, target, acceptance criteria, and required regression tests.",
-        "Operational evidence and human recommendation evidence are both required before public quality claims.",
-        "The analyzer never edits Spec, Feature status, or implementation code."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/evaluation/test_improvement.py",
-          "tests/harness/test_feature_harness.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "--no-cache",
-          "scripts/feature_harness.py",
-          "scripts/check_feature.py",
-          "src/jobfindsme/evaluation/improvement.py",
-          "tests/evaluation/test_improvement.py",
-          "tests/harness/test_feature_harness.py"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "--no-cache",
-          "scripts/feature_harness.py",
-          "scripts/check_feature.py",
-          "src/jobfindsme/evaluation/improvement.py",
-          "tests/evaluation/test_improvement.py",
-          "tests/harness/test_feature_harness.py"
-        ]
-      ],
-      "evidence_path": "reports/features/M25-001.json"
-    },
-    {
-      "id": "M26-001",
-      "title": "Low-latency search modes, multi-city coverage, and evidence output",
-      "status": "done",
-      "blocked_by": [
-        "M24-001",
-        "M25-001"
-      ],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "Career-Ops provider registry",
-          "url": "https://github.com/santifer/career-ops/tree/main/providers",
-          "adopted_pattern": "Prefer source-specific public JSON APIs for Tencent, Meituan, Alibaba, Greenhouse, Lever, and similar providers before browser automation.",
-          "rejected_or_not_adopted": "Do not assume an observed endpoint is permanent or acceptable for high-volume use; every adopted provider needs its own policy and live-evidence review."
-        },
-        {
-          "category": "open_source",
-          "title": "mergedao/mcp-jobs",
-          "url": "https://github.com/mergedao/mcp-jobs",
-          "adopted_pattern": "Keep the interactive MCP surface direct and separate bounded job-list discovery from on-demand detail retrieval.",
-          "rejected_or_not_adopted": "Do not launch a new browser per source, return silent empty-success results, or discard durable state and evaluation evidence."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "RFC 5861: stale-while-revalidate and stale-if-error",
-          "url": "https://datatracker.ietf.org/doc/html/rfc5861",
-          "adopted_pattern": "Serve explicitly marked cached data on the low-latency path and separate expensive refresh from interactive response time.",
-          "rejected_or_not_adopted": "Do not treat cached jobs as fresh or hide source failures from diagnostics."
-        },
-        {
-          "category": "official_guide",
-          "title": "Playwright browser guidance",
-          "url": "https://playwright.dev/docs/browsers",
-          "adopted_pattern": "Keep browser automation bounded and observable instead of making every user interaction an exhaustive browser crawl.",
-          "rejected_or_not_adopted": "Do not make Playwright a required second browser runtime when the user-owned CDP session already provides authenticated access."
-        }
-      ],
-      "local_constraints": [
-        "Chinese recruitment platforms have uneven yield, latency, login requirements, and anti-bot behavior.",
-        "Interactive users need results quickly; monitoring and evaluation need broad source coverage.",
-        "Multiple requested cities must each be searched rather than silently dropping all but the first.",
-        "Recommendation text must remain deterministic and must not depend on the host Agent inventing reasons."
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "README.md",
-        "README.en.md",
-        "docs/SKILL.md",
-        "integrations/shared/SKILL.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/connectors/boss_zhipin.py",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/doctor/service.py",
-        "src/jobfindsme/evaluation/live_loop.py",
-        "src/jobfindsme/importing/repository.py",
-        "src/jobfindsme/mcp/schemas.py",
-        "src/jobfindsme/mcp/tools.py",
-        "src/jobfindsme/matching/ranker.py",
-        "src/jobfindsme/monitoring/__main__.py",
-        "src/jobfindsme/presentation.py",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "src/jobfindsme/source_catalog.py",
-        "tests/core/test_app.py",
-        "tests/core/test_source_catalog.py",
-        "tests/connectors/test_boss_zhipin.py",
-        "tests/doctor/test_doctor.py",
-        "tests/mcp/test_tools.py",
-        "tests/matching/test_ranker.py",
-        "tests/importing/test_importing.py",
-        "reports/features/M26-001.json"
-      ],
-      "acceptance": [
-        "Interactive search defaults to fast refresh, cache mode performs no remote discovery, and full mode remains explicit.",
-        "Live Loop and scheduled monitoring always use full refresh.",
-        "Fast mode refreshes the preferred source for every requested city and reuses other configured source caches.",
-        "Supported Chinese city names are translated to the platform's required city identifiers before BOSS discovery.",
-        "Search diagnostics expose refresh mode, end-to-end time, matching time, per-source state, and cache use.",
-        "An empty browser refresh with existing records is reported as degraded cache use rather than a successful proof of zero available jobs.",
-        "Doctor distinguishes an authenticated empty response from explicit authentication failure and does not tell users to log in again without evidence.",
-        "MCP search configuration persists recruitment track and employment type so strict filters execute in Core rather than in host-Agent post-processing.",
-        "A requested minimum salary compares against the posted lower bound; unknown recruitment track or employment type cannot silently satisfy an explicit strict filter.",
-        "Cached BOSS rows created before explicit classification fields are interpreted consistently until a fresh source record replaces them.",
-        "Stable text output includes role, company, location, recruitment track, employment type, salary when known, match percentage, recommendation reasons, warnings, and direct apply URL.",
-        "Regression tests prove multi-city source planning and prevent remote access in cache mode."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "-p",
-          "no:cacheprovider"
-        ],
-        [
-          "ruff",
-          "check",
-          "--no-cache",
-          "src",
-          "tests"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "--no-cache",
-          "src",
-          "tests"
-        ]
-      ],
-      "evidence_path": "reports/features/M26-001.json"
-    },
-    {
-      "id": "M27-001",
-      "title": "Persistent incremental job radar and novelty-aware results",
-      "status": "done",
-      "blocked_by": [
-        "M26-001"
-      ],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "Career-Ops",
-          "url": "https://github.com/santifer/career-ops",
-          "adopted_pattern": "Treat a job search as a persistent local workflow with durable job state instead of a stateless list-generation request.",
-          "rejected_or_not_adopted": "Do not copy automatic application behavior or require a hosted model for the deterministic state loop."
-        },
-        {
-          "category": "official_guide",
-          "title": "Google Rules of Machine Learning",
-          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
-          "adopted_pattern": "Define measurable product goals and keep serving-time evidence before adding ranking complexity.",
-          "rejected_or_not_adopted": "Do not optimize raw click or discovery counts when repeated or low-quality jobs waste user time."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Data Cascades in High-Stakes AI",
-          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
-          "adopted_pattern": "Make canonical identity, history, and source provenance first-class before using downstream scores.",
-          "rejected_or_not_adopted": "Do not hide identity or history failures behind a single recommendation metric."
-        }
-      ],
-      "local_constraints": [
-        "Users may access the same local workspace from different MCP-compatible Agents.",
-        "The default workflow must remain useful without a model API or hosted account.",
-        "A repeated search must not lose saved, applied, or rejected state.",
-        "Novelty claims must come from persisted job identity and version evidence, not Agent conversation memory."
-      ],
-      "allowed_paths": [
-        "AGENTS.md",
-        "PROJECT_SPEC.md",
-        "README.md",
-        "README.en.md",
-        "docs/SKILL.md",
-        "integrations/shared/SKILL.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/job_impressions.py",
-        "src/jobfindsme/privacy.py",
-        "src/jobfindsme/matching/**",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "src/jobfindsme/monitoring/**",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/presentation.py",
-        "src/jobfindsme/migrations/**",
-        "tests/core/**",
-        "tests/test_storage.py",
-        "tests/importing/**",
-        "tests/matching/**",
-        "tests/monitoring/**",
-        "tests/mcp/**",
-        "reports/features/M27-001.json"
-      ],
-      "acceptance": [
-        "The first successful search creates a per-Search-Plan result baseline backed by durable canonical job identifiers.",
-        "A later search classifies results as new, materially changed, reopened, closed, or unchanged.",
-        "Unchanged jobs already shown or rejected are suppressed by default; saved and applied jobs remain queryable and are never silently reset.",
-        "No-result output distinguishes no qualified delta from source failure or an empty cache.",
-        "Diagnostics expose new, changed, reopened, closed, repeated-suppressed, and low-relevance-filtered counts.",
-        "The human-facing digest never pads the response with old or weak jobs merely to reach a count.",
-        "Regression tests cover repeat searches, cross-Agent state reuse, job version changes, source failure, and explicit history requests."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/core/test_incremental_radar.py",
-          "tests/mcp/test_tools.py",
-          "tests/test_storage.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src",
-          "tests"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "src",
-          "tests"
-        ]
-      ],
-      "evidence_path": "reports/features/M27-001.json"
-    },
-    {
-      "id": "M27-002",
-      "title": "Effective cross-source coverage and bounded detail enrichment",
-      "status": "in_progress",
-      "blocked_by": [
-        "M26-001"
-      ],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "mergedao/mcp-jobs",
-          "url": "https://github.com/mergedao/mcp-jobs",
-          "adopted_pattern": "Keep list discovery lightweight and retrieve details only for selected candidates.",
-          "rejected_or_not_adopted": "Do not equate a configured platform or raw list-card count with verified recommendation coverage."
-        },
-        {
-          "category": "official_guide",
-          "title": "Playwright Locators and Auto-waiting",
-          "url": "https://playwright.dev/docs/locators",
-          "adopted_pattern": "Use bounded, observable detail extraction with resilient user-facing locators where browser access is necessary.",
-          "rejected_or_not_adopted": "Do not fetch every detail page or make interactive latency depend on the slowest blocked source."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Data Cascades in High-Stakes AI",
-          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
-          "adopted_pattern": "Measure source field completeness and provenance before tuning ranking weights.",
-          "rejected_or_not_adopted": "Do not compensate for missing descriptions or classifications by boosting incomplete records."
-        }
-      ],
-      "local_constraints": [
-        "Chinese platforms have uneven data fields, latency, login requirements, and anti-bot behavior.",
-        "Detail fetching must have per-source budgets and cannot open unbounded browser tabs.",
-        "Unknown recruitment track or employment type cannot silently satisfy an explicit strict filter.",
-        "A source must provide incremental qualified jobs before it is promoted as a default recommendation source."
-      ],
-      "allowed_paths": [
-        "AGENTS.md",
-        "PROJECT_SPEC.md",
-        "README.md",
-        "README.en.md",
-        "docs/SKILL.md",
-        "integrations/shared/SKILL.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/core/**",
         "src/jobfindsme/evaluation/**",
-        "src/jobfindsme/importing/**",
-        "src/jobfindsme/matching/**",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "src/jobfindsme/source_catalog.py",
-        "tests/connectors/**",
-        "tests/core/**",
-        "tests/evaluation/**",
-        "tests/importing/**",
-        "tests/matching/**",
-        "reports/features/M27-002.json"
+        "tests/evaluation/**"
       ],
       "acceptance": [
-        "Each source declares a transport class: structured_api, public_http, authenticated_browser, browser_dom, or local_import.",
-        "Source selection prefers structured API/HTTP and never starts a browser when a verified non-browser connector can satisfy the same source.",
-        "Every source exposes a maturity state, field-completeness profile, recent yield, latency, and failure reason.",
-        "List-card records declare their detail level and are not treated as complete job descriptions.",
-        "The system enriches only a bounded set of role-qualified candidates before final ranking.",
-        "Recruitment track, employment type, experience, and job description extraction have source-specific contract tests.",
-        "Blocked or zero-yield sources are cooled down and cannot hold the interactive response open indefinitely.",
-        "Evaluation compares BOSS-only, multi-source discovery, and multi-source enriched ranking using Qualified Unique Jobs@10 and non-primary-source incremental gain.",
-        "README source claims are generated or manually gated from dated Live Loop and human-label evidence."
+        "A fresh real search snapshot is manually labeled.",
+        "P@10, NDCG@10, valid-link rate, source success, and latency are generated by scripts.",
+        "A second run proves seen-job suppression and change reporting.",
+        "Synthetic data is not used for public quality claims."
       ],
-      "implementation_progress": {
-        "completed": [
-          "Liepin and Zhilian list-card records support best-effort detail-page enrichment for at most three candidates per source.",
-          "Detail enrichment has a total time budget, closes its temporary CDP target, and degrades to the original list-card record on failure.",
-          "Normalized source evidence distinguishes list_card, detail_page, and structured_source descriptions and records detail provenance.",
-          "Wuyou remains a list discovery source and is not advertised as detail-enriched."
-        ],
-        "remaining": [
-          "Declare transport class, maturity, completeness, recent yield, and latency for every source.",
-          "Add source-specific recruitment track, employment type, and experience extraction contracts.",
-          "Implement cooldown for blocked or zero-yield sources.",
-          "Run the cross-source enriched ranking evaluation and gate public source claims with dated evidence."
-        ]
-      },
       "checks": [
         [
           "python3",
           "-m",
           "pytest",
-          "tests/connectors/test_china_platforms.py",
-          "tests/importing/test_importing.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src",
-          "tests"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "src",
-          "tests"
+          "tests/evaluation"
         ]
-      ],
-      "evidence_path": "reports/features/M27-002.json"
-    },
-    {
-      "id": "M28-001",
-      "title": "Evidence-bound profile-derived Search Plan proposal",
-      "status": "done",
-      "blocked_by": [
-        "M27-001"
       ],
       "design_research_required": true,
       "research_refs": [
-        {
-          "category": "open_source",
-          "title": "Career-Ops",
-          "url": "https://github.com/santifer/career-ops",
-          "adopted_pattern": "Reduce repeated setup by deriving a reusable search configuration from durable local profile state.",
-          "rejected_or_not_adopted": "Do not silently persist inferred preferences or require a hosted model to construct the proposal."
-        },
         {
           "category": "official_guide",
-          "title": "Google Rules of Machine Learning",
-          "url": "https://developers.google.com/machine-learning/guides/rules-of-ml",
-          "adopted_pattern": "Start with observable, explainable heuristics and expose uncertainty before adding learned preference prediction.",
-          "rejected_or_not_adopted": "Do not present heuristic salary or location guesses as measured user intent."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Data Cascades in High-Stakes AI",
-          "url": "https://research.google/pubs/everyone-wants-to-do-the-model-work-not-the-data-work-data-cascades-in-high-stakes-ai/",
-          "adopted_pattern": "Preserve evidence provenance and confirmation boundaries for profile-derived decisions.",
-          "rejected_or_not_adopted": "Do not turn missing or noisy resume fields into confident downstream filters."
-        }
-      ],
-      "local_constraints": [
-        "Only confirmed local profile facts may influence a suggested Search Plan.",
-        "Resume locations describe history and cannot be treated as confirmed job-location preference.",
-        "Experience alone cannot justify a desired salary floor.",
-        "The proposal must be returned during the fast setup flow but cannot be persisted until the user confirms it.",
-        "Missing recruitment track or employment type remains unknown instead of defaulting every user to social full-time work."
-      ],
-      "allowed_paths": [
-        "PROJECT_SPEC.md",
-        "README.md",
-        "integrations/shared/SKILL.md",
-        "specs/feature_list.json",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/core/**",
-        "src/jobfindsme/doctor/**",
-        "src/jobfindsme/mcp/**",
-        "src/jobfindsme/plan_suggestions.py",
-        "src/jobfindsme/resources/jobfindsme/SKILL.md",
-        "tests/core/**",
-        "tests/doctor/**",
-        "tests/mcp/**",
-        "reports/features/M28-001.json"
-      ],
-      "acceptance": [
-        "suggest_plan reads only the latest confirmed ProfileSummary and returns ready=false when none exists.",
-        "The proposal includes role, location, experience, recruitment, and employment hints with reasoning and explicit confirmation fields.",
-        "Salary remains unset unless the profile contains confirmed salary-preference evidence.",
-        "setup_profile auto-confirm returns the proposal without requiring a second Agent round trip.",
-        "The proposal is never persisted as an active Search Plan without configure_search confirmation.",
-        "Doctor validates the actual registered MCP tool count instead of a stale hard-coded number."
-      ],
-      "checks": [
-        [
-          "python3",
-          "-m",
-          "pytest",
-          "tests/core/test_app.py",
-          "tests/mcp/test_tools.py",
-          "tests/mcp/test_stdio_server.py",
-          "tests/doctor/test_doctor.py"
-        ],
-        [
-          "ruff",
-          "check",
-          "src",
-          "tests"
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "src",
-          "tests"
-        ]
-      ],
-      "evidence_path": "reports/features/M28-001.json"
-    },
-    {
-      "id": "M29-001",
-      "title": "Lean four-source architecture and unified Agent installation",
-      "status": "in_progress",
-      "blocked_by": [],
-      "design_research_required": true,
-      "research_refs": [
-        {
-          "category": "open_source",
-          "title": "mergedao/mcp-jobs",
-          "url": "https://github.com/mergedao/mcp-jobs",
-          "adopted_pattern": "Keep Agent onboarding short and expose normalized multi-source search through MCP.",
-          "rejected_or_not_adopted": "A browser-first scraper does not prove that every source needs a browser or has equal result quality."
+          "title": "MCP client best practices",
+          "url": "https://modelcontextprotocol.io/docs/develop/clients/client-best-practices",
+          "adopted_pattern": "Measure context size and structured-result usability from the client perspective.",
+          "rejected_or_not_adopted": "Do not optimize protocol correctness while ignoring end-user result quality."
         },
         {
           "category": "open_source",
-          "title": "speedyapply/JobSpy",
+          "title": "JobSpy",
           "url": "https://github.com/speedyapply/JobSpy",
-          "adopted_pattern": "Use independent source adapters, normalized records, retries, and parallel execution.",
-          "rejected_or_not_adopted": "Do not assume international job-board transports or anti-blocking techniques transfer safely to Chinese platforms."
-        },
-        {
-          "category": "open_source",
-          "title": "can4hou6joeng4/boss-agent-cli",
-          "url": "https://github.com/can4hou6joeng4/boss-agent-cli",
-          "adopted_pattern": "Keep authenticated BOSS access local and document platform-risk boundaries.",
-          "rejected_or_not_adopted": "Do not add application automation or recruiter messaging to the product scope."
-        },
-        {
-          "category": "official_guide",
-          "title": "RFC 5861",
-          "url": "https://www.rfc-editor.org/rfc/rfc5861",
-          "adopted_pattern": "Use explicit stale cache fallback so one slow source does not block interactive results.",
-          "rejected_or_not_adopted": "Cached jobs must never be presented as a successful live refresh."
-        },
-        {
-          "category": "paper_or_benchmark",
-          "title": "Help Me Find a Job: A Graph-based Approach for Job Recommendation at Scale",
-          "url": "https://arxiv.org/abs/1801.00377",
-          "adopted_pattern": "Evaluate recommendation usefulness under job and user cold-start constraints.",
-          "rejected_or_not_adopted": "Do not add collaborative filtering before the project has sufficient real interaction data."
+          "adopted_pattern": "Evaluate each source independently behind a normalized job schema.",
+          "rejected_or_not_adopted": "Do not equate scraped record count with qualified-job coverage."
         }
       ],
+      "local_constraints": [
+        "Evaluation uses authorized real searches and manually reviewed labels.",
+        "No public quality claim is made until provenance gates pass."
+      ],
+      "evidence_path": "reports/features/EVAL-001.json"
+    },
+    {
+      "id": "REGISTRY-001",
+      "title": "Publish a reproducible MCP distribution",
+      "status": "backlog",
+      "blocked_by": [
+        "MCP-001",
+        "EVAL-001"
+      ],
       "allowed_paths": [
+        ".github/**",
+        "INSTALL.md",
         "README.md",
         "README.en.md",
-        "INSTALL.md",
-        "PROJECT_SPEC.md",
-        "AGENTS.md",
-        "docs/SKILL.md",
-        "specs/feature_list.json",
         "pyproject.toml",
-        "scripts/gen_demo_assets.py",
-        "scripts/smoke_fast_install.sh",
-        "scripts/smoke_installed_package.sh",
-        "src/jobfindsme/cli.py",
-        "src/jobfindsme/contracts.py",
-        "src/jobfindsme/connectors/**",
-        "src/jobfindsme/core/app.py",
-        "src/jobfindsme/doctor/service.py",
-        "src/jobfindsme/importing/discovery.py",
-        "src/jobfindsme/installer/service.py",
-        "src/jobfindsme/source_catalog.py",
-        "tests/cli/**",
-        "tests/connectors/**",
-        "tests/core/**",
-        "tests/doctor/**",
+        "scripts/**",
+        "server.json",
+        "specs/feature_list.json",
         "tests/installer/**",
-        "reports/features/M29-001.json"
+        "reports/features/REGISTRY-001.json"
       ],
       "acceptance": [
-        "Lagou is absent from live discovery, setup, diagnostics, public source claims, and demo generation.",
-        "Legacy Lagou source values and historical jobs remain readable while live refresh is skipped.",
-        "Default China plans contain BOSS, Liepin, Zhaopin, and 51job only.",
-        "All supported Agent hosts install the same wheel and use one idempotent connect command.",
-        "Clean release installation plus WorkBuddy configuration stays within 180 seconds and does not install Playwright.",
-        "README, Agent instructions, and Product Spec describe the same four-source capability and evidence-gated transport strategy.",
-        "Unverified HTTP endpoints, signature reverse engineering, and CAPTCHA bypass are not claimed or added as default dependencies."
+        "A clean machine can install and list tools without cloning the repository.",
+        "The packaged wheel includes migrations and the Agent Skill.",
+        "The release has an immutable version and installation smoke evidence.",
+        "Official MCP Registry metadata is added only when its package transport is valid."
       ],
       "checks": [
         [
           "python3",
           "-m",
-          "pytest"
-        ],
-        [
-          "ruff",
-          "check",
-          "."
-        ],
-        [
-          "ruff",
-          "format",
-          "--check",
-          "."
-        ],
-        [
-          "bash",
-          "scripts/smoke_installed_package.sh"
+          "pytest",
+          "tests/installer",
+          "tests/mcp"
         ]
       ],
-      "evidence_path": "reports/features/M29-001.json"
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "official_guide",
+          "title": "Official MCP Registry quickstart",
+          "url": "https://modelcontextprotocol.io/registry/quickstart",
+          "adopted_pattern": "Publish reproducible metadata only for a supported immutable package.",
+          "rejected_or_not_adopted": "Do not add decorative registry metadata before the transport is valid."
+        },
+        {
+          "category": "open_source",
+          "title": "mcp-jobs",
+          "url": "https://github.com/mergedao/mcp-jobs",
+          "adopted_pattern": "Keep installation and first invocation short enough for Agent users.",
+          "rejected_or_not_adopted": "Do not require source checkout or development dependencies for end users."
+        }
+      ],
+      "local_constraints": [
+        "End users install a release artifact, not a source checkout.",
+        "The local stdio process must continue using the user's SQLite workspace."
+      ],
+      "evidence_path": "reports/features/REGISTRY-001.json"
     }
   ]
 }

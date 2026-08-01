@@ -89,7 +89,80 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         job_id=matches[0]["job"]["job_id"],
         state="saved",
     )
-    call(registry, "configure_monitor", enabled=True, interval_hours=24)
     receipt = call(registry, "export_local_data")
 
     assert Path(receipt["path"]).exists()
+
+
+def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
+    jobs = tmp_path / "jobs.json"
+    jobs.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "qualified",
+                    "title": "AI应用工程师",
+                    "company": "甲公司",
+                    "location": "上海",
+                    "description": "Python FastAPI RAG Agent，20-30K，社招正式岗。",
+                    "recruitment_track": "social",
+                    "employment_type": "full_time",
+                    "url": "https://example.com/jobs/qualified",
+                },
+                {
+                    "id": "unknown-salary",
+                    "title": "AI应用工程师",
+                    "company": "乙公司",
+                    "location": "上海",
+                    "description": "Python RAG Agent，薪资面议，社招正式岗。",
+                    "recruitment_track": "social",
+                    "employment_type": "full_time",
+                    "url": "https://example.com/jobs/unknown-salary",
+                },
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    registry = ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db"))
+    call(
+        registry,
+        "configure_search",
+        target_roles=["AI应用工程师"],
+        locations=["上海"],
+        salary_min_k=20,
+        recruitment_track="social",
+        employment_type="full_time",
+        sources=[
+            {
+                "kind": "json_file",
+                "source_name": "用户提供岗位",
+                "path": str(jobs),
+            }
+        ],
+    )
+
+    first = registry.call("search_jobs", {"refresh_mode": "full"})
+    assert first["isError"] is False
+    rendered = first["content"][0]["text"]
+    structured = first["structuredContent"]
+
+    section_positions = [rendered.index(f"【{index}·") for index in range(1, 6)]
+    assert section_positions == sorted(section_positions)
+    assert structured["count"] == 1
+    assert structured["jobs"][0]["job"]["company"] == "甲公司"
+    assert "乙公司" not in rendered
+    assert "匹配度：" in rendered
+    assert "推荐理由：" in rendered
+    assert "投递链接：https://example.com/jobs/qualified" in rendered
+    assert "workspace_id" not in rendered
+    assert "plan_id" not in rendered
+    assert "│" not in rendered
+
+    second = registry.call("search_jobs", {"refresh_mode": "cache"})
+    assert second["isError"] is False
+    second_text = second["content"][0]["text"]
+    assert all(f"【{index}·" in second_text for index in range(1, 6))
+    assert "本轮未刷新外部来源，使用本地缓存" in second_text
+    assert "此前展示且未变化" in second_text
+    assert "重复岗位" not in second_text

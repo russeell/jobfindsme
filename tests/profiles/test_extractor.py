@@ -76,11 +76,11 @@ def test_extracts_utf8_text_and_docx(tmp_path) -> None:
     extracted_markdown = ResumeTextExtractor().extract_path(markdown)
     extracted_docx = ResumeTextExtractor().extract(
         file_name="resume.docx",
-        content=make_docx("Projects: JobFindsMe"),
+        content=make_docx("Projects: jobfindsme"),
     )
 
     assert extracted_markdown.text == "# Skills\nPython RAG"
-    assert extracted_docx.text == "Projects: JobFindsMe"
+    assert extracted_docx.text == "Projects: jobfindsme"
 
 
 def test_decodes_gbk_text_resume() -> None:

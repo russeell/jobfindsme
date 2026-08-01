@@ -173,13 +173,13 @@ def test_exact_title_ranks_above_partial_description_match() -> None:
     assert matches[0].score > matches[1].score
 
 
-def test_unknown_salary_is_retained_with_warning() -> None:
-    match = DeterministicMatcher().match(
+def test_unknown_salary_is_excluded_when_salary_is_a_hard_constraint() -> None:
+    matches = DeterministicMatcher().match(
         plan(),
         [job("unknown", description="Python RAG Agent，1-3年")],
-    )[0]
+    )
 
-    assert "岗位未公开薪资" in match.evidence.warnings
+    assert matches == []
 
 
 def test_minimum_salary_requires_the_posted_lower_bound_to_match() -> None:
@@ -282,7 +282,7 @@ def test_required_skill_gap_is_explicit() -> None:
     )
 
     match = DeterministicMatcher().match(
-        plan(),
+        plan(salary_min_k=None),
         [
             job(
                 "required",

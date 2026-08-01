@@ -18,7 +18,7 @@ RESUME = """# Skills
 Python, FastAPI, RAG, Docker
 
 # Projects
-- Built JobFindsMe with MCP and SQLite
+- Built jobfindsme with MCP and SQLite
 """
 
 

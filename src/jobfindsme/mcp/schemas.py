@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal, Self
 
 from pydantic import Field, model_validator
@@ -7,12 +8,23 @@ from pydantic import Field, model_validator
 from jobfindsme.contracts import (
     DiscoverySource,
     EmploymentType,
+    ExportReceipt,
+    JobChangeType,
+    JobDetails,
+    JobState,
     JobStateKind,
+    JobSummary,
+    MatchEvidence,
     RecruitmentTrack,
+    SearchChanges,
+    SearchConfiguration,
+    SearchPresentationContext,
     SearchRefreshMode,
+    SearchRunDiagnostics,
     StrictModel,
+    SuggestedPlan,
 )
-from jobfindsme.profiles.models import ResumeImportMode
+from jobfindsme.profiles.models import ProfileFact, ResumeImportMode
 
 
 class SetupProfileInput(StrictModel):
@@ -99,7 +111,7 @@ class SearchJobsInput(StrictModel):
     refresh_mode: SearchRefreshMode = Field(
         default=SearchRefreshMode.FAST,
         description=(
-            "fast: refresh primary source, reuse caches. "
+            "fast: concurrently refresh the maintained bounded sources. "
             "cache: no remote access. full: refresh all sources"
         ),
     )
@@ -247,41 +259,6 @@ class UpdateJobStateInput(StrictModel):
     )
 
 
-class ConfigureMonitorInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
-    plan_id: str | None = Field(
-        default=None,
-        description="Search Plan ID (omit to use active context)",
-    )
-    enabled: bool = Field(
-        description="true to start periodic search; false to stop",
-    )
-    interval_hours: int = Field(
-        default=24,
-        ge=1,
-        le=168,
-        description="Hours between auto searches (1–168, default 24 = daily)",
-    )
-    schedule_cron: str | None = Field(
-        default=None,
-        max_length=64,
-        description=(
-            "Optional 5-field cron for arbitrary time and frequency — "
-            "takes precedence over interval_hours. "
-            "Examples: '0 9 * * *' (daily 09:00), '0 20 * * 1' (Mondays 20:00), "
-            "'0 8 */2 * *' (every 2 days 08:00). "
-            "Omit to keep interval_hours."
-        ),
-    )
-    notification_channel: str | None = Field(
-        default=None,
-        description="Optional notification channel, e.g. 'feishu'",
-    )
-
-
 class ExportLocalDataInput(StrictModel):
     workspace_id: str | None = Field(
         default=None,
@@ -311,3 +288,63 @@ class DeleteLocalDataInput(StrictModel):
         default=None,
         description="Token from preview response (required for confirm)",
     )
+
+
+class SetupProfileOutput(StrictModel):
+    profile_id: str
+    status: str
+    parser_version: str | None = None
+    fact_counts: dict[str, int]
+    facts: tuple[ProfileFact, ...] = ()
+    next_offset: int | None = None
+    total_facts: int
+    review_available: bool
+    suggested_plan: SuggestedPlan | None = None
+
+
+class SearchJobOutput(StrictModel):
+    job: JobSummary
+    score: float
+    evidence: MatchEvidence
+    state: JobStateKind
+    first_seen_at: datetime | None = None
+    change_type: JobChangeType | None = None
+
+
+class SearchJobsOutput(StrictModel):
+    jobs: tuple[SearchJobOutput, ...]
+    count: int
+    changes: SearchChanges
+    diagnostics: SearchRunDiagnostics
+    presentation: SearchPresentationContext
+
+
+class GetJobsOutput(StrictModel):
+    jobs: tuple[JobSummary, ...]
+    count: int
+    offset: int
+    limit: int
+    next_offset: int | None = None
+
+
+class DeleteLocalDataOutput(StrictModel):
+    workspace_id: str
+    scope: str
+    record_counts: dict[str, int] | None = None
+    confirmation_token: str | None = None
+    expires_at: datetime | None = None
+    deleted: bool | None = None
+    deleted_at: datetime | None = None
+
+
+MCP_OUTPUT_MODELS: dict[str, type[StrictModel]] = {
+    "setup_profile": SetupProfileOutput,
+    "configure_search": SearchConfiguration,
+    "suggest_plan": SuggestedPlan,
+    "search_jobs": SearchJobsOutput,
+    "get_jobs": GetJobsOutput,
+    "get_job_details": JobDetails,
+    "update_job_state": JobState,
+    "export_local_data": ExportReceipt,
+    "delete_local_data": DeleteLocalDataOutput,
+}

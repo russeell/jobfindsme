@@ -247,8 +247,8 @@ class DiscoverySourceKind(StrEnum):
     LIEPIN_HTTP = "liepin_http"
     # Compatibility only: pre-v0.4.3 workspaces may still contain this value.
     LIEPIN_CDP = "liepin_cdp"
+    # Compatibility only: old workspaces may still contain these values.
     ZHILIAN_CDP = "zhilian_cdp"
-    # Compatibility only: old workspaces may still contain this value.
     LAGOU_CDP = "lagou_cdp"
     WUYOU_CDP = "wuyou_cdp"
     JSON_FILE = "json_file"
@@ -256,7 +256,7 @@ class DiscoverySourceKind(StrEnum):
 
     @property
     def retired(self) -> bool:
-        return self is self.LAGOU_CDP
+        return self in {self.ZHILIAN_CDP, self.LAGOU_CDP, self.WUYOU_CDP}
 
     @property
     def uses_browser(self) -> bool:
@@ -264,8 +264,6 @@ class DiscoverySourceKind(StrEnum):
         return self in {
             self.BOSS_CDP,
             self.LIEPIN_CDP,
-            self.ZHILIAN_CDP,
-            self.WUYOU_CDP,
         }
 
 
@@ -356,6 +354,18 @@ class SearchChanges(StrictModel):
     closed: int = Field(default=0, ge=0)
     repeated_suppressed: int = Field(default=0, ge=0)
     closed_job_ids: tuple[str, ...] = ()
+
+
+class SearchPresentationContext(StrictModel):
+    """Bounded facts required to render one search consistently."""
+
+    profile_used: bool = False
+    skill_count: int = Field(default=0, ge=0)
+    project_count: int = Field(default=0, ge=0)
+    experience_count: int = Field(default=0, ge=0)
+    education_count: int = Field(default=0, ge=0)
+    highest_degree: str | None = None
+    applied_filters: tuple[str, ...] = ()
 
 
 class SearchRunResult(StrictModel):

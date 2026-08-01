@@ -60,7 +60,7 @@ def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
     responses = [json.loads(line) for line in output_stream.getvalue().splitlines()]
     assert [response["id"] for response in responses] == [1, 2, 3]
     assert responses[0]["result"]["protocolVersion"] == "2025-11-25"
-    assert len(responses[1]["result"]["tools"]) == 10
+    assert len(responses[1]["result"]["tools"]) == 9
     assert responses[2]["result"]["structuredContent"] == {
         "jobs": [],
         "count": 0,
@@ -106,3 +106,6 @@ def test_initialize_instructions_carry_the_output_contract(tmp_path) -> None:
     assert "resume is not required" in instructions
     assert "include_seen=true" in instructions
     assert "never paste complete resumes" in instructions
+    assert "never rebuild results as a table" in instructions
+    assert "not duplicates" in instructions
+    assert "Never invent a CLI fallback command" in instructions

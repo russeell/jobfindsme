@@ -9,5 +9,10 @@ dist/
 build/
 *.egg-info/
 .jobfindsme/
-reports/
+uv.lock
+reports/*
+!reports/features/
+reports/features/*
+!reports/features/.gitkeep
+!reports/features/*.json
 build/

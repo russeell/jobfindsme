@@ -31,3 +31,16 @@ def test_skill_contract_keeps_apply_links_as_bare_urls() -> None:
     # No positive instruction to wrap links in Markdown
     assert "[投递链接](" not in skill
     assert "as a clickable Markdown link" not in skill
+
+
+def test_skill_preserves_server_output_and_incremental_semantics() -> None:
+    root = Path(__file__).parents[2]
+    skill = (root / "integrations" / "shared" / "SKILL.md").read_text()
+
+    assert "complete five-section answer" in skill
+    assert "never rebuild it as a table" in skill
+    assert "previously shown unchanged" in skill
+    assert "jobs, not duplicates" in skill
+    assert "Never automatically retry it with" in skill
+    assert "Never invent CLI search syntax" in skill
+    assert "Never search, list, or scan the user's directories" in skill

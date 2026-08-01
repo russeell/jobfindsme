@@ -123,17 +123,11 @@ class Doctor:
     def _connectors() -> Diagnostic:
         try:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
-            from jobfindsme.connectors.china_platforms import (
-                LiepinConnector,
-                WuyouConnector,
-                ZhilianConnector,
-            )
+            from jobfindsme.connectors.china_platforms import LiepinConnector
 
             names = (
                 BossZhipinConnector.__name__,
                 LiepinConnector.__name__,
-                ZhilianConnector.__name__,
-                WuyouConnector.__name__,
             )
         except ImportError as error:
             return Diagnostic(name="connectors", ok=False, message=str(error))

@@ -337,18 +337,17 @@ def _hard_filter(
         location.casefold() in searchable for location in location_terms
     ):
         return False
-    if (
-        plan.salary_min_k is not None
-        and _annual_salary_min(job) is not None
-        and _annual_salary_min(job) < plan.salary_min_k * 1000 * 12
-    ):
-        return False
-    if (
-        plan.salary_max_k is not None
-        and _annual_salary_min(job) is not None
-        and _annual_salary_min(job) > plan.salary_max_k * 1000 * 12
-    ):
-        return False
+    annual_salary_min = _annual_salary_min(job)
+    if plan.salary_min_k is not None:
+        if annual_salary_min is None:
+            return False
+        if annual_salary_min < plan.salary_min_k * 1000 * 12:
+            return False
+    if plan.salary_max_k is not None:
+        if annual_salary_min is None:
+            return False
+        if annual_salary_min > plan.salary_max_k * 1000 * 12:
+            return False
     return not (
         plan.experience_max_years is not None
         and job.experience_min_years is not None

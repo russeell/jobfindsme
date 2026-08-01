@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import ast
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
+from jobfindsme.mcp.schemas import GetJobsOutput
 
 
 def make_registry(tmp_path):
@@ -32,11 +34,17 @@ def test_registry_exposes_product_level_tools(tmp_path) -> None:
         "get_jobs",
         "get_job_details",
         "update_job_state",
-        "configure_monitor",
         "export_local_data",
         "delete_local_data",
     ]
     assert all(tool["inputSchema"]["additionalProperties"] is False for tool in tools)
+    assert all(tool["title"] for tool in tools)
+    assert all(tool["outputSchema"]["type"] == "object" for tool in tools)
+    assert all("annotations" in tool for tool in tools)
+    by_name = {tool["name"]: tool for tool in tools}
+    assert by_name["search_jobs"]["annotations"]["openWorldHint"] is True
+    assert by_name["export_local_data"]["annotations"]["readOnlyHint"] is False
+    assert by_name["delete_local_data"]["annotations"]["destructiveHint"] is True
 
 
 def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
@@ -101,6 +109,21 @@ def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
     assert "extra" in result["content"][0]["text"]
 
 
+def test_output_schema_failure_is_a_tool_error_not_a_protocol_crash(tmp_path) -> None:
+    _, _, _, registry = make_registry(tmp_path)
+    registry._definitions["suggest_plan"] = replace(
+        registry._definitions["suggest_plan"],
+        output_model=GetJobsOutput,
+    )
+
+    result = registry.call("suggest_plan", {})
+
+    assert result["isError"] is True
+    assert result["content"][0]["text"] == (
+        "tool output did not match its declared schema"
+    )
+
+
 def test_delete_tool_cannot_bypass_core_two_phase_protocol(tmp_path) -> None:
     core, workspace, _, registry = make_registry(tmp_path)
 
@@ -137,26 +160,6 @@ def test_delete_tool_cannot_bypass_core_two_phase_protocol(tmp_path) -> None:
 
     assert confirmed["isError"] is False
     assert core.list_workspaces() == []
-
-
-def test_monitor_configuration_is_persisted_by_core(tmp_path) -> None:
-    core, workspace, plan, registry = make_registry(tmp_path)
-
-    result = registry.call(
-        "configure_monitor",
-        {
-            "workspace_id": workspace.workspace_id,
-            "plan_id": plan.plan_id,
-            "enabled": True,
-            "interval_hours": 12,
-            "notification_channel": "feishu",
-        },
-    )
-
-    assert result["structuredContent"]["enabled"] is True
-    with core.database.connect() as connection:
-        row = connection.execute("SELECT * FROM monitor_configs").fetchone()
-    assert row["interval_hours"] == 12
 
 
 def test_setup_profile_supports_import_and_confirmation_in_one_tool(
@@ -333,7 +336,7 @@ def test_job_list_text_has_stable_classification_and_link_format(tmp_path) -> No
 
     assert text == (
         "1. 大模型应用工程师实习生｜示例科技｜上海｜校招｜实习\n"
-        "   投递链接：https://example.com/jobs/intern-1"
+        "\n   投递链接：https://example.com/jobs/intern-1"
     )
 
 
@@ -364,9 +367,15 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "本轮变化：新增 1" in text
+    assert [f"【{index}·" in text for index in range(1, 6)] == [True] * 5
+    assert "简历解析：本次未使用简历" in text
+    assert "过滤：角色(AI应用工程师) → 给出 1 个" in text
     assert "[新增] AI应用工程师" in text
+    assert "匹配度：已通过角色、地点、薪资等可判定硬条件" in text
     assert "投递链接：https://example.com/jobs/match-1" in text
+    assert "推荐理由：" in text
+    assert "workspace" not in text.casefold()
+    assert "plan_id" not in text.casefold()
     assert result["structuredContent"]["diagnostics"]["refresh_mode"] == "cache"
     assert result["structuredContent"]["jobs"][0]["job"]["job_id"]
     assert result["structuredContent"]["jobs"][0]["state"] == "discovered"
@@ -398,7 +407,35 @@ def test_search_explains_when_only_previously_shown_jobs_remain(tmp_path) -> Non
     assert first["structuredContent"]["count"] == 1
     assert second["structuredContent"]["count"] == 0
     assert second["structuredContent"]["changes"]["repeated_suppressed"] == 1
-    assert "此前展示过" in second["content"][0]["text"]
+    text = second["content"][0]["text"]
+    assert all(f"【{index}·" in text for index in range(1, 6))
+    assert "此前展示过" in text
+    assert "重复岗位" not in text
+    assert "之前没有做过有效抓取" not in text
+
+
+def test_search_profile_section_returns_counts_without_resume_content(tmp_path) -> None:
+    core, workspace, _, registry = make_registry(tmp_path)
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python\n项目：内部项目ABC", encoding="utf-8")
+    registry.call(
+        "setup_profile",
+        {
+            "action": "import",
+            "workspace_id": workspace.workspace_id,
+            "resume_path": str(resume),
+        },
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    assert "【1·简历解析】" in text
+    assert "技能 1 项" in text
+    assert "项目 0 项" in text
+    assert "Python" not in text
+    assert "内部项目ABC" not in text
+    assert result["structuredContent"]["presentation"]["profile_used"] is True
 
 
 def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:

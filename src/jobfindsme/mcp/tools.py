@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -7,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.schemas import (
-    ConfigureMonitorInput,
+    MCP_OUTPUT_MODELS,
     ConfigureSearchInput,
     DeleteLocalDataInput,
     ExportLocalDataInput,
@@ -20,10 +21,11 @@ from jobfindsme.mcp.schemas import (
 )
 from jobfindsme.presentation import (
     format_job_list,
-    format_search_empty,
     format_search_results,
 )
 from jobfindsme.profiles.models import CandidateProfile, FactType
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -45,10 +47,12 @@ class ToolDefinition:
     description: str
     input_model: type[BaseModel]
     annotations: ToolAnnotations = field(default_factory=ToolAnnotations)
+    output_model: type[BaseModel] | None = None
 
     def protocol_schema(self) -> dict[str, Any]:
         schema: dict[str, Any] = {
             "name": self.name,
+            "title": self.name.replace("_", " ").title(),
             "description": self.description,
             "inputSchema": self.input_model.model_json_schema(),
         }
@@ -56,11 +60,15 @@ class ToolDefinition:
         # Always include annotations — unannotated tools are treated as
         # potentially destructive by MCP clients (Anthropic standard).
         schema["annotations"] = {
+            "title": schema["title"],
             "readOnlyHint": ann.read_only_hint,
             "destructiveHint": ann.destructive_hint,
             "idempotentHint": ann.idempotent_hint,
             "openWorldHint": ann.open_world_hint,
         }
+        output_model = self.output_model or MCP_OUTPUT_MODELS.get(self.name)
+        if output_model is not None:
+            schema["outputSchema"] = output_model.model_json_schema()
         return schema
 
 
@@ -75,7 +83,7 @@ class ToolDefinition:
 RO = ToolAnnotations(read_only_hint=True)
 RW = ToolAnnotations()
 DESTRUCTIVE = ToolAnnotations(destructive_hint=True)
-RO_IDEMPOTENT = ToolAnnotations(read_only_hint=True, idempotent_hint=True)
+OPEN_WORLD = ToolAnnotations(open_world_hint=True)
 
 TOOL_DEFINITIONS = (
     ToolDefinition(
@@ -127,19 +135,23 @@ TOOL_DEFINITIONS = (
         "search_jobs",
         (
             "Search for matching jobs across configured platforms.  "
-            "In fast mode (default): refreshes primary live source (BOSS直聘), "
-            "reuses caches for others. In cache mode: no remote access, "
+            "In fast mode (default): concurrently refreshes the two maintained "
+            "bounded sources. In cache mode: no remote access, "
             "local DB only. In full mode: refreshes all sources.  "
             "Returns hard-filtered, coarse-ranked jobs with extracted "
             "signals (skills, experience, degree) for Agent-side ranking.  "
             "The radar suppresses previously-seen unchanged jobs; use "
             "include_seen=true to get them back.  "
+            "A zero-result incremental run is valid and must not be retried "
+            "automatically with full mode.  "
+            "The text response already contains the complete five-section "
+            "user-facing result; preserve it instead of rebuilding a table.  "
             "Results need get_job_details for full JD text.  "
             "Browser sources (BOSS直聘) require allow_browser_sources=true "
             "and a running Chrome session from jobfindsme setup."
         ),
         SearchJobsInput,
-        RW,
+        OPEN_WORLD,
     ),
     ToolDefinition(
         "get_jobs",
@@ -182,19 +194,6 @@ TOOL_DEFINITIONS = (
         RW,
     ),
     ToolDefinition(
-        "configure_monitor",
-        (
-            "Enable or disable periodic background search.  "
-            "When enabled, the monitor runs at the configured interval_hours "
-            "(1-168) or at an arbitrary schedule_cron (5-field cron, e.g. "
-            "'0 9 * * *' daily 09:00 — takes precedence).  "
-            "No runs occur until explicitly enabled.  "
-            "notification_channel is optional (e.g. 'feishu')."
-        ),
-        ConfigureMonitorInput,
-        RW,
-    ),
-    ToolDefinition(
         "export_local_data",
         (
             "Write a local export file and return only its path, SHA-256 "
@@ -204,7 +203,7 @@ TOOL_DEFINITIONS = (
             "Use this for backup or data portability."
         ),
         ExportLocalDataInput,
-        RO_IDEMPOTENT,
+        RW,
     ),
     ToolDefinition(
         "delete_local_data",
@@ -249,11 +248,23 @@ class ToolRegistry:
         ) as error:
             return _error(str(error))
         structured = _json_value(value)
-        if name == "search_jobs" and not value["jobs"]:
-            text = format_search_empty(value["diagnostics"])
-        elif name == "search_jobs":
-            text = format_search_results(value["jobs"], value["changes"])
-        elif name in {"search_jobs", "get_jobs"}:
+        output_model = definition.output_model or MCP_OUTPUT_MODELS.get(name)
+        if output_model is not None:
+            try:
+                structured = output_model.model_validate(structured).model_dump(
+                    mode="json"
+                )
+            except ValidationError:
+                _log.exception("tool output failed schema validation: %s", name)
+                return _error("tool output did not match its declared schema")
+        if name == "search_jobs":
+            text = format_search_results(
+                value["jobs"],
+                value["changes"],
+                value["diagnostics"],
+                value["presentation"],
+            )
+        elif name == "get_jobs":
             text = format_job_list(value["jobs"])
         else:
             text = _compact_json(structured)
@@ -370,6 +381,10 @@ class ToolRegistry:
                 "count": len(jobs),
                 "changes": result.changes,
                 "diagnostics": result.diagnostics,
+                "presentation": self.core.search_presentation_context(
+                    workspace_id=request.workspace_id,
+                    plan_id=request.plan_id,
+                ),
             }
         if name == "get_jobs":
             jobs = self.core.list_job_summaries(**values)
@@ -389,18 +404,6 @@ class ToolRegistry:
             workspace = self.core.context.resolve_workspace(values.pop("workspace_id"))
             return self.core.update_job_state(
                 workspace_id=workspace.workspace_id,
-                **values,
-            )
-        if name == "configure_monitor":
-            context = self.core.context.resolve(
-                workspace_id=values.pop("workspace_id"),
-                plan_id=values.pop("plan_id"),
-            )
-            if context.plan is None:
-                raise ValueError("no active Search Plan — run configure_search first")
-            return self.core.configure_monitor(
-                workspace_id=context.workspace.workspace_id,
-                plan_id=context.plan.plan_id,
                 **values,
             )
         if name == "export_local_data":

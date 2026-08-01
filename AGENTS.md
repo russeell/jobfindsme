@@ -14,7 +14,7 @@ application state and returns inspectable evidence with direct apply links.
 3. **③ 查历史** — every job ever matched/shown, queryable with its state
    (applied/saved/rejected) and first-seen time.
 
-Never surface internal concepts (Workspace IDs, cron syntax, signal scores,
+Never surface internal concepts (Workspace IDs, cron syntax, raw signals,
 connector names) to the user unless asked.
 
 The first search establishes a baseline. Later searches should focus on new or
@@ -45,6 +45,8 @@ their resume or search constraints.
    to share it, skip this step entirely and go straight to `configure_search`.
    Without a profile, matching uses the user's stated constraints + JD
    signals; never claim resume-based skill matches.
+   If the user says "my resume" without a path, ask once for the path. Never
+   search or list user directories to guess a resume location.
 
 2. **configure_search** — create or update the plan when constraints change.
    Extract these from the user's request. Only `target_roles`
@@ -62,15 +64,16 @@ their resume or search constraints.
    Read results from the `jobs` field. Each job includes:
    - `job` — title, company, location, salary, apply URL
    - `score` — deterministic signal-match score (0.0–1.0), useful for
-     coarse ordering. Higher = more signal overlap. Agent does final ranking.
+     understanding the Server order. Higher = more signal overlap.
    - `evidence.extracted_signals` — structured JD signals (see below)
    - `state`, `change_type`, `first_seen_at`
+   - The text response already contains the complete five-section answer.
+     Preserve it; never rebuild it as a wide table.
 
-4. **Agent-side matching (v0.4.1+)** — The Server hard-filters then coarse-ranks
-   using deterministic signal matching. You receive pre-sorted results with a
-   useful `score`. Your job:
+4. **Evidence-grounded follow-up** — The Server hard-filters, ranks, and renders
+   the base result. Preserve it. Only when the user asks for deeper comparison:
 
-   - Use `score` as a starting point. It combines: skill overlap (50%),
+   - Explain `score` as a signal, not a hiring probability. It combines: skill overlap (50%),
      experience fit (25%), degree match (10%), liveness (5%), salary presence (5%).
    - Read `evidence.extracted_signals` for each job:
      - `required_skills` — canonical skill names found in the JD
@@ -80,10 +83,7 @@ their resume or search constraints.
      - `liveness` — "active", "stale", "closed", "unknown"
      - `salary_range` — e.g. "20K-30K"
    - Compare these signals against the user's profile and stated preferences.
-   - Do the final semantic ranking yourself — override `score` ordering when
-     your reading of the JD suggests a different ranking than the signal score.
-   - ≤20 eligible jobs: Server passes all through, no ranking applied.
-     >20 eligible jobs: Server returns top-20 by signal score.
+   - Add a separate observation; never silently reorder or replace the base list.
 
 5. Use **get_jobs** only for pagination. Use **get_job_details** only when
    the user asks about one specific job.
@@ -92,44 +92,48 @@ their resume or search constraints.
      already applied to (with notes).
    - Rejected: `get_jobs` with `states: ["rejected"]`.
    - History (everything ever pushed): `search_jobs` with `include_seen: true`.
-7. **Periodic push setup** — record the user's exact time and frequency:
-   - `configure_monitor` with `schedule_cron` (5-field cron, arbitrary time/
-     frequency, e.g. `"0 9 * * *"` daily 09:00, `"0 20 * * 1"` Mondays 20:00,
-     `"0 8 */2 * *"` every 2 days) or `interval_hours` for simple intervals.
-   - Never invent a schedule — use exactly what the user said.
-   - For Agent-host scheduling, create the host's scheduled task with the
-     user's exact cron expression.
+7. **Periodic push setup** — scheduling and notification belong to the host
+   Agent. Create a host task at the exact time the user requested; its action
+   calls `search_jobs`. Do not invent a schedule or notification channel.
 8. **Daily push execution** — `search_jobs` (limit 10-15); radar suppresses
    seen jobs and never re-suggests applied/rejected jobs. Prioritize
    new > changed > reopened. If `count` is 0 say briefly "今天暂无新增岗位";
    never fabricate jobs. Record `applied`/`rejected`/`saved` immediately after
    the user decides — never apply on their behalf.
 
+An empty incremental result is successful when unchanged jobs were suppressed.
+Never call `repeated_suppressed` duplicates, claim the previous crawl was
+invalid, or automatically retry with `full`. If MCP is unavailable, run
+`jobfindsme doctor` only; do not invent CLI search syntax or expose IDs.
+
 ## Output Rules
 
-Every search result MUST use the fixed four-section structure (SKILL.md
+Every search result MUST preserve the Server's fixed five-section structure
+(SKILL.md
 Output Contract), in order:
 
-1. **第 1 段 · 简历解析** (skip entirely in no-resume mode) — counts only:
+1. **第 1 段 · 简历解析** — always present. With a resume, show counts only:
    `简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士` — never list actual
-   skills/experience content or institutions.
+   skills/experience content or institutions. Without a resume, state that
+   the explicit search conditions were used.
 2. **第 2 段 · 检索概览** — per source from `diagnostics.source_runs`:
-   `猎聘·上海 ✓(42) · BOSS直聘·上海 ✗(原因)` + 共检索 N 个岗位.
+   `猎聘·上海 ✓(42) · BOSS直聘·上海 ✗(原因)` + 本轮来源返回 N 条记录.
 3. **第 3 段 · 过滤说明** — the plan constraints applied →
    `→ 给出 N 个` (N = `diagnostics.result_count`).
 4. **第 4 段 · 岗位列表** — each job as a deterministic block:
    fact line (+ 匹配度 X% when score > 0), signal line, bare-URL
-   投递链接, and your 推荐理由.
+   投递链接, and the Server's 推荐理由.
+5. **第 5 段 · 说明** — preserve new/changed/reopened/closed and
+   previously-shown counts without renaming them.
 
 Block rules: keep fact/signal lines verbatim; apply link is a BARE URL on
 its own line (no Markdown/HTML wrapping — terminal clients auto-link bare
 URLs); 推荐理由 derives ONLY from returned signals vs profile (or vs the
 user's stated constraints in no-profile mode); never invent facts.
 
-Sort results by your own semantic assessment. Use the Server's `score` as a
-starting point — it reflects deterministic signal overlap — but your reading
-of the JD is the final authority. Keep the response compact.
-Do not pad it with repeated or weak jobs to reach a fixed count.
+Preserve the Server-rendered order and text. Do not rebuild it as a table,
+rerank it silently, or pad it with repeated or weak jobs. If the user later
+asks for a comparison, add a separate evidence-grounded analysis.
 
 The ordinary first-use interaction should require at most one consolidated
 confirmation after the user's resume path and natural-language request. Never

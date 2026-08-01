@@ -211,7 +211,7 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
 
     monkeypatch.setattr(core.jobs, "mark_missing_closed", fail_if_closed)
 
-    result = core._discover_sources(
+    result = core.search._discover_sources(
         workspace_id=configured.workspace.workspace_id,
         plan_id=configured.plan.plan_id,
         sources=(source,),
@@ -274,14 +274,19 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
         refresh_mode=SearchRefreshMode.FAST,
     )
 
-    assert set(discovered) == {"BOSS直聘·上海", "BOSS直聘·杭州"}
+    assert set(discovered) == {
+        "BOSS直聘·上海",
+        "BOSS直聘·杭州",
+        "猎聘·上海",
+        "猎聘·杭州",
+    }
     assert result.diagnostics.refresh_mode is SearchRefreshMode.FAST
     assert (
         sum(
             run.status is SourceRunStatus.SKIPPED
             for run in result.diagnostics.source_runs
         )
-        == 2
+        == 0
     )
 
 
@@ -351,7 +356,7 @@ def test_empty_browser_refresh_uses_existing_cache_as_degraded(
         lambda **_: (ImportSummary(0, 0, 0, ()),),
     )
 
-    run = core._discover_sources(
+    run = core.search._discover_sources(
         workspace_id=configured.workspace.workspace_id,
         plan_id=configured.plan.plan_id,
         sources=(source,),

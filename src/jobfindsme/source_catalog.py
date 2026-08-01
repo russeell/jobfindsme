@@ -24,12 +24,8 @@ def recommended_connectors(
         ("boss_cdp", "BOSS直聘"),
         ("liepin_http", "猎聘"),
     )
-    # 前程无忧 and 智联招聘 are retired from defaults as of v0.3.1:
-    #   51job — WAF2 blocks pure HTTP, CDP interception works but requires
-    #     Chrome which is unstable in headless macOS environments
-    #   智联 — fe-api returns honeypot, DOM extraction had stale selectors
-    #     and produced ~30% dirty records
-    # Both connectors are kept in the codebase for explicit opt-in use.
+    # Old source kinds remain readable for database compatibility, but only
+    # these two evidence-backed connectors are executable in production.
     multiple_locations = len(requested_locations) > 1
     return tuple(
         DiscoverySource(

@@ -11,7 +11,7 @@
 ## ✨ 最简单的方式：和 Agent 聊天安装（推荐）
 
 **你什么都不用装。** 把下面这段话复制，发给你的 AI Agent
-（Claude Code / Codex / ZCode / Kimi / Qwen / TRAE 等任何一个）：
+（Claude Code / Codex / Cursor / ZCode）：
 
 ```text
 请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
@@ -41,8 +41,7 @@ https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
 
 ## 方式二：一行命令（想自己动手）
 
-把 `codex` 换成你的 Agent（`claude` / `workbuddy` / `kimi` / `qwen` / `trae` /
-`trae-cn` / `zcode` / `qoder`）：
+把 `codex` 换成你的 Agent（`claude` / `cursor` / `zcode`）：
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
@@ -103,7 +102,7 @@ jobfindsme doctor
 
 ```json
 {"name": "python", "ok": true, "required": true}
-{"name": "mcp", "ok": true, "message": "10 tools", "required": true}
+{"name": "mcp", "ok": true, "message": "9 tools", "required": true}
 ```
 
 - `required: true` 的项必须全为 `ok: true`（版本、Python、数据库、权限、MCP、连接器）
@@ -131,10 +130,10 @@ Ubuntu: `sudo apt install python3.12 python3.12-venv`）。
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.5.0/jobfindsme-0.5.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.6.0/jobfindsme-0.6.0-py3-none-any.whl"
 ```
 
-> 版本号与仓库最新 Release 保持一致（当前 v0.5.0）。PyPI 安装会在项目
+> 版本号与仓库最新 Release 保持一致（当前 v0.6.0）。PyPI 安装会在项目
 > 成熟后开放，届时此配方自动切换到 `pip install jobfindsme[browser]`。
 
 ### 第 3 步：接入当前 Agent

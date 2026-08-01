@@ -150,7 +150,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup_parser.add_argument(
         "--platform",
         nargs="+",
-        choices=("boss", "liepin", "zhilian"),
+        choices=("boss", "liepin"),
     )
     return parser
 

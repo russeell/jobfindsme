@@ -11,6 +11,8 @@ from jobfindsme.contracts import (
     JobSummary,
     RecruitmentTrack,
     SearchChanges,
+    SearchPresentationContext,
+    SearchRefreshMode,
     SearchRunDiagnostics,
     SourceRunStatus,
 )
@@ -29,7 +31,12 @@ _EMPLOYMENT_LABELS = {
 }
 
 
-def format_job_list(items: Sequence[Any]) -> str:
+def format_job_list(
+    items: Sequence[Any],
+    *,
+    include_recommendation: bool = False,
+    profile_used: bool = False,
+) -> str:
     """Render stable, evidence-based recommendation blocks.
 
     This text is the deterministic part of the Agent contract: every Agent
@@ -58,6 +65,10 @@ def format_job_list(items: Sequence[Any]) -> str:
         # confirmed profile exists (score_signals returns 0 without one).
         if score and score > 0:
             lines.append(f"   匹配度：{round(score * 100)}%（信号匹配，非录用概率）")
+        elif include_recommendation:
+            lines.append(
+                "   匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）"
+            )
 
         # Structured signals — deterministic facts for the Agent's reasoning
         signals = _extracted_signals(evidence)
@@ -72,10 +83,29 @@ def format_job_list(items: Sequence[Any]) -> str:
         if signal_parts:
             lines.append("   " + " ｜ ".join(signal_parts))
 
-        warnings = tuple(getattr(evidence, "warnings", ())) if evidence else ()
-        if warnings:
-            lines.append("   注意：" + "；".join(warnings[:2]))
-        lines.append(f"   投递链接：{job.apply_url}")
+        warnings = list(getattr(evidence, "warnings", ())) if evidence else []
+        if include_recommendation and (not job.salary or not job.salary.raw_text):
+            warnings.append("薪资未注明")
+        if include_recommendation and job.recruitment_track is RecruitmentTrack.UNKNOWN:
+            warnings.append("招聘类型未注明")
+        if include_recommendation and job.employment_type is EmploymentType.UNKNOWN:
+            warnings.append("岗位性质未注明")
+        if include_recommendation and warnings:
+            lines.append("   需要注意：" + "；".join(dict.fromkeys(warnings[:3])))
+        lines.extend(["", f"   投递链接：{job.apply_url}"])
+        if include_recommendation:
+            lines.extend(
+                [
+                    "",
+                    "   推荐理由："
+                    + _recommendation_reason(
+                        job,
+                        score=score,
+                        signals=signals,
+                        profile_used=profile_used,
+                    ),
+                ]
+            )
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
@@ -89,20 +119,61 @@ def _extracted_signals(evidence: Any | None) -> dict:
     return {}
 
 
-def format_search_results(items: Sequence[Any], changes: SearchChanges) -> str:
-    labels = []
-    for label, count in (
-        ("新增", changes.new),
-        ("变更", changes.changed),
-        ("重开", changes.reopened),
-        ("关闭", changes.closed),
-    ):
-        if count:
-            labels.append(f"{label} {count}")
-    summary = "本轮变化：" + ("，".join(labels) if labels else "无")
+def format_search_results(
+    items: Sequence[Any],
+    changes: SearchChanges,
+    diagnostics: SearchRunDiagnostics,
+    context: SearchPresentationContext,
+) -> str:
+    profile_line = (
+        f"简历解析：技能 {context.skill_count} 项 ｜ "
+        f"项目 {context.project_count} 项 ｜ "
+        f"经验 {context.experience_count} 项 ｜ "
+        f"学历：{context.highest_degree or '未识别'}"
+        if context.profile_used
+        else "简历解析：本次未使用简历，按用户明确条件匹配。"
+    )
+    source_parts = []
+    for run in diagnostics.source_runs:
+        if run.status in {SourceRunStatus.SUCCESS, SourceRunStatus.DEGRADED}:
+            marker = "✓" if run.status is SourceRunStatus.SUCCESS else "△"
+            suffix = "·缓存" if run.cache_used else ""
+            source_parts.append(f"{run.source_name} {marker}({run.discovered}{suffix})")
+        elif run.status is SourceRunStatus.FAILED:
+            source_parts.append(f"{run.source_name} ✗({_short_error(run.error)})")
+        else:
+            source_parts.append(f"{run.source_name} -({_short_error(run.error)})")
+    source_line = "检索：" + (" · ".join(source_parts) if source_parts else "本地缓存")
+    if diagnostics.refresh_mode is SearchRefreshMode.CACHE:
+        source_line += "\n本轮未刷新外部来源，使用本地缓存。"
+    else:
+        source_line += f"\n本轮来源返回 {diagnostics.total_discovered} 条记录。"
+    filters = " + ".join(context.applied_filters) or "未设置额外条件"
+    filter_line = f"过滤：{filters} → 给出 {diagnostics.result_count} 个"
+    job_text = format_job_list(
+        items,
+        include_recommendation=True,
+        profile_used=context.profile_used,
+    )
+    if not items:
+        job_text = format_search_empty(diagnostics)
+    changes_line = (
+        f"本次新增 {changes.new} 个，变更 {changes.changed} 个，"
+        f"重开 {changes.reopened} 个，关闭 {changes.closed} 个。"
+    )
     if changes.repeated_suppressed:
-        summary += f"；已隐藏重复 {changes.repeated_suppressed}"
-    return summary + "\n\n" + format_job_list(items)
+        changes_line += (
+            f"已隐藏 {changes.repeated_suppressed} 个此前展示且未变化的岗位。"
+        )
+    return "\n\n".join(
+        (
+            "【1·简历解析】\n" + profile_line,
+            "【2·检索概览】\n" + source_line,
+            "【3·过滤说明】\n" + filter_line,
+            "【4·岗位列表】\n" + job_text,
+            "【5·说明】\n" + changes_line,
+        )
+    )
 
 
 def format_search_empty(diagnostics: SearchRunDiagnostics) -> str:
@@ -146,3 +217,29 @@ def _change_label(change_type: Any | None) -> str:
     labels = {"new": "[新增] ", "changed": "[变更] ", "reopened": "[重开] "}
     value = getattr(change_type, "value", change_type)
     return labels.get(value, "")
+
+
+def _recommendation_reason(
+    job: JobSummary,
+    *,
+    score: float | None,
+    signals: dict,
+    profile_used: bool,
+) -> str:
+    parts = []
+    if profile_used and score is not None:
+        parts.append(f"简历事实与岗位信号综合匹配度为 {round(score * 100)}%")
+    else:
+        parts.append("岗位名称已通过目标角色筛选")
+    skills = signals.get("required_skills") or []
+    if skills:
+        parts.append("JD 明确涉及 " + "、".join(skills[:4]))
+    if job.salary and job.salary.raw_text:
+        parts.append("薪资信息明确")
+    return "；".join(parts) + "。"
+
+
+def _short_error(error: str | None) -> str:
+    if not error:
+        return "无结果"
+    return error.replace("\n", " ")[:80]

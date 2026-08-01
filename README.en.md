@@ -9,7 +9,7 @@
 - searches **BOSS直聘** and **猎聘 (Liepin)** from one Agent;
 - matches jobs against your resume (Agent-side semantic ranking);
 - returns matching jobs with direct apply links;
-- optional scheduled push at any time/frequency; applied jobs are never re-suggested;
+- host-Agent scheduled searches; applied jobs are never re-suggested;
 - query every job ever matched, with its state.
 
 ## Install
@@ -27,14 +27,13 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.5.0/jobfindsme-0.5.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.6.0/jobfindsme-0.6.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
 
-Replace `claude` with `codex`, `workbuddy`, `kimi`, `trae`, `zcode`, `qwen`,
-`qoder`, or `trae-cn`. Every Agent uses the same runtime; only its MCP config
-path differs.
+Replace `claude` with `codex`, `cursor`, or `zcode`. Other MCP clients can use
+`jobfindsme config` for standard JSON or `jobfindsme connect --path <file>`.
 
 ## Use
 
@@ -52,13 +51,13 @@ Find new jobs since my last search.
 
 ## Sources
 
-Two platforms only — **BOSS直聘** and **猎聘 (Liepin)**, covering the large
-majority of China's tech hiring market. The focus keeps maintenance cost and
-failure rate low.
+Two verified sources are maintained — **BOSS直聘** and **猎聘 (Liepin)**.
+The project prioritizes useful, reliable results over an inflated connector
+count and does not claim complete market coverage.
 
 | Source | Method | Speed | Browser needed? |
 |---|---|---|---|
-| BOSS Zhipin | local Chrome CDP, XHR-injected internal API | ~0.5s | ✅ yes (login session) |
+| BOSS Zhipin | authorized local Chrome CDP, site request in page context | ~0.5s | ✅ yes (login session) |
 | Liepin | `api-c.liepin.com` pure HTTP JSON API | ~1.0s | ❌ no |
 
 Liepin prefers pure HTTP (sub-second, no browser). When Chrome is available,
