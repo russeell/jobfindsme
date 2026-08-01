@@ -4,6 +4,7 @@ import io
 import zipfile
 
 import pytest
+from pypdf import PdfWriter
 
 from jobfindsme.profiles.extractor import (
     MAX_RESUME_BYTES,
@@ -26,6 +27,48 @@ def make_docx(text: str) -> bytes:
     return output.getvalue()
 
 
+def make_pdf_with_text(text: str) -> bytes:
+    """Programmatic single-page PDF with a text layer (pypdf-generated)."""
+    from pypdf.generic import (
+        DictionaryObject,
+        NameObject,
+        StreamObject,
+    )
+
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=300, height=144)
+    content = StreamObject()
+    content.set_data(f"BT /F1 18 Tf 0 0 Td ({text}) Tj ET".encode("ascii"))
+    page[NameObject("/Contents")] = writer._add_object(content)
+    page[NameObject("/Resources")] = DictionaryObject(
+        {
+            NameObject("/Font"): DictionaryObject(
+                {
+                    NameObject("/F1"): DictionaryObject(
+                        {
+                            NameObject("/Type"): NameObject("/Font"),
+                            NameObject("/Subtype"): NameObject("/Type1"),
+                            NameObject("/BaseFont"): NameObject("/Helvetica"),
+                        }
+                    )
+                }
+            )
+        }
+    )
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
+def make_scanned_pdf() -> bytes:
+    """Blank page with no content stream — what a scanned PDF yields."""
+    writer = PdfWriter()
+    writer.add_blank_page(width=612, height=792)
+    output = io.BytesIO()
+    writer.write(output)
+    return output.getvalue()
+
+
 def test_extracts_utf8_text_and_docx(tmp_path) -> None:
     markdown = tmp_path / "resume.md"
     markdown.write_text("# Skills\nPython RAG", encoding="utf-8")
@@ -38,6 +81,36 @@ def test_extracts_utf8_text_and_docx(tmp_path) -> None:
 
     assert extracted_markdown.text == "# Skills\nPython RAG"
     assert extracted_docx.text == "Projects: JobFindsMe"
+
+
+def test_decodes_gbk_text_resume() -> None:
+    """Chinese Windows TXT resumes are GBK/GB18030, not UTF-8."""
+    content = "姓名：张三\n技能：Python、FastAPI".encode("gb18030")
+
+    extracted = ResumeTextExtractor().extract(
+        file_name="resume.txt",
+        content=content,
+    )
+
+    assert extracted.text == "姓名：张三\n技能：Python、FastAPI"
+
+
+def test_extracts_text_pdf() -> None:
+    text = "Hello World, resume with Python and FastAPI experience."
+    extracted = ResumeTextExtractor().extract(
+        file_name="resume.pdf",
+        content=make_pdf_with_text(text),
+    )
+
+    assert "Python" in extracted.text
+
+
+def test_rejects_scanned_pdf() -> None:
+    with pytest.raises(ResumeExtractionError, match="scanned image"):
+        ResumeTextExtractor().extract(
+            file_name="resume.pdf",
+            content=make_scanned_pdf(),
+        )
 
 
 @pytest.mark.parametrize(

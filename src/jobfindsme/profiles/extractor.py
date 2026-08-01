@@ -10,6 +10,7 @@ from pypdf import PdfReader
 
 MAX_RESUME_BYTES = 5 * 1024 * 1024
 MAX_PDF_PAGES = 50
+MIN_READABLE_PDF_CHARS = 30
 MAX_DOCX_FILES = 500
 MAX_DOCX_UNCOMPRESSED_BYTES = 20 * 1024 * 1024
 
@@ -69,10 +70,16 @@ class ResumeTextExtractor:
 
 
 def _decode_text(content: bytes) -> str:
-    try:
-        return content.decode("utf-8-sig")
-    except UnicodeDecodeError as error:
-        raise ResumeExtractionError("text resume must use UTF-8") from error
+    """Decode text resumes with encoding fallback (GB18030 is the superset
+    covering GBK/GB2312 — common for Chinese Windows-saved TXT resumes)."""
+    for encoding in ("utf-8-sig", "gb18030"):
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ResumeExtractionError(
+        "text resume encoding not recognized (tried UTF-8 and GB18030)"
+    )
 
 
 def _extract_pdf(content: bytes) -> str:
@@ -84,7 +91,16 @@ def _extract_pdf(content: bytes) -> str:
         raise ResumeExtractionError("encrypted PDF is not supported")
     if len(reader.pages) > MAX_PDF_PAGES:
         raise ResumeExtractionError("PDF cannot exceed 50 pages")
-    return "\n".join(page.extract_text() or "" for page in reader.pages)
+    try:
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except Exception as error:
+        raise ResumeExtractionError("invalid PDF content") from error
+    if len(text.strip()) < MIN_READABLE_PDF_CHARS:
+        raise ResumeExtractionError(
+            "PDF looks like a scanned image with no text layer; "
+            "provide a text-based PDF or export it as DOCX/TXT"
+        )
+    return text
 
 
 def _extract_docx(content: bytes) -> str:
