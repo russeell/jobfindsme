@@ -19,16 +19,16 @@ FONT_PATHS = (
     Path("/System/Library/Fonts/Supplemental/Songti.ttc"),
 )
 
-BG = "#f6f8fb"
-PANEL = "#ffffff"
-SECTION_BG = "#eef6ff"
-TEXT = "#17202a"
-MUTED = "#667085"
-BLUE = "#1677ff"
-GREEN = "#16a34a"
-YELLOW = "#b7791f"
-RULE = "#d9e2ec"
-SOFT_RULE = "#edf2f7"
+BG = "#0b0f14"
+PANEL = "#111827"
+SECTION_BG = "#10243f"
+TEXT = "#e5edf7"
+MUTED = "#93a4b8"
+BLUE = "#60a5fa"
+GREEN = "#7dd3a7"
+YELLOW = "#f2c76b"
+RULE = "#263244"
+SOFT_RULE = "#1e293b"
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
