@@ -434,3 +434,231 @@ def test_score_signals_degree_match() -> None:
 
 def test_score_signals_returns_zero_without_profile() -> None:
     assert score_signals(job("plain"), None) == 0.0
+
+
+# ── Regression: salary conflict — raw vs structured ────────────────────
+
+
+def test_raw_text_lower_than_structured_min_is_filtered_by_strict_salary() -> None:
+    """When raw salary text shows 18K but structured fields claim 20K,
+    the strict salary_min_k=20 filter must use the conservative (lower)
+    value and exclude the job."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    # Simulate: structured says 20K, raw_text says "18-30K"
+    details = SalaryDetails(
+        raw_text="18-30K",
+        currency="CNY",
+        period=SalaryPeriod.MONTH,
+        min_amount=20000,
+        max_amount=30000,
+        months_per_year=12,
+        normalized_annual_min=20000 * 12,
+        normalized_annual_max=30000 * 12,
+    )
+    new_min, new_max, new_details = _reconcile_salary(20, 30, details)
+
+    # Must use the conservative raw-text value (18K monthly)
+    assert new_min == 18
+    assert new_details is not None
+    # normalized_annual_min should now reflect 18K, not 20K
+    assert new_details.normalized_annual_min == 18 * 1000 * 12  # 216000
+    assert new_details.normalized_annual_min < 20 * 1000 * 12  # < 240000
+
+
+def test_raw_text_consistent_with_structured_is_not_adjusted() -> None:
+    """When raw text and structured fields agree, no adjustment needed."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    details = SalaryDetails(
+        raw_text="25-40K",
+        currency="CNY",
+        period=SalaryPeriod.MONTH,
+        min_amount=25000,
+        max_amount=40000,
+        months_per_year=12,
+        normalized_annual_min=25000 * 12,
+        normalized_annual_max=40000 * 12,
+    )
+    new_min, new_max, new_details = _reconcile_salary(25, 40, details)
+
+    assert new_min == 25  # Unchanged
+    assert new_max == 40  # Unchanged
+    assert new_details is details  # Same object returned
+
+
+def test_parse_monthly_salary_min_k_returns_monthly_base() -> None:
+    """parse_monthly_salary_min_k returns monthly K, not annualised."""
+    from jobfindsme.importing.normalizer import parse_monthly_salary_min_k
+
+    # Plain monthly: returns the base K value
+    assert parse_monthly_salary_min_k("18-30K") == 18.0
+    assert parse_monthly_salary_min_k("20-40K") == 20.0
+    # With bonus months: returns monthly base, NOT bonus-inflated annual
+    assert parse_monthly_salary_min_k("18-30K·15薪") == 18.0
+    assert parse_monthly_salary_min_k("20-40K·15薪") == 20.0
+    # Decimal
+    assert parse_monthly_salary_min_k("18.5-30.5K") == 18.5
+    # Yearly → conservative /12
+    result = parse_monthly_salary_min_k("20-30万/年")
+    assert abs(result - 20 * 10 / 12) < 0.01  # ≈ 16.67
+    # Non-salary text
+    assert parse_monthly_salary_min_k("面议") is None
+    assert parse_monthly_salary_min_k("") is None
+
+
+def test_18_30K_15salary_filtered_by_strict_20k() -> None:
+    """18-30K·15薪 has a monthly base of 18K — must be filtered when
+    salary_min_k=20 with STRICT policy.
+
+    The bonus months (·15薪) increase the ANNUAL total but the plan
+    threshold is in monthly-K terms; 18K < 20K so the job is excluded.
+    """
+    raw = RawJobRecord(
+        source_kind=SourceKind.CAREER_SITE,
+        source_name="企业官网",
+        source_url="https://careers.example.com/job-18k",
+        external_id="job-18k",
+        payload={
+            "title": "AI应用工程师",
+            "company": "示例科技",
+            "description": "Python RAG Agent 大模型 18-30K·15薪",
+            "location": "杭州",
+            "url": "https://careers.example.com/job-18k",
+            "published_at": "2026-07-27T00:00:00Z",
+        },
+    )
+    j = normalize_job(raw, fetched_at=NOW)
+
+    # Verify the job has monthly min 18K in raw text
+    from jobfindsme.importing.normalizer import parse_monthly_salary_min_k
+
+    raw_monthly = parse_monthly_salary_min_k("18-30K·15薪")
+    assert raw_monthly == 18.0
+
+    # Strict filter with salary_min_k=20 must exclude it
+    p = plan(salary_min_k=20, salary_policy=SalaryPolicy.STRICT)
+    result = filter_jobs(p, [j], limit=20)
+    assert len(result) == 0, (
+        f"18K monthly job should be filtered by strict 20K threshold, "
+        f"but {len(result)} passed"
+    )
+
+    # Same job with salary_min_k=15 should pass
+    p15 = plan(salary_min_k=15, salary_policy=SalaryPolicy.STRICT)
+    result15 = filter_jobs(p15, [j], limit=20)
+    assert len(result15) == 1
+
+
+def test_monthly_salary_min_k_uses_lowest_candidate_across_sources() -> None:
+    """_monthly_salary_min_k returns min(salary_min_k, raw_text, salary details)."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.matching.ranker import _monthly_salary_min_k
+
+    j = job(
+        "conflict",
+        description="AI应用工程师 20-30K",
+    )
+    j = j.model_copy(
+        update={
+            "salary_min_k": 20,
+            "salary": SalaryDetails(
+                raw_text="18-30K",
+                currency="CNY",
+                period=SalaryPeriod.MONTH,
+                min_amount=18000,
+                max_amount=30000,
+                months_per_year=12,
+                normalized_annual_min=18000 * 12,
+                normalized_annual_max=30000 * 12,
+            ),
+        }
+    )
+    monthly = _monthly_salary_min_k(j)
+    assert monthly == 18  # conservative — raw text 18K beats structured 20K
+
+
+def test_monthly_salary_min_k_returns_none_for_day_hour_unknown() -> None:
+    """DAY / HOUR / UNKNOWN periods must not pretend to be monthly."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.matching.ranker import _monthly_salary_min_k
+
+    day_job = job("day-rate", description="AI工程师 500-800/天").model_copy(
+        update={
+            "salary": SalaryDetails(
+                raw_text="500-800/天",
+                currency="CNY",
+                period=SalaryPeriod.DAY,
+                min_amount=500,
+                max_amount=800,
+            ),
+        }
+    )
+    assert _monthly_salary_min_k(day_job) is None
+
+
+# ── _reconcile_salary edge cases ────────────────────────────────────────
+
+
+def test_reconcile_salary_handles_decimal_values() -> None:
+    """Decimal monthly salaries are parsed correctly."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    details = SalaryDetails(
+        raw_text="18.5-30.5K",
+        currency="CNY",
+        period=SalaryPeriod.MONTH,
+        min_amount=18500,
+        max_amount=30500,
+        months_per_year=12,
+        normalized_annual_min=18500 * 12,
+        normalized_annual_max=30500 * 12,
+    )
+    # No conflict — structured and raw agree
+    new_min, new_max, new_details = _reconcile_salary(19, 31, details)
+    # 18.5 < 19 so should adjust
+    assert new_min == 18
+    assert new_max == 30
+
+
+def test_reconcile_salary_skips_yearly_raw_text() -> None:
+    """Yearly raw text like "20-30万/年" does not match the monthly regex,
+    so _reconcile_salary returns early without adjustment."""
+    from jobfindsme.contracts import SalaryDetails, SalaryPeriod
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    details = SalaryDetails(
+        raw_text="20-30万/年",
+        currency="CNY",
+        period=SalaryPeriod.YEAR,
+        min_amount=200000,
+        max_amount=300000,
+        normalized_annual_min=200000,
+        normalized_annual_max=300000,
+    )
+    new_min, new_max, new_details = _reconcile_salary(25, 35, details)
+    # yearly raw text is in different units — must not be compared with monthly K
+    assert new_min == 25  # unchanged
+    assert new_details is details
+
+
+def test_reconcile_salary_skips_mianyi() -> None:
+    """面议 raw_text has no parseable number — return early."""
+    from jobfindsme.contracts import SalaryDetails
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    details = SalaryDetails(raw_text="面议")
+    new_min, _, new_details = _reconcile_salary(25, 35, details)
+    assert new_min == 25  # unchanged
+    assert new_details is details
+
+
+def test_reconcile_salary_skips_empty_raw_text() -> None:
+    """Empty or None raw_text should not trigger reconciliation."""
+    from jobfindsme.importing.normalizer import _reconcile_salary
+
+    new_min, _, _ = _reconcile_salary(25, 35, None)
+    assert new_min == 25  # unchanged

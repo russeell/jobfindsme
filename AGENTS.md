@@ -105,8 +105,16 @@ An empty incremental result is successful when unchanged jobs were suppressed.
 Never call `repeated_suppressed` duplicates, claim the previous crawl was
 invalid, or automatically retry with `full`. If MCP is unavailable, run
 `jobfindsme doctor` only; do not invent CLI search syntax or expose IDs.
+If the browser is unavailable, the ONLY recovery action is `jobfindsme setup`.
+Never tell the user to open a raw Chrome instance or invoke `google-chrome`
+directly.
 
 ## Output Rules
+
+**CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
+Return it verbatim. Never renumber, delete, reorder, rewrite, or rebuild any
+block. `structuredContent` is for programmatic consumption only — the text
+is the deterministic contract, identical on every host.
 
 Every search result MUST preserve the Server's fixed five-section structure
 (SKILL.md
@@ -130,6 +138,13 @@ Block rules: keep fact/signal lines verbatim; apply link is a BARE URL on
 its own line (no Markdown/HTML wrapping — terminal clients auto-link bare
 URLs); 推荐理由 derives ONLY from returned signals vs profile (or vs the
 user's stated constraints in no-profile mode); never invent facts.
+
+**STRICTLY FORBIDDEN in 推荐理由**: subjective evaluations not backed by
+returned evidence — no "龙头", "核心区", "有前景", "福利齐全", "行业领先",
+"知名企业", or any company/area/industry/benefit judgment. The Server's
+evidence only covers role match, salary, skills, experience, degree, and
+liveness — never extrapolate beyond these. In no-resume mode, never
+fabricate a match percentage or claim resume-based skill matches.
 
 Preserve the Server-rendered order and text. Do not rebuild it as a table,
 rerank it silently, or pad it with repeated or weak jobs. If the user later

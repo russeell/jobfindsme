@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import logging
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -18,6 +19,8 @@ from jobfindsme.contracts import (
     SourceEvidence,
 )
 
+_log = logging.getLogger(__name__)
+
 _TAG_RE = re.compile(r"<[^>]+>")
 _SPACE_RE = re.compile(r"\s+")
 _YEAR_RE = re.compile(r"(\d+)\s*(?:[-~到至]\s*(\d+))?\s*年")
@@ -29,6 +32,26 @@ _MONTHLY_SALARY_RE = re.compile(
 _ANNUAL_WAN_RE = re.compile(
     r"(\d+(?:\.\d+)?)\s*[-~到至]\s*(\d+(?:\.\d+)?)\s*万\s*/?\s*年"
 )
+
+
+def parse_monthly_salary_min_k(raw_text: str) -> float | None:
+    """Extract conservative monthly minimum salary in K from raw text.
+
+    Shared parsing used by both the normalizer and the hard filter so
+    salary comparisons use a single, consistent "月薪 K" definition:
+
+    - ``"18-30K"`` / ``"18-30K·15薪"`` → 18.0 (monthly base, ignoring bonus months)
+    - ``"20-30万/年"`` → 20*10/12 ≈ 16.7 (conservative yearly→monthly)
+    - ``"面议"``, daily, hourly, UNKNOWN → None
+    """
+    monthly = _MONTHLY_SALARY_RE.search(raw_text)
+    if monthly:
+        return float(monthly.group(1))
+    annual = _ANNUAL_WAN_RE.search(raw_text)
+    if annual:
+        return float(annual.group(1)) * 10.0 / 12.0  # 万/年 → K/月
+    return None
+
 
 _CAMPUS_TERMS = ("校招", "校园招聘", "应届", "毕业生", "campus", "new grad", "graduate")
 _SOCIAL_TERMS = ("社招", "社会招聘", "experienced", "social recruitment")
@@ -154,6 +177,16 @@ def normalize_job(
     if experience and experience_min is None and experience_max is None:
         experience_min = int(experience.group(1))
         experience_max = int(experience.group(2) or experience.group(1))
+
+    # ── Raw/structured salary conflict reconciliation ────────────────────
+    # When a source provides both structured salary fields AND raw text
+    # (e.g. salary_min_k=20 but raw_text="18-30K"), the raw text may
+    # reveal a lower bound that structured fields miss.  Use the most
+    # conservative (lowest) value so the strict salary filter never
+    # passes a job whose visible raw salary is below the threshold.
+    salary_min, salary_max, salary_details = _reconcile_salary(
+        salary_min, salary_max, salary_details
+    )
 
     recruitment_track = _recruitment_track(payload, title, description, raw.source_url)
     employment_type = _employment_type(payload, title, description)
@@ -389,3 +422,68 @@ def _parse_salary(payload: dict[str, Any], text: str) -> SalaryDetails | None:
     if "面议" in text:
         return SalaryDetails(raw_text="面议")
     return None
+
+
+def _reconcile_salary(
+    salary_min_k: int | None,
+    salary_max_k: int | None,
+    salary_details: SalaryDetails | None,
+) -> tuple[int | None, int | None, SalaryDetails | None]:
+    """Resolve raw-text vs structured salary conflicts conservatively.
+
+    When raw_text shows a lower lower-bound than the structured field
+    (e.g. raw "18-30K" but structured salary_min_k=20), the visible
+    salary to the user is below threshold.  Use the raw-text value so
+    the strict filter correctly excludes it.
+    """
+    if salary_details is None or not salary_details.raw_text:
+        return salary_min_k, salary_max_k, salary_details
+
+    monthly = _MONTHLY_SALARY_RE.search(salary_details.raw_text)
+    if monthly is None:
+        return salary_min_k, salary_max_k, salary_details
+
+    raw_min = int(float(monthly.group(1)))
+    raw_max = int(float(monthly.group(2)))
+
+    adjusted = False
+    new_min = salary_min_k
+    new_max = salary_max_k
+
+    if salary_min_k is not None and raw_min < salary_min_k:
+        _log.info(
+            "salary conflict: raw_text min=%dK < structured min=%dK — "
+            "using conservative raw value for filtering",
+            raw_min,
+            salary_min_k,
+        )
+        new_min = raw_min
+        adjusted = True
+    if salary_max_k is not None and raw_max < salary_max_k:
+        new_max = raw_max
+        adjusted = True
+
+    if not adjusted:
+        return salary_min_k, salary_max_k, salary_details
+
+    # Rebuild SalaryDetails with conservative normalized values
+    months = salary_details.months_per_year or 12
+    new_details = SalaryDetails(
+        raw_text=salary_details.raw_text,
+        currency=salary_details.currency,
+        period=salary_details.period,
+        min_amount=new_min * 1000 if new_min is not None else salary_details.min_amount,
+        max_amount=new_max * 1000 if new_max is not None else salary_details.max_amount,
+        months_per_year=salary_details.months_per_year,
+        normalized_annual_min=(
+            new_min * 1000 * months
+            if new_min is not None
+            else salary_details.normalized_annual_min
+        ),
+        normalized_annual_max=(
+            new_max * 1000 * months
+            if new_max is not None
+            else salary_details.normalized_annual_max
+        ),
+    )
+    return new_min, new_max, new_details

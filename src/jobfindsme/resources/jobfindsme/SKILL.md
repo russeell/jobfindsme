@@ -111,6 +111,11 @@ jobfindsme setup          # runtime: ~/.jobfindsme/runtime/bin/python -m jobfind
 
 ## Output Contract (输出契约 — 固定五段结构)
 
+**CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
+The host MUST return it verbatim. Never renumber, delete, reorder, rewrite, or
+rebuild any block. `structuredContent` is for programmatic consumption only;
+the text is the deterministic contract — identical on every host.
+
 Every search result MUST preserve exactly these five Server-rendered sections
 in this order. In no-resume mode, section 1 explicitly says no resume was used.
 
@@ -189,13 +194,19 @@ duplicates and never invent totals that are absent from structured content.
    Markdown (`[链接](url)`), HTML, or code fences: most terminal clients
    auto-link bare URLs in plain text, and any wrapping breaks
    clickability and copyability. The URL must stay visible and unmodified.
-4. **Never delete or rewrite the Server's 推荐理由**. You may append one
-   additional semantic observation, based ONLY on returned signals versus the
-   confirmed profile. Never invent facts not present in the block or profile.
+4. **Never delete, rewrite, or append to the Server's 推荐理由** in the initial
+   search response. If the user later asks to compare jobs, add a separate
+   evidence-grounded analysis after the complete Server output. Never invent
+   facts not present in the block or profile.
    **No-profile mode**: base the reason on the job's own signals vs the
    user's stated preferences (role, location, salary, track) — e.g.
    "标题与目标角色一致，薪资符合 20K+ 要求，学历本科满足" — and never
    claim resume-based skill matches.
+   **STRICTLY FORBIDDEN**: subjective evaluations not backed by returned
+   evidence — no "龙头", "核心区", "有前景", "福利齐全", "行业领先",
+   "知名企业", or any company/area/industry/benefit judgment. The Server's
+   evidence only covers role match, salary, skills, experience, degree,
+   and liveness — never extrapolate beyond these.
 5. If the block lacks a field (e.g. no salary), say so briefly rather than
    guessing.
 6. When presenting several jobs, keep this block order; your reasoning lines
@@ -261,3 +272,11 @@ Never invent, reuse, or bypass a confirmation token.
 - Clearly label unknown salary or freshness.
 - Do not claim that a synthetic evaluation score is field performance.
 - Do not automate applications or external messages.
+- **The text response from search_jobs IS the final output** — return it
+  verbatim. Never renumber, delete, reorder, or rebuild blocks.
+- **Never add subjective evaluations** (company reputation, area desirability,
+  industry outlook, benefit quality) absent from returned evidence.
+- **No-resume mode** must never fabricate a match percentage or claim
+  resume-based skill matches.
+- **Recovery**: only suggest `jobfindsme setup` or `jobfindsme doctor`.
+  Never tell the user to launch raw Chrome or invent CLI search syntax.

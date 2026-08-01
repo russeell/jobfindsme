@@ -18,9 +18,11 @@ from jobfindsme.contracts import (
     JobLiveness,
     JobPosting,
     RecruitmentTrack,
+    SalaryPeriod,
     SalaryPolicy,
     SearchPlan,
 )
+from jobfindsme.importing.normalizer import parse_monthly_salary_min_k
 from jobfindsme.profiles.models import FactType, ProfileSummary
 from jobfindsme.taxonomy import (
     expand_location_terms,
@@ -80,8 +82,8 @@ def eligible_count(
 
 
 def has_undisclosed_salary(job: JobPosting) -> bool:
-    """Return true when no comparable CNY lower bound is available."""
-    return _annual_salary_min(job) is None
+    """Return true when no comparable CNY monthly lower bound is available."""
+    return _monthly_salary_min_k(job) is None
 
 
 def undisclosed_salary_counts(
@@ -335,22 +337,16 @@ def _hard_filter(
         location.casefold() in searchable for location in location_terms
     ):
         return False
-    annual_salary_min = _annual_salary_min(job)
+    monthly_min = _monthly_salary_min_k(job)
     if plan.salary_min_k is not None:
-        if annual_salary_min is None and plan.salary_policy is SalaryPolicy.STRICT:
+        if monthly_min is None and plan.salary_policy is SalaryPolicy.STRICT:
             return False
-        if (
-            annual_salary_min is not None
-            and annual_salary_min < plan.salary_min_k * 1000 * 12
-        ):
+        if monthly_min is not None and monthly_min < plan.salary_min_k:
             return False
     if plan.salary_max_k is not None:
-        if annual_salary_min is None and plan.salary_policy is SalaryPolicy.STRICT:
+        if monthly_min is None and plan.salary_policy is SalaryPolicy.STRICT:
             return False
-        if (
-            annual_salary_min is not None
-            and annual_salary_min > plan.salary_max_k * 1000 * 12
-        ):
+        if monthly_min is not None and monthly_min > plan.salary_max_k:
             return False
     return not (
         plan.experience_max_years is not None
@@ -372,17 +368,57 @@ def _profile_experience_years(profile: ProfileSummary | None) -> int | None:
     return max(values, default=None)
 
 
-def _annual_salary_min(job: JobPosting) -> int | None:
-    if job.salary and job.salary.currency in {None, "CNY"}:
-        return job.salary.normalized_annual_min
+def _monthly_salary_min_k(job: JobPosting) -> int | None:
+    """Conservative monthly minimum salary in K (月薪K下限).
+
+    Uses the most conservative available source so the strict filter
+    never passes a job whose visible monthly salary is below threshold.
+
+    - MONTH data / raw ``x-yK·N薪``: uses ``x`` (monthly base; bonus
+      months are NOT factored in because the plan threshold is in
+      monthly-K terms).
+    - YEAR data: conservatively divides by 12.
+    - DAY / HOUR / UNKNOWN: returns None (do not pretend to be monthly).
+    """
+    candidates: list[int] = []
+
+    # salary_min_k is already monthly K (set during normalization)
     if job.salary_min_k is not None:
-        return job.salary_min_k * 1000 * 12
-    return None
+        candidates.append(job.salary_min_k)
 
+    # Parse raw_text for monthly K via the shared function
+    if job.salary and job.salary.raw_text:
+        monthly = parse_monthly_salary_min_k(job.salary.raw_text)
+        if monthly is not None:
+            candidates.append(int(monthly))
 
-def _annual_salary_max(job: JobPosting) -> int | None:
+    # Structured salary details
     if job.salary and job.salary.currency in {None, "CNY"}:
-        return job.salary.normalized_annual_max
+        period = job.salary.period
+        amount = job.salary.min_amount
+        if period is SalaryPeriod.MONTH and amount is not None:
+            candidates.append(amount // 1000)
+        elif period is SalaryPeriod.YEAR and amount is not None:
+            candidates.append(amount // 1000 // 12)  # conservative /12
+        # DAY / HOUR / UNKNOWN: skip
+
+    if not candidates:
+        return None
+    return min(candidates)
+
+
+def _monthly_salary_max_k(job: JobPosting) -> int | None:
+    """Conservative monthly maximum salary in K (月薪K上限)."""
+    candidates: list[int] = []
     if job.salary_max_k is not None:
-        return job.salary_max_k * 1000 * 12
-    return None
+        candidates.append(job.salary_max_k)
+    if job.salary and job.salary.currency in {None, "CNY"}:
+        period = job.salary.period
+        amount = job.salary.max_amount
+        if period is SalaryPeriod.MONTH and amount is not None:
+            candidates.append(amount // 1000)
+        elif period is SalaryPeriod.YEAR and amount is not None:
+            candidates.append(amount // 1000 // 12)
+    if not candidates:
+        return None
+    return max(candidates)
