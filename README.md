@@ -19,19 +19,19 @@
 ---
 
 <p align="center">
-  <img src="docs/demo.gif" alt="jobfindsme 真实运行 demo（BOSS直聘 + 猎聘 双平台实时返回）" width="780">
+  <img src="docs/demo.gif" alt="jobfindsme 固定五段输出 demo（BOSS直聘 + 猎聘 双平台示例）" width="780">
 </p>
 
 <details>
-<summary>📸 等不及动画？先看一张静态效果截图（同为实时渲染，非 mock）</summary>
+<summary>📸 等不及动画？先看一张静态效果截图</summary>
 <br>
 <p align="center">
-  <img src="docs/search-screenshot.png" alt="jobfindsme 真实搜索结果效果截图" width="780">
+  <img src="docs/search-screenshot.png" alt="jobfindsme 固定五段输出效果截图" width="780">
 </p>
 </details>
 
-> 💡 图中两个平台一起出结果 —— 录制时本机已通过 `jobfindsme setup` 登录 BOSS 专用 Chrome；
-> 未登录时 BOSS 会自动跳过并明确标注，不会静默少一个平台。
+> 💡 图中展示的是由 `scripts/render_readme_assets.py` 生成的可复现输出示例；
+> 真实搜索时，未登录 BOSS 会自动跳过并明确标注，不会静默少一个平台。
 
 > ⭐ 如果它帮你省了时间，点个 Star 支持一下，让更多求职者发现这个开源项目。
 
@@ -56,7 +56,7 @@
 | **Job**（找到了什么） | 一个岗位 + 证据 + 投递链接 | 岗位、匹配度、链接 |
 | **Tracking**（有什么变化） | 与上次相比的新增/变更/关闭，以及已投/已存/已忽略 | 每日推送只报变化 |
 
-几秒后，Agent 返回匹配的岗位列表（上面动图同一次运行的真实输出节选）：
+几秒后，Agent 返回匹配的岗位列表（上面动图展示同一固定五段结构）：
 
 ```text
 ✅ 猎聘·上海 ✓ (1.0s)   ✅ BOSS直聘·上海 ✓ (0.5s)
