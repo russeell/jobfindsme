@@ -215,13 +215,6 @@ class ConfigureSearchInput(StrictModel):
     )
 
 
-class SuggestPlanInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
-
-
 class GetJobsInput(StrictModel):
     workspace_id: str | None = Field(
         default=None,
@@ -372,7 +365,6 @@ class DeleteLocalDataOutput(StrictModel):
 MCP_OUTPUT_MODELS: dict[str, type[StrictModel]] = {
     "setup_profile": SetupProfileOutput,
     "configure_search": SearchConfiguration,
-    "suggest_plan": SuggestedPlan,
     "search_jobs": SearchJobsOutput,
     "get_jobs": GetJobsOutput,
     "get_job_details": JobDetails,

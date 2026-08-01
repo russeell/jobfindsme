@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from jobfindsme.core import jobfindsmecore
-from jobfindsme.mcp.tools import ToolRegistry
+from jobfindsme.mcp.registry import ToolRegistry
 
 _log = logging.getLogger(__name__)
 

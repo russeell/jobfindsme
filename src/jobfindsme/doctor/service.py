@@ -9,8 +9,8 @@ from pathlib import Path
 
 from jobfindsme.contracts import StrictModel
 from jobfindsme.core import jobfindsmecore
+from jobfindsme.mcp.registry import TOOL_DEFINITIONS, ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer
-from jobfindsme.mcp.tools import TOOL_DEFINITIONS, ToolRegistry
 
 
 def _cdp_port_reachable() -> bool:

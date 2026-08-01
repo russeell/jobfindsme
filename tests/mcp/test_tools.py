@@ -30,7 +30,6 @@ def test_registry_exposes_product_level_tools(tmp_path) -> None:
     assert [tool["name"] for tool in tools] == [
         "setup_profile",
         "configure_search",
-        "suggest_plan",
         "search_jobs",
         "get_jobs",
         "get_job_details",
@@ -114,12 +113,15 @@ def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
 
 def test_output_schema_failure_is_a_tool_error_not_a_protocol_crash(tmp_path) -> None:
     _, _, _, registry = make_registry(tmp_path)
-    registry._definitions["suggest_plan"] = replace(
-        registry._definitions["suggest_plan"],
+    registry._definitions["configure_search"] = replace(
+        registry._definitions["configure_search"],
         output_model=GetJobsOutput,
     )
 
-    result = registry.call("suggest_plan", {})
+    result = registry.call(
+        "configure_search",
+        {"target_roles": ["AI应用工程师"]},
+    )
 
     assert result["isError"] is True
     assert result["content"][0]["text"] == (
@@ -1169,7 +1171,7 @@ def test_chrome_cdp_errors_normalized_to_recovery_message(tmp_path) -> None:
 def test_source_summary_never_leaks_raw_chrome_command(tmp_path) -> None:
     """The diagnostic_summary.source_summary must sanitize Chrome errors
     so the host model never sees raw CDP commands or port numbers."""
-    from jobfindsme.mcp.tools import _build_source_summary
+    from jobfindsme.mcp.responses import build_source_summary
 
     diagnostics = {
         "refresh_mode": "fast",
@@ -1192,7 +1194,7 @@ def test_source_summary_never_leaks_raw_chrome_command(tmp_path) -> None:
             },
         ],
     }
-    summary = _build_source_summary(diagnostics)
+    summary = build_source_summary(diagnostics)
 
     # Chrome error normalized
     assert "Chrome 未连接，请运行 jobfindsme setup" in summary

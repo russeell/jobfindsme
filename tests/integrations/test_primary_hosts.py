@@ -72,7 +72,7 @@ def test_mcp_server_instructions_declare_text_as_final_output() -> None:
 
 def test_search_jobs_tool_description_declares_text_immutability() -> None:
     """The search_jobs tool description must state the text contract."""
-    from jobfindsme.mcp.tools import TOOL_DEFINITIONS
+    from jobfindsme.mcp.registry import TOOL_DEFINITIONS
 
     search_def = [t for t in TOOL_DEFINITIONS if t.name == "search_jobs"][0]
     desc = search_def.description

@@ -4,8 +4,8 @@ import io
 import json
 
 from jobfindsme.core import jobfindsmecore
+from jobfindsme.mcp.registry import ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer
-from jobfindsme.mcp.tools import ToolRegistry
 
 
 def request(request_id: int, method: str, params=None) -> str:
@@ -60,7 +60,7 @@ def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
     responses = [json.loads(line) for line in output_stream.getvalue().splitlines()]
     assert [response["id"] for response in responses] == [1, 2, 3]
     assert responses[0]["result"]["protocolVersion"] == "2025-11-25"
-    assert len(responses[1]["result"]["tools"]) == 9
+    assert len(responses[1]["result"]["tools"]) == 8
     assert responses[2]["result"]["structuredContent"] == {
         "jobs": [],
         "count": 0,

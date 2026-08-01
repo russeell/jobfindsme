@@ -1,3 +1,3 @@
-from jobfindsme.mcp.tools import ToolRegistry
+from jobfindsme.mcp.registry import ToolRegistry
 
 __all__ = ["ToolRegistry"]
