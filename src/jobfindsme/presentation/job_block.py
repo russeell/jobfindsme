@@ -1,4 +1,9 @@
-"""Stable human-facing job list presentation shared by adapters."""
+"""Per-job blocks: facts, match result, signals, apply link, reason.
+
+Every block is generated ONLY from structured evidence (job fields +
+extracted signals).  Never add subjective evaluations — company
+reputation, area desirability, industry outlook, benefits.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +15,8 @@ from jobfindsme.contracts import (
     JobMatch,
     JobSummary,
     RecruitmentTrack,
-    SearchChanges,
-    SearchPresentationContext,
-    SearchRefreshMode,
-    SearchRunDiagnostics,
-    SourceRunStatus,
 )
+from jobfindsme.presentation.salary import _has_disclosed_salary
 
 _RECRUITMENT_LABELS = {
     RecruitmentTrack.CAMPUS: "校招",
@@ -122,96 +123,6 @@ def _extracted_signals(evidence: Any | None) -> dict:
     return {}
 
 
-def format_search_results(
-    items: Sequence[Any],
-    changes: SearchChanges,
-    diagnostics: SearchRunDiagnostics,
-    context: SearchPresentationContext,
-) -> str:
-    profile_line = (
-        f"简历解析：技能 {context.skill_count} 项 ｜ "
-        f"项目 {context.project_count} 项 ｜ "
-        f"经验 {context.experience_count} 项 ｜ "
-        f"学历：{context.highest_degree or '未识别'}"
-        if context.profile_used
-        else "简历解析：本次未使用简历，按用户明确条件匹配。"
-    )
-    source_parts = []
-    for run in diagnostics.source_runs:
-        if run.status in {SourceRunStatus.SUCCESS, SourceRunStatus.DEGRADED}:
-            marker = "✓" if run.status is SourceRunStatus.SUCCESS else "△"
-            suffix = "·缓存" if run.cache_used else ""
-            source_parts.append(f"{run.source_name} {marker}({run.discovered}{suffix})")
-        elif run.status is SourceRunStatus.FAILED:
-            source_parts.append(f"{run.source_name} ✗({_short_error(run.error)})")
-        else:
-            source_parts.append(f"{run.source_name} -({_short_error(run.error)})")
-    source_line = "检索：" + (" · ".join(source_parts) if source_parts else "本地缓存")
-    if diagnostics.refresh_mode is SearchRefreshMode.CACHE:
-        source_line += (
-            f"\n本轮未刷新外部来源，从本地缓存匹配到 {diagnostics.result_count} 条。"
-        )
-    else:
-        source_line += (
-            f"\n本轮远程发现 {diagnostics.total_discovered} 条，"
-            f"本地岗位库匹配到 {diagnostics.result_count} 条。"
-        )
-    filters = " + ".join(context.applied_filters) or "未设置额外条件"
-    filter_line = f"过滤：{filters} → 给出 {diagnostics.result_count} 个"
-    if diagnostics.undisclosed_salary_filtered_count:
-        filter_line += (
-            f"；另有 {diagnostics.undisclosed_salary_filtered_count} 个"
-            "薪资未公开岗位按严格模式排除"
-        )
-    if diagnostics.undisclosed_salary_included_count:
-        filter_line += (
-            f"；保留 {diagnostics.undisclosed_salary_included_count} 个"
-            "薪资未公开岗位并逐条提示"
-        )
-    job_text = format_job_list(
-        items,
-        include_recommendation=True,
-        profile_used=context.profile_used,
-    )
-    if not items:
-        job_text = format_search_empty(diagnostics)
-    changes_line = (
-        f"本次新增 {changes.new} 个，变更 {changes.changed} 个，"
-        f"重开 {changes.reopened} 个，关闭 {changes.closed} 个。"
-    )
-    if changes.repeated_suppressed:
-        changes_line += (
-            f"已隐藏 {changes.repeated_suppressed} 个此前展示且未变化的岗位。"
-        )
-    return "\n\n".join(
-        (
-            "【1·简历解析】\n" + profile_line,
-            "【2·检索概览】\n" + source_line,
-            "【3·过滤说明】\n" + filter_line,
-            "【4·岗位列表】\n" + job_text,
-            "【5·说明】\n" + changes_line,
-        )
-    )
-
-
-def format_search_empty(diagnostics: SearchRunDiagnostics) -> str:
-    """Explain why an incremental search returned no visible jobs."""
-    attempted = [
-        run
-        for run in diagnostics.source_runs
-        if run.status is not SourceRunStatus.SKIPPED
-    ]
-    if attempted and all(run.status is SourceRunStatus.FAILED for run in attempted):
-        return "岗位来源刷新失败，未把失败误报成‘没有新岗位’。请稍后重试。"
-    if diagnostics.repeated_suppressed_count:
-        return (
-            "本轮没有新增或变化的合格岗位。"
-            f"已隐藏 {diagnostics.repeated_suppressed_count} 个此前展示过的岗位；"
-            "需要查看历史结果时，请使用 include_seen=true。"
-        )
-    return "当前来源或本地缓存中没有符合搜索条件的岗位。"
-
-
 def _job_score_and_evidence(
     item: Any,
 ) -> tuple[JobSummary | Any, float | None, Any | None, Any | None]:
@@ -263,57 +174,3 @@ def _recommendation_reason(
     if _has_disclosed_salary(job):
         parts.append("薪资信息明确")
     return "；".join(parts) + "。"
-
-
-def _has_disclosed_salary(job: JobSummary) -> bool:
-    """Return whether salary is both numeric and actually disclosed.
-
-    Some source parsers can retain numeric fields while the source card says
-    "面议".  The user-facing explanation must follow the source text in that
-    conflict instead of claiming that an undisclosed salary is explicit.
-    """
-    salary = job.salary
-    if salary is None or not salary.raw_text.strip():
-        return False
-    normalized = salary.raw_text.casefold().replace(" ", "")
-    undisclosed_markers = ("面议", "未公开", "未注明", "保密", "negotiable")
-    if any(marker in normalized for marker in undisclosed_markers):
-        return False
-    return (
-        salary.min_amount is not None
-        or salary.max_amount is not None
-        or salary.normalized_annual_min is not None
-        or salary.normalized_annual_max is not None
-    )
-
-
-def _short_error(error: str | None) -> str:
-    """Normalize source-run errors to safe, short categories.
-
-    Chrome/CDP/9222 errors are unified to a single recovery message so the
-    user never sees raw commands, port numbers, or stack traces.  Other
-    errors are classified into short safe labels.
-    """
-    if not error:
-        return "无结果"
-    lowered = error.lower()
-    chrome_markers = (
-        "chrome",
-        "cdp",
-        "9222",
-        "remote-debugging-port",
-        "chrome-debug",
-        "devtools",
-        "websocket",
-    )
-    if any(marker in lowered for marker in chrome_markers):
-        return "Chrome 未连接，请运行 jobfindsme setup"
-    if "timeout" in lowered or "timed out" in lowered:
-        return "来源响应超时"
-    if "connection" in lowered or "refused" in lowered or "unreachable" in lowered:
-        return "来源无法连接"
-    if "auth" in lowered or "login" in lowered or "未登录" in lowered:
-        return "来源需要登录"
-    if "parse" in lowered or "json" in lowered or "decode" in lowered:
-        return "来源返回数据无法解析"
-    return error.replace("\n", " ")[:60]
