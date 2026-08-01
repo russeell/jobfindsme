@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import json
 import os
+import ssl
 import sys
 import urllib.request
 from collections.abc import Sequence
@@ -172,16 +173,8 @@ def _version() -> str:
 def _self_update() -> dict:
     import subprocess
 
-    request = urllib.request.Request(
-        "https://api.github.com/repos/russeell/jobfindsme/releases/latest",
-        headers={
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "jobfindsme-updater",
-        },
-    )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            release = json.load(response)
+        release = _fetch_latest_release()
         wheel_url = _select_release_wheel(release)
     except Exception as error:
         return {"ok": False, "output": f"could not resolve latest release: {error}"}
@@ -202,6 +195,34 @@ def _self_update() -> dict:
         "ok": result.returncode == 0,
         "output": (result.stdout + result.stderr).strip(),
     }
+
+
+def _release_request() -> urllib.request.Request:
+    return urllib.request.Request(
+        "https://api.github.com/repos/russeell/jobfindsme/releases/latest",
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "jobfindsme-updater",
+        },
+    )
+
+
+def _ssl_context() -> ssl.SSLContext | None:
+    """TLS context pinned to certifi CA roots, or None when unavailable."""
+    try:
+        import certifi
+
+        return ssl.create_default_context(cafile=certifi.where())
+    except Exception:
+        return None
+
+
+def _fetch_latest_release() -> dict[str, Any]:
+    """Resolve the latest GitHub release, trusting certifi's CA bundle."""
+    with urllib.request.urlopen(
+        _release_request(), timeout=20, context=_ssl_context()
+    ) as response:
+        return json.load(response)
 
 
 def _select_release_wheel(release: dict[str, Any]) -> str:

@@ -1,6 +1,7 @@
 import json
+import ssl
 
-from jobfindsme.cli import _select_release_wheel, run
+from jobfindsme.cli import _fetch_latest_release, _select_release_wheel, run
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
@@ -75,6 +76,39 @@ def test_self_update_selects_prebuilt_release_wheel() -> None:
     )
 
     assert url == "https://example.com/jobfindsme.whl"
+
+
+def test_fetch_latest_release_uses_certifi_ssl_context(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self):
+            return json.dumps({"tag_name": "v0.8.0", "assets": []}).encode()
+
+    def fake_urlopen(request, timeout, context):
+        captured["request"] = request
+        captured["timeout"] = timeout
+        captured["context"] = context
+        return FakeResponse()
+
+    monkeypatch.setattr("jobfindsme.cli.urllib.request.urlopen", fake_urlopen)
+
+    release = _fetch_latest_release()
+
+    assert release["tag_name"] == "v0.8.0"
+    assert captured["timeout"] == 20
+    assert isinstance(captured["context"], ssl.SSLContext)
+    assert captured["context"].verify_mode == ssl.CERT_REQUIRED
+    assert (
+        captured["request"].full_url
+        == "https://api.github.com/repos/russeell/jobfindsme/releases/latest"
+    )
 
 
 def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(
