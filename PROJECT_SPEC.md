@@ -164,7 +164,14 @@ resume usage -> source diagnostics -> applied filters -> job blocks -> changes
 
 Each job block contains facts, an explainable match signal, bounded warnings,
 a bare apply URL, and a grounded recommendation reason. The host preserves this
-text instead of rebuilding it as a table. No-resume mode remains explicit.
+text verbatim instead of rebuilding it as a table or appending observations to
+the initial result. A separate evidence-grounded comparison is allowed only
+when the user asks for one. No-resume mode remains explicit.
+
+Search-plan salary bounds use the domestic recruiting convention of monthly
+salary in thousands of CNY. Bonus months such as `18-30K·15薪` do not turn an
+18K monthly lower bound into a match for `salary_min_k=20`; conflicting raw and
+structured salary fields are reconciled conservatively.
 An empty incremental result is a successful radar outcome when unchanged jobs
 were suppressed; it must not be renamed as duplicate detection or trigger an
 automatic full refresh. If MCP is unavailable, the host may run `jobfindsme

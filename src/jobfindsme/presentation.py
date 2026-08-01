@@ -41,6 +41,10 @@ def format_job_list(
 
     This text is the deterministic part of the Agent contract: every Agent
     receives the identical facts, signals, warnings, link, and base reason.
+    Hosts MUST preserve this output verbatim — never renumber, delete,
+    reorder, or rewrite blocks, and never add subjective evaluations
+    (company reputation, area desirability, industry outlook, benefits) that
+    are absent from the returned structured evidence.
     """
     if not items:
         return "未找到符合条件的岗位。"
@@ -235,11 +239,19 @@ def _recommendation_reason(
     signals: dict,
     profile_used: bool,
 ) -> str:
+    """Build an evidence-grounded recommendation reason.
+
+    CRITICAL: Every claim MUST be backed by structured signals or job
+    fields returned by the Server.  Never invent company reputation,
+    area desirability, industry outlook, or benefit quality.
+    Hosts MUST preserve this reason verbatim — do not append subjective
+    evaluations like '龙头', '核心区', '有前景', or '福利齐全'.
+    """
     parts = []
     if profile_used and score is not None:
         parts.append(f"简历事实与岗位信号综合匹配度为 {round(score * 100)}%")
     else:
-        parts.append("岗位名称已通过目标角色筛选")
+        parts.append("岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）")
     skills = signals.get("required_skills") or []
     if skills:
         parts.append("JD 明确涉及 " + "、".join(skills[:4]))

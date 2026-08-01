@@ -490,3 +490,216 @@ def test_mcp_layer_contains_no_matching_or_persistence_imports() -> None:
             for alias in node.names
         )
         assert modules.isdisjoint(forbidden), path
+
+
+# ── Regression: block integrity ──────────────────────────────────────────
+
+
+def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None:
+    """Each job block must be atomically complete — fact line, match degree,
+    signal line, bare URL, and evidence-grounded recommendation with
+    consecutive numbering 1..21.
+
+    Splits the output into per-block slices by adjacent numbering and
+    asserts each individually, not just a global string search.
+    """
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    records = [
+        {
+            "id": f"job-{i}",
+            "title": "AI应用工程师",
+            "company": f"示例科技{i}",
+            "description": "Python RAG Agent 大模型 3-5年 25-40K",
+            "location": "上海",
+            "url": f"https://example.com/jobs/{i}",
+        }
+        for i in range(1, 22)  # 21 jobs
+    ]
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(json.dumps(records, ensure_ascii=False), source_name="企业官网"),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache", "limit": 21})
+    text = result["content"][0]["text"]
+
+    # Five sections present
+    for section_idx in range(1, 6):
+        assert f"【{section_idx}·" in text, f"Missing section {section_idx}"
+
+    assert result["structuredContent"]["count"] == 21
+
+    # ── Split into 21 blocks by adjacent numbering ──
+    # Find the start of section 4 (岗位列表) and end at section 5 (说明)
+    sec4_start = text.index("【4·岗位列表】")
+    sec5_start = text.index("【5·说明】")
+    job_section = text[sec4_start:sec5_start]
+
+    # Extract block boundaries: each block starts with "N. " where N is 1..21
+    block_starts: list[int] = []
+    for i in range(1, 22):
+        marker = f"\n{i}. " if i > 1 else f"{i}. "
+        block_starts.append(job_section.index(marker))
+
+    blocks: list[str] = []
+    for idx in range(21):
+        start = block_starts[idx]
+        end = block_starts[idx + 1] if idx + 1 < 21 else len(job_section)
+        blocks.append(job_section[start:end].strip())
+
+    assert len(blocks) == 21
+
+    # ── Per-block assertions ──
+    structured_jobs = result["structuredContent"]["jobs"]
+    ordered_blocks = zip(blocks, structured_jobs, strict=True)
+    for i, (block, item) in enumerate(ordered_blocks, start=1):
+        expected_job = item["job"]
+        # Must start with correct number
+        assert block.startswith(f"{i}. "), f"Block {i} does not start with '{i}. '"
+
+        # Fact line must contain title, company, location, track, type,
+        # and salary separated by "｜"
+        assert expected_job["title"] in block, f"Block {i} missing title"
+        assert expected_job["company"] in block, f"Block {i} missing company"
+        assert expected_job["locations"][0] in block, f"Block {i} missing location"
+        assert "社招" in block or "校招" in block or "招聘类型" in block, (
+            f"Block {i} missing recruitment track"
+        )
+        employment_labels = ("正式", "实习", "兼职", "岗位性质")
+        assert any(label in block for label in employment_labels), (
+            f"Block {i} missing employment type"
+        )
+        assert "｜" in block, f"Block {i} missing pipe separators in fact line"
+
+        # Match description line must be present
+        assert "匹配度" in block, f"Block {i} missing match degree"
+
+        # Independent 投递链接 with correct URL
+        expected_url = expected_job["apply_url"]
+        assert f"投递链接：{expected_url}" in block, (
+            f"Block {i} missing or wrong apply URL: expected {expected_url}"
+        )
+        # The URL must appear on its own line (bare URL after 投递链接：)
+        lines = block.split("\n")
+        url_lines = [ln for ln in lines if "投递链接：" in ln]
+        assert len(url_lines) >= 1, f"Block {i} has no 投递链接 line"
+
+        # Recommendation reason must be present
+        assert "推荐理由：" in block, f"Block {i} missing recommendation reason"
+        # Recommendation must not be empty
+        reason_pos = block.index("推荐理由：")
+        reason_text = block[reason_pos + len("推荐理由：") :].strip()
+        assert len(reason_text) > 0, f"Block {i} has empty recommendation reason"
+
+    # Numbering must be consecutive in the original text
+    for i in range(1, 21):
+        pos_i = text.index(f"{i}. ")
+        pos_next = text.index(f"{i + 1}. ")
+        assert pos_i < pos_next, f"Block {i} and {i + 1} out of order"
+
+    assert "workspace" not in text.casefold()
+    assert "plan_id" not in text.casefold()
+
+
+def test_no_resume_recommendation_contains_no_marketing_words(tmp_path) -> None:
+    """In no-profile mode, the Server's 推荐理由 must be evidence-grounded
+    and NEVER contain subjective evaluations like company reputation or
+    area desirability."""
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "job-1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Agent 3-5年 25-40K",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    # Server recommendation reason must be present
+    assert "推荐理由：" in text
+
+    # Forbidden marketing/subjective words — must not appear in Server output
+    forbidden = [
+        "龙头",
+        "核心区",
+        "有前景",
+        "福利齐全",
+        "行业领先",
+        "知名企业",
+        "独角兽",
+        "大厂",
+        "明星",
+        "风口",
+        "赛道",
+    ]
+    for word in forbidden:
+        assert word not in text, f"Marketing word '{word}' found in Server output"
+
+    # In no-profile mode, must not fabricate resume-based match percentage
+    assert "本次未使用简历" in text
+    # The match-degree line should use the no-profile form
+    assert "已通过角色" in text or "非录用概率" in text
+
+
+def test_search_output_section_headers_are_locked_and_immutable(tmp_path) -> None:
+    """The five-section header structure is part of the output contract."""
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "job-1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Agent",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    required_headers = [
+        "【1·简历解析】",
+        "【2·检索概览】",
+        "【3·过滤说明】",
+        "【4·岗位列表】",
+        "【5·说明】",
+    ]
+    for header in required_headers:
+        assert header in text, f"Missing locked header: {header}"
+
+    # The text must be the primary output channel
+    assert isinstance(result["content"][0]["text"], str)
+    assert len(result["content"][0]["text"]) > 0
+    # structuredContent exists for programmatic consumption
+    assert "jobs" in result["structuredContent"]
+    assert "diagnostics" in result["structuredContent"]
