@@ -19,16 +19,16 @@ FONT_PATHS = (
     Path("/System/Library/Fonts/Supplemental/Songti.ttc"),
 )
 
-BG = "#111318"
-PANEL = "#171a21"
-TITLE_BAR = "#272a33"
-TEXT = "#e8edf2"
-MUTED = "#aab4bf"
-BLUE = "#61afef"
-GREEN = "#98c379"
-YELLOW = "#e5c07b"
-RED = "#e06c75"
-RULE = "#2f3542"
+BG = "#f6f8fb"
+PANEL = "#ffffff"
+SECTION_BG = "#eef6ff"
+TEXT = "#17202a"
+MUTED = "#667085"
+BLUE = "#1677ff"
+GREEN = "#16a34a"
+YELLOW = "#b7791f"
+RULE = "#d9e2ec"
+SOFT_RULE = "#edf2f7"
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -39,16 +39,20 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
 
 
 FONT_TITLE = _font(25)
-FONT_BODY = _font(23)
-FONT_SMALL = _font(19)
-FONT_MONO = _font(22)
+FONT_BODY = _font(22)
+FONT_SMALL = _font(18)
+FONT_BADGE = _font(17)
 
+
+PROMPT = (
+    "用 jobfindsme，根据 ~/Documents/resume.pdf，"
+    "找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。"
+)
 
 DEMO_LINES: list[tuple[str, str]] = [
     (
         "你",
-        "用 jobfindsme，根据 ~/Documents/resume.pdf，"
-        "找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。",
+        PROMPT,
     ),
     ("", ""),
     ("section", "【1·简历解析】"),
@@ -119,6 +123,15 @@ def _color(kind: str) -> str:
     }.get(kind, TEXT)
 
 
+def _prompt_frame(text: str) -> list[tuple[str, str]]:
+    cursor = "  ▌" if len(text) < len(PROMPT) else ""
+    return [("你", text + cursor)]
+
+
+def _with_status(lines: list[tuple[str, str]], status: str) -> list[tuple[str, str]]:
+    return [*lines, ("", ""), ("good", status)]
+
+
 def _wrap(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -150,8 +163,8 @@ def render(
     img = Image.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(img)
 
-    margin = 26
-    radius = 18
+    margin = 34
+    radius = 20
     draw.rounded_rectangle(
         (margin, margin, width - margin, height - margin),
         radius=radius,
@@ -159,29 +172,31 @@ def render(
         outline=RULE,
         width=1,
     )
+    draw.text((margin + 34, margin + 28), "jobfindsme", fill=TEXT, font=FONT_TITLE)
     draw.rounded_rectangle(
-        (margin, margin, width - margin, margin + 56),
-        radius=radius,
-        fill=TITLE_BAR,
+        (margin + 190, margin + 27, margin + 330, margin + 58),
+        radius=15,
+        fill=SECTION_BG,
     )
-    draw.rectangle((margin, margin + 36, width - margin, margin + 56), fill=TITLE_BAR)
-    for idx, color in enumerate((RED, YELLOW, GREEN)):
-        x = margin + 26 + idx * 28
-        draw.ellipse((x, margin + 20, x + 14, margin + 34), fill=color)
     draw.text(
-        (margin + 122, margin + 17),
-        "jobfindsme — 固定五段输出示例",
-        fill=MUTED,
-        font=FONT_SMALL,
+        (margin + 209, margin + 34),
+        "固定五段输出",
+        fill=BLUE,
+        font=FONT_BADGE,
+    )
+    draw.line(
+        (margin + 34, margin + 76, width - margin - 34, margin + 76),
+        fill=SOFT_RULE,
+        width=1,
     )
 
-    y = margin + 82
-    x = margin + 28
-    max_width = width - margin * 2 - 56
-    line_gap = 11
+    y = margin + 100
+    x = margin + 34
+    max_width = width - margin * 2 - 68
+    line_gap = 9
     for kind, text in lines:
         if not text:
-            y += 12
+            y += 9
             continue
         font = FONT_BODY if kind not in {"section", "你"} else FONT_TITLE
         prefix = (
@@ -201,21 +216,29 @@ def render(
 
 def main() -> None:
     DOCS.mkdir(exist_ok=True)
-    full = render(DEMO_LINES, width=1280, height=1160)
+    full = render(DEMO_LINES, width=1280, height=1280)
     full.save(DOCS / "search-results.png", quality=95)
 
-    screenshot = render(DEMO_LINES[:30], width=1180, height=900)
+    screenshot = render(DEMO_LINES, width=1180, height=1200)
     screenshot.save(DOCS / "search-screenshot.png", quality=95)
 
-    frame_counts = [2, 8, 13, 21, 30, len(DEMO_LINES)]
-    frames = [
-        render(DEMO_LINES[:count], width=1000, height=760) for count in frame_counts
+    scenes = [
+        _prompt_frame("用 jobfindsme"),
+        _prompt_frame("用 jobfindsme，根据 ~/Documents/resume.pdf"),
+        _prompt_frame(PROMPT),
+        _with_status(DEMO_LINES[:4], "Agent 正在解析简历并生成搜索条件…"),
+        _with_status(DEMO_LINES[:8], "双平台并行检索中：猎聘 + BOSS直聘…"),
+        DEMO_LINES[:13],
+        DEMO_LINES[:21],
+        DEMO_LINES[:30],
+        DEMO_LINES,
     ]
+    frames = [render(scene, width=1000, height=1220) for scene in scenes]
     frames[0].save(
         DOCS / "demo.gif",
         save_all=True,
         append_images=frames[1:],
-        duration=[750, 850, 950, 1050, 1200, 2200],
+        duration=[650, 800, 900, 950, 1050, 1150, 1400, 1700, 3600],
         loop=0,
         optimize=True,
     )
