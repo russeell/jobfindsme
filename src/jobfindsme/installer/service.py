@@ -221,13 +221,13 @@ class HostInstaller:
     def _codex_block(self) -> str:
         return (
             "\n[mcp_servers.jobfindsme]\n"
-            f"command = {json.dumps(self.python)}\n"
+            f"command = {json.dumps(self.python, ensure_ascii=False)}\n"
             'args = ["-m", "jobfindsme.mcp"]\n'
             "required = true\n"
             'default_tools_approval_mode = "prompt"\n'
             "\n[mcp_servers.jobfindsme.env]\n"
             f"JOBFINDSME_DB_PATH = "
-            f"{json.dumps(str(self.data_dir / 'jobfindsme.db'))}\n"
+            f"{json.dumps(str(self.data_dir / 'jobfindsme.db'), ensure_ascii=False)}\n"
         )
 
     def _json_server(self) -> dict[str, object]:
