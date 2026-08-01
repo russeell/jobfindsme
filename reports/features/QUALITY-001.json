@@ -62,7 +62,7 @@
       "command": [
         "python3",
         "-m",
-        "jobfindsme.evaluation.run",
+        "jobfindsme.evaluation.cli",
         "--dataset",
         "data/eval/v0.1.json",
         "--report",

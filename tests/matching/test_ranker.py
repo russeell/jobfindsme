@@ -10,7 +10,7 @@ from jobfindsme.contracts import (
     SearchPlan,
     SourceKind,
 )
-from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
+from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching.ranker import (
     filter_jobs,

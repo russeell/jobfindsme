@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from jobfindsme.evaluation.collect import read_search_results
+from jobfindsme.evaluation.datasets.collect import read_search_results
 
 
 def test_read_full_job_match_output(tmp_path) -> None:

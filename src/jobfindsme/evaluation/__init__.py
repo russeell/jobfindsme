@@ -10,7 +10,7 @@ Layout:
     metrics/     — evaluate_dataset / evaluate_chinese_dataset, reports
     regression/  — snapshot replay and the frozen legacy BM25 matcher
     field_trial/ — live loop, labeling CLI, improvement analysis
-    cli.py       — evaluation entry (python -m jobfindsme.evaluation.run)
+    cli.py       — evaluation entry (python -m jobfindsme.evaluation.cli)
 """
 
 from __future__ import annotations

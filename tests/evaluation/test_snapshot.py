@@ -9,8 +9,8 @@ from jobfindsme.contracts import (
     SourceEvidence,
     SourceKind,
 )
-from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
-from jobfindsme.evaluation.snapshot import (
+from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
+from jobfindsme.evaluation.regression.snapshot import (
     compare_results,
     diff_loop_reports,
     load_job_snapshot,

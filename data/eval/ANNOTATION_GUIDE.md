@@ -91,7 +91,7 @@ data/eval/field_trial/day_07.json  # 第 7 天
 每天直接运行 Live Loop，同时保存机器报告和待标注 Top 10：
 
 ```bash
-python -m jobfindsme.evaluation.live_loop \
+python -m jobfindsme.evaluation.field_trial.live_loop \
   --agent-host codex \
   --allow-browser-sources \
   --day 1 \
@@ -112,7 +112,7 @@ M14 的原则门槛是“至少 3 天且至少 50 条”，但每日模板最多
 `--loop-reports` 必须按日期一一对应：
 
 ```bash
-python -m jobfindsme.evaluation.assemble \
+python -m jobfindsme.evaluation.field_trial.assemble \
   --version v1.0.0 \
   --labeler russeell \
   --days data/eval/field_trial/day_*.json \
@@ -126,7 +126,7 @@ python -m jobfindsme.evaluation.assemble \
 然后运行正式评测门禁：
 
 ```bash
-python -m jobfindsme.evaluation.run \
+python -m jobfindsme.evaluation.cli \
   --type chinese \
   --dataset data/eval/field_trial/chinese_real_v1.0.json \
   --require-claim-ready \

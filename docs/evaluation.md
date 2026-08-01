@@ -17,7 +17,7 @@ Core ✗→ Evaluation
 | `evaluation/metrics/` | `evaluate_dataset` / `evaluate_chinese_dataset` and reports |
 | `evaluation/regression/` | snapshot replay (`save/load/replay`) and the frozen legacy BM25 matcher |
 | `evaluation/field_trial/` | live search loop, field-trial dataset assembly, improvement analysis |
-| `evaluation/cli.py` | evaluation entry (`python -m jobfindsme.evaluation.run`) |
+| `evaluation/cli.py` | evaluation entry (`python -m jobfindsme.evaluation.cli`) |
 
 Legacy module paths (`evaluation.runner`, `evaluation.snapshot`, …)
 remain as thin re-export shims for scripts and tests.
@@ -27,7 +27,7 @@ remain as thin re-export shims for scripts and tests.
 - `pytest` — full suite (CI runs it on Python 3.11/3.12/3.13)
 - `ruff check .` and `ruff format --check .`
 - Synthetic evaluation regression gate (CI):
-  `python -m jobfindsme.evaluation.run --dataset data/eval/v0.1.json --report <tmp>/synthetic-evaluation.json --type synthetic`
+  `python -m jobfindsme.evaluation.cli --dataset data/eval/v0.1.json --report <tmp>/synthetic-evaluation.json --type synthetic`
 - `scripts/smoke_installed_package.sh` — built wheel sanity
 
 ## Claims policy
