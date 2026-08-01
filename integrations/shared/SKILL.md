@@ -63,8 +63,27 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    Use `salary_policy: strict` when a salary constraint is present. Use
    `salary_policy: include_undisclosed` only when the user explicitly asks to
    retain jobs with undisclosed or negotiable salary.
-5. Call `search_jobs` without IDs in the same turn. Read matches from its
-   `jobs` field. Use `get_jobs` only for later pagination or state filtering.
+5. Call `search_jobs` without IDs in the same turn. The `content[0].text`
+   IS the final output — return it verbatim. `structuredContent` contains
+   only `final_text`, `count`, `changes`, `diagnostic_summary`, and
+   `integrity` — it does NOT expose the jobs array, evidence, or apply URLs.
+   **STOP immediately after returning content[0].text.** Do NOT prepend or
+   append separators (`---`, `***`), headings, analysis, highlights,
+   suggestions, or follow-up questions. Only call `get_jobs` /
+   `get_job_details` when the user explicitly asks for comparison or
+   analysis in a SUBSEQUENT message — never in the same response.
+   When the user says "不使用简历" or "不要用简历" or "skip resume",
+   pass `use_profile: false` to `search_jobs`; the Server will skip
+   profile loading entirely, Section 1 will show "本次未使用简历", and
+   no match percentages will appear. The local profile is NOT deleted.
+   For an ordinary interactive request such as "找岗位", "搜索岗位", or
+   "显示符合条件的岗位", pass `include_seen: true` so the user receives the
+   current matching list even if some jobs were shown before. Pass
+   `include_seen: false` only when the user explicitly asks for incremental
+   changes such as "继续找新岗位", "今天新增", or a scheduled radar update.
+   Use `get_jobs` only for later pagination or state filtering, and
+   `get_job_details` only when the user explicitly asks about one specific
+   job. Never auto-call them to rebuild or supplement the initial result.
    Set `allow_browser_sources: true`. Do not begin by asking technical setup
    questions. If diagnostics show that the browser is unavailable or BOSS is
    logged out, give one recovery action: run `jobfindsme setup`, complete login
@@ -113,8 +132,12 @@ jobfindsme setup          # runtime: ~/.jobfindsme/runtime/bin/python -m jobfind
 
 **CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
 The host MUST return it verbatim. Never renumber, delete, reorder, rewrite, or
-rebuild any block. `structuredContent` is for programmatic consumption only;
-the text is the deterministic contract — identical on every host.
+rebuild any block. `structuredContent` contains ONLY `final_text`, `count`,
+`changes`, `diagnostic_summary`, and an `integrity` hash — it does NOT include
+the jobs array, evidence, JD excerpts, or apply URLs. Use `get_jobs` /
+`get_job_details` for structured job data only when the user explicitly asks;
+never auto-call them to rebuild or supplement the initial search result.
+The text is the deterministic contract — identical on every host.
 
 Every search result MUST preserve exactly these five Server-rendered sections
 in this order. In no-resume mode, section 1 explicitly says no resume was used.

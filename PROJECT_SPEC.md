@@ -152,8 +152,11 @@ Every tool must provide:
   failures.
 
 Human-facing `content` is intentionally stable across hosts. The same response
-also carries validated `structuredContent`, so clients that need custom UI or
-machine processing do not have to parse or rewrite the five-section text.
+also carries validated `structuredContent` — but deliberately minimal: only
+`final_text`, `count`, `changes`, `diagnostic_summary`, and an `integrity`
+hash. The full jobs array, evidence, JD excerpts, and apply URLs are NOT
+exposed in structuredContent. Clients that need structured job data must use
+`get_jobs` / `get_job_details` instead.
 
 `search_jobs` returns both strict structured content and a complete five-part
 human-facing result, in this fixed order:

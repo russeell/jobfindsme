@@ -61,29 +61,23 @@ their resume or search constraints.
    - exclusions — e.g. `["外包", "996"]`
 
 3. **search_jobs** — call in the same turn. Set `allow_browser_sources: true`.
-   Read results from the `jobs` field. Each job includes:
-   - `job` — title, company, location, salary, apply URL
-   - `score` — deterministic signal-match score (0.0–1.0), useful for
-     understanding the Server order. Higher = more signal overlap.
-   - `evidence.extracted_signals` — structured JD signals (see below)
-   - `state`, `change_type`, `first_seen_at`
-   - The text response already contains the complete five-section answer.
-     Preserve it; never rebuild it as a wide table.
+   Set `include_seen: true` for ordinary interactive "find/show jobs"
+   requests. Use `include_seen: false` only for explicitly incremental
+   requests such as "new jobs today", "continue finding new jobs", or a
+   scheduled radar run.
+   The `content[0].text` IS the final output — return it verbatim.
+   `structuredContent` contains ONLY `final_text`, `count`, `changes`,
+   `diagnostic_summary`, and an `integrity` hash — it does NOT expose the
+   jobs array, evidence, JD excerpts, or apply URLs. Use `get_jobs` /
+   `get_job_details` for structured job data only when the user explicitly
+   requests it; never auto-call them to rebuild or supplement the initial
+   search result.
 
 4. **Evidence-grounded follow-up** — The Server hard-filters, ranks, and renders
-   the base result. Preserve it. Only when the user asks for deeper comparison:
-
-   - Explain `score` as a signal, not a hiring probability. It combines: skill overlap (50%),
-     experience fit (25%), degree match (10%), liveness (5%), salary presence (5%).
-   - Read `evidence.extracted_signals` for each job:
-     - `required_skills` — canonical skill names found in the JD
-     - `required_experience` — e.g. "3-5年"
-     - `required_degree` — e.g. "本科"
-     - `employment_type` / `recruitment_track` — detected from JD
-     - `liveness` — "active", "stale", "closed", "unknown"
-     - `salary_range` — e.g. "20K-30K"
-   - Compare these signals against the user's profile and stated preferences.
-   - Add a separate observation; never silently reorder or replace the base list.
+   the base result. Preserve it verbatim. Only when the user asks for deeper
+   comparison, use `get_job_details` for specific jobs and compare the returned
+   signals against the user's profile and stated preferences. Add a separate
+   observation; never silently reorder or replace the base list.
 
 5. Use **get_jobs** only for pagination. Use **get_job_details** only when
    the user asks about one specific job.
@@ -113,8 +107,19 @@ directly.
 
 **CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
 Return it verbatim. Never renumber, delete, reorder, rewrite, or rebuild any
-block. `structuredContent` is for programmatic consumption only — the text
-is the deterministic contract, identical on every host.
+block. `structuredContent` contains ONLY `final_text`, `count`, `changes`,
+`diagnostic_summary`, and an `integrity` hash — it does NOT include the
+jobs array, evidence, JD excerpts, or apply URLs. The text is the
+deterministic contract, identical on every host.
+
+**STOP AFTER final_text:** The initial search response MUST consist ONLY of
+`content[0].text` returned verbatim — then STOP immediately. Do NOT prepend
+or append separators (`---`, `***`), headings, analysis, highlights,
+suggestions, or follow-up questions. Only call `get_jobs` / `get_job_details`
+when the user explicitly asks for comparison or analysis in a SUBSEQUENT
+message — never in the same response that returned the search result.
+When the user says they do not want to use a resume, pass
+`use_profile: false` to `search_jobs`.
 
 Every search result MUST preserve the Server's fixed five-section structure
 (SKILL.md

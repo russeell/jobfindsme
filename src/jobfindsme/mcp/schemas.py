@@ -9,19 +9,17 @@ from jobfindsme.contracts import (
     DiscoverySource,
     EmploymentType,
     ExportReceipt,
-    JobChangeType,
     JobDetails,
     JobState,
     JobStateKind,
     JobSummary,
-    MatchEvidence,
     RecruitmentTrack,
     SalaryPolicy,
     SearchChanges,
     SearchConfiguration,
-    SearchPresentationContext,
+    SearchDiagnosticSummary,
+    SearchIntegrity,
     SearchRefreshMode,
-    SearchRunDiagnostics,
     StrictModel,
     SuggestedPlan,
 )
@@ -117,14 +115,29 @@ class SearchJobsInput(StrictModel):
         ),
     )
     include_seen: bool = Field(
-        default=False,
-        description="If true, include previously-seen unchanged jobs",
+        default=True,
+        description=(
+            "Include previously-seen unchanged jobs for ordinary interactive "
+            "searches. Set false only for explicitly incremental or scheduled "
+            "radar requests."
+        ),
     )
     limit: int = Field(
         default=20,
         ge=1,
         le=100,
         description="Max jobs to return (1–100)",
+    )
+    use_profile: bool = Field(
+        default=True,
+        description=(
+            "If false, skip the local profile entirely for this search — "
+            "Section 1 will show '本次未使用简历，按用户明确条件匹配。' "
+            "and no match percentages will appear.  "
+            "The local profile is NOT deleted; it remains available for "
+            "later searches.  Set to false when the user explicitly says "
+            "they do not want to use a resume."
+        ),
     )
 
 
@@ -310,21 +323,32 @@ class SetupProfileOutput(StrictModel):
     suggested_plan: SuggestedPlan | None = None
 
 
-class SearchJobOutput(StrictModel):
-    job: JobSummary
-    score: float
-    evidence: MatchEvidence
-    state: JobStateKind
-    first_seen_at: datetime | None = None
-    change_type: JobChangeType | None = None
-
-
 class SearchJobsOutput(StrictModel):
-    jobs: tuple[SearchJobOutput, ...]
-    count: int
-    changes: SearchChanges
-    diagnostics: SearchRunDiagnostics
-    presentation: SearchPresentationContext
+    """search_jobs structuredContent — deliberately minimal.
+
+    Contains ONLY the final rendered text, summary counts, and integrity
+    evidence.  Does NOT expose the jobs array, JobSummary, MatchEvidence,
+    JD excerpts, apply URLs, or full SearchRunDiagnostics — the host
+    model MUST use get_jobs / get_job_details for structured job data
+    and must never rebuild or rewrite the Server's final_text.
+    """
+
+    final_text: str = Field(
+        description=(
+            "Complete five-section human-facing result.  Byte-identical "
+            "to content[0].text.  The host MUST return this verbatim."
+        ),
+    )
+    count: int = Field(ge=0, description="Number of visible job results")
+    changes: SearchChanges = Field(
+        description="Change counts (new/changed/reopened/closed/repeated_suppressed)"
+    )
+    diagnostic_summary: SearchDiagnosticSummary = Field(
+        description="Compact source status without job-level data"
+    )
+    integrity: SearchIntegrity = Field(
+        description="SHA-256 of final_text for transport-integrity verification"
+    )
 
 
 class GetJobsOutput(StrictModel):

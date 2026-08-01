@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
+from jobfindsme.contracts import (
+    SearchChanges,
+)
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.schemas import (
     MCP_OUTPUT_MODELS,
@@ -20,6 +24,7 @@ from jobfindsme.mcp.schemas import (
     UpdateJobStateInput,
 )
 from jobfindsme.presentation import (
+    _short_error,
     format_job_list,
     format_search_results,
 )
@@ -141,16 +146,31 @@ TOOL_DEFINITIONS = (
             "Returns hard-filtered, coarse-ranked jobs with extracted "
             "signals (skills, experience, degree) used by server-side ranking.  "
             "The radar suppresses previously-seen unchanged jobs; use "
-            "include_seen=true to get them back.  "
+            "include_seen=true for ordinary interactive find/show requests. "
+            "Use include_seen=false only for explicitly incremental or "
+            "scheduled radar requests.  "
             "A zero-result incremental run is valid and must not be retried "
             "automatically with full mode.  "
             "CRITICAL: content[0].text IS THE FINAL USER-FACING OUTPUT — "
             "the host MUST return it verbatim without renumbering, deleting, "
-            "reordering, or rewriting any block. structuredContent is for "
-            "programmatic consumption only.  "
-            "Results need get_job_details for full JD text.  "
+            "reordering, or rewriting any block.  "
+            "structuredContent contains ONLY final_text, count, changes, "
+            "diagnostic_summary, and an integrity hash — it does NOT expose "
+            "the jobs array, evidence, JD excerpts, or apply URLs.  "
+            "Use get_jobs / get_job_details for structured job data when "
+            "the user explicitly asks.  "
             "Browser sources (BOSS直聘) require allow_browser_sources=true "
-            "and a running Chrome session from jobfindsme setup."
+            "and a running Chrome session from jobfindsme setup.  "
+            "STOP: The initial search response MUST consist ONLY of "
+            "content[0].text returned verbatim.  The host MUST NOT prepend "
+            "or append separators (---), headings, analysis, highlights, "
+            "suggestions, or follow-up questions.  Only call get_jobs / "
+            "get_job_details when the user explicitly asks for comparison "
+            "or analysis in a SUBSEQUENT message.  "
+            "Set use_profile=false when the user says they do not want to "
+            "use a resume for this search; the Server skips profile loading "
+            "entirely, Section 1 shows '本次未使用简历', and no match "
+            "percentages appear.  The local profile is NOT deleted."
         ),
         SearchJobsInput,
         OPEN_WORLD,
@@ -249,6 +269,40 @@ class ToolRegistry:
             RuntimeError,
         ) as error:
             return _error(str(error))
+        if name == "search_jobs":
+            # Render the five-section text first — it is the contract.
+            text = format_search_results(
+                value["jobs"],
+                value["changes"],
+                value["diagnostics"],
+                value["presentation"],
+            )
+            # Build a deliberately minimal structured value.  The host model
+            # sees ONLY final_text, count, changes, diagnostic summary, and
+            # an integrity hash — no jobs array, JobSummary, MatchEvidence,
+            # JD excerpts, or apply URLs that could induce it to rebuild or
+            # rewrite the Server result.
+            slim_value = _build_search_jobs_output(
+                text=text,
+                count=value["count"],
+                changes=value["changes"],
+                diagnostics=value["diagnostics"],
+            )
+            structured = _json_value(slim_value)
+            output_model = definition.output_model or MCP_OUTPUT_MODELS.get(name)
+            if output_model is not None:
+                try:
+                    structured = output_model.model_validate(structured).model_dump(
+                        mode="json"
+                    )
+                except ValidationError:
+                    _log.exception("tool output failed schema validation: %s", name)
+                    return _error("tool output did not match its declared schema")
+            return {
+                "content": [{"type": "text", "text": text}],
+                "structuredContent": structured,
+                "isError": False,
+            }
         structured = _json_value(value)
         output_model = definition.output_model or MCP_OUTPUT_MODELS.get(name)
         if output_model is not None:
@@ -259,14 +313,7 @@ class ToolRegistry:
             except ValidationError:
                 _log.exception("tool output failed schema validation: %s", name)
                 return _error("tool output did not match its declared schema")
-        if name == "search_jobs":
-            text = format_search_results(
-                value["jobs"],
-                value["changes"],
-                value["diagnostics"],
-                value["presentation"],
-            )
-        elif name == "get_jobs":
+        if name == "get_jobs":
             text = format_job_list(value["jobs"])
         else:
             text = _compact_json(structured)
@@ -358,6 +405,7 @@ class ToolRegistry:
                 allow_browser_sources=request.allow_browser_sources,
                 refresh_mode=request.refresh_mode,
                 include_seen=request.include_seen,
+                use_profile=request.use_profile,
             )
             matches = result.matches
             summaries = {
@@ -387,6 +435,7 @@ class ToolRegistry:
                 "presentation": self.core.search_presentation_context(
                     workspace_id=request.workspace_id,
                     plan_id=request.plan_id,
+                    use_profile=request.use_profile,
                 ),
             }
         if name == "get_jobs":
@@ -467,6 +516,74 @@ def _profile_page(
         "total_facts": len(facts),
         "review_available": bool(facts),
     }
+
+
+def _build_search_jobs_output(
+    *,
+    text: str,
+    count: int,
+    changes: SearchChanges | dict[str, Any],
+    diagnostics: Any,
+) -> dict[str, Any]:
+    """Build the deliberately minimal structuredContent for search_jobs.
+
+    The returned dict exposes ONLY final_text, count, changes, a compact
+    diagnostic summary, and a SHA-256 integrity hash.  It deliberately
+    OMITS the jobs array, JobSummary, MatchEvidence, JD excerpts, apply
+    URLs, and full SearchRunDiagnostics — the host model cannot rebuild
+    or rewrite the Server result from structuredContent alone.
+    """
+    # Normalise diagnostics to a plain dict (may be a Pydantic model).
+    diag_dict: dict[str, Any] = (
+        diagnostics.model_dump() if hasattr(diagnostics, "model_dump") else diagnostics
+    )
+    source_parts = _build_source_summary(diag_dict)
+    return {
+        "final_text": text,
+        "count": count,
+        "changes": changes,
+        "diagnostic_summary": {
+            "refresh_mode": diag_dict.get("refresh_mode", "fast"),
+            "source_summary": source_parts,
+            "total_discovered": diag_dict.get("total_discovered", 0),
+            "result_count": diag_dict.get("result_count", count),
+        },
+        "integrity": {
+            "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+        },
+    }
+
+
+def _build_source_summary(diagnostics: dict[str, Any]) -> str:
+    """Build a compact source-status line from diagnostics.source_runs.
+
+    Mirror of the section-2 source line in format_search_results, kept
+    deliberately compact — no raw errors, no timestamps, no per-source
+    discovered counts beyond the pre-formatted string.
+
+    Chrome/CDP errors are sanitised to the single recovery message so the
+    host model never sees raw commands, port numbers, or stack traces.
+    """
+    runs = diagnostics.get("source_runs", [])
+    parts: list[str] = []
+    for run in runs:
+        status = run.get("status", "skipped")
+        name = run.get("source_name", "?")
+        if status in ("success", "degraded"):
+            marker = "✓" if status == "success" else "△"
+            suffix = "·缓存" if run.get("cache_used") else ""
+            parts.append(f"{name} {marker}({run.get('discovered', 0)}{suffix})")
+        elif status == "failed":
+            parts.append(f"{name} ✗({_short_error(run.get('error'))})")
+        else:
+            err = _short_error(run.get("error"))
+            parts.append(f"{name} -({err})" if err else f"{name} -")
+    if parts:
+        return "检索：" + " · ".join(parts)
+    refresh_mode = diagnostics.get("refresh_mode", "fast")
+    if refresh_mode == "cache":
+        return "检索：本地缓存（本轮未刷新外部来源）"
+    return "检索：本地缓存"
 
 
 def _error(message: str) -> dict[str, Any]:

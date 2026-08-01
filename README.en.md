@@ -27,7 +27,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.7.1/jobfindsme-0.7.1-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.7.2/jobfindsme-0.7.2-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```

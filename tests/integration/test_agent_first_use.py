@@ -3,8 +3,17 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from jobfindsme.contracts import (
+    EmploymentType,
+    JobLiveness,
+    JobSummary,
+    RecruitmentTrack,
+    SalaryDetails,
+    SalaryPeriod,
+)
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
+from jobfindsme.presentation import format_job_list
 
 
 def call(registry: ToolRegistry, name: str, **arguments):
@@ -67,26 +76,22 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         ],
     )
     search_result = call(registry, "search_jobs")
-    matches = search_result["jobs"]
-
     assert search_result["count"] == 2
-    # v0.4: filter-only, no BM25 ranking — both jobs pass hard filter.
-    # Order is deterministic and owned by the server.
-    companies = {m["job"]["company"] for m in matches}
+    assert "jobs" not in search_result
+    assert "甲公司" in search_result["final_text"]
+    assert "乙公司" in search_result["final_text"]
+
+    history = call(registry, "get_jobs", limit=10)
+    matches = history["jobs"]
+    companies = {item["company"] for item in matches}
     assert companies == {"甲公司", "乙公司"}
-    # v0.4: evidence carries extracted_signals for Agent-side matching,
-    # not BM25 profile-based evidence_pairs/matched_profile_skills.
-    for m in matches:
-        assert "extracted_signals" in m["evidence"]
-        sig = m["evidence"]["extracted_signals"]
-        assert isinstance(sig["required_skills"], list)
-    assert "description" not in matches[0]["job"]
-    assert matches[0]["job"]["untrusted_external_content"] is True
+    assert "description" not in matches[0]
+    assert matches[0]["untrusted_external_content"] is True
 
     call(
         registry,
         "update_job_state",
-        job_id=matches[0]["job"]["job_id"],
+        job_id=matches[0]["job_id"],
         state="saved",
     )
     receipt = call(registry, "export_local_data")
@@ -150,19 +155,54 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     section_positions = [rendered.index(f"【{index}·") for index in range(1, 6)]
     assert section_positions == sorted(section_positions)
     assert structured["count"] == 1
-    assert structured["jobs"][0]["job"]["company"] == "甲公司"
+    assert structured["final_text"] == rendered
+    assert "jobs" not in structured
+    history_companies = {
+        item["company"] for item in call(registry, "get_jobs", limit=10)["jobs"]
+    }
+    assert history_companies == {"甲公司", "乙公司"}
     assert "乙公司" not in rendered
     assert "匹配度：" in rendered
     assert "推荐理由：" in rendered
     assert "投递链接：https://example.com/jobs/qualified" in rendered
+    assert "本轮远程发现 2 条，本地岗位库匹配到 1 条" in rendered
     assert "workspace_id" not in rendered
     assert "plan_id" not in rendered
     assert "│" not in rendered
 
-    second = registry.call("search_jobs", {"refresh_mode": "cache"})
+    second = registry.call(
+        "search_jobs", {"refresh_mode": "cache", "include_seen": False}
+    )
     assert second["isError"] is False
     second_text = second["content"][0]["text"]
     assert all(f"【{index}·" in second_text for index in range(1, 6))
-    assert "本轮未刷新外部来源，使用本地缓存" in second_text
+    assert "本轮未刷新外部来源，从本地缓存匹配到 0 条" in second_text
     assert "此前展示且未变化" in second_text
     assert "重复岗位" not in second_text
+
+
+def test_undisclosed_salary_never_claims_salary_is_explicit() -> None:
+    """Source text wins if stale numeric fields conflict with '面议'."""
+    job = JobSummary(
+        job_id="job-undisclosed",
+        title="AI应用工程师",
+        company="乙公司",
+        locations=("上海",),
+        salary=SalaryDetails(
+            raw_text="薪资面议",
+            currency="CNY",
+            period=SalaryPeriod.MONTH,
+            min_amount=20,
+            max_amount=30,
+        ),
+        recruitment_track=RecruitmentTrack.SOCIAL,
+        employment_type=EmploymentType.FULL_TIME,
+        apply_url="https://example.com/jobs/undisclosed",
+        source_name="测试来源",
+        liveness=JobLiveness.ACTIVE,
+    )
+
+    rendered = format_job_list([job], include_recommendation=True)
+
+    assert "需要注意：薪资未注明" in rendered
+    assert "薪资信息明确" not in rendered

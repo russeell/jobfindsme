@@ -378,6 +378,37 @@ class SearchPresentationContext(StrictModel):
     applied_filters: tuple[str, ...] = ()
 
 
+class SearchDiagnosticSummary(StrictModel):
+    """Compact per-source status for structuredContent.
+
+    Deliberately omits raw errors, timestamps, per-source discovered counts,
+    and full SourceRunStats so the host model cannot reconstruct job listings
+    from structuredContent alone.  Full diagnostics remain embedded in the
+    human-facing final_text (section 2).
+    """
+
+    refresh_mode: SearchRefreshMode
+    source_summary: str = Field(
+        default="",
+        description=(
+            "Pre-formatted source line, for example "
+            "'BOSS直聘 ✓(42) · 猎聘 ✗(Chrome未连接)'"
+        ),
+    )
+    total_discovered: int = Field(default=0, ge=0)
+    result_count: int = Field(default=0, ge=0)
+
+
+class SearchIntegrity(StrictModel):
+    """Evidence that final_text was not modified by the transport layer."""
+
+    sha256: str = Field(
+        min_length=64,
+        max_length=64,
+        description="SHA-256 hex digest of final_text (UTF-8 encoded)",
+    )
+
+
 class SearchRunResult(StrictModel):
     """Search output plus evidence needed by field-trial evaluation."""
 
