@@ -31,6 +31,24 @@ python -m pip wheel \
 wheel="$(find "$temporary/dist" -name '*.whl' -print -quit)"
 test -n "$wheel"
 
+python - "$wheel" <<'PY'
+import sys
+import zipfile
+
+wheel = sys.argv[1]
+forbidden = (
+    "jobfindsme/connectors/http_platforms.py",
+    "jobfindsme/monitor_configs.py",
+    "jobfindsme/monitoring/",
+    "jobfindsme/notifications/",
+)
+with zipfile.ZipFile(wheel) as archive:
+    names = archive.namelist()
+leaked = [name for name in names if name.startswith(forbidden)]
+if leaked:
+    raise SystemExit(f"installed wheel contains retired modules: {leaked}")
+PY
+
 python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
 

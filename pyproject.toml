@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "jobfindsme"
 version = "0.6.0"
-description = "AI求职雷达 | 聚合BOSS直聘和猎聘 | MCP Server提供结构化岗位信号，Agent做语义匹配 | 增量岗位追踪"
+description = "AI求职雷达 | 聚合BOSS直聘和猎聘 | 硬条件过滤 | 可解释推荐 | 增量岗位追踪"
 readme = "README.md"
 license = "MIT"
 keywords = ["ai", "job-search", "recruitment", "mcp", "career", "resume", "china-jobs",
