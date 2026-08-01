@@ -65,17 +65,27 @@ def format_job_list(
             fields.append(job.salary.raw_text)
         lines = ["｜".join(fields)]
 
+        # Structured signals support deterministic reasons and optional host UI.
+        signals = _extracted_signals(evidence)
+        has_jd_signals = _has_extractable_signals(signals)
+
         # Match degree = deterministic signal score; shown only when a
         # confirmed profile exists (score_signals returns 0 without one).
         if score and score > 0:
-            lines.append(f"   匹配度：{round(score * 100)}%（信号匹配，非录用概率）")
+            if has_jd_signals:
+                lines.append(
+                    f"   匹配度：{round(score * 100)}%（信号匹配，非录用概率）"
+                )
+            else:
+                lines.append(
+                    "   匹配度：已通过角色、地点、薪资等可判定硬条件；"
+                    "JD 信息有限，未给出信号百分比"
+                )
         elif include_recommendation:
             lines.append(
                 "   匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）"
             )
 
-        # Structured signals support deterministic reasons and optional host UI.
-        signals = _extracted_signals(evidence)
         signal_parts = []
         skills = signals.get("required_skills") or []
         if skills:
@@ -106,6 +116,7 @@ def format_job_list(
                         job,
                         score=score,
                         signals=signals,
+                        evidence=evidence,
                         profile_used=profile_used,
                     ),
                 ]
@@ -153,6 +164,7 @@ def _recommendation_reason(
     *,
     score: float | None,
     signals: dict,
+    evidence: Any | None,
     profile_used: bool,
 ) -> str:
     """Build an evidence-grounded recommendation reason.
@@ -164,8 +176,17 @@ def _recommendation_reason(
     evaluations like '龙头', '核心区', '有前景', or '福利齐全'.
     """
     parts = []
-    if profile_used and score is not None:
+    matched = list(getattr(evidence, "matched_profile_skills", ())) if evidence else []
+    missing = list(getattr(evidence, "missing_required_skills", ())) if evidence else []
+    has_jd_signals = _has_extractable_signals(signals)
+    if matched:
+        parts.append("简历技能命中：" + "、".join(matched[:6]))
+    if missing:
+        parts.append("岗位要求但简历未体现：" + "、".join(missing[:6]))
+    if profile_used and score is not None and has_jd_signals:
         parts.append(f"简历事实与岗位信号综合匹配度为 {round(score * 100)}%")
+    elif profile_used:
+        parts.append("JD 信息有限，未给出信号百分比")
     else:
         parts.append("岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）")
     skills = signals.get("required_skills") or []
@@ -174,3 +195,12 @@ def _recommendation_reason(
     if _has_disclosed_salary(job):
         parts.append("薪资信息明确")
     return "；".join(parts) + "。"
+
+
+def _has_extractable_signals(signals: dict) -> bool:
+    """True when the JD yielded at least one structured signal for display."""
+    return bool(
+        signals.get("required_skills")
+        or signals.get("required_experience")
+        or signals.get("required_degree")
+    )

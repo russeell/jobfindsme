@@ -28,6 +28,7 @@ from jobfindsme.matching.ranker import (
     score_signals,
     undisclosed_salary_counts,
 )
+from jobfindsme.profiles.models import FactType
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 
@@ -82,26 +83,49 @@ class SearchOrchestrator:
             jobs = [job for job in jobs if job.source.source_name not in excluded]
 
         passed = filter_jobs(context.plan, jobs, profile=profile, limit=limit)
-        return [
-            JobMatch(
-                job=job,
-                score=score_signals(job, profile),
-                evidence=MatchEvidence(
-                    hard_filter_passed=True,
-                    warnings=(
-                        ("薪资未公开，尚未验证是否满足薪资条件",)
-                        if has_undisclosed_salary(job)
-                        and (
-                            context.plan.salary_min_k is not None
-                            or context.plan.salary_max_k is not None
-                        )
-                        else ()
+        profile_skills = (
+            {
+                fact.value.casefold()
+                for fact in profile.facts
+                if fact.fact_type is FactType.SKILL
+            }
+            if profile is not None
+            else set()
+        )
+        matches = []
+        for job in passed:
+            signals = extract_job_signals(job)
+            required_skills = signals["required_skills"]
+            matched = [
+                skill for skill in required_skills if skill.casefold() in profile_skills
+            ]
+            missing = [
+                skill
+                for skill in required_skills
+                if skill.casefold() not in profile_skills
+            ]
+            matches.append(
+                JobMatch(
+                    job=job,
+                    score=score_signals(job, profile),
+                    evidence=MatchEvidence(
+                        hard_filter_passed=True,
+                        matched_profile_skills=tuple(matched),
+                        missing_required_skills=tuple(missing),
+                        warnings=(
+                            ("薪资未公开，尚未验证是否满足薪资条件",)
+                            if has_undisclosed_salary(job)
+                            and (
+                                context.plan.salary_min_k is not None
+                                or context.plan.salary_max_k is not None
+                            )
+                            else ()
+                        ),
+                        extracted_signals=signals,
                     ),
-                    extracted_signals=extract_job_signals(job),
-                ),
+                )
             )
-            for job in passed
-        ]
+        return matches
 
     def search_jobs(
         self,

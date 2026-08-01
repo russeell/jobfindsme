@@ -445,6 +445,123 @@ def test_search_profile_section_returns_counts_without_resume_content(tmp_path) 
     assert "简历解析：技能" in text
 
 
+def test_search_sparse_jd_with_profile_hides_signal_percentage(tmp_path) -> None:
+    """Sparse JD text must not render a misleading low percentage."""
+    core, workspace, _, registry = make_registry(tmp_path)
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python", encoding="utf-8")
+    registry.call(
+        "setup_profile",
+        {
+            "action": "import",
+            "workspace_id": workspace.workspace_id,
+            "resume_path": str(resume),
+        },
+    )
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "sparse",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/sparse",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    assert "匹配度：已通过角色、地点、薪资等可判定硬条件" in text
+    assert "JD 信息有限，未给出信号百分比" in text
+    assert not re.search(r"匹配度：\d+%", text)
+
+
+def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
+    """推荐理由 must name resume skills that hit and JD skills that are missing."""
+    core, workspace, _, registry = make_registry(tmp_path)
+    resume = tmp_path / "resume.txt"
+    resume.write_text("技能：Python、RAG", encoding="utf-8")
+    registry.call(
+        "setup_profile",
+        {
+            "action": "import",
+            "workspace_id": workspace.workspace_id,
+            "resume_path": str(resume),
+        },
+    )
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "rich",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Kubernetes 3-5年 25-40K",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/rich",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+    text = result["content"][0]["text"]
+
+    assert "匹配度：43%（信号匹配，非录用概率）" in text
+    assert "简历技能命中：Python、RAG" in text
+    assert "岗位要求但简历未体现：Kubernetes" in text
+
+
+def test_search_changes_section_has_four_levels(tmp_path) -> None:
+    """⑤ 说明 must always render the four change levels as fixed bullets."""
+    core, workspace, _, registry = make_registry(tmp_path)
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            '[{"id":"seen","title":"AI应用工程师",'
+            '"company":"示例科技","description":"Python RAG",'
+            '"url":"https://example.com/jobs/seen"}]',
+            source_name="fixture",
+        ),
+    )
+
+    first = registry.call("search_jobs", {"refresh_mode": "cache"})
+    first_text = first["content"][0]["text"]
+    assert "- 🆕 新增：1 条" in first_text
+    assert "- ✏️ 变更：0 条" in first_text
+    assert "- 🔄 重开：0 条" in first_text
+    assert "- ⛔ 关闭：0 条" in first_text
+    assert "重复抑制" not in first_text
+
+    second = registry.call(
+        "search_jobs", {"refresh_mode": "cache", "include_seen": False}
+    )
+    second_text = second["content"][0]["text"]
+    assert "- 🆕 新增：0 条" in second_text
+    assert "- 🔁 重复抑制（此前展示且未变化）：1 条" in second_text
+
+
 def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)

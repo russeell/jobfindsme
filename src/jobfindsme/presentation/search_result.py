@@ -54,14 +54,17 @@ def format_search_results(
     )
     if not items:
         job_text = format_search_empty(diagnostics)
-    changes_line = (
-        f"本次新增 {changes.new} 个，变更 {changes.changed} 个，"
-        f"重开 {changes.reopened} 个，关闭 {changes.closed} 个。"
-    )
+    changes_lines = [
+        f"- 🆕 新增：{changes.new} 条",
+        f"- ✏️ 变更：{changes.changed} 条",
+        f"- 🔄 重开：{changes.reopened} 条",
+        f"- ⛔ 关闭：{changes.closed} 条",
+    ]
     if changes.repeated_suppressed:
-        changes_line += (
-            f"已隐藏 {changes.repeated_suppressed} 个此前展示且未变化的岗位。"
+        changes_lines.append(
+            f"- 🔁 重复抑制（此前展示且未变化）：{changes.repeated_suppressed} 条"
         )
+    changes_line = "\n".join(changes_lines)
     return "\n\n".join(
         (
             "【1·简历解析】\n" + profile_line,
