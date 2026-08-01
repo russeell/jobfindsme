@@ -45,6 +45,15 @@
 找上海和杭州的 AI 应用工程师岗位，20K以上，社招，正式。
 ```
 
+你只需要理解四个概念，其余全部自动：
+
+| 概念 | 含义 | 示例 |
+|---|---|---|
+| **Profile**（我是谁） | 简历 → 结构化事实 | 技能、经验、学历 |
+| **Search**（我找什么） | 一次搜索的条件 | 上海 + AI应用工程师 + 20K+ |
+| **Job**（找到了什么） | 一个岗位 + 证据 + 投递链接 | 岗位、匹配度、链接 |
+| **Tracking**（有什么变化） | 与上次相比的新增/变更/关闭，以及已投/已存/已忽略 | 每日推送只报变化 |
+
 几秒后，Agent 返回匹配的岗位列表（上面动图同一次运行的真实输出节选）：
 
 ```text
@@ -289,7 +298,9 @@ python -m pytest
 ruff check . && ruff format --check .
 ```
 
-架构、来源门禁和评测闭环见 [PROJECT_SPEC.md](PROJECT_SPEC.md)。
+架构、来源门禁和评测闭环见 [architecture](docs/architecture.md)、
+[connectors](docs/connectors.md)、[evaluation](docs/evaluation.md)；
+完整工程规范在 `docs/internal/project_spec.md`。
 发现错排、漏排、重复或失效链接，请提交脱敏
 [Issue](https://github.com/russeell/jobfindsme/issues)。
 

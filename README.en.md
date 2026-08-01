@@ -2,7 +2,7 @@
 
 **One sentence searches BOSS直聘 and 猎聘 (Liepin) together, matching jobs against your resume.**
 
-[Chinese](README.md) · [Install](INSTALL.md) · [Specification](PROJECT_SPEC.md)
+[Chinese](README.md) · [Install](INSTALL.md) · [Architecture](docs/architecture.md)
 
 ## What it does
 
@@ -72,8 +72,10 @@ matching signals. BOSS requires an authenticated local Chrome session.
 - the ranking score is explainable and reproducible, not a hiring probability;
 - the project does not auto-apply or guarantee complete market coverage.
 
-See [PROJECT_SPEC.md](PROJECT_SPEC.md) for architecture, evaluation, and source
-promotion gates.
+See [architecture](docs/architecture.md) for the module map and the
+search path, [connectors](docs/connectors.md) for source promotion
+gates, and [evaluation](docs/evaluation.md) for the quality loop. The
+full engineering spec lives in `docs/internal/project_spec.md`.
 
 ## License
 

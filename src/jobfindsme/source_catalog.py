@@ -26,6 +26,8 @@ def recommended_connectors(
     )
     # Old source kinds remain readable for database compatibility, but only
     # these two evidence-backed connectors are executable in production.
+    # Remove after migration 013 and v1.0 support window: retired kinds are
+    # read-only for old workspaces and must never be selected or executed.
     multiple_locations = len(requested_locations) > 1
     return tuple(
         DiscoverySource(
