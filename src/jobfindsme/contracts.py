@@ -19,6 +19,13 @@ class Workspace(StrictModel):
     created_at: datetime
 
 
+class SalaryPolicy(StrEnum):
+    """How an explicit salary constraint treats jobs without salary data."""
+
+    STRICT = "strict"
+    INCLUDE_UNDISCLOSED = "include_undisclosed"
+
+
 class SearchPlan(StrictModel):
     plan_id: str = Field(min_length=1, max_length=128)
     workspace_id: str = Field(min_length=1, max_length=128)
@@ -27,6 +34,7 @@ class SearchPlan(StrictModel):
     locations: tuple[str, ...] = ()
     salary_min_k: int | None = Field(default=None, ge=0, le=1000)
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
+    salary_policy: SalaryPolicy = SalaryPolicy.STRICT
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
     recruitment_track: RecruitmentTrack | None = None
@@ -345,6 +353,8 @@ class SearchRunDiagnostics(StrictModel):
     closed_count: int = Field(default=0, ge=0)
     repeated_suppressed_count: int = Field(default=0, ge=0)
     low_relevance_filtered_count: int = Field(default=0, ge=0)
+    undisclosed_salary_filtered_count: int = Field(default=0, ge=0)
+    undisclosed_salary_included_count: int = Field(default=0, ge=0)
 
 
 class SearchChanges(StrictModel):

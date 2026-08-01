@@ -44,6 +44,25 @@ def test_delete_requires_matching_single_use_confirmation_token(tmp_path) -> Non
     assert tokens == 0
 
 
+def test_delete_confirmation_survives_mcp_process_restart(tmp_path) -> None:
+    database_path = tmp_path / "jobfindsme.db"
+    first_process = jobfindsmecore(database_path)
+    workspace = first_process.create_workspace("restart-safe")
+    preview = first_process.preview_delete(
+        workspace_id=workspace.workspace_id,
+        scope="workspace",
+    )
+
+    second_process = jobfindsmecore(database_path)
+    result = second_process.confirm_delete(
+        workspace_id=workspace.workspace_id,
+        scope="workspace",
+        confirmation_token=preview.confirmation_token,
+    )
+
+    assert result.deleted is True
+
+
 def test_export_contains_structured_data_but_no_complete_resume(tmp_path) -> None:
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG\n项目：求职助手", encoding="utf-8")

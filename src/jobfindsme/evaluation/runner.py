@@ -22,8 +22,8 @@ from jobfindsme.evaluation.labeling import (
     compute_precision_at_k,
     compute_valid_link_rate,
 )
+from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.importing.normalizer import normalize_job
-from jobfindsme.matching import DeterministicMatcher
 
 
 class MetricResult(StrictModel):
@@ -79,7 +79,7 @@ def _evaluate_matching(case: dict[str, Any]) -> bool:
         _raw_job(case["case_id"], case["candidate"]),
         fetched_at=now,
     )
-    actual = bool(DeterministicMatcher().match(plan, [job]))
+    actual = bool(LegacyBM25Matcher().match(plan, [job]))
     return actual is case["expected_match"]
 
 

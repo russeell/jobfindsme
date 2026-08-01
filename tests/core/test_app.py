@@ -131,7 +131,7 @@ def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
     matches = core.match_jobs()
 
     # v0.4: filter-only, no BM25 ranking — both jobs pass hard filter.
-    # Order is insertion order; the Agent owns ranking.
+    # Order is deterministic and owned by the server.
     external_ids = {match.job.external_id for match in matches}
     assert external_ids == {"python", "java"}
     # Both jobs carry extracted_signals

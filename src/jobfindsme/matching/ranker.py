@@ -5,34 +5,25 @@ Since v0.4 the matcher no longer produces BM25 scores.  The pipeline is:
 1. Hard filter — remove jobs that violate objective constraints
 2. Signal extraction — pull skills, experience, degree from each JD
 3. Coarse rank (v0.4.1) — deterministic signal-match score, Top-20 cut
-4. Agent — semantic understanding and final ranking of the top candidates
-
-``DeterministicMatcher`` is kept for backward compatibility with the
-evaluation pipeline only.
+4. Server presentation — stable, evidence-backed ordering across Agent hosts
 """
 
 from __future__ import annotations
 
 import re
-from collections import Counter
 from datetime import UTC, datetime
 
 from jobfindsme.contracts import (
     EmploymentType,
-    EvidencePair,
     JobLiveness,
-    JobMatch,
     JobPosting,
-    MatchEvidence,
     RecruitmentTrack,
+    SalaryPolicy,
     SearchPlan,
 )
-from jobfindsme.matching.tokenizer import tokenize
 from jobfindsme.profiles.models import FactType, ProfileSummary
 from jobfindsme.taxonomy import (
     expand_location_terms,
-    expand_role_terms,
-    extract_required_skills,
     extract_skills,
     is_target_role_candidate,
 )
@@ -40,41 +31,6 @@ from jobfindsme.taxonomy import (
 # ── Degree ordering for comparison ──────────────────────────────────────────
 
 _DEGREE_ORDER = {"大专": 1, "本科": 2, "硕士": 3, "博士": 4, "不限": 0}
-
-
-class DeterministicMatcher:
-    """Legacy matcher — kept for evaluation backward compatibility only.
-
-    New code should use the module-level ``filter_jobs`` and
-    ``extract_job_signals`` functions instead.
-    """
-
-    stale_after_days: int | None = None
-
-    def match(self, *args, **kwargs):
-        """Delegates to module-level ``_legacy_match``."""
-        return _legacy_match(*args, **kwargs)
-
-    def eligible_count(
-        self,
-        plan: SearchPlan,
-        jobs: list[JobPosting],
-    ) -> int:
-        """Count jobs that pass hard filters (used for diagnostics)."""
-        return sum(
-            1
-            for job in jobs
-            if _hard_filter(plan, job, stale_after_days=self.stale_after_days)
-        )
-
-    @staticmethod
-    def _hard_filter(
-        plan: SearchPlan,
-        job: JobPosting,
-        *,
-        stale_after_days: int | None = None,
-    ) -> bool:
-        return _hard_filter(plan, job, stale_after_days=stale_after_days)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -111,8 +67,51 @@ def filter_jobs(
     return [job for job, _ in scored[:limit]]
 
 
+def eligible_count(
+    plan: SearchPlan,
+    jobs: list[JobPosting],
+    *,
+    stale_after_days: int | None = 7,
+) -> int:
+    """Count jobs that pass the production hard-filter contract."""
+    return sum(
+        1 for job in jobs if _hard_filter(plan, job, stale_after_days=stale_after_days)
+    )
+
+
+def has_undisclosed_salary(job: JobPosting) -> bool:
+    """Return true when no comparable CNY lower bound is available."""
+    return _annual_salary_min(job) is None
+
+
+def undisclosed_salary_counts(
+    plan: SearchPlan,
+    jobs: list[JobPosting],
+    *,
+    stale_after_days: int | None = 7,
+) -> tuple[int, int]:
+    """Return (filtered, included) unknown-salary counts for diagnostics.
+
+    Only jobs that satisfy every non-salary hard constraint are counted.
+    """
+    if plan.salary_min_k is None and plan.salary_max_k is None:
+        return 0, 0
+    permissive = plan.model_copy(
+        update={"salary_policy": SalaryPolicy.INCLUDE_UNDISCLOSED}
+    )
+    eligible_unknown = sum(
+        1
+        for job in jobs
+        if has_undisclosed_salary(job)
+        and _hard_filter(permissive, job, stale_after_days=stale_after_days)
+    )
+    if plan.salary_policy is SalaryPolicy.STRICT:
+        return eligible_unknown, 0
+    return 0, eligible_unknown
+
+
 def extract_job_signals(job: JobPosting) -> dict:
-    """Extract structured signals from a job posting for Agent-side matching.
+    """Extract structured signals for deterministic ranking and explanation.
 
     Returns a dict with:
       - required_skills: list[str]  — canonical skill names found in the JD
@@ -184,8 +183,8 @@ def score_signals(
 
     Weights are chosen so that skill overlap dominates, with smaller
     contributions from experience alignment, degree match, and title
-    relevance.  The result is a coarse sort key — the Agent still
-    owns the final semantic ranking.
+    relevance. The server owns this reproducible ordering; a host Agent may
+    explain it but must not silently replace it.
 
     Returns 0.0 when *profile* is None (no scoring without a profile).
     """
@@ -202,8 +201,7 @@ def _score_signals(
 
     Weights are chosen so that skill overlap dominates, with smaller
     contributions from experience alignment, degree match, and title
-    relevance.  The result is a coarse sort key — the Agent still
-    owns the final semantic ranking.
+    relevance. The server owns this reproducible ordering.
     """
     signals = extract_job_signals(job)
 
@@ -339,181 +337,25 @@ def _hard_filter(
         return False
     annual_salary_min = _annual_salary_min(job)
     if plan.salary_min_k is not None:
-        if annual_salary_min is None:
+        if annual_salary_min is None and plan.salary_policy is SalaryPolicy.STRICT:
             return False
-        if annual_salary_min < plan.salary_min_k * 1000 * 12:
+        if (
+            annual_salary_min is not None
+            and annual_salary_min < plan.salary_min_k * 1000 * 12
+        ):
             return False
     if plan.salary_max_k is not None:
-        if annual_salary_min is None:
+        if annual_salary_min is None and plan.salary_policy is SalaryPolicy.STRICT:
             return False
-        if annual_salary_min > plan.salary_max_k * 1000 * 12:
+        if (
+            annual_salary_min is not None
+            and annual_salary_min > plan.salary_max_k * 1000 * 12
+        ):
             return False
     return not (
         plan.experience_max_years is not None
         and job.experience_min_years is not None
         and job.experience_min_years > plan.experience_max_years
-    )
-
-
-# ── Legacy BM25 scoring (kept for evaluation backward compat) ─────────────────
-
-import math  # noqa: E402
-
-
-def _legacy_match(
-    plan: SearchPlan,
-    jobs: list[JobPosting],
-    *,
-    profile: ProfileSummary | None = None,
-    limit: int = 20,
-    min_score: float = 0.10,
-    stale_after_days: int | None = None,
-) -> list[JobMatch]:
-    """BM25-based matching — for evaluation use only."""
-    effective_stale = stale_after_days
-    eligible = [
-        job for job in jobs if _hard_filter(plan, job, stale_after_days=effective_stale)
-    ]
-    if not eligible:
-        return []
-    query_terms = tokenize(" ".join(expand_role_terms(plan.target_roles)))
-    profile_facts = profile.facts if profile else ()
-    profile_skill_evidence = {
-        skill: fact.evidence_snippet
-        for fact in profile_facts
-        if fact.fact_type is FactType.SKILL
-        for skill in extract_skills(fact.value)
-    }
-    profile_experience = _profile_experience_years(profile)
-    documents = [tokenize(f"{job.title} {job.description}") for job in eligible]
-    document_frequency = Counter(
-        term for document in documents for term in set(document)
-    )
-    matches = [
-        _bm25_score(
-            plan,
-            job,
-            terms,
-            query_terms,
-            document_frequency,
-            len(eligible),
-            profile_skill_evidence,
-            profile_experience,
-        )
-        for job, terms in zip(eligible, documents, strict=True)
-    ]
-    scored = [m for m in matches if m.score >= min_score]
-    return sorted(scored, key=lambda item: (-item.score, item.job.job_id))[:limit]
-
-
-def _bm25_score(
-    plan: SearchPlan,
-    job: JobPosting,
-    document: tuple[str, ...],
-    query: tuple[str, ...],
-    document_frequency: Counter[str],
-    document_count: int,
-    profile_skill_evidence: dict[str, str],
-    profile_experience: int | None,
-) -> JobMatch:
-    frequencies = Counter(document)
-    bm25 = 0.0
-    matched: list[str] = []
-    for term in dict.fromkeys(query):
-        frequency = frequencies[term]
-        if not frequency:
-            continue
-        matched.append(term)
-        inverse_frequency = math.log(
-            1
-            + (document_count - document_frequency[term] + 0.5)
-            / (document_frequency[term] + 0.5)
-        )
-        bm25 += inverse_frequency * frequency / (frequency + 1.2)
-    title_bonus = (
-        0.25
-        if any(role.casefold() in job.title.casefold() for role in plan.target_roles)
-        else 0.0
-    )
-    location_bonus = (
-        0.1
-        if plan.locations
-        and any(
-            location.casefold() in " ".join(job.locations).casefold()
-            for location in expand_location_terms(plan.locations)
-        )
-        else 0.0
-    )
-    role_score = bm25 / max(1, len(query))
-    job_skill_evidence = extract_skills(f"{job.title} {job.description}")
-    matched_profile_skills = tuple(
-        sorted(set(profile_skill_evidence) & set(job_skill_evidence))
-    )
-    missing_job_skills = tuple(
-        sorted(set(job_skill_evidence) - set(profile_skill_evidence))
-    )
-    required_job_skills = extract_required_skills(job.description)
-    missing_required_skills = tuple(
-        sorted(set(required_job_skills) - set(profile_skill_evidence))
-    )
-    skill_score = (
-        len(matched_profile_skills) / len(job_skill_evidence)
-        if profile_skill_evidence and job_skill_evidence
-        else 0.0
-    )
-    score = min(
-        1.0,
-        role_score * 0.55 + skill_score * 0.35 + title_bonus + location_bonus,
-    )
-    warnings = []
-    if job.source.liveness == JobLiveness.UNKNOWN:
-        warnings.append("来源刷新失败或岗位缺少有效性验证")
-    if job.salary is None and job.salary_min_k is None:
-        warnings.append("岗位未公开薪资")
-    if profile_skill_evidence and missing_job_skills:
-        warnings.append(f"简历未提供这些技能证据：{', '.join(missing_job_skills)}")
-    if profile_skill_evidence and missing_required_skills:
-        warnings.append(f"岗位必备技能缺口：{', '.join(missing_required_skills)}")
-    if (
-        profile_experience is not None
-        and job.experience_min_years is not None
-        and profile_experience < job.experience_min_years
-    ):
-        warnings.append(
-            f"岗位要求至少{job.experience_min_years}年，"
-            f"简历可确认约{profile_experience}年"
-        )
-    if title_bonus:
-        reasons = [f"岗位名称与目标方向“{plan.target_roles[0]}”直接匹配"]
-    elif matched:
-        reasons = ["岗位职责与目标方向存在关键词重合"]
-    else:
-        reasons = []
-    if location_bonus:
-        reasons.append("工作地点符合搜索计划")
-    if matched_profile_skills:
-        reasons.append(f"简历技能覆盖：{', '.join(matched_profile_skills)}")
-    evidence_pairs = tuple(
-        EvidencePair(
-            criterion=skill,
-            profile_evidence=profile_skill_evidence[skill],
-            job_evidence=job_skill_evidence[skill],
-        )
-        for skill in matched_profile_skills
-    )
-    return JobMatch(
-        job=job,
-        score=round(score, 6),
-        evidence=MatchEvidence(
-            hard_filter_passed=True,
-            matched_terms=tuple(matched),
-            reasons=tuple(reasons),
-            warnings=tuple(warnings),
-            evidence_pairs=evidence_pairs,
-            matched_profile_skills=matched_profile_skills,
-            missing_job_skills=missing_job_skills,
-            missing_required_skills=missing_required_skills,
-        ),
     )
 
 

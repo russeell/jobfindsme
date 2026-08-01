@@ -13,6 +13,7 @@ from jobfindsme.connectors.boss_zhipin import (
     BossAuthenticationRequired,
     BossConnectorError,
     BossZhipinConnector,
+    _CDPSession,
     _chrome_command,
     setup_chrome,
 )
@@ -52,7 +53,9 @@ class FakeCdp:
             return "complete"
         self.evaluated_js.append(js)
         assert f"{BOSS_ORIGIN}/wapi/" in js
-        assert "withCredentials = true" in js
+        assert 'credentials: "include"' in js
+        assert "await fetch(" in js
+        assert "XMLHttpRequest" not in js
         return json.dumps(self.api_payload)
 
     def close(self) -> None:
@@ -66,6 +69,22 @@ def connector(fake: FakeCdp) -> BossZhipinConnector:
         policy=public_policy(),
         session_factory=lambda _port: fake,
     )
+
+
+def test_cdp_runtime_evaluation_awaits_async_fetch_promise() -> None:
+    session = object.__new__(_CDPSession)
+    captured: dict[str, Any] = {}
+
+    def send(method, params=None, sid=None):
+        captured.update(method=method, params=params, sid=sid)
+        return {"result": {"result": {"value": "ok"}}}
+
+    session.send = send
+
+    assert session.eval_js("Promise.resolve('ok')", "session-1") == "ok"
+    assert captured["method"] == "Runtime.evaluate"
+    assert captured["params"]["awaitPromise"] is True
+    assert captured["params"]["returnByValue"] is True
 
 
 def test_boss_navigates_to_origin_before_same_origin_api_and_closes_resources() -> None:

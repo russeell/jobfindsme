@@ -8,6 +8,7 @@ import socket
 import time
 from collections.abc import Callable
 from contextlib import suppress
+from importlib.resources import files
 from typing import Any, Protocol
 from urllib.parse import urlencode
 
@@ -32,50 +33,11 @@ BOSS_CITY_CODES = {
     "西安": "101110100",
 }
 
-_JS_FETCH_API = """
-(function(){
-    var url = __API_URL__;
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, false);
-    xhr.withCredentials = true;
-    try {
-        xhr.send();
-    } catch(e) {
-        return JSON.stringify({error: 'network_error', message: e.message});
-    }
-    if (xhr.status === 401 || xhr.status === 403) {
-        return JSON.stringify({error: 'authentication_required', status: xhr.status});
-    }
-    if (xhr.status !== 200) {
-        return JSON.stringify({error: 'http_error', status: xhr.status});
-    }
-    var data = JSON.parse(xhr.responseText);
-    var jobs = (data.zpData || {}).jobList || [];
-    return JSON.stringify({jobs: jobs.map(function(j) {
-        return {
-            job_id: j.encryptJobId || j.securityId || '',
-            title: j.jobName || '',
-            salary: j.salaryDesc || '',
-            location: [j.cityName, j.areaDistrict, j.businessDistrict]
-                .filter(function(v){return v && v !== '\\u4e0d\\u9650';}).join(' · '),
-            company: j.brandName || '',
-            experience: j.jobExperience || '',
-            degree: j.jobDegree || '',
-            skills: (j.skills || []).join(', '),
-            job_labels: (j.jobLabels || []).join(', '),
-            boss_name: j.bossTitle || '',
-            boss_active: j.activeTimeDesc || (j.bossOnline ? '\\u5728\\u7ebf' : ''),
-            company_scale: j.brandScaleName || '',
-            company_stage: j.brandStageName || '',
-            company_industry: j.brandIndustry || '',
-            welfare: (j.welfareList || []).join(', '),
-            job_link: j.encryptJobId
-                ? 'https://www.zhipin.com/job_detail/' + j.encryptJobId + '.html'
-                : ''
-        };
-    })});
-})()
-"""
+_JS_FETCH_API = (
+    files("jobfindsme.resources.connectors")
+    .joinpath("boss_fetch.js")
+    .read_text(encoding="utf-8")
+)
 
 
 class BossConnectorError(RuntimeError):

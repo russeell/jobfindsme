@@ -60,6 +60,9 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    unless the user explicitly provides a source. Core selects maintained
    sources and returns official search links. Never ask ordinary users for
    `career_url`, `board_name`, `board_token`, or other connector internals.
+   Use `salary_policy: strict` when a salary constraint is present. Use
+   `salary_policy: include_undisclosed` only when the user explicitly asks to
+   retain jobs with undisclosed or negotiable salary.
 5. Call `search_jobs` without IDs in the same turn. Read matches from its
    `jobs` field. Use `get_jobs` only for later pagination or state filtering.
    Set `allow_browser_sources: true`. Do not begin by asking technical setup

@@ -13,6 +13,7 @@ from jobfindsme.contracts import (
     JobStateKind,
     JobSummary,
     RecruitmentTrack,
+    SalaryPolicy,
     SearchConfiguration,
     SearchPlan,
     SearchPresentationContext,
@@ -26,7 +27,6 @@ from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
 from jobfindsme.job_impressions import JobImpressionService
 from jobfindsme.job_states import JobStateService
-from jobfindsme.matching import DeterministicMatcher
 from jobfindsme.plan_suggestions import suggest_search_plan
 from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
 from jobfindsme.profiles.models import (
@@ -55,6 +55,10 @@ def _applied_filter_labels(plan: SearchPlan) -> tuple[str, ...]:
         labels.append(f"薪资{plan.salary_min_k}K+")
     if plan.salary_max_k is not None:
         labels.append(f"薪资不高于{plan.salary_max_k}K")
+    if (
+        plan.salary_min_k is not None or plan.salary_max_k is not None
+    ) and plan.salary_policy is SalaryPolicy.INCLUDE_UNDISCLOSED:
+        labels.append("保留薪资未公开岗位")
     if plan.experience_min_years is not None:
         labels.append(f"经验≥{plan.experience_min_years}年")
     if plan.experience_max_years is not None:
@@ -89,8 +93,6 @@ class jobfindsmecore:
         self.jobs = JobRepository(self.database)
         self.job_imports = JobImportService(self.jobs)
         self.discovery = JobDiscoveryService(self.job_imports)
-        self.matcher = DeterministicMatcher()
-        self.matcher.stale_after_days = 7
         self.job_states = JobStateService(self.database)
         self.job_impressions = JobImpressionService(self.database)
         self.privacy = PrivacyService(self.database)
@@ -100,7 +102,6 @@ class jobfindsmecore:
             profiles=self.profiles,
             jobs=self.jobs,
             discovery=self.discovery,
-            matcher=self.matcher,
             impressions=self.job_impressions,
             subscriptions=self.source_subscriptions,
         )
@@ -122,6 +123,7 @@ class jobfindsmecore:
         locations: Sequence[str] = (),
         salary_min_k: int | None = None,
         salary_max_k: int | None = None,
+        salary_policy: str = SalaryPolicy.STRICT,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
         recruitment_track: str | None = None,
@@ -135,6 +137,7 @@ class jobfindsmecore:
             locations=locations,
             salary_min_k=salary_min_k,
             salary_max_k=salary_max_k,
+            salary_policy=salary_policy,
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
             recruitment_track=recruitment_track,
@@ -154,6 +157,7 @@ class jobfindsmecore:
         locations: Sequence[str] = (),
         salary_min_k: int | None = None,
         salary_max_k: int | None = None,
+        salary_policy: str = SalaryPolicy.STRICT,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
         recruitment_track: str | None = None,
@@ -172,6 +176,7 @@ class jobfindsmecore:
             "locations": locations,
             "salary_min_k": salary_min_k,
             "salary_max_k": salary_max_k,
+            "salary_policy": salary_policy,
             "experience_min_years": experience_min_years,
             "experience_max_years": experience_max_years,
             "recruitment_track": recruitment_track,

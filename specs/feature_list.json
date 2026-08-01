@@ -106,7 +106,7 @@
         "BOSS直聘 requires user-authorized local Chrome state.",
         "猎聘 remains useful without Chrome through HTTP discovery.",
         "Historical SQLite migrations and retired enum values remain readable.",
-        "The host Agent owns scheduling, notification, conversation, and final semantic ranking."
+        "The host Agent owns scheduling, notification, and conversation; the Server owns deterministic ranking and base presentation."
       ],
       "evidence_path": "reports/features/MCP-001.json"
     },
@@ -192,6 +192,113 @@
         "No model API key is required for the stable output contract."
       ],
       "evidence_path": "reports/features/UX-001.json"
+    },
+    {
+      "id": "QUALITY-001",
+      "title": "Make matching policy, taxonomy, evaluation, and browser resources explicit",
+      "status": "done",
+      "blocked_by": [
+        "UX-001"
+      ],
+      "allowed_paths": [
+        ".github/workflows/ci.yml",
+        "CONTRIBUTING.md",
+        "INSTALL.md",
+        "PROJECT_SPEC.md",
+        "README.md",
+        "README.en.md",
+        "integrations/**",
+        "pyproject.toml",
+        "scripts/**",
+        "specs/feature_list.json",
+        "src/**",
+        "tests/**",
+        "reports/features/QUALITY-001.json"
+      ],
+      "acceptance": [
+        "Skill aliases are loaded from a versioned packaged JSON resource and community edits are collision-validated.",
+        "Salary-constrained searches default to strict handling but support an explicit include-undisclosed policy with warnings and diagnostics.",
+        "Production search no longer depends on the historical BM25 matcher; legacy replay code lives under evaluation.",
+        "The BOSS page-context request uses a packaged asynchronous script and the installed wheel proves the resource exists.",
+        "Synthetic evaluation is an explicit CI regression gate and remains disallowed as public field evidence.",
+        "SQLite deletion confirmation remains restart-safe, and retired source values remain readable but non-executable.",
+        "Stable human text and validated structuredContent remain the two intentional MCP output surfaces."
+      ],
+      "checks": [
+        [
+          "python3",
+          "-m",
+          "pytest"
+        ],
+        [
+          "python3",
+          "-m",
+          "jobfindsme.evaluation.run",
+          "--dataset",
+          "data/eval/v0.1.json",
+          "--report",
+          "/tmp/jobfindsme-synthetic-eval.json",
+          "--type",
+          "synthetic"
+        ],
+        [
+          "python3",
+          "-m",
+          "ruff",
+          "check",
+          "."
+        ],
+        [
+          "python3",
+          "-m",
+          "ruff",
+          "format",
+          "--check",
+          "."
+        ],
+        [
+          "bash",
+          "scripts/smoke_installed_package.sh"
+        ]
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "official_guide",
+          "title": "Python importlib.resources",
+          "url": "https://docs.python.org/3/library/importlib.resources.html",
+          "adopted_pattern": "Ship non-code taxonomies and browser scripts as importable package resources.",
+          "rejected_or_not_adopted": "Do not depend on source-tree-relative paths that fail after wheel installation."
+        },
+        {
+          "category": "official_guide",
+          "title": "MCP tools specification",
+          "url": "https://modelcontextprotocol.io/specification/2025-06-18/server/tools",
+          "adopted_pattern": "Return validated structuredContent alongside a compatible text result.",
+          "rejected_or_not_adopted": "Do not multiply presentation modes when structured output already supports custom clients."
+        },
+        {
+          "category": "official_guide",
+          "title": "GitHub Actions Python testing",
+          "url": "https://docs.github.com/en/actions/how-tos/writing-workflows/building-and-testing/building-and-testing-python",
+          "adopted_pattern": "Run a deterministic evaluation command in the same reproducible Python CI environment.",
+          "rejected_or_not_adopted": "Do not run authenticated browser field trials on hosted CI."
+        },
+        {
+          "category": "open_source",
+          "title": "JobSpy",
+          "url": "https://github.com/speedyapply/JobSpy",
+          "adopted_pattern": "Keep source adapters and normalized domain behavior independently testable.",
+          "rejected_or_not_adopted": "Do not import source coverage claims or make model-backed ranking mandatory."
+        }
+      ],
+      "local_constraints": [
+        "No model API key is required for core matching.",
+        "Unknown salary never silently satisfies a salary threshold.",
+        "Historical migrations are append-only within the current major version.",
+        "Field-quality claims require real manually reviewed evidence."
+      ],
+      "evidence_path": "reports/features/QUALITY-001.json"
     },
     {
       "id": "EVAL-001",

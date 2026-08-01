@@ -23,6 +23,12 @@ jobs:
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq libcurl4-openssl-dev
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest
+      - name: Synthetic evaluation regression gate
+        run: >-
+          python -m jobfindsme.evaluation.run
+          --dataset data/eval/v0.1.json
+          --report ${{ runner.temp }}/synthetic-evaluation.json
+          --type synthetic
       - run: ruff check .
       - run: ruff format --check .
       - run: bash scripts/smoke_installed_package.sh

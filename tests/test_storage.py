@@ -57,6 +57,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0010_search_plan_filters",
         "0011_search_job_impressions",
         "0012_monitor_schedule_cron",
+        "0013_search_plan_salary_policy",
     ]
     assert foreign_keys == 1
 

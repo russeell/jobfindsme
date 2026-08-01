@@ -5,7 +5,12 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from jobfindsme.contracts import EmploymentType, RecruitmentTrack, SearchPlan
+from jobfindsme.contracts import (
+    EmploymentType,
+    RecruitmentTrack,
+    SalaryPolicy,
+    SearchPlan,
+)
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]
@@ -37,6 +42,7 @@ class SearchPlanService:
         locations: Sequence[str] = (),
         salary_min_k: int | None = None,
         salary_max_k: int | None = None,
+        salary_policy: str = SalaryPolicy.STRICT,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
         recruitment_track: str | None = None,
@@ -55,6 +61,7 @@ class SearchPlanService:
             locations=tuple(value.strip() for value in locations if value.strip()),
             salary_min_k=salary_min_k,
             salary_max_k=salary_max_k,
+            salary_policy=SalaryPolicy(salary_policy),
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
             recruitment_track=(
@@ -73,11 +80,11 @@ class SearchPlanService:
                 """
                 INSERT INTO search_plans (
                     plan_id, workspace_id, name, target_roles_json,
-                    locations_json, salary_min_k, salary_max_k,
+                    locations_json, salary_min_k, salary_max_k, salary_policy,
                     experience_min_years, experience_max_years,
                     recruitment_track, employment_type,
                     official_sources_only, exclusions_json, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     plan.plan_id,
@@ -87,6 +94,7 @@ class SearchPlanService:
                     json.dumps(plan.locations, ensure_ascii=False),
                     plan.salary_min_k,
                     plan.salary_max_k,
+                    plan.salary_policy.value,
                     plan.experience_min_years,
                     plan.experience_max_years,
                     plan.recruitment_track.value if plan.recruitment_track else None,
@@ -122,6 +130,7 @@ class SearchPlanService:
         locations: Sequence[str] = (),
         salary_min_k: int | None = None,
         salary_max_k: int | None = None,
+        salary_policy: str = SalaryPolicy.STRICT,
         experience_min_years: int | None = None,
         experience_max_years: int | None = None,
         recruitment_track: str | None = None,
@@ -140,6 +149,7 @@ class SearchPlanService:
             locations=tuple(value.strip() for value in locations if value.strip()),
             salary_min_k=salary_min_k,
             salary_max_k=salary_max_k,
+            salary_policy=SalaryPolicy(salary_policy),
             experience_min_years=experience_min_years,
             experience_max_years=experience_max_years,
             recruitment_track=(
@@ -158,7 +168,7 @@ class SearchPlanService:
                 """
                 UPDATE search_plans SET
                     name = ?, target_roles_json = ?, locations_json = ?,
-                    salary_min_k = ?, salary_max_k = ?,
+                    salary_min_k = ?, salary_max_k = ?, salary_policy = ?,
                     experience_min_years = ?, experience_max_years = ?,
                     recruitment_track = ?, employment_type = ?,
                     official_sources_only = ?, exclusions_json = ?, updated_at = ?
@@ -170,6 +180,7 @@ class SearchPlanService:
                     json.dumps(plan.locations, ensure_ascii=False),
                     plan.salary_min_k,
                     plan.salary_max_k,
+                    plan.salary_policy.value,
                     plan.experience_min_years,
                     plan.experience_max_years,
                     plan.recruitment_track.value if plan.recruitment_track else None,
@@ -207,6 +218,7 @@ class SearchPlanService:
             locations=tuple(json.loads(row["locations_json"])),
             salary_min_k=row["salary_min_k"],
             salary_max_k=row["salary_max_k"],
+            salary_policy=SalaryPolicy(row["salary_policy"]),
             experience_min_years=row["experience_min_years"],
             experience_max_years=row["experience_max_years"],
             recruitment_track=(

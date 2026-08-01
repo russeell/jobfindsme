@@ -47,6 +47,15 @@ with zipfile.ZipFile(wheel) as archive:
 leaked = [name for name in names if name.startswith(forbidden)]
 if leaked:
     raise SystemExit(f"installed wheel contains retired modules: {leaked}")
+required_resources = {
+    "jobfindsme/resources/connectors/boss_fetch.js",
+    "jobfindsme/resources/taxonomy/skills.json",
+}
+missing_resources = required_resources - set(names)
+if missing_resources:
+    raise SystemExit(
+        f"installed wheel is missing resources: {sorted(missing_resources)}"
+    )
 PY
 
 python -m venv --system-site-packages "$temporary/venv"

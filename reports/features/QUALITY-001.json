@@ -1,0 +1,108 @@
+{
+  "feature_id": "QUALITY-001",
+  "status": "passed",
+  "verified_at": "2026-08-01T11:51:58.823658+00:00",
+  "changed_paths": [
+    ".github/workflows/ci.yml",
+    "CONTRIBUTING.md",
+    "INSTALL.md",
+    "PROJECT_SPEC.md",
+    "README.en.md",
+    "README.md",
+    "integrations/shared/SKILL.md",
+    "pyproject.toml",
+    "reports/features/QUALITY-001.json",
+    "scripts/install.sh",
+    "scripts/smoke_installed_package.sh",
+    "scripts/validate_taxonomy.py",
+    "specs/feature_list.json",
+    "src/jobfindsme/cli.py",
+    "src/jobfindsme/connectors/boss_zhipin.py",
+    "src/jobfindsme/contracts.py",
+    "src/jobfindsme/core/app.py",
+    "src/jobfindsme/core/search.py",
+    "src/jobfindsme/evaluation/legacy_matcher.py",
+    "src/jobfindsme/evaluation/live_loop.py",
+    "src/jobfindsme/evaluation/runner.py",
+    "src/jobfindsme/evaluation/snapshot.py",
+    "src/jobfindsme/matching/__init__.py",
+    "src/jobfindsme/matching/ranker.py",
+    "src/jobfindsme/mcp/schemas.py",
+    "src/jobfindsme/mcp/tools.py",
+    "src/jobfindsme/migrations/0013_search_plan_salary_policy.sql",
+    "src/jobfindsme/presentation.py",
+    "src/jobfindsme/resources/connectors/__init__.py",
+    "src/jobfindsme/resources/connectors/boss_fetch.js",
+    "src/jobfindsme/resources/jobfindsme/SKILL.md",
+    "src/jobfindsme/resources/taxonomy/__init__.py",
+    "src/jobfindsme/resources/taxonomy/skills.json",
+    "src/jobfindsme/search_plans.py",
+    "src/jobfindsme/taxonomy.py",
+    "tests/connectors/test_boss_zhipin.py",
+    "tests/core/test_app.py",
+    "tests/core/test_privacy.py",
+    "tests/evaluation/test_snapshot.py",
+    "tests/integration/test_agent_first_use.py",
+    "tests/matching/test_ranker.py",
+    "tests/test_search_plans.py",
+    "tests/test_storage.py",
+    "tests/test_taxonomy.py"
+  ],
+  "checks": [
+    {
+      "command": [
+        "python3",
+        "-m",
+        "pytest"
+      ],
+      "returncode": 0,
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.4, pytest-9.0.3, pluggy-1.6.0\nrootdir: /Users/russeell/Documents/开源项目开发/jobfindsme\nconfigfile: pyproject.toml\ntestpaths: tests\nplugins: cov-6.3.0, asyncio-1.3.0, anyio-4.13.0, mock-3.15.1, recording-0.13.4, inline-snapshot-0.34.2\nasyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function\ncollected 255 items\n\ntests/cli/test_cli.py ......                                             [  2%]\ntests/connectors/test_boss_zhipin.py ............                        [  7%]\ntests/connectors/test_china_platforms.py ........                        [ 10%]\ntests/connectors/test_connectors.py .......                              [ 12%]\ntests/connectors/test_pure_http.py ...                                   [ 14%]\ntests/core/test_app.py ..................                                [ 21%]\ntests/core/test_incremental_radar.py ......                              [ 23%]\ntests/core/test_privacy.py ....                                          [ 25%]\ntests/core/test_source_catalog.py .......                                [ 27%]\ntests/doctor/test_doctor.py ......                                       [ 30%]\ntests/evaluation/test_collect.py ...                                     [ 31%]\ntests/evaluation/test_evaluation.py ...                                  [ 32%]\ntests/evaluation/test_improvement.py ....                                [ 34%]\ntests/evaluation/test_labeling.py ...................                    [ 41%]\ntests/evaluation/test_live_loop.py ....                                  [ 43%]\ntests/evaluation/test_snapshot.py .......                                [ 45%]\ntests/harness/test_feature_harness.py ............                       [ 50%]\ntests/importing/test_importing.py ...................                    [ 58%]\ntests/installer/test_installer.py ..........                             [ 61%]\ntests/integration/test_agent_first_use.py ..                             [ 62%]\ntests/integration/test_cli_workflow.py ..                                [ 63%]\ntests/integrations/test_compatibility_matrix.py ...                      [ 64%]\ntests/integrations/test_packaged_skill.py ...                            [ 65%]\ntests/integrations/test_primary_hosts.py ...                             [ 67%]\ntests/matching/test_ranker.py ......................                     [ 75%]\ntests/mcp/test_stdio_server.py ...                                       [ 76%]\ntests/mcp/test_tools.py .................                                [ 83%]\ntests/profiles/test_extractor.py .........                               [ 87%]\ntests/profiles/test_parser.py ..                                         [ 87%]\ntests/profiles/test_service.py .......                                   [ 90%]\ntests/security/test_resume_privacy.py ..                                 [ 91%]\ntests/test_contracts.py .....                                            [ 93%]\ntests/test_search_plans.py ....                                          [ 94%]\ntests/test_storage.py ........                                           [ 98%]\ntests/test_taxonomy.py ...                                               [ 99%]\ntests/test_workspaces.py ..                                              [100%]\n\n============================= 255 passed in 46.33s =============================\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "jobfindsme.evaluation.run",
+        "--dataset",
+        "data/eval/v0.1.json",
+        "--report",
+        "/tmp/jobfindsme-synthetic-eval.json",
+        "--type",
+        "synthetic"
+      ],
+      "returncode": 0,
+      "output": "/tmp/jobfindsme-synthetic-eval.json\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "ruff",
+        "check",
+        "."
+      ],
+      "returncode": 0,
+      "output": "All checks passed!\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "."
+      ],
+      "returncode": 0,
+      "output": "106 files already formatted\n"
+    },
+    {
+      "command": [
+        "bash",
+        "scripts/smoke_installed_package.sh"
+      ],
+      "returncode": 0,
+      "output": "Processing /var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/source\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nBuilding wheels for collected packages: jobfindsme\n  Building wheel for jobfindsme (pyproject.toml): started\n  Building wheel for jobfindsme (pyproject.toml): finished with status 'done'\n  Created wheel for jobfindsme: filename=jobfindsme-0.7.0-py3-none-any.whl size=147944 sha256=c8f0524b527105cc9345045675de29db3fad5abfa7b527c3a34c827ae1fabfbb\n  Stored in directory: /private/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/pip-ephem-wheel-cache-e7ohnsy3/wheels/96/c5/e9/c01515e09b2ce29d24f719e7ea451e2f5b8e72c28fc485e88d\nSuccessfully built jobfindsme\nProcessing /var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/dist/jobfindsme-0.7.0-py3-none-any.whl\nInstalling collected packages: jobfindsme\n  Attempting uninstall: jobfindsme\n    Found existing installation: jobfindsme 0.2.0.dev0\n    Not uninstalling jobfindsme at /Users/russeell/miniconda3/lib/python3.13/site-packages, outside environment /var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/venv\n    Can't uninstall 'jobfindsme'. No files were found to uninstall.\nSuccessfully installed jobfindsme-0.7.0\n{\"host\": \"cursor\", \"action\": \"connect\", \"config_path\": \"/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/home/.cursor/mcp.json\", \"skill_path\": \"/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/home/.cursor/skills/jobfindsme/SKILL.md\", \"backups\": [], \"commands\": [\"cursor mcp list\"]}\n{\"workspace_id\": \"ws_64f11755e7c141edab127f120f0eb0d2\", \"name\": \"Installed Package Smoke\", \"created_at\": \"2026-08-01T11:51:54.253441Z\"}\n{\"ok\": true, \"diagnostics\": [{\"name\": \"version\", \"ok\": true, \"message\": \"jobfindsme 0.7.0  |  更新: jobfindsme self-update\", \"required\": true}, {\"name\": \"python\", \"ok\": true, \"message\": \"Python 3.13\", \"required\": true}, {\"name\": \"database\", \"ok\": true, \"message\": \"/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz/jobfindsme.db\", \"required\": true}, {\"name\": \"permissions\", \"ok\": true, \"message\": \"/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-wheel-smoke.YhFLmz mode=700\", \"required\": true}, {\"name\": \"mcp\", \"ok\": true, \"message\": \"9 tools\", \"required\": true}, {\"name\": \"connectors\", \"ok\": true, \"message\": \"ready: BossZhipinConnector, LiepinConnector\", \"required\": true}, {\"name\": \"browser_connectors\", \"ok\": false, \"message\": \"Chrome CDP (port 9222) not reachable — run 'jobfindsme setup' to launch Chrome for platform search\", \"required\": false}, {\"name\": \"boss_login\", \"ok\": false, \"message\": \"Chrome CDP not reachable — run 'jobfindsme setup' first\", \"required\": false}, {\"name\": \"secrets\", \"ok\": true, \"message\": \"no optional secrets configured\", \"required\": true}]}\n"
+    }
+  ]
+}

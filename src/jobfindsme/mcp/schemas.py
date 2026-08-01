@@ -16,6 +16,7 @@ from jobfindsme.contracts import (
     JobSummary,
     MatchEvidence,
     RecruitmentTrack,
+    SalaryPolicy,
     SearchChanges,
     SearchConfiguration,
     SearchPresentationContext,
@@ -163,6 +164,13 @@ class ConfigureSearchInput(StrictModel):
         ge=0,
         le=1000,
         description="Max monthly salary in thousands, e.g. 50 = 50K/月",
+    )
+    salary_policy: SalaryPolicy = Field(
+        default=SalaryPolicy.STRICT,
+        description=(
+            "strict excludes jobs without salary when a salary filter is set; "
+            "include_undisclosed keeps them with an explicit warning"
+        ),
     )
     experience_min_years: int | None = Field(
         default=None,

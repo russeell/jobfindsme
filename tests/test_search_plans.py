@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from jobfindsme.contracts import SalaryPolicy
 from jobfindsme.search_plans import SearchPlanNotFoundError, SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
@@ -39,6 +40,22 @@ def test_workspace_can_hold_multiple_search_plans(tmp_path) -> None:
     )
 
     assert plans.list(workspace.workspace_id) == [first, second]
+
+
+def test_salary_policy_round_trips_through_sqlite(tmp_path) -> None:
+    workspaces, plans = make_services(tmp_path)
+    workspace = workspaces.create()
+
+    created = plans.create(
+        workspace_id=workspace.workspace_id,
+        name="include unknown salary",
+        target_roles=["AI应用工程师"],
+        salary_min_k=20,
+        salary_policy=SalaryPolicy.INCLUDE_UNDISCLOSED,
+    )
+
+    loaded = plans.get(workspace_id=workspace.workspace_id, plan_id=created.plan_id)
+    assert loaded.salary_policy is SalaryPolicy.INCLUDE_UNDISCLOSED
 
 
 def test_plans_are_isolated_between_workspaces(tmp_path) -> None:

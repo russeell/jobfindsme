@@ -130,10 +130,10 @@ Ubuntu: `sudo apt install python3.12 python3.12-venv`）。
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.6.0/jobfindsme-0.6.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.7.0/jobfindsme-0.7.0-py3-none-any.whl"
 ```
 
-> 版本号与仓库最新 Release 保持一致（当前 v0.6.0）。PyPI 安装会在项目
+> 版本号与仓库最新 Release 保持一致（当前 v0.7.0）。PyPI 安装会在项目
 > 成熟后开放，届时此配方自动切换到 `pip install jobfindsme[browser]`。
 
 ### 第 3 步：接入当前 Agent
