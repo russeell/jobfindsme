@@ -25,7 +25,7 @@ jobs:
       - run: python -m pytest
       - name: Synthetic evaluation regression gate
         run: >-
-          python -m jobfindsme.evaluation.run
+          python -m jobfindsme.evaluation.cli
           --dataset data/eval/v0.1.json
           --report ${{ runner.temp }}/synthetic-evaluation.json
           --type synthetic

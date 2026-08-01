@@ -7,8 +7,10 @@ from jobfindsme.contracts import (
     SourceRunStats,
     SourceRunStatus,
 )
-from jobfindsme.evaluation.improvement import analyze_engineering_improvements
-from jobfindsme.evaluation.live_loop import (
+from jobfindsme.evaluation.field_trial.improvement import (
+    analyze_engineering_improvements,
+)
+from jobfindsme.evaluation.field_trial.live_loop import (
     LiveSearchLoopReport,
     LoopJob,
     LoopQuality,
