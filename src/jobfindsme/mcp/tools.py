@@ -139,7 +139,7 @@ TOOL_DEFINITIONS = (
             "bounded sources. In cache mode: no remote access, "
             "local DB only. In full mode: refreshes all sources.  "
             "Returns hard-filtered, coarse-ranked jobs with extracted "
-            "signals (skills, experience, degree) for Agent-side ranking.  "
+            "signals (skills, experience, degree) used by server-side ranking.  "
             "The radar suppresses previously-seen unchanged jobs; use "
             "include_seen=true to get them back.  "
             "A zero-result incremental run is valid and must not be retried "
@@ -333,6 +333,7 @@ class ToolRegistry:
                 locations=request.locations,
                 salary_min_k=request.salary_min_k,
                 salary_max_k=request.salary_max_k,
+                salary_policy=request.salary_policy,
                 experience_min_years=request.experience_min_years,
                 experience_max_years=request.experience_max_years,
                 recruitment_track=request.recruitment_track,

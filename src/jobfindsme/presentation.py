@@ -40,8 +40,7 @@ def format_job_list(
     """Render stable, evidence-based recommendation blocks.
 
     This text is the deterministic part of the Agent contract: every Agent
-    receives the identical block (facts + signals + link).  Agents append
-    their own semantic 推荐理由 on top of these facts.
+    receives the identical facts, signals, warnings, link, and base reason.
     """
     if not items:
         return "未找到符合条件的岗位。"
@@ -70,7 +69,7 @@ def format_job_list(
                 "   匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）"
             )
 
-        # Structured signals — deterministic facts for the Agent's reasoning
+        # Structured signals support deterministic reasons and optional host UI.
         signals = _extracted_signals(evidence)
         signal_parts = []
         skills = signals.get("required_skills") or []
@@ -150,6 +149,16 @@ def format_search_results(
         source_line += f"\n本轮来源返回 {diagnostics.total_discovered} 条记录。"
     filters = " + ".join(context.applied_filters) or "未设置额外条件"
     filter_line = f"过滤：{filters} → 给出 {diagnostics.result_count} 个"
+    if diagnostics.undisclosed_salary_filtered_count:
+        filter_line += (
+            f"；另有 {diagnostics.undisclosed_salary_filtered_count} 个"
+            "薪资未公开岗位按严格模式排除"
+        )
+    if diagnostics.undisclosed_salary_included_count:
+        filter_line += (
+            f"；保留 {diagnostics.undisclosed_salary_included_count} 个"
+            "薪资未公开岗位并逐条提示"
+        )
     job_text = format_job_list(
         items,
         include_recommendation=True,

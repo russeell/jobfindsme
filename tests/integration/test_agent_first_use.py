@@ -71,7 +71,7 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
 
     assert search_result["count"] == 2
     # v0.4: filter-only, no BM25 ranking — both jobs pass hard filter.
-    # Order is insertion order; the Agent owns ranking.
+    # Order is deterministic and owned by the server.
     companies = {m["job"]["company"] for m in matches}
     assert companies == {"甲公司", "乙公司"}
     # v0.4: evidence carries extracted_signals for Agent-side matching,

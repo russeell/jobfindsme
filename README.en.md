@@ -7,7 +7,7 @@
 ## What it does
 
 - searches **BOSS直聘** and **猎聘 (Liepin)** from one Agent;
-- matches jobs against your resume (Agent-side semantic ranking);
+- deterministically ranks jobs against structured local resume facts;
 - returns matching jobs with direct apply links;
 - host-Agent scheduled searches; applied jobs are never re-suggested;
 - query every job ever matched, with its state.
@@ -27,7 +27,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.6.0/jobfindsme-0.6.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.7.0/jobfindsme-0.7.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
@@ -57,7 +57,7 @@ count and does not claim complete market coverage.
 
 | Source | Method | Speed | Browser needed? |
 |---|---|---|---|
-| BOSS Zhipin | authorized local Chrome CDP, site request in page context | ~0.5s | ✅ yes (login session) |
+| BOSS Zhipin | authorized local Chrome CDP, asynchronous site response in page context | ~0.5s | ✅ yes (login session) |
 | Liepin | `api-c.liepin.com` pure HTTP JSON API | ~1.0s | ❌ no |
 
 Liepin prefers pure HTTP (sub-second, no browser). When Chrome is available,

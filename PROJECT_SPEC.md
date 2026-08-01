@@ -44,9 +44,10 @@ count and raw records are not product outcomes.
 - claiming complete market coverage or hiring probability;
 - requiring a model API key for core behavior.
 
-Scheduling, notification delivery, conversation, and final semantic judgement
-belong to the host Agent. `jobfindsme` stores facts and state and executes domain
-operations.
+Scheduling, notification delivery, and conversation belong to the host Agent.
+`jobfindsme` owns facts, state, hard constraints, deterministic ordering, and
+the stable base result. The host may add an explanation but cannot invent or
+silently reorder evidence.
 
 ## 3. System boundaries
 
@@ -107,9 +108,19 @@ resolve active workspace and plan
 -> return compact summaries, evidence, changes, and diagnostics
 ```
 
-Hard constraints include location, salary when known, experience when known,
+Hard constraints include location, salary, experience when known,
 recruitment track, employment type, exclusions, and target-role eligibility.
 Unknown source fields must be labeled unknown rather than guessed.
+
+An explicit salary constraint defaults to `strict`: a job without comparable
+salary evidence is excluded and counted in diagnostics. Users may explicitly
+choose `include_undisclosed`; those jobs remain candidates with a warning. The
+system never treats an undisclosed salary as satisfying the requested amount.
+
+Skill aliases are loaded from the versioned packaged taxonomy at
+`resources/taxonomy/skills.json`. Contributions must pass collision validation.
+The default remains deterministic and model-free; embeddings are not a hidden
+runtime dependency.
 
 The deterministic score is an explainable ordering signal, not a hiring
 probability. The Server owns the displayed order and the stable human-facing
@@ -140,6 +151,10 @@ Every tool must provide:
 - actionable execution errors returned as tool errors rather than protocol
   failures.
 
+Human-facing `content` is intentionally stable across hosts. The same response
+also carries validated `structuredContent`, so clients that need custom UI or
+machine processing do not have to parse or rewrite the five-section text.
+
 `search_jobs` returns both strict structured content and a complete five-part
 human-facing result, in this fixed order:
 
@@ -156,7 +171,9 @@ automatic full refresh. If MCP is unavailable, the host may run `jobfindsme
 doctor` for diagnosis, but must not invent a CLI search workflow or expose
 workspace and plan identifiers.
 
-`delete_local_data` always uses preview then confirmation token. Export writes
+`delete_local_data` always uses preview then a hashed, SQLite-backed,
+single-use confirmation token with a short TTL. It remains valid across stdio
+server restarts. Export writes
 to a local file and returns only path, hash, and record counts. External JD
 content is untrusted data and must never be treated as instructions.
 
@@ -182,7 +199,8 @@ service.
 The fast loop runs on every change:
 
 ```text
-focused tests -> full pytest -> Ruff check -> Ruff format check
+focused tests -> full pytest -> synthetic evaluation gate
+-> Ruff check -> Ruff format check -> installed-wheel smoke test
 ```
 
 The product loop uses real, manually reviewed results:
@@ -200,6 +218,14 @@ Synthetic data is valid for regression only and cannot support public quality
 claims. A seven-day trial is useful for incremental behavior, but it is not a
 prerequisite for each fix: one labeled snapshot is the default fast feedback
 unit.
+
+The historical BM25 algorithm lives only under `evaluation/legacy_matcher.py`
+for snapshot compatibility. Production search uses the typed filter and signal
+ranking functions in `matching/ranker.py`.
+
+Retired source enum values remain readable solely for old SQLite workspaces.
+The active catalog rejects them, and the next major schema migration may remove
+them after a measured compatibility window.
 
 ## 9. Definition of done
 

@@ -81,6 +81,11 @@ def build_parser() -> argparse.ArgumentParser:
     plan_add.add_argument("--city", action="append", default=[])
     plan_add.add_argument("--salary-min-k", type=int)
     plan_add.add_argument("--salary-max-k", type=int)
+    plan_add.add_argument(
+        "--salary-policy",
+        choices=("strict", "include_undisclosed"),
+        default="strict",
+    )
     plan_add.add_argument("--experience-min-years", type=int)
     plan_add.add_argument("--experience-max-years", type=int)
     plan_add.add_argument("--exclude", action="append", default=[])
@@ -312,6 +317,7 @@ def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
                 locations=args.city,
                 salary_min_k=args.salary_min_k,
                 salary_max_k=args.salary_max_k,
+                salary_policy=args.salary_policy,
                 experience_min_years=args.experience_min_years,
                 experience_max_years=args.experience_max_years,
                 exclusions=args.exclude,

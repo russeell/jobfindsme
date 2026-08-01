@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from jobfindsme.contracts import JobMatch, JobPosting, SearchPlan, StrictModel
-from jobfindsme.matching import DeterministicMatcher
+from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
 
 # ── L1: Snapshot save / replay ───────────────────────────────────────────────
 
@@ -107,7 +107,7 @@ def replay_snapshot(
     Use this to detect regressions: save a snapshot before a code change,
     replay it afterward, and compare the results.
     """
-    matcher = DeterministicMatcher()
+    matcher = LegacyBM25Matcher()
     matches = matcher.match(
         plan,
         snapshot.jobs,

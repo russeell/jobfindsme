@@ -96,7 +96,7 @@ def run_live_search_loop(
     )
     from jobfindsme.matching.ranker import score_signals
 
-    # v0.4+: JobMatch.score is always 0.0 (Agent owns ranking).  Report the
+    # The server owns deterministic JobMatch scores. Report the
     # deterministic signal score so averages have operational meaning.
     jobs = tuple(
         LoopJob(

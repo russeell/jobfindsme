@@ -20,8 +20,14 @@ from jobfindsme.contracts import (
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.job_impressions import JobImpressionService
-from jobfindsme.matching import DeterministicMatcher
-from jobfindsme.matching.ranker import extract_job_signals, filter_jobs, score_signals
+from jobfindsme.matching.ranker import (
+    eligible_count,
+    extract_job_signals,
+    filter_jobs,
+    has_undisclosed_salary,
+    score_signals,
+    undisclosed_salary_counts,
+)
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 
@@ -38,7 +44,6 @@ class SearchOrchestrator:
         profiles: ResumeProfileService,
         jobs: JobRepository,
         discovery: JobDiscoveryService,
-        matcher: DeterministicMatcher,
         impressions: JobImpressionService,
         subscriptions: SourceSubscriptionService,
     ) -> None:
@@ -46,7 +51,6 @@ class SearchOrchestrator:
         self.profiles = profiles
         self.jobs = jobs
         self.discovery = discovery
-        self.matcher = matcher
         self.impressions = impressions
         self.subscriptions = subscriptions
 
@@ -80,6 +84,15 @@ class SearchOrchestrator:
                 score=score_signals(job, profile),
                 evidence=MatchEvidence(
                     hard_filter_passed=True,
+                    warnings=(
+                        ("薪资未公开，尚未验证是否满足薪资条件",)
+                        if has_undisclosed_salary(job)
+                        and (
+                            context.plan.salary_min_k is not None
+                            or context.plan.salary_max_k is not None
+                        )
+                        else ()
+                    ),
                     extracted_signals=extract_job_signals(job),
                 ),
             )
@@ -234,6 +247,9 @@ class SearchOrchestrator:
         finished_at = datetime.now(UTC)
         total_discovered = sum(run.discovered for run in source_runs)
         total_unique = sum(run.unique for run in source_runs)
+        salary_filtered, salary_included = undisclosed_salary_counts(
+            context.plan, source_jobs
+        )
         return SearchRunResult(
             matches=radar.matches,
             diagnostics=SearchRunDiagnostics(
@@ -254,9 +270,10 @@ class SearchOrchestrator:
                 repeated_suppressed_count=radar.changes.repeated_suppressed,
                 low_relevance_filtered_count=max(
                     0,
-                    self.matcher.eligible_count(context.plan, source_jobs)
-                    - len(candidates),
+                    eligible_count(context.plan, source_jobs) - len(candidates),
                 ),
+                undisclosed_salary_filtered_count=salary_filtered,
+                undisclosed_salary_included_count=salary_included,
             ),
             changes=radar.changes,
         )

@@ -9,6 +9,7 @@ from jobfindsme.contracts import (
     SourceEvidence,
     SourceKind,
 )
+from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.evaluation.snapshot import (
     compare_results,
     diff_loop_reports,
@@ -16,7 +17,6 @@ from jobfindsme.evaluation.snapshot import (
     replay_snapshot,
     save_job_snapshot,
 )
-from jobfindsme.matching import DeterministicMatcher
 
 
 def _make_job(job_id: str, title: str, description: str = "") -> JobPosting:
@@ -137,7 +137,7 @@ def test_compare_identical_results(tmp_path: Path) -> None:
         created_at=datetime(2026, 7, 30, tzinfo=UTC),
         updated_at=datetime(2026, 7, 30, tzinfo=UTC),
     )
-    matcher = DeterministicMatcher()
+    matcher = LegacyBM25Matcher()
     matches = matcher.match(plan, jobs)
     report = compare_results(matches, matches)
     assert report.unchanged == len(matches)
@@ -164,7 +164,7 @@ def test_compare_detects_new_and_removed(tmp_path: Path) -> None:
         created_at=datetime(2026, 7, 30, tzinfo=UTC),
         updated_at=datetime(2026, 7, 30, tzinfo=UTC),
     )
-    matcher = DeterministicMatcher()
+    matcher = LegacyBM25Matcher()
     baseline = matcher.match(plan, all_jobs[:2])  # j1, j2
     candidate = matcher.match(plan, all_jobs[1:])  # j2, j3
     report = compare_results(baseline, candidate)

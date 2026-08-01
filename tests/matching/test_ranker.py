@@ -6,16 +6,23 @@ from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
     EmploymentType,
     RecruitmentTrack,
+    SalaryPolicy,
     SearchPlan,
     SourceKind,
 )
+from jobfindsme.evaluation.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.importing.normalizer import normalize_job
-from jobfindsme.matching import DeterministicMatcher
-from jobfindsme.matching.ranker import filter_jobs, score_signals
+from jobfindsme.matching.ranker import (
+    filter_jobs,
+    score_signals,
+    undisclosed_salary_counts,
+)
 from jobfindsme.matching.tokenizer import tokenize
 from jobfindsme.profiles.models import FactStatus, FactType, ProfileFact, ProfileSummary
 
 NOW = datetime(2026, 7, 28, tzinfo=UTC)
+
+DeterministicMatcher = LegacyBM25Matcher
 
 
 def plan(**overrides: object) -> SearchPlan:
@@ -180,6 +187,26 @@ def test_unknown_salary_is_excluded_when_salary_is_a_hard_constraint() -> None:
     )
 
     assert matches == []
+
+
+def test_unknown_salary_can_be_kept_only_with_explicit_policy() -> None:
+    unknown = job("unknown", description="Python RAG Agent，1-3年")
+
+    passed = filter_jobs(
+        plan(salary_policy=SalaryPolicy.INCLUDE_UNDISCLOSED),
+        [unknown],
+    )
+
+    assert [item.external_id for item in passed] == ["unknown"]
+
+
+def test_unknown_salary_policy_produces_explicit_diagnostics() -> None:
+    unknown = job("unknown", description="Python RAG Agent，1-3年")
+
+    assert undisclosed_salary_counts(plan(), [unknown]) == (1, 0)
+    assert undisclosed_salary_counts(
+        plan(salary_policy=SalaryPolicy.INCLUDE_UNDISCLOSED), [unknown]
+    ) == (0, 1)
 
 
 def test_minimum_salary_requires_the_posted_lower_bound_to_match() -> None:
