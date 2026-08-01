@@ -49,18 +49,20 @@ def filter_jobs(
     """Return hard-filter-passing jobs, coarse-ranked by signal match.
 
     If *profile* is provided, jobs are scored against profile facts
-    (skills, experience, degree) and sorted descending.  The top
-    *limit* are returned.
+    (skills, experience, degree) and sorted descending — even when the
+    eligible pool fits within *limit*, so the presented list always starts
+    with the strongest matches.  The top *limit* are returned.  Sorting is
+    stable, so ties keep their natural order.
 
-    If the eligible pool is ≤ *limit* (or no profile), all pass
-    through in natural order — there is no need to rank.
+    Without a profile there is no score, so jobs pass through in natural
+    order.
     """
     eligible = [
         job
         for job in jobs
         if _hard_filter(plan, job, stale_after_days=stale_after_days)
     ]
-    if len(eligible) <= limit or profile is None:
+    if profile is None:
         return eligible[:limit]
 
     # Coarse ranking: deterministic signal-match score

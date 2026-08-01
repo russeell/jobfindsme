@@ -379,6 +379,17 @@ def test_filter_jobs_returns_all_when_pool_within_limit() -> None:
     assert [item.external_id for item in passed] == ["a", "b", "c"]
 
 
+def test_filter_jobs_sorts_by_score_even_when_pool_within_limit() -> None:
+    jobs = [
+        job("low", description="Java Spring 云原生平台，1-3年，25-40K"),
+        job("high", description="Python RAG Agent，1-3年，25-40K"),
+    ]
+
+    passed = filter_jobs(plan(), jobs, profile=_profile("Python", "RAG"), limit=20)
+
+    assert [item.external_id for item in passed] == ["high", "low"]
+
+
 def test_filter_jobs_truncates_to_limit_with_profile() -> None:
     jobs = [job(f"job-{index}") for index in range(30)]
 
