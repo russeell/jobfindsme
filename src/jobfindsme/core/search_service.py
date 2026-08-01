@@ -12,6 +12,7 @@ from jobfindsme.context import ActiveContextService
 from jobfindsme.contracts import (
     DiscoverySource,
     EmploymentType,
+    JobLiveness,
     JobMatch,
     RecruitmentTrack,
     SalaryPolicy,
@@ -235,6 +236,11 @@ class SearchUseCase:
                         if degree in fact.value and order > best_degree:
                             highest_degree = degree
                             best_degree = order
+        all_jobs = self.orchestrator.jobs.list(context.workspace.workspace_id)
+        distinct_shown, total_shows = self.orchestrator.impressions.counts(
+            workspace_id=context.workspace.workspace_id,
+            plan_id=context.plan.plan_id,
+        )
         return SearchPresentationContext(
             profile_used=profile is not None,
             skill_count=counts[FactType.SKILL],
@@ -243,6 +249,11 @@ class SearchUseCase:
             education_count=counts[FactType.EDUCATION],
             highest_degree=highest_degree,
             applied_filters=_applied_filter_labels(context.plan),
+            total_matched_count=distinct_shown,
+            cumulative_shown_count=total_shows,
+            closed_count=sum(
+                1 for job in all_jobs if job.source.liveness is JobLiveness.CLOSED
+            ),
         )
 
     # ── Search pipeline (thin delegation to the orchestrator) ─────────────

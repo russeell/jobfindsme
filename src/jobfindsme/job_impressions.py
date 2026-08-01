@@ -26,6 +26,20 @@ class JobImpressionService:
     def __init__(self, database: Database) -> None:
         self.database = database
 
+    def counts(self, *, workspace_id: str, plan_id: str) -> tuple[int, int]:
+        """Return (distinct jobs ever shown, total show events) for a plan."""
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT COUNT(*) AS distinct_jobs,
+                       COALESCE(SUM(shown_count), 0) AS total_shows
+                FROM search_job_impressions
+                WHERE workspace_id = ? AND plan_id = ?
+                """,
+                (workspace_id, plan_id),
+            ).fetchone()
+        return int(row["distinct_jobs"]), int(row["total_shows"])
+
     def select_and_record(
         self,
         *,

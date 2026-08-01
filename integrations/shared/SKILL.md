@@ -183,7 +183,7 @@ paragraph and the link gets buried:
 
 ```text
 1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
-   匹配度：68%（信号匹配，非录用概率）      ← with profile: score_signals
+   匹配度：68%（信号匹配，非录用概率）      ← with profile: score_signals (60%–100%)
    匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）
    技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
 
@@ -193,15 +193,32 @@ paragraph and the link gets buried:
 ```
 
 - **匹配度 rule**: preserve the Server text. With a confirmed profile it
-  may show a signal-match percentage labeled 非录用概率. Without a
-  profile it states that the job passed the decidable hard constraints; it
-  must not fabricate a percentage.
+  shows a 60%–100% score — 60% is the hard-condition floor (the job already
+  passed role/location/salary/track/type), plus up to 40% evidence bonus.
+  Without a profile it states that the job passed the decidable hard
+  constraints; it must not fabricate a percentage.
 
 ### 第 5 段 · 说明
 
-Always preserve the Server's short change summary: new, changed, reopened,
-closed, and previously shown unchanged counts. Never rename the last count as
-duplicates and never invent totals that are absent from structured content.
+Always preserve the Server's bounded operating summary, in this order:
+
+```text
+结果：历史共匹配 100 个合适岗位；本次展示 11 个（全部新增）；累计展示 83 次；另有 12 个岗位已关闭（不再推荐）。重复抑制（此前展示且未变化）147 条。
+建议：优先投 #2（基金，40-60K，技能：Agent、RAG） → #3（字节，30-60K，薪资明确）。
+下一步建议（和 AI 聊天就能用）：
+- 📬 定时推送：对我说「每天早上 9 点推送新岗位给我」（可改任意时间频率）
+- 📋 查看历史：对我说「我投过哪些岗位？」或「我之前看过的岗位有哪些？」
+[来源说明：仅当有来源降级/失败时出现，恢复方案一律写成对我说「...」]
+投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。
+```
+
+- 结果 covers new, changed, reopened, closed, and previously shown
+  unchanged counts. Never rename the last count as duplicates and never
+  invent totals absent from structured content.
+- 建议 names only jobs present in section 4, with evidence-backed reason
+  tags (skills, salary). Never add subjective evaluations.
+- Recovery instructions are always chat actions ("对我说 ...") — do not
+  print raw commands, ports, or local paths.
 
 ### Block rules (岗位块规则)
 

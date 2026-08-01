@@ -181,12 +181,16 @@ def score_signals(
     job: JobPosting,
     profile: ProfileSummary | None,
 ) -> float:
-    """Deterministic signal-match score, 0.0–1.0.
+    """Deterministic match score, 0.0 or 0.60–1.0.
 
-    Weights are chosen so that skill overlap dominates, with smaller
-    contributions from experience alignment, degree match, and title
-    relevance. The server owns this reproducible ordering; a host Agent may
-    explain it but must not silently replace it.
+    A job that reaches this function has already passed every decidable
+    hard constraint (role, location, salary, track, type, experience), so
+    the score starts at 0.60 and adds up to 0.40 from evidence signals
+    (skill overlap dominates, then experience, degree, liveness, salary).
+    This keeps every recommendable job in the 60%–100% band instead of
+    punishing candidates whose JD text is sparse. The server owns this
+    reproducible ordering; a host Agent may explain it but must not
+    silently replace it.
 
     Returns 0.0 when *profile* is None (no scoring without a profile).
     """
@@ -199,12 +203,7 @@ def _score_signals(
     job: JobPosting,
     profile: ProfileSummary,
 ) -> float:
-    """Deterministic signal-match score, 0.0–1.0.
-
-    Weights are chosen so that skill overlap dominates, with smaller
-    contributions from experience alignment, degree match, and title
-    relevance. The server owns this reproducible ordering.
-    """
+    """Deterministic signal score: 0.60 hard-condition floor + 0.40 bonus."""
     signals = extract_job_signals(job)
 
     profile_skills = {
@@ -265,7 +264,8 @@ def _score_signals(
     if job.salary_min_k or (job.salary and job.salary.raw_text):
         score += 0.05
 
-    return round(min(1.0, score), 4)
+    normalized = score / 0.95  # signal part never exceeds 0.95
+    return round(min(1.0, 0.60 + 0.40 * normalized), 4)
 
 
 def _profile_highest_degree(profile: ProfileSummary) -> str | None:

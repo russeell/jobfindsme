@@ -445,8 +445,8 @@ def test_search_profile_section_returns_counts_without_resume_content(tmp_path) 
     assert "简历解析：技能" in text
 
 
-def test_search_sparse_jd_with_profile_hides_signal_percentage(tmp_path) -> None:
-    """Sparse JD text must not render a misleading low percentage."""
+def test_search_sparse_jd_with_profile_keeps_score_in_60_to_100(tmp_path) -> None:
+    """Even a sparse JD keeps a 60%+ score (hard-condition floor)."""
     core, workspace, _, registry = make_registry(tmp_path)
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python", encoding="utf-8")
@@ -483,9 +483,7 @@ def test_search_sparse_jd_with_profile_hides_signal_percentage(tmp_path) -> None
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "匹配度：已通过角色、地点、薪资等可判定硬条件" in text
-    assert "JD 信息有限，未给出信号百分比" in text
-    assert not re.search(r"匹配度：\d+%", text)
+    assert re.search(r"匹配度：6\d%|匹配度：100%", text)
 
 
 def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
@@ -526,13 +524,15 @@ def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "匹配度：43%（信号匹配，非录用概率）" in text
+    assert "匹配度：78%（信号匹配，非录用概率）" in text
     assert "简历技能命中：Python、RAG" in text
     assert "岗位要求但简历未体现：Kubernetes" in text
 
 
-def test_search_changes_section_has_four_levels(tmp_path) -> None:
-    """⑤ 说明 must always render the four change levels as fixed bullets."""
+def test_search_operating_summary_lists_results_suggestions_and_next_steps(
+    tmp_path,
+) -> None:
+    """⑤ 说明 must render results, suggestions, next steps, and apply tip."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -548,18 +548,23 @@ def test_search_changes_section_has_four_levels(tmp_path) -> None:
 
     first = registry.call("search_jobs", {"refresh_mode": "cache"})
     first_text = first["content"][0]["text"]
-    assert "- 🆕 新增：1 条" in first_text
-    assert "- ✏️ 变更：0 条" in first_text
-    assert "- 🔄 重开：0 条" in first_text
-    assert "- ⛔ 关闭：0 条" in first_text
+    assert "结果：历史共匹配 1 个合适岗位" in first_text
+    assert "本次展示 1 个（全部新增）" in first_text
+    assert "累计展示 1 次" in first_text
+    assert "建议：优先投 #1（示例科技" in first_text
+    assert "下一步建议（和 AI 聊天就能用）：" in first_text
+    assert "📬 定时推送" in first_text
+    assert "📋 查看历史" in first_text
+    assert "投递后对我说「把第 1 个标记为已投递」" in first_text
     assert "重复抑制" not in first_text
 
     second = registry.call(
         "search_jobs", {"refresh_mode": "cache", "include_seen": False}
     )
     second_text = second["content"][0]["text"]
-    assert "- 🆕 新增：0 条" in second_text
-    assert "- 🔁 重复抑制（此前展示且未变化）：1 条" in second_text
+    assert "本次展示 0 个（无新增）" in second_text
+    assert "重复抑制（此前展示且未变化）1 条" in second_text
+    assert "建议：当前没有可投递的新岗位" in second_text
 
 
 def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:

@@ -48,3 +48,6 @@ class SearchPresentationContext(StrictModel):
     education_count: int = Field(default=0, ge=0)
     highest_degree: str | None = None
     applied_filters: tuple[str, ...] = ()
+    total_matched_count: int = Field(default=0, ge=0)
+    cumulative_shown_count: int = Field(default=0, ge=0)
+    closed_count: int = Field(default=0, ge=0)
