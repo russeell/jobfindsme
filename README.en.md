@@ -4,6 +4,8 @@
 
 [Chinese](README.md) · [Install](INSTALL.md) · [Architecture](docs/architecture.md)
 
+> ⭐ If jobfindsme saves you time, give it a star so more job seekers can find it.
+
 ## What it does
 
 - searches **BOSS直聘** and **猎聘 (Liepin)** from one Agent;
@@ -27,7 +29,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.7.2/jobfindsme-0.7.2-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.8.0/jobfindsme-0.8.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
