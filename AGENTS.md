@@ -192,3 +192,12 @@ broadening criteria if appropriate.
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
 report that state briefly. Do not describe a zero-result source run as proof
 that no matching jobs exist.
+
+## Git Workflow
+
+- Small fixes, docs, and experiments: commit directly to `main` after tests
+  and lint pass. Do not open a PR for these.
+- Large or cross-module changes (new connectors, breaking contracts, releases):
+  use a feature branch and open a PR for review.
+- After merging, delete the feature branch; never leave stale merged branches
+  on the remote.
