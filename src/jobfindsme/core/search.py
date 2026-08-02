@@ -205,7 +205,7 @@ class SearchOrchestrator:
                 source_kind=source.kind,
                 status=SourceRunStatus.SKIPPED,
                 elapsed_seconds=0,
-                error="browser source requires explicit opt-in",
+                error="浏览器来源需显式开启",
             )
             for source in skipped_sources
         )
@@ -215,7 +215,7 @@ class SearchOrchestrator:
                 source_kind=source.kind,
                 status=SourceRunStatus.SKIPPED,
                 elapsed_seconds=0,
-                error="source retired; cached historical jobs remain available",
+                error="来源已停用，历史岗位仍可检索",
             )
             for source in retired_sources
         )
@@ -232,7 +232,7 @@ class SearchOrchestrator:
                     workspace_id=context.workspace.workspace_id,
                     source_name=source.source_name,
                 ),
-                error=f"{refresh_mode} mode uses local cache for this source",
+                error="缓存模式未刷新",
             )
             for source in refresh_skipped
         )

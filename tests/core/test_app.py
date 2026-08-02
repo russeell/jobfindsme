@@ -241,7 +241,7 @@ def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> Non
 
     assert result.matches == ()
     assert result.diagnostics.source_runs[0].status is SourceRunStatus.SKIPPED
-    assert "retired" in (result.diagnostics.source_runs[0].error or "")
+    assert "停用" in (result.diagnostics.source_runs[0].error or "")
 
 
 def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(

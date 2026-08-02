@@ -36,7 +36,8 @@
 </p>
 </details>
 
-> 💡 图中展示的是由 `scripts/render_readme_assets.py` 生成的可复现输出示例；
+> 💡 动图由 `scripts/record_readme_demo.sh` 录制**真实 MCP Server 输出**
+> （示例简历 + 示例岗位数据，不涉及个人文件夹、工作区 ID 或真实岗位 ID）。
 > 真实搜索时，未登录 BOSS 会自动跳过并明确标注，不会静默少一个平台。
 
 > ⭐ 如果它帮你省了时间，点个 Star 支持一下，让更多求职者发现这个开源项目。
