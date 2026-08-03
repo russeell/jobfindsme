@@ -9,11 +9,15 @@ instead of pretending the platform had no jobs.
 
 from __future__ import annotations
 
+import json
+import time
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any, Protocol
 from urllib.parse import urlencode
 
 from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
+from jobfindsme.connectors.boss_zhipin import DEFAULT_CDP_PORT, _CDPSession
 from jobfindsme.connectors.pure_http import _UA, _default_session_factory
 from jobfindsme.contracts import SourceKind
 
@@ -122,68 +126,168 @@ class WuyouHttpConnector:
             raise WuyouBlockedError(
                 f"前程无忧接口返回非 JSON（status {response.status_code}）"
             ) from error
-        items = ((payload.get("resultbody") or {}).get("job") or {}).get("items") or []
-        return [
-            self._to_record(item)
-            for item in items
-            if isinstance(item, dict) and item.get("jobid")
-        ]
+        return _parse_payload(payload, self.source_name)
 
-    def _to_record(self, item: dict[str, Any]) -> RawJobRecord:
-        title = str(item.get("job_name") or "")
-        link = str(item.get("job_href") or "")
-        if link.startswith("//"):
-            link = "https:" + link
-        elif link.startswith("/"):
-            link = "https://www.51job.com" + link
-        classification = " ".join(
-            (title, str(item.get("jobtype_text") or ""))
-        ).casefold()
-        recruitment_track = (
-            "campus"
-            if any(t in classification for t in ("校招", "校园", "应届"))
-            else "social"
+
+def _parse_payload(payload: dict[str, Any], source_name: str) -> list[RawJobRecord]:
+    items = ((payload.get("resultbody") or {}).get("job") or {}).get("items") or []
+    return [
+        _to_record(item, source_name)
+        for item in items
+        if isinstance(item, dict) and item.get("jobid")
+    ]
+
+
+def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
+    title = str(item.get("job_name") or "")
+    link = str(item.get("job_href") or "")
+    if link.startswith("//"):
+        link = "https:" + link
+    elif link.startswith("/"):
+        link = "https://www.51job.com" + link
+    classification = " ".join((title, str(item.get("jobtype_text") or ""))).casefold()
+    recruitment_track = (
+        "campus"
+        if any(t in classification for t in ("校招", "校园", "应届"))
+        else "social"
+    )
+    job_type = str(item.get("jobtype_text") or "").casefold()
+    employment_type = (
+        "internship"
+        if "实习" in job_type or "intern" in job_type
+        else "part_time"
+        if "兼职" in job_type
+        else "contract"
+        if "合同" in job_type
+        else "full_time"
+    )
+    description = " ".join(
+        part
+        for part in (
+            str(item.get("jobtype_text") or ""),
+            str(item.get("jobwelf") or ""),
+            str(item.get("companytype_text") or ""),
         )
-        job_type = str(item.get("jobtype_text") or "").casefold()
-        employment_type = (
-            "internship"
-            if "实习" in job_type or "intern" in job_type
-            else "part_time"
-            if "兼职" in job_type
-            else "contract"
-            if "合同" in job_type
-            else "full_time"
-        )
-        description = " ".join(
-            part
-            for part in (
-                str(item.get("jobtype_text") or ""),
-                str(item.get("jobwelf") or ""),
-                str(item.get("companytype_text") or ""),
+        if part
+    )
+    return RawJobRecord(
+        source_kind=SourceKind.CAREER_SITE,
+        source_name=source_name,
+        source_url=link or _API_URL,
+        external_id=str(item.get("jobid") or ""),
+        payload={
+            "title": title,
+            "company": str(item.get("company_name") or ""),
+            "description": description,
+            "location": str(item.get("workarea_text") or ""),
+            "salary": str(item.get("providesalary_text") or ""),
+            "experience": "",
+            "degree": "",
+            "skills": "",
+            "url": link,
+            "apply_url": link,
+            "recruitment_track": recruitment_track,
+            "employment_type": employment_type,
+            "welfare": str(item.get("jobwelf") or ""),
+            "published_at": str(item.get("issue_date") or item.get("updatedate") or ""),
+        },
+    )
+
+
+_FETCH_JS = """(async () => {
+  const url = __API_URL__;
+  try {
+    const response = await fetch(url, {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    const text = await response.text();
+    if (text.trimStart().startsWith("<") || text.includes("aliyun_waf")) {
+      return JSON.stringify({ error: "waf_blocked", status: response.status });
+    }
+    return JSON.stringify({ ok: true, text });
+  } catch (error) {
+    return JSON.stringify({ error: "network_error", message: String(error) });
+  }
+})()"""
+
+
+class WuyouCdpConnector:
+    """前程无忧 CDP fallback: the real page solves WAF, then we call the API.
+
+    Used only when pure HTTP is challenged.  Requires the user's local
+    Chrome bridge (``jobfindsme setup``), same as BOSS直聘.
+    """
+
+    def __init__(
+        self,
+        keyword: str,
+        city: str = "",
+        *,
+        policy: ConnectorPolicy,
+        source_name: str = "前程无忧",
+        cdp_port: int = DEFAULT_CDP_PORT,
+        session_factory: Callable[[int], Any] | None = None,
+        settle_seconds: float = 2.5,
+    ) -> None:
+        if not policy.can_fetch:
+            raise PermissionError("source policy does not allow fetching")
+        self.keyword = keyword.strip()
+        self.city = city.strip()
+        self.source_name = source_name
+        self.cdp_port = cdp_port
+        self.session_factory = session_factory or _CDPSession
+        self.settle_seconds = settle_seconds
+
+    def _api_url(self) -> str:
+        params = {
+            "keyword": self.keyword,
+            "searchType": "2",
+            "sortType": "0",
+            "jobArea": WUYOU_CITY_CODES.get(self.city, ""),
+            "pageNum": "1",
+            "pageSize": "30",
+        }
+        return f"{_API_URL}?{urlencode(params)}"
+
+    def fetch(self) -> list[RawJobRecord]:
+        cdp = self.session_factory(self.cdp_port)
+        target_id: str | None = None
+        try:
+            target_id = cdp.send(
+                "Target.createTarget",
+                {"url": "about:blank", "background": True},
+            )["result"]["targetId"]
+            sid = cdp.send(
+                "Target.attachToTarget",
+                {"targetId": target_id, "flatten": True},
+            )["result"]["sessionId"]
+            cdp.send("Page.enable", sid=sid)
+            cdp.send("Runtime.enable", sid=sid)
+            cdp.send("Page.navigate", {"url": "https://we.51job.com/"}, sid)
+            self._wait_ready(cdp, sid)
+            time.sleep(self.settle_seconds)  # WAF challenge JS + SPA bootstrap
+            raw = cdp.eval_js(
+                _FETCH_JS.replace("__API_URL__", json.dumps(self._api_url())),
+                sid,
             )
-            if part
-        )
-        return RawJobRecord(
-            source_kind=SourceKind.CAREER_SITE,
-            source_name=self.source_name,
-            source_url=link or _API_URL,
-            external_id=str(item.get("jobid") or ""),
-            payload={
-                "title": title,
-                "company": str(item.get("company_name") or ""),
-                "description": description,
-                "location": str(item.get("workarea_text") or ""),
-                "salary": str(item.get("providesalary_text") or ""),
-                "experience": "",
-                "degree": "",
-                "skills": "",
-                "url": link,
-                "apply_url": link,
-                "recruitment_track": recruitment_track,
-                "employment_type": employment_type,
-                "welfare": str(item.get("jobwelf") or ""),
-                "published_at": str(
-                    item.get("issue_date") or item.get("updatedate") or ""
-                ),
-            },
-        )
+            result = json.loads(raw) if isinstance(raw, str) else raw
+            if not isinstance(result, dict) or result.get("error"):
+                raise WuyouBlockedError(
+                    f"前程无忧页面内请求失败：{result.get('error') or result}"
+                )
+            return _parse_payload(json.loads(result["text"]), self.source_name)
+        finally:
+            if target_id is not None:
+                with suppress(Exception):
+                    cdp.send("Target.closeTarget", {"targetId": target_id})
+            cdp.close()
+
+    @staticmethod
+    def _wait_ready(cdp: Any, sid: str, timeout_seconds: float = 15) -> None:
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            if cdp.eval_js("document.readyState", sid) in {"interactive", "complete"}:
+                return
+            time.sleep(0.2)
+        raise WuyouError("前程无忧页面加载超时")

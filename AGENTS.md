@@ -190,7 +190,8 @@ broadening criteria if appropriate.
   Provides title, company, salary, experience, education, and skill labels.
 - 智联招聘 — pure HTTP JSON API via `fe-api.zhaopin.com`; experimental.
 - 前程无忧 — pure HTTP JSON API via `we.51job.com`; experimental. Both sit
-  behind Aliyun WAF and may be challenged; report blocked sources as
+  behind Aliyun WAF and may be challenged; when HTTP is blocked they fall
+  back to the same Chrome bridge as BOSS. Report still-blocked sources as
   blocked, never as "no jobs".
 
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,

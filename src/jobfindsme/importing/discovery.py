@@ -57,9 +57,12 @@ def _connector_chain(
             )
         return chain
     if source.kind is DiscoverySourceKind.ZHILIAN_HTTP:
-        from jobfindsme.connectors.zhilian import ZhilianHttpConnector
+        from jobfindsme.connectors.zhilian import (
+            ZhilianCdpConnector,
+            ZhilianHttpConnector,
+        )
 
-        return [
+        chain = [
             (
                 ZhilianHttpConnector(
                     query, city=city, policy=policy, source_name=source.source_name
@@ -67,10 +70,23 @@ def _connector_chain(
                 0,
             )
         ]
+        if allow_browser:
+            chain.append(
+                (
+                    ZhilianCdpConnector(
+                        query, city=city, policy=policy, source_name=source.source_name
+                    ),
+                    3,
+                )
+            )
+        return chain
     if source.kind is DiscoverySourceKind.WUYOU_HTTP:
-        from jobfindsme.connectors.wuyou import WuyouHttpConnector
+        from jobfindsme.connectors.wuyou import (
+            WuyouCdpConnector,
+            WuyouHttpConnector,
+        )
 
-        return [
+        chain = [
             (
                 WuyouHttpConnector(
                     query, city=city, policy=policy, source_name=source.source_name
@@ -78,6 +94,16 @@ def _connector_chain(
                 0,
             )
         ]
+        if allow_browser:
+            chain.append(
+                (
+                    WuyouCdpConnector(
+                        query, city=city, policy=policy, source_name=source.source_name
+                    ),
+                    3,
+                )
+            )
+        return chain
     return []
 
 

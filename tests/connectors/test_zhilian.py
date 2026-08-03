@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
@@ -9,6 +10,7 @@ import pytest
 from jobfindsme.connectors.base import ConnectorPolicy
 from jobfindsme.connectors.zhilian import (
     ZhilianBlockedError,
+    ZhilianCdpConnector,
     ZhilianHttpConnector,
 )
 
@@ -140,4 +142,73 @@ def test_zhilian_empty_envelope_raises_blocked() -> None:
     )
 
     with pytest.raises(ZhilianBlockedError, match="风控"):
+        connector.fetch()
+
+
+class FakeCdp:
+    def __init__(self, fetch_result: Any) -> None:
+        self.fetch_result = fetch_result
+        self.closed = False
+
+    def send(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        sid: str | None = None,
+    ) -> dict[str, Any]:
+        if method == "Target.createTarget":
+            return {"result": {"targetId": "target-1"}}
+        if method == "Target.attachToTarget":
+            return {"result": {"sessionId": "session-1"}}
+        if method == "Target.closeTarget":
+            self.closed = True
+        return {"result": {}}
+
+    def eval_js(self, js: str, _sid: str) -> Any:
+        if js == "document.readyState":
+            return "complete"
+        return self.fetch_result
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_zhilian_cdp_parses_job_payload() -> None:
+    payload = {
+        "code": 200,
+        "apiCode": 200,
+        "data": {"results": [_job()], "numTotal": 1},
+    }
+    cdp = FakeCdp(
+        json.dumps({"ok": True, "text": json.dumps(payload, ensure_ascii=False)})
+    )
+    connector = ZhilianCdpConnector(
+        "AI应用工程师",
+        city="上海",
+        policy=_policy(),
+        session_factory=lambda _port: cdp,
+        settle_seconds=0,
+    )
+
+    records = connector.fetch()
+
+    assert len(records) == 1
+    assert records[0].payload["company"] == "示例科技"
+    assert (
+        records[0].payload["apply_url"]
+        == "https://www.zhaopin.com/job_detail/example.html"
+    )
+    assert cdp.closed
+
+
+def test_zhilian_cdp_waf_blocked_raises() -> None:
+    cdp = FakeCdp(json.dumps({"error": "waf_blocked", "status": 200}))
+    connector = ZhilianCdpConnector(
+        "AI应用工程师",
+        policy=_policy(),
+        session_factory=lambda _port: cdp,
+        settle_seconds=0,
+    )
+
+    with pytest.raises(ZhilianBlockedError, match="页面内请求失败"):
         connector.fetch()

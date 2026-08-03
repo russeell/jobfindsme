@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import pytest
 
 from jobfindsme.connectors.base import ConnectorPolicy
-from jobfindsme.connectors.wuyou import WuyouBlockedError, WuyouHttpConnector
+from jobfindsme.connectors.wuyou import (
+    WuyouBlockedError,
+    WuyouCdpConnector,
+    WuyouHttpConnector,
+)
 
 
 def _policy() -> ConnectorPolicy:
@@ -115,3 +120,68 @@ def test_wuyou_empty_items_returns_empty() -> None:
     )
 
     assert connector.fetch() == []
+
+
+class FakeCdp:
+    def __init__(self, fetch_result: Any) -> None:
+        self.fetch_result = fetch_result
+        self.closed = False
+
+    def send(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+        sid: str | None = None,
+    ) -> dict[str, Any]:
+        if method == "Target.createTarget":
+            return {"result": {"targetId": "target-1"}}
+        if method == "Target.attachToTarget":
+            return {"result": {"sessionId": "session-1"}}
+        if method == "Target.closeTarget":
+            self.closed = True
+        return {"result": {}}
+
+    def eval_js(self, js: str, _sid: str) -> Any:
+        if js == "document.readyState":
+            return "complete"
+        return self.fetch_result
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_wuyou_cdp_parses_job_payload() -> None:
+    payload = {"status": "1", "resultbody": {"job": {"items": [_item()]}}}
+    cdp = FakeCdp(
+        json.dumps({"ok": True, "text": json.dumps(payload, ensure_ascii=False)})
+    )
+    connector = WuyouCdpConnector(
+        "AI应用工程师",
+        city="上海",
+        policy=_policy(),
+        session_factory=lambda _port: cdp,
+        settle_seconds=0,
+    )
+
+    records = connector.fetch()
+
+    assert len(records) == 1
+    assert records[0].payload["title"] == "AI应用工程师"
+    assert (
+        records[0].payload["apply_url"]
+        == "https://www.51job.com/job_search/example.html"
+    )
+    assert cdp.closed
+
+
+def test_wuyou_cdp_waf_blocked_raises() -> None:
+    cdp = FakeCdp(json.dumps({"error": "waf_blocked", "status": 200}))
+    connector = WuyouCdpConnector(
+        "AI应用工程师",
+        policy=_policy(),
+        session_factory=lambda _port: cdp,
+        settle_seconds=0,
+    )
+
+    with pytest.raises(WuyouBlockedError, match="页面内请求失败"):
+        connector.fetch()
