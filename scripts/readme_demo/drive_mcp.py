@@ -132,7 +132,7 @@ def main() -> None:
                     "refresh_mode": "cache",
                     "include_seen": True,
                     "use_profile": True,
-                    "limit": 5,
+                    "limit": 20,
                 },
             },
         }

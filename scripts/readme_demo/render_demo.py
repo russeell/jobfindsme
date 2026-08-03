@@ -72,6 +72,9 @@ color:var(--blue);font-weight:600}
 .caption{font-size:12.5px;color:var(--muted);margin-top:9px}
 .job{border:1px solid var(--line);border-radius:14px;background:var(--card2);
 padding:13px 15px;margin-bottom:10px}
+.jobs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.jobs .job{margin-bottom:0}
+.jobs .reason{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .job .top{display:flex;align-items:center;gap:10px}
 .tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:var(--chip2);color:var(--green)}
 .job h4{font-size:14.5px;font-weight:700;color:var(--text);flex:1}
@@ -260,8 +263,8 @@ def render(data: dict, theme: str) -> str:
             f'<div class="link">{esc(job["link"])}</div>'
             f'<div class="reason">{esc(job["reason"])}</div></div>'
         )
-    job_list = "".join(jobs[:3])
-    extra = len(p["jobs"]) - 3
+    job_list = f'<div class="jobs">{"".join(jobs[:8])}</div>'
+    extra = len(p["jobs"]) - 8
     more = (
         f'<div class="more" id="more">还有 {extra} 个匹配岗位未展示，完整结果见实际输出</div>'
         if extra > 0
