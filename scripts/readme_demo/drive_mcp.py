@@ -1,25 +1,34 @@
-"""Drive the real jobfindsme MCP server and print the five-section result.
+"""Drive the real jobfindsme MCP server and capture the five-section result.
 
 The demo uses a throwaway SQLite database in a temp dir and generic fixture
 resume/jobs — no personal folders, workspace IDs, or real job IDs appear.
+Writes {"prompt": ..., "text": ...} to --json-out for the HTML renderer.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
 import sys
 import tempfile
-import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 RESUME = HERE / "resume.md"
 JOBS = HERE / "jobs.json"
+PROMPT = (
+    "用 jobfindsme，根据 ~/Documents/resume.pdf 找上海和杭州的 "
+    "AI 应用工程师岗位，20K以上，社招，正式。"
+)
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json-out", required=True)
+    args = parser.parse_args()
+
     tmp = tempfile.mkdtemp(prefix="jobfindsme-readme-demo-")
     db = Path(tmp) / "demo.db"
     env = dict(os.environ)
@@ -134,15 +143,11 @@ def main() -> None:
         )
     text = searched["result"]["content"][0]["text"]
 
-    # Stream the five sections the way an Agent streams its answer.
-    sections = text.split("\n\n")
-    for index, section in enumerate(sections):
-        for line in section.splitlines():
-            print(line, flush=True)
-            time.sleep(0.12 if line.startswith("【") else 0.04)
-        if index < len(sections) - 1:
-            print(flush=True)
-            time.sleep(0.35)
+    Path(args.json_out).write_text(
+        json.dumps({"prompt": PROMPT, "text": text}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"captured five-section output -> {args.json_out}")
     proc.terminate()
 
 
