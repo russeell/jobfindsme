@@ -29,7 +29,7 @@ body[data-theme="light"]{--bg:#edf1f6;--win:#ffffff;--win2:#f7f9fc;--card:#f7f9f
 html,body{height:100%}
 body{background:var(--bg);font-family:"PingFang SC","Hiragino Sans GB",
 "Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;color:var(--text);
-display:flex;align-items:center;justify-content:center;padding:34px}
+display:block;padding:0}
 .win{width:1220px;border-radius:22px;background:var(--win);border:1px solid var(--line);
 box-shadow:0 24px 70px rgba(2,6,23,.45);overflow:hidden}
 body[data-theme="light"] .win{box-shadow:0 22px 60px rgba(15,23,42,.14)}
@@ -313,9 +313,11 @@ def render(data: dict, theme: str) -> str:
 <script>
 const PROMPT = {json.dumps(data["prompt"], ensure_ascii=False)};
 const els = {{prompt: document.getElementById("prompt"), status: document.getElementById("status")}};
-  const ids = ["s1","s2","s3","s4","s5","job-1","job-2","job-3","more"];
-function full() {{ ids.forEach(id => document.getElementById(id).classList.add("vis"));
-  els.prompt.textContent = PROMPT; els.status.classList.add("on"); }}
+function full() {{
+  ["s1","s2","s3","s4","s5"].forEach(id => document.getElementById(id).classList.add("vis"));
+  document.querySelectorAll(".job, .more").forEach(el => el.classList.add("vis"));
+  els.prompt.textContent = PROMPT; els.status.classList.add("on");
+}}
 if (window.__SKIP_TO_END__) {{ full(); }}
 else {{
   let i = 0;
@@ -325,14 +327,15 @@ else {{
     else {{ setTimeout(() => {{ els.status.classList.add("on"); setTimeout(startReveal, 1050); }}, 260); }}
   }}
   function startReveal() {{
-    const timings = [["s1",600],["s2",680],["s3",680],["s4",480],["job-1",40],
-                     ["job-2",560],["job-3",540],["more",360],["s5",700]];
+    const queue = [];
+    ["s1","s2","s3","s4"].forEach(id => queue.push(document.getElementById(id)));
+    document.querySelectorAll(".job").forEach(el => queue.push(el));
+    const more = document.getElementById("more");
+    if (more) queue.push(more);
+    queue.push(document.getElementById("s5"));
     let t = 0;
-    for (const [id, ms] of timings) {{ t += ms;
-      setTimeout(() => {{
-        const el = document.getElementById(id);
-        if (el) el.classList.add("vis");
-      }}, t);
+    for (const el of queue) {{ t += 430;
+      setTimeout(() => el.classList.add("vis"), t);
     }}
   }}
   type();
