@@ -16,15 +16,19 @@ def test_china_search_gets_default_connectors() -> None:
         "BOSS直聘·杭州",
         "猎聘·上海",
         "猎聘·杭州",
+        "智联招聘·上海",
+        "智联招聘·杭州",
+        "前程无忧·上海",
+        "前程无忧·杭州",
     }
-    assert len(sources) == 4
+    assert len(sources) == 8
     assert all(
         source.kind.uses_browser for source in sources if "BOSS" in source.source_name
     )
     assert all(
         not source.kind.uses_browser
         for source in sources
-        if "猎聘" in source.source_name
+        if "BOSS" not in source.source_name
     )
     assert all(source.catalog_managed for source in sources)
     assert {source.location for source in sources} == {"上海", "杭州"}
@@ -65,7 +69,7 @@ def test_catalog_reconciliation_updates_queries_and_preserves_custom_source() ->
     )
 
     managed = [source for source in reconciled if source.catalog_managed]
-    assert len(managed) == 2  # BOSS + Liepin only in v0.3.1
+    assert len(managed) == 4  # BOSS + 猎聘 + 智联 + 前程无忧
     assert {source.query for source in managed} == {"RAG工程师"}
     assert {source.location for source in managed} == {"杭州"}
     assert custom in reconciled

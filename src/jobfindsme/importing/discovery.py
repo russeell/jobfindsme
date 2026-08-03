@@ -56,6 +56,28 @@ def _connector_chain(
                 )
             )
         return chain
+    if source.kind is DiscoverySourceKind.ZHILIAN_HTTP:
+        from jobfindsme.connectors.zhilian import ZhilianHttpConnector
+
+        return [
+            (
+                ZhilianHttpConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            )
+        ]
+    if source.kind is DiscoverySourceKind.WUYOU_HTTP:
+        from jobfindsme.connectors.wuyou import WuyouHttpConnector
+
+        return [
+            (
+                WuyouHttpConnector(
+                    query, city=city, policy=policy, source_name=source.source_name
+                ),
+                0,
+            )
+        ]
     return []
 
 
@@ -108,6 +130,8 @@ class JobDiscoveryService:
         if source.kind in {
             DiscoverySourceKind.LIEPIN_HTTP,
             DiscoverySourceKind.LIEPIN_CDP,
+            DiscoverySourceKind.ZHILIAN_HTTP,
+            DiscoverySourceKind.WUYOU_HTTP,
         }:
             # Walk the fallback chain: pure HTTP → CDP interception → DOM.
             # Every tier raises a typed error on transport failure; log each

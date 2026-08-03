@@ -23,11 +23,11 @@ def recommended_connectors(
     platforms = (
         ("boss_cdp", "BOSS直聘"),
         ("liepin_http", "猎聘"),
+        ("zhilian_http", "智联招聘"),
+        ("wuyou_http", "前程无忧"),
     )
-    # Old source kinds remain readable for database compatibility, but only
-    # these two evidence-backed connectors are executable in production.
-    # Remove after migration 013 and v1.0 support window: retired kinds are
-    # read-only for old workspaces and must never be selected or executed.
+    # Old source kinds remain readable for database compatibility; retired
+    # kinds are read-only for old workspaces and never selected/executed.
     multiple_locations = len(requested_locations) > 1
     return tuple(
         DiscoverySource(

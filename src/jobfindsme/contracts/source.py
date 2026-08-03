@@ -62,6 +62,8 @@ class SourceEvidence(StrictModel):
 class DiscoverySourceKind(StrEnum):
     BOSS_CDP = "boss_cdp"
     LIEPIN_HTTP = "liepin_http"
+    ZHILIAN_HTTP = "zhilian_http"
+    WUYOU_HTTP = "wuyou_http"
     # Remove after migration 013 and v1.0 support window.
     # Compatibility only: pre-v0.4.3 workspaces may still contain this value.
     LIEPIN_CDP = "liepin_cdp"
@@ -104,6 +106,8 @@ class DiscoverySource(StrictModel):
         required = {
             DiscoverySourceKind.BOSS_CDP: self.query,
             DiscoverySourceKind.LIEPIN_HTTP: self.query,
+            DiscoverySourceKind.ZHILIAN_HTTP: self.query,
+            DiscoverySourceKind.WUYOU_HTTP: self.query,
             DiscoverySourceKind.LIEPIN_CDP: self.query,
             DiscoverySourceKind.ZHILIAN_CDP: self.query,
             DiscoverySourceKind.LAGOU_CDP: self.query,

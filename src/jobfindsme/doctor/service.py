@@ -124,10 +124,14 @@ class Doctor:
         try:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
             from jobfindsme.connectors.china_platforms import LiepinConnector
+            from jobfindsme.connectors.wuyou import WuyouHttpConnector
+            from jobfindsme.connectors.zhilian import ZhilianHttpConnector
 
             names = (
                 BossZhipinConnector.__name__,
                 LiepinConnector.__name__,
+                ZhilianHttpConnector.__name__,
+                WuyouHttpConnector.__name__,
             )
         except ImportError as error:
             return Diagnostic(name="connectors", ok=False, message=str(error))

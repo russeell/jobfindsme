@@ -188,6 +188,10 @@ broadening criteria if appropriate.
   login via `jobfindsme setup`. Uses CDP XHR injection (~0.9s per query).
 - 猎聘 — pure HTTP API via `api-c.liepin.com` (~1.2s); no browser needed.
   Provides title, company, salary, experience, education, and skill labels.
+- 智联招聘 — pure HTTP JSON API via `fe-api.zhaopin.com`; experimental.
+- 前程无忧 — pure HTTP JSON API via `we.51job.com`; experimental. Both sit
+  behind Aliyun WAF and may be challenged; report blocked sources as
+  blocked, never as "no jobs".
 
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
 report that state briefly. Do not describe a zero-result source run as proof

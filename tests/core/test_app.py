@@ -279,6 +279,10 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
         "BOSS直聘·杭州",
         "猎聘·上海",
         "猎聘·杭州",
+        "智联招聘·上海",
+        "智联招聘·杭州",
+        "前程无忧·上海",
+        "前程无忧·杭州",
     }
     assert result.diagnostics.refresh_mode is SearchRefreshMode.FAST
     assert (
