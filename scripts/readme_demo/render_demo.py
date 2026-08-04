@@ -301,7 +301,7 @@ def render(data: dict, theme: str) -> str:
   </div>
   <div class="body">
     <div class="user"><div class="avatar">你</div><div class="bubble" id="prompt"></div></div>
-    <div class="status" id="status">正在连接 jobfindsme · 本地解析简历并双平台并行检索<span class="dots">…</span></div>
+    <div class="status" id="status">正在连接 jobfindsme · 本地解析简历并四平台并行检索<span class="dots">…</span></div>
     <div class="card" id="s1"><div class="sec"><h3>① 简历解析</h3><div class="stats">{stats}</div></div></div>
     <div class="card" id="s2"><div class="sec"><h3>② 检索概览</h3><div class="chips">{chips}</div><div class="caption">{caption}</div></div></div>
     <div class="card" id="s3"><div class="sec"><h3>③ 过滤说明</h3><div class="chips">{filters}</div></div></div>

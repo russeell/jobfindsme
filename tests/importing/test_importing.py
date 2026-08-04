@@ -91,7 +91,7 @@ def test_discovery_raises_when_whole_chain_fails() -> None:
             raise RuntimeError("blocked")
 
     service = JobDiscoveryService(AlwaysFailImports())
-    with pytest.raises(RuntimeError, match="all connectors failed"):
+    with pytest.raises(RuntimeError, match="blocked"):
         service._discover_one(
             workspace_id="workspace",
             source=DiscoverySource(

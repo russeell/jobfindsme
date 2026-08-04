@@ -1,6 +1,6 @@
 # jobfindsme · AI Job Search Radar
 
-**One sentence searches BOSS直聘 and 猎聘 (Liepin) together, matching jobs against your resume.**
+**One sentence searches BOSS直聘, 猎聘 (Liepin), 智联招聘 and 前程无忧 together, matching jobs against your resume.**
 
 [Chinese](README.md) · [Install](INSTALL.md) · [Architecture](docs/architecture.md)
 
@@ -8,7 +8,7 @@
 
 ## What it does
 
-- searches **BOSS直聘** and **猎聘 (Liepin)** from one Agent;
+- searches **BOSS直聘、猎聘 (Liepin)、智联招聘、前程无忧** from one Agent;
 - deterministically ranks jobs against structured local resume facts;
 - returns matching jobs with direct apply links;
 - host-Agent scheduled searches; applied jobs are never re-suggested;

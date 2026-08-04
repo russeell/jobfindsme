@@ -124,7 +124,7 @@ TOOL_DEFINITIONS = (
             "recruitment_track (social/campus), employment_type "
             "(full_time/internship/part_time), and exclusions.  "
             "Omitting sources auto-selects maintained platform connectors "
-            "(BOSS直聘 + 猎聘).  "
+            "(BOSS直聘/猎聘/智联招聘/前程无忧).  "
             "Replaces the previous plan; history is preserved in SQLite."
         ),
         ConfigureSearchInput,

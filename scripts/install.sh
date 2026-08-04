@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # jobfindsme 一键安装
-# 本地求职雷达 · 聚合 BOSS直聘 + 猎聘 · Agent 语义匹配 · 增量岗位追踪
+# 本地求职雷达 · 聚合四大招聘平台 · Agent 语义匹配 · 增量岗位追踪
 #
 # 用法（人类用户）:
 #   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
@@ -36,7 +36,7 @@ dim()    { printf '\033[2m%s\033[0m\n' "$*"; }
 
 echo
 bold "🤖 jobfindsme v${VERSION} · AI 求职雷达"
-dim  "   一个 MCP Server，同时搜 BOSS直聘 + 猎聘，Agent 做语义匹配"
+dim  "   一个 MCP Server，同时搜 BOSS直聘/猎聘/智联/前程无忧，Agent 做语义匹配"
 echo
 
 # ── 1. Python ────────────────────────────────────────────────────────────────

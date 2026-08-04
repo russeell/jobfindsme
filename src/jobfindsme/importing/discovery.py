@@ -183,9 +183,7 @@ class JobDiscoveryService:
                     )
                 except Exception as error:
                     last_error = error
-            raise RuntimeError(
-                f"all connectors failed for {source.source_name}"
-            ) from last_error
+            raise RuntimeError(str(last_error)) from last_error
         if source.kind.retired:
             raise ValueError(f"{source.kind} is retired and cannot discover jobs")
 

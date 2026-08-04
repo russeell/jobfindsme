@@ -211,7 +211,7 @@ class ConfigureSearchInput(StrictModel):
     )
     sources: tuple[DiscoverySource, ...] | None = Field(
         default=None,
-        description="Explicit sources; omit = BOSS直聘 + 猎聘 auto-selected",
+        description="Explicit sources; omit = four maintained platforms auto-selected",
     )
 
 

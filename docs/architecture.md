@@ -1,7 +1,7 @@
 # Architecture
 
 jobfindsme is a **local-first job search and incremental tracking engine
-for AI Agents** — a dual-source (BOSS直聘 + 猎聘) MCP Server with local
+for AI Agents** — a four-source (BOSS直聘 + 猎聘 + 智联招聘 + 前程无忧) MCP Server with local
 SQLite persistence.
 
 ## Four user-facing concepts
