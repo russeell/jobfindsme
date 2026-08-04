@@ -18,28 +18,6 @@
 
 ---
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/demo-dark.gif">
-    <img src="docs/demo-light.gif" alt="jobfindsme 演示：一句话搜索，返回固定五段结果" width="820">
-  </picture>
-</p>
-
-<details>
-<summary>📸 等不及动画？先看一张静态效果截图</summary>
-<br>
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-    <img src="docs/screenshot-light.png" alt="jobfindsme 固定五段输出效果截图" width="820">
-  </picture>
-</p>
-</details>
-
-> 💡 动图由 `scripts/record_readme_demo.sh` 基于**真实 MCP Server 输出**渲染
-> （示例简历 + 示例岗位数据，不涉及个人文件夹、工作区 ID 或真实岗位 ID）。
-> 真实搜索时，未登录 BOSS 会自动跳过并明确标注，不会静默少一个平台。
-
 > ⭐ 如果它帮你省了时间，点个 Star 支持一下，让更多求职者发现这个开源项目。
 
 ---
