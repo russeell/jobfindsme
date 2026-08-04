@@ -43,8 +43,10 @@ their resume or search constraints.
    `action: "import"` and the user's resume path only when the user provides
    one (first use or resume change). If the user has no resume or prefers not
    to share it, skip this step entirely and go straight to `configure_search`.
-   Without a profile, matching uses the user's stated constraints + JD
-   signals; never claim resume-based skill matches.
+   A previously confirmed profile is reused automatically — do NOT set
+   `use_profile=false` unless the user explicitly says not to use their
+   resume. Without any profile, matching uses the user's stated constraints
+   + JD signals; never claim resume-based skill matches.
    If the user says "my resume" without a path, ask once for the path. Never
    search or list user directories to guess a resume location.
 

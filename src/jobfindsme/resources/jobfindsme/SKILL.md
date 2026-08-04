@@ -139,6 +139,11 @@ the jobs array, evidence, JD excerpts, or apply URLs. Use `get_jobs` /
 never auto-call them to rebuild or supplement the initial search result.
 The text is the deterministic contract — identical on every host.
 
+**Profile reuse:** A previously confirmed profile is used automatically.
+Do NOT set `use_profile=false` unless the user explicitly says not to use
+their resume. If the user provides a resume path, call `setup_profile` to
+import it first.
+
 Every search result MUST preserve exactly these five Server-rendered sections
 in this order. In no-resume mode, section 1 explicitly says no resume was used.
 
