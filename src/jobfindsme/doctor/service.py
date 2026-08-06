@@ -47,6 +47,7 @@ class Doctor:
             self._permissions(),
             self._mcp(),
             self._connectors(),
+            self._sources(),
             self._browser_connectors(),
             self._boss_login(),
             self._secrets(),
@@ -176,6 +177,32 @@ class Doctor:
             ok=True,
             required=False,
             message="Chrome CDP available on port 9222; platform search is ready",
+        )
+
+    @staticmethod
+    def _sources() -> Diagnostic:
+        """Per-source routing report — which backend serves each platform now.
+
+        Mirrors agent-reach's ``doctor --json`` idea: an Agent reads this
+        before searching so it never promises a platform whose backend is
+        unavailable, and knows the retry chain per source.
+        """
+        cdp = _cdp_port_reachable()
+        chrome_state = "Chrome 已连接" if cdp else "Chrome 未连接"
+        setup_hint = "运行 jobfindsme setup" if not cdp else ""
+        rows = [
+            f"BOSS直聘 → cdp ｜ {chrome_state}"
+            + (f"；{setup_hint}" if setup_hint else ""),
+            "猎聘 → http ｜ 就绪（无需浏览器）",
+            f"智联招聘 → http→cdp ｜ HTTP 可能被 WAF 拦截；{chrome_state}"
+            + (f"；{setup_hint} 可启用 CDP 兜底" if setup_hint else "；CDP 兜底可用"),
+            f"前程无忧 → http→cdp ｜ HTTP 可能被 WAF 拦截；{chrome_state}"
+            + (f"；{setup_hint} 可启用 CDP 兜底" if setup_hint else "；CDP 兜底可用"),
+        ]
+        return Diagnostic(
+            name="sources",
+            ok=True,
+            message="\n".join(rows),
         )
 
     @staticmethod

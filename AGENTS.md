@@ -196,6 +196,14 @@ broadening criteria if appropriate.
   back to the same Chrome bridge as BOSS. Report still-blocked sources as
   blocked, never as "no jobs".
 
+**Routing (agent-reach style):** before searching, optionally run
+`jobfindsme doctor --output json` to see which backend serves each source;
+never promise a platform whose backend is unavailable. Retry chains: BOSS →
+CDP → prompt setup/login; 猎聘 → HTTP → CDP fallback; 智联/前程无忧 → HTTP →
+CDP fallback → mark blocked (never "no jobs"). Never read, copy, or export
+browser cookies. Temp output goes to `/tmp`; persistent data stays in
+`~/.jobfindsme/`.
+
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
 report that state briefly. Do not describe a zero-result source run as proof
 that no matching jobs exist.

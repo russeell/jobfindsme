@@ -16,6 +16,7 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
         "permissions",
         "mcp",
         "connectors",
+        "sources",
         "browser_connectors",
         "boss_login",
         "secrets",

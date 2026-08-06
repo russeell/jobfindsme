@@ -27,6 +27,23 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 - If the host cannot access that path, ask the user to run
   `jobfindsme profile import <path>`; the CLI accepts the facts by default.
 - Return only confirmed profile facts and the minimum evidence needed.
+- Never read, copy, or export browser cookies. BOSS直聘 only uses the
+  dedicated Chrome profile via `jobfindsme setup` + QR login; never log in
+  for the user.
+
+## 来源路由表
+
+动手前可运行 `jobfindsme doctor --output json` 体检各来源当前后端；来源失败
+按下面的重试链处理，不要自行发明命令或猜测原因。
+
+| 来源 | 默认后端 | 需要条件 | 失败重试链 |
+|---|---|---|---|
+| BOSS直聘 | CDP（本地 Chrome） | `jobfindsme setup` + 扫码登录 | CDP 失败 → 提示「帮我重新登录 BOSS直聘」或运行 setup → 仍失败按缓存/降级标注 |
+| 猎聘 | 纯 HTTP | 无 | HTTP 失败 → 有 Chrome 时自动 CDP 兜底 → 仍失败按缓存标注 |
+| 智联招聘 | 纯 HTTP（实验性） | 无；HTTP 可能被阿里云 WAF 拦截 | HTTP 被拦 → 自动 CDP 兜底 → 仍失败标注「被安全校验拦截」，不得当作"无岗位" |
+| 前程无忧 | 纯 HTTP（实验性） | 同上 | 同上 |
+
+临时输出放 `/tmp`，持久数据在 `~/.jobfindsme/`。
 
 ## Workflow
 
