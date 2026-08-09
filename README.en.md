@@ -14,6 +14,20 @@
 - host-Agent scheduled searches; applied jobs are never re-suggested;
 - query every job ever matched, with its state.
 
+### Evidence, not claims
+
+| Release gate | Current result |
+|---|---:|
+| Python tests | 315 passing |
+| Clean install + Cursor setup | 12 seconds |
+| Agent behavior contract | 0/6 without the Skill, 6/6 with it |
+| Wheel smoke test | CLI, SQLite migrations, and all 8 MCP tools pass end to end |
+
+Live availability changes with platform controls and local login state.
+jobfindsme never presents cache or a blocked response as fresh data; every
+search returns per-source diagnostics. See the latest
+[four-source search report](reports/real-world/latest_four_source_search.md).
+
 ## Install
 
 Install the local runtime once:
@@ -62,10 +76,10 @@ count and does not claim complete market coverage.
 
 | Source | Method | Speed | Browser needed? |
 |---|---|---|---|
-| BOSS Zhipin | authorized local Chrome CDP, asynchronous site response in page context | ~0.5s | ✅ yes (login session) |
-| Liepin | `api-c.liepin.com` pure HTTP JSON API | ~1.0s | ❌ no |
-| Zhaopin | public web JSON API, bounded CDP fallback | varies | usually no |
-| 51job | public web JSON API, bounded CDP fallback | varies | usually no |
+| BOSS Zhipin | authorized local Chrome session with time-labeled cache fallback | login-dependent | yes |
+| Liepin | public Web JSON listing with bounded detail enrichment | usually sub-second | no for listings |
+| Zhaopin | HTTP first, authorized local-browser fallback after security checks | experimental | fallback only |
+| 51job | HTTP first, authorized local-browser fallback after WAF checks | experimental | fallback only |
 
 HTTP sources can degrade to an explicitly labeled recent cache when challenged.
 When Chrome is available, bounded browser fallbacks may enrich results. BOSS
