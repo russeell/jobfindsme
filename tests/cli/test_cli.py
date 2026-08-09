@@ -89,7 +89,7 @@ def test_fetch_latest_release_uses_certifi_ssl_context(monkeypatch) -> None:
             return False
 
         def read(self):
-            return json.dumps({"tag_name": "v0.8.0", "assets": []}).encode()
+            return json.dumps({"tag_name": "v0.9.0", "assets": []}).encode()
 
     def fake_urlopen(request, timeout, context):
         captured["request"] = request
@@ -101,7 +101,7 @@ def test_fetch_latest_release_uses_certifi_ssl_context(monkeypatch) -> None:
 
     release = _fetch_latest_release()
 
-    assert release["tag_name"] == "v0.8.0"
+    assert release["tag_name"] == "v0.9.0"
     assert captured["timeout"] == 20
     assert isinstance(captured["context"], ssl.SSLContext)
     assert captured["context"].verify_mode == ssl.CERT_REQUIRED

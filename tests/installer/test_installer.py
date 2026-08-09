@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -101,6 +102,23 @@ def test_backup_names_do_not_collide_within_one_second(tmp_path) -> None:
     assert first.backups[0] != second.backups[0]
     assert Path(first.backups[0]).exists()
     assert Path(second.backups[0]).exists()
+
+
+def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
+    root = Path(__file__).resolve().parents[2]
+    project = tomllib.loads((root / "pyproject.toml").read_text())
+    version = project["project"]["version"]
+    script = (root / "scripts" / "install.sh").read_text()
+    install_doc = (root / "INSTALL.md").read_text()
+    english_readme = (root / "README.en.md").read_text()
+    wheel = f"jobfindsme-{version}-py3-none-any.whl"
+
+    assert f'VERSION="{version}"' in script
+    assert wheel in install_doc
+    assert wheel in english_readme
+    assert "CHECKSUM_GH=" in script
+    assert "SHA-256 校验失败" in script
+    assert "ghproxy" not in script
 
 
 @pytest.mark.parametrize("host", ["codex", "claude", "cursor"])

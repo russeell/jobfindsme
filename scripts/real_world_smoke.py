@@ -21,7 +21,6 @@ from jobfindsme.presentation import format_search_results
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT_DIR = ROOT / "reports" / "real-world"
-README_ASSET_DIR = ROOT / "docs"
 
 
 def _source_family(source_name: str) -> str:
@@ -317,7 +316,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--asset",
         type=Path,
-        default=README_ASSET_DIR / "readme-terminal.png",
+        default=REPORT_DIR / "latest_search.png",
     )
     return parser
 

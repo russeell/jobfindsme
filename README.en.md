@@ -29,7 +29,7 @@ Or install manually:
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.8.0/jobfindsme-0.8.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.9.0/jobfindsme-0.9.0-py3-none-any.whl"
 ~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
 ~/.jobfindsme/runtime/bin/python -m jobfindsme setup
 ```
@@ -53,7 +53,8 @@ Find new jobs since my last search.
 
 ## Sources
 
-Two verified sources are maintained — **BOSS直聘** and **猎聘 (Liepin)**.
+Four source paths are maintained — **BOSS直聘**, **猎聘 (Liepin)**,
+**智联招聘**, and **前程无忧**.
 The project prioritizes useful, reliable results over an inflated connector
 count and does not claim complete market coverage.
 
@@ -61,10 +62,12 @@ count and does not claim complete market coverage.
 |---|---|---|---|
 | BOSS Zhipin | authorized local Chrome CDP, asynchronous site response in page context | ~0.5s | ✅ yes (login session) |
 | Liepin | `api-c.liepin.com` pure HTTP JSON API | ~1.0s | ❌ no |
+| Zhaopin | public web JSON API, bounded CDP fallback | varies | usually no |
+| 51job | public web JSON API, bounded CDP fallback | varies | usually no |
 
-Liepin prefers pure HTTP (sub-second, no browser). When Chrome is available,
-the browser tier additionally enriches job detail pages with JD text for stronger
-matching signals. BOSS requires an authenticated local Chrome session.
+HTTP sources can degrade to an explicitly labeled recent cache when challenged.
+When Chrome is available, bounded browser fallbacks may enrich results. BOSS
+requires an authenticated local Chrome session.
 
 ## Privacy and limitations
 

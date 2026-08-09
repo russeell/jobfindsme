@@ -166,6 +166,45 @@ def test_closed_then_reopened_job_is_reported_once_per_transition(tmp_path) -> N
     assert reopened.changes.reopened == 1
 
 
+def test_closed_count_is_scoped_to_current_search_plan(tmp_path) -> None:
+    _, core, workspace, first_plan = _core_with_job(tmp_path)
+    shown = core.search_jobs(
+        workspace_id=workspace.workspace_id,
+        plan_id=first_plan.plan_id,
+        refresh_mode="cache",
+    )[0]
+    closed_job = shown.job.model_copy(
+        update={
+            "source": shown.job.source.model_copy(
+                update={"liveness": JobLiveness.CLOSED}
+            )
+        }
+    )
+    core.jobs.upsert(workspace.workspace_id, closed_job)
+    core.search_jobs_with_diagnostics(
+        workspace_id=workspace.workspace_id,
+        plan_id=first_plan.plan_id,
+        refresh_mode="cache",
+    )
+    second_plan = core.create_search_plan(
+        workspace_id=workspace.workspace_id,
+        name="Second",
+        target_roles=["AI应用工程师"],
+    )
+
+    first_context = core.search_presentation_context(
+        workspace_id=workspace.workspace_id,
+        plan_id=first_plan.plan_id,
+    )
+    second_context = core.search_presentation_context(
+        workspace_id=workspace.workspace_id,
+        plan_id=second_plan.plan_id,
+    )
+
+    assert first_context.closed_count == 1
+    assert second_context.closed_count == 0
+
+
 def test_applied_job_is_never_re_suggested_in_daily_push(tmp_path) -> None:
     """Daily-push scenario: jobs marked applied must not be re-suggested,
     even when they were applied before ever being shown by search."""

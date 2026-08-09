@@ -40,6 +40,20 @@ class JobImpressionService:
             ).fetchone()
         return int(row["distinct_jobs"]), int(row["total_shows"])
 
+    def closed_count(self, *, workspace_id: str, plan_id: str) -> int:
+        """Return jobs shown by this plan whose latest state is closed."""
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT COUNT(*) AS closed_jobs
+                FROM search_job_impressions
+                WHERE workspace_id = ? AND plan_id = ?
+                  AND last_liveness = 'closed'
+                """,
+                (workspace_id, plan_id),
+            ).fetchone()
+        return int(row["closed_jobs"])
+
     def select_and_record(
         self,
         *,

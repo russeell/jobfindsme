@@ -1,4 +1,4 @@
-"""Pure-HTTP 猎聘 connector used by the maintained dual-source product."""
+"""Pure-HTTP 猎聘 connector used by the maintained four-source product."""
 
 from __future__ import annotations
 

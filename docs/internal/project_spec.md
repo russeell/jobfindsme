@@ -3,7 +3,7 @@
 ## 1. Product goal
 
 `jobfindsme` is a local-first job discovery and tracking MCP Server. It helps
-an existing AI Agent search BOSS直聘 and 猎聘, remove repeats, enforce user
+an existing AI Agent search BOSS直聘、猎聘、智联招聘 and 前程无忧, remove repeats, enforce user
 constraints, preserve job state, and return compact evidence with direct apply
 links.
 
@@ -27,6 +27,7 @@ count and raw records are not product outcomes.
 - reusable search plans and active local context;
 - BOSS直聘 discovery through a user-authorized local Chrome session;
 - 猎聘 discovery through HTTP, with bounded browser detail enrichment;
+- 智联招聘 and 前程无忧 discovery through HTTP, with bounded browser fallback;
 - normalization, cross-source deduplication, hard filtering, and coarse ranking;
 - incremental states: new, changed, reopened, closed, seen, saved, applied,
   and rejected;
@@ -79,12 +80,14 @@ notification SDK. Web and MCP adapters must not duplicate matching rules.
 
 ## 4. Source strategy
 
-Only two source paths are maintained:
+Four source paths are maintained:
 
 | Source | Primary path | Fallback | Role |
 |---|---|---|---|
 | BOSS直聘 | authorized local Chrome CDP | recent labeled cache | primary live source |
 | 猎聘 | HTTP JSON | bounded CDP detail enrichment, then cache | independent second source |
+| 智联招聘 | HTTP JSON | bounded CDP request, then cache | additional coverage |
+| 前程无忧 | HTTP JSON | bounded CDP request, then cache | additional coverage |
 
 Historical enum values and migrations may remain for old SQLite databases, but
 retired sources must not be selected, diagnosed, documented as supported, or
@@ -93,6 +96,10 @@ executed by the current catalog.
 Every source run records status, method, duration, records discovered, cache
 usage, and a bounded error. One source failure must not cancel successful
 results from another source.
+
+Platform search pages are partial snapshots. Their missing records must never
+be treated as closure evidence; only an explicitly complete authoritative
+snapshot may close jobs by absence.
 
 ## 5. Core search flow
 

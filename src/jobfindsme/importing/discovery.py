@@ -202,4 +202,8 @@ class JobDiscoveryService:
                 source_url=path.as_uri(),
             )
         )
-        return self.imports.import_records(workspace_id, records)
+        return self.imports.import_records(
+            workspace_id,
+            records,
+            snapshot_complete=True,
+        )

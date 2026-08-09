@@ -360,7 +360,7 @@ class SearchOrchestrator:
                         cache_used=True,
                         error=error,
                     )
-                if not source.kind.uses_browser:
+                if summary.snapshot_complete:
                     self.jobs.mark_missing_closed(
                         workspace_id=workspace_id,
                         source_name=source.source_name,
@@ -433,7 +433,6 @@ def select_refresh_sources(
         return sources, ()
     if mode is SearchRefreshMode.CACHE:
         return (), sources
-    # The maintained catalog contains only two bounded sources. Refreshing
-    # both concurrently is faster and more reliable than making BOSS a
-    # single-source gate: Liepin can still return when browser state degrades.
+    # Refresh all maintained sources concurrently. Per-source failures are
+    # isolated, so one challenged platform never blocks results from others.
     return sources, ()

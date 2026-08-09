@@ -74,7 +74,7 @@ duplicate matching rules.
 | `profiles/` | resume extraction (PDF/DOCX/MD/TXT) → facts |
 | `matching/` | hard filter, signal extraction, deterministic coarse rank |
 | `importing/` | connectors output → normalized canonical jobs |
-| `connectors/` | BOSS直聘 (Chrome CDP) and 猎聘 (HTTP) adapters |
+| `connectors/` | BOSS直聘、猎聘、智联招聘、前程无忧的来源适配器 |
 | `tracking` | impressions (incremental radar) and user job state |
 | `presentation/` | deterministic rendering of results and blocks |
 | `mcp/` | protocol entry, registry, handlers, responses |

@@ -1,11 +1,14 @@
 # Connectors
 
-Only two source paths are maintained:
+Four source paths are maintained. Every remote result is a bounded search
+page, not an authoritative full snapshot:
 
 | Source | Primary path | Fallback | Role |
 |---|---|---|---|
 | BOSS直聘 | authorized local Chrome CDP | recent labeled cache | primary live source |
 | 猎聘 | HTTP JSON (curl_cffi) | bounded CDP detail enrichment, then cache | independent second source |
+| 智联招聘 | public HTTP JSON | bounded CDP request, then cache | additional coverage |
+| 前程无忧 | public HTTP JSON | bounded CDP request, then cache | additional coverage |
 
 ## BOSS直聘 (Chrome CDP)
 
@@ -25,13 +28,23 @@ Only two source paths are maintained:
 - Platform limitation: the HTTP listing does not include JD body text —
   bounded browser enrichment may fill descriptions, otherwise the JD body
   is absent and matching falls back to title/card signals.
-- `mark_missing_closed` marks previously-seen jobs closed when they
-  disappear from the listing.
+- A bounded listing never marks absent historical jobs closed. Only an
+  explicitly complete, authoritative snapshot may use absence as closure
+  evidence; platform pagination is partial by definition.
+
+## 智联招聘 and 前程无忧 (HTTP with browser fallback)
+
+- Both sources first request their public web JSON endpoints without login.
+- A typed WAF or schema failure triggers a bounded CDP fallback when the
+  authorized browser bridge is available; otherwise the source degrades to
+  a clearly labeled recent cache.
+- Empty or challenged responses are failures, never silently interpreted as
+  "no jobs".
 
 ## Source health
 
-- Sources run concurrently with bounded timeouts; one source failing
-  never cancels the other's results.
+- Sources run concurrently with bounded timeouts; one source failing never
+  cancels results from the other sources.
 - Every run records status (success / degraded / failed / skipped),
   duration, discovered/unique counts, cache usage, and a bounded error.
 - A failed browser refresh with cached records degrades gracefully;

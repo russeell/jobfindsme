@@ -410,6 +410,22 @@ def test_filter_jobs_orders_highest_signal_score_first() -> None:
     assert [item.external_id for item in passed] == ["python", "both"]
 
 
+def test_experience_range_must_overlap_plan_range() -> None:
+    jobs = [
+        job("junior", description="AI应用工程师，1-3年，25-40K"),
+        job("matching", description="AI应用工程师，5-8年，25-40K"),
+        job("unknown", description="AI应用工程师，经验不限，25-40K"),
+    ]
+
+    passed = filter_jobs(
+        plan(experience_min_years=5, experience_max_years=10),
+        jobs,
+        limit=20,
+    )
+
+    assert [item.external_id for item in passed] == ["matching", "unknown"]
+
+
 def test_score_signals_skill_overlap_dominates() -> None:
     python_job = job("python", description="Python RAG Agent，1-3年，25-40K")
     java_job = job("java", description="Java Spring 云原生平台，1-3年，25-40K")

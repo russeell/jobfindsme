@@ -14,19 +14,23 @@
 #
 # 设计原则:
 #   - 一条命令完成「检测 Python → 建运行时 → 装包 → 接入 Agent → 打印下一步」
-#   - 清华镜像加速依赖下载；GitHub 直连失败自动回退镜像
+#   - 清华镜像加速依赖下载；Release wheel 必须通过 SHA-256 校验
 #   - 检测到 uv 则用 uv pip 加速；运行时布局与 venv 一致，可重复执行
 #   - 不克隆源码、不装开发依赖、不下载浏览器
 
 set -euo pipefail
 
-VERSION="0.8.0"
+VERSION="0.9.0"
 WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
-WHEEL_PROXY="https://mirror.ghproxy.com/${WHEEL_GH}"
+CHECKSUM_GH="${WHEEL_GH}.sha256"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
 AGENTS=(codex claude cursor zcode)
 AGENT="${1:-}"
+DOWNLOAD_DIR="$(mktemp -d)"
+WHEEL_FILE="$DOWNLOAD_DIR/jobfindsme-${VERSION}-py3-none-any.whl"
+CHECKSUM_FILE="${WHEEL_FILE}.sha256"
+trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
 green()  { printf '\033[32m%s\033[0m\n' "$*"; }
@@ -52,16 +56,30 @@ if ! python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)' 2
 fi
 green "✓ Python $(python3 --version 2>&1)"
 
-# ── 2. 选 wheel 源（GitHub 直连优先，失败回退 ghproxy，再失败回退直连）────────
-WHEEL_URL="$WHEEL_GH"
-if ! curl -fsSLI --max-time 8 -o /dev/null "$WHEEL_GH" 2>/dev/null; then
-  yellow "· GitHub 直连较慢，切换镜像源"
-  WHEEL_URL="$WHEEL_PROXY"
-  if ! curl -fsSLI --max-time 8 -o /dev/null "$WHEEL_URL" 2>/dev/null; then
-    yellow "· 镜像也不可达，回退 GitHub 直连"
-    WHEEL_URL="$WHEEL_GH"
-  fi
+# ── 2. 下载并校验官方 Release wheel ─────────────────────────────────────────
+yellow "· 下载 jobfindsme v${VERSION} 官方 Release…"
+curl -fL --retry 3 --retry-all-errors \
+  --connect-timeout 10 --max-time 120 \
+  -o "$WHEEL_FILE" "$WHEEL_GH"
+curl -fL --retry 3 --retry-all-errors \
+  --connect-timeout 10 --max-time 30 \
+  -o "$CHECKSUM_FILE" "$CHECKSUM_GH"
+
+expected_checksum="$(awk 'NR == 1 {print $1}' "$CHECKSUM_FILE")"
+if command -v shasum >/dev/null 2>&1; then
+  actual_checksum="$(shasum -a 256 "$WHEEL_FILE" | awk '{print $1}')"
+elif command -v sha256sum >/dev/null 2>&1; then
+  actual_checksum="$(sha256sum "$WHEEL_FILE" | awk '{print $1}')"
+else
+  red "✗ 无法校验安装包：需要 shasum 或 sha256sum"
+  exit 1
 fi
+if [[ ! "$expected_checksum" =~ ^[0-9a-fA-F]{64}$ ]] || \
+   [[ "$actual_checksum" != "$expected_checksum" ]]; then
+  red "✗ Release wheel SHA-256 校验失败，安装已停止"
+  exit 1
+fi
+green "✓ Release wheel 校验通过"
 
 # ── 3. 建运行时 + 装包（uv 加速 if available）─────────────────────────────────
 mkdir -p "$HOME/.jobfindsme"
@@ -76,7 +94,7 @@ fi
 yellow "· 安装 jobfindsme[browser]（依赖走清华镜像）…"
 "${PIP[@]}" --quiet \
   --index-url "$MIRROR" --upgrade \
-  "jobfindsme[browser] @ $WHEEL_URL"
+  "$WHEEL_FILE[browser]"
 
 BIN=( "$RUNTIME/bin/python" -m jobfindsme )
 green "✓ 安装完成: $("${BIN[@]}" --version 2>&1)"

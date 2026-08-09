@@ -104,7 +104,7 @@ class SearchJobsInput(StrictModel):
     allow_browser_sources: bool = Field(
         default=True,
         description=(
-            "If false, skip BOSS直聘 (needs Chrome); 猎聘 still runs via HTTP"
+            "If false, skip browser-only BOSS直聘; maintained HTTP sources still run"
         ),
     )
     refresh_mode: SearchRefreshMode = Field(

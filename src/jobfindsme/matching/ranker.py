@@ -350,6 +350,12 @@ def _hard_filter(
             return False
         if monthly_min is not None and monthly_min > plan.salary_max_k:
             return False
+    if (
+        plan.experience_min_years is not None
+        and job.experience_max_years is not None
+        and job.experience_max_years < plan.experience_min_years
+    ):
+        return False
     return not (
         plan.experience_max_years is not None
         and job.experience_min_years is not None

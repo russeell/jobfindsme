@@ -131,10 +131,10 @@ Ubuntu: `sudo apt install python3.12 python3.12-venv`）。
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
   --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.8.0/jobfindsme-0.8.0-py3-none-any.whl"
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.9.0/jobfindsme-0.9.0-py3-none-any.whl"
 ```
 
-> 版本号与仓库最新 Release 保持一致（当前 v0.8.0）。PyPI 安装会在项目
+> 版本号与仓库最新 Release 保持一致（当前 v0.9.0）。PyPI 安装会在项目
 > 成熟后开放，届时此配方自动切换到 `pip install jobfindsme[browser]`。
 
 ### 第 3 步：接入当前 Agent
@@ -173,7 +173,8 @@ BOSS 登录检查标为"可选/未配置"不构成失败，不要因此重试安
 BOSS 显示"未登录"就去 `jobfindsme setup` 扫码。系统不会把失败伪装成"没有岗位"。
 
 **Q：安装脚本卡在下载？**
-GitHub 直连慢会自动切镜像源（`mirror.ghproxy.com`），依赖走清华 PyPI 镜像。
+Release wheel 只从 GitHub 官方下载，并使用随 Release 发布的 SHA-256
+校验文件验证完整性；Python 依赖走清华 PyPI 镜像。
 仍失败时重试一次，或改用方式三的 pip 安装。
 
 **Q：可以用 conda / pyenv 的 Python 吗？**

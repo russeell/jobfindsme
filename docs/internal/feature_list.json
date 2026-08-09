@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0",
   "project": "jobfindsme",
-  "product_baseline": "local-first-dual-source-mcp-server",
+  "product_baseline": "local-first-four-source-mcp-server",
   "research_policy": {
     "enforced_from_feature": "MCP-001",
     "required_categories": [
@@ -24,7 +24,7 @@
   "features": [
     {
       "id": "MCP-001",
-      "title": "Converge jobfindsme into a focused dual-source MCP Server",
+      "title": "Converge jobfindsme into a focused multi-source MCP Server",
       "status": "done",
       "blocked_by": [],
       "allowed_paths": [
@@ -43,10 +43,10 @@
         "reports/features/*.json"
       ],
       "acceptance": [
-        "Only BOSS直聘 and 猎聘 remain executable and documented sources.",
+        "Only the four maintained China sources remain executable and documented.",
         "Built-in scheduling, Feishu delivery, and notification configuration are removed.",
         "The core facade delegates search orchestration instead of owning the entire pipeline.",
-        "The stdio MCP Server exposes nine focused tools with strict input and output schemas.",
+        "The stdio MCP Server exposes eight focused tools with strict input and output schemas.",
         "Tool annotations, structured output, bounded context, deletion safety, and stderr logging follow MCP guidance.",
         "A built wheel can initialize SQLite, configure a host, and answer an MCP call.",
         "User-visible product naming is lowercase jobfindsme."
@@ -302,7 +302,7 @@
     },
     {
       "id": "EVAL-001",
-      "title": "Validate real dual-source quality and incremental behavior",
+      "title": "Validate real four-source quality and incremental behavior",
       "status": "ready",
       "blocked_by": [
         "UX-001"

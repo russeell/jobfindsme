@@ -38,7 +38,7 @@ class SearchDiagnosticSummary(StrictModel):
         default="",
         description=(
             "Pre-formatted source line, for example "
-            "'BOSS直聘 △ 缓存 · 猎聘 ✓ 84（上海42、深圳42）'"
+            "'BOSS直聘 △ 缓存 · 猎聘 ✓ 84 · 智联招聘 ✓ 30 · 前程无忧 △ 缓存'"
         ),
     )
     total_discovered: int = Field(default=0, ge=0)

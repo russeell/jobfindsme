@@ -16,6 +16,7 @@ class ImportSummary:
     unique: int
     versions_created: int
     jobs: tuple[JobPosting, ...]
+    snapshot_complete: bool = False
 
 
 class JobImportService:
@@ -35,7 +36,12 @@ class JobImportService:
             enrich = getattr(connector, "enrich", None)
             if callable(enrich):
                 records = enrich(records, limit=enrich_limit)
-        return self.import_records(workspace_id, records, fetched_at=fetched_at)
+        return self.import_records(
+            workspace_id,
+            records,
+            fetched_at=fetched_at,
+            snapshot_complete=bool(getattr(connector, "snapshot_complete", False)),
+        )
 
     def import_records(
         self,
@@ -43,6 +49,7 @@ class JobImportService:
         records: Iterable[RawJobRecord],
         *,
         fetched_at: datetime | None = None,
+        snapshot_complete: bool = False,
     ) -> ImportSummary:
         raw_records = list(records)
         normalized = [normalize_job(raw, fetched_at=fetched_at) for raw in raw_records]
@@ -55,4 +62,5 @@ class JobImportService:
             unique=len(unique),
             versions_created=versions,
             jobs=tuple(unique.values()),
+            snapshot_complete=snapshot_complete,
         )

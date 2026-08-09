@@ -24,6 +24,11 @@ jobs:
             'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           test "v${package_version}" = "${GITHUB_REF_NAME}"
       - run: python -m build --wheel
+      - name: Generate SHA-256 checksum
+        run: |
+          wheel="$(find dist -name '*.whl' -print -quit)"
+          wheel_name="$(basename "${wheel}")"
+          (cd dist && sha256sum "${wheel_name}" > "${wheel_name}.sha256")
       - name: Verify release wheel
         run: |
           wheel="$(find dist -name '*.whl' -print -quit)"
@@ -31,7 +36,7 @@ jobs:
       - run: python -m jobfindsme --version
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.whl
+          files: dist/*
           generate_release_notes: true
       # PyPI publishing is intentionally deferred until the project is
       # mature; re-add a publish-pypi job (OIDC trusted publishing) then.

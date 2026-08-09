@@ -220,6 +220,84 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
     assert result[0].status is SourceRunStatus.SUCCESS
 
 
+def test_partial_http_snapshot_never_closes_absent_jobs(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="liepin_http",
+                source_name="猎聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    source = configured.sources[0].source
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(40, 40, 0, (), snapshot_complete=False),),
+    )
+
+    def fail_if_closed(**_: object) -> None:
+        raise AssertionError("partial HTTP snapshots cannot close absent jobs")
+
+    monkeypatch.setattr(core.jobs, "mark_missing_closed", fail_if_closed)
+
+    result = core.search._discover_sources(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        sources=(source,),
+    )
+
+    assert result[0].status is SourceRunStatus.SUCCESS
+
+
+def test_complete_snapshot_can_close_absent_jobs(tmp_path, monkeypatch) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_roles=["AI应用工程师"],
+        sources=(
+            DiscoverySource(
+                kind="json_file",
+                source_name="完整岗位快照",
+                path=str(tmp_path / "jobs.json"),
+            ),
+        ),
+    )
+    source = configured.sources[0].source
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(0, 0, 0, (), snapshot_complete=True),),
+    )
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        core.jobs, "mark_missing_closed", lambda **values: calls.append(values)
+    )
+
+    result = core.search._discover_sources(
+        workspace_id=configured.workspace.workspace_id,
+        plan_id=configured.plan.plan_id,
+        sources=(source,),
+    )
+
+    assert result[0].status is SourceRunStatus.SUCCESS
+    assert len(calls) == 1
+    assert calls[0]["observed_job_ids"] == set()
+
+
 def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
