@@ -19,7 +19,7 @@ HERE = Path(__file__).resolve().parent
 RESUME = HERE / "resume.md"
 JOBS = HERE / "jobs.json"
 PROMPT = (
-    "用 jobfindsme，根据 ~/Documents/resume.pdf 找上海和杭州的 "
+    "用 jobfindsme，根据 ~/Documents/resume.pdf 找上海和深圳的 "
     "AI 应用工程师岗位，20K以上，社招，正式。"
 )
 
@@ -27,7 +27,29 @@ PROMPT = (
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json-out", required=True)
+    parser.add_argument(
+        "--report",
+        type=Path,
+        help="Use a sanitized real-world report instead of fixture data.",
+    )
     args = parser.parse_args()
+
+    if args.report:
+        payload = json.loads(args.report.read_text(encoding="utf-8"))
+        Path(args.json_out).write_text(
+            json.dumps(
+                {
+                    "prompt": PROMPT,
+                    "text": payload["final_text"],
+                    "top_counts": payload.get("top_counts", {}),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        print(f"captured real report output -> {args.json_out}")
+        return
 
     tmp = tempfile.mkdtemp(prefix="jobfindsme-readme-demo-")
     db = Path(tmp) / "demo.db"

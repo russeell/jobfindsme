@@ -1326,7 +1326,62 @@ def test_source_summary_never_leaks_raw_chrome_command(tmp_path) -> None:
     assert "Google Chrome" not in summary
     assert "websocket" not in summary.casefold()
     # Successful source appears normally
-    assert "猎聘 ✓(42)" in summary
+    assert "猎聘 ✓ 42" in summary
+
+
+def test_source_summary_aggregates_platforms_and_shows_coverage() -> None:
+    from jobfindsme.mcp.responses import build_source_summary
+
+    diagnostics = {
+        "refresh_mode": "full",
+        "source_runs": [
+            {
+                "source_name": "猎聘·深圳",
+                "status": "success",
+                "discovered": 42,
+                "cache_used": False,
+            },
+            {
+                "source_name": "猎聘·上海",
+                "status": "success",
+                "discovered": 42,
+                "cache_used": False,
+            },
+            {
+                "source_name": "BOSS直聘·上海",
+                "status": "degraded",
+                "discovered": 0,
+                "cache_used": True,
+            },
+            {
+                "source_name": "BOSS直聘·深圳",
+                "status": "degraded",
+                "discovered": 0,
+                "cache_used": True,
+            },
+            {
+                "source_name": "智联招聘·上海",
+                "status": "degraded",
+                "discovered": 0,
+                "cache_used": True,
+            },
+            {
+                "source_name": "前程无忧·上海",
+                "status": "degraded",
+                "discovered": 0,
+                "cache_used": True,
+            },
+        ],
+    }
+
+    summary = build_source_summary(diagnostics)
+
+    assert summary.count("猎聘") == 1
+    assert summary.count("BOSS直聘") == 1
+    assert summary.count("智联招聘") == 1
+    assert summary.count("前程无忧") == 1
+    assert "猎聘 ✓ 84（深圳42、上海42）" in summary
+    assert "BOSS直聘 △ 缓存" in summary
 
 
 def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None:

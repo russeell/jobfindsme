@@ -14,7 +14,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from jobfindsme.presentation import _short_error, format_job_list
+from jobfindsme.presentation import format_job_list
+from jobfindsme.presentation.diagnostics import _source_line_from_runs
 
 
 def validate_output(model: type[Any], value: Any) -> dict[str, Any]:
@@ -101,21 +102,8 @@ def build_source_summary(diagnostics: dict[str, Any]) -> str:
     host model never sees raw commands, port numbers, or stack traces.
     """
     runs = diagnostics.get("source_runs", [])
-    parts: list[str] = []
-    for run in runs:
-        status = run.get("status", "skipped")
-        name = run.get("source_name", "?")
-        if status in ("success", "degraded"):
-            marker = "✓" if status == "success" else "△"
-            suffix = "·缓存" if run.get("cache_used") else ""
-            parts.append(f"{name} {marker}({run.get('discovered', 0)}{suffix})")
-        elif status == "failed":
-            parts.append(f"{name} ✗({_short_error(run.get('error'))})")
-        else:
-            err = _short_error(run.get("error"))
-            parts.append(f"{name} -({err})" if err else f"{name} -")
-    if parts:
-        return "检索：" + " · ".join(parts)
+    if runs:
+        return _source_line_from_runs(runs)
     refresh_mode = diagnostics.get("refresh_mode", "fast")
     if refresh_mode == "cache":
         return "检索：本地缓存（本轮未刷新外部来源）"

@@ -45,7 +45,7 @@
 真实 MCP 输出示例：
 
 <p align="center">
-  <img src="docs/readme-terminal.png" alt="jobfindsme 真实 MCP 输出示例" width="860">
+  <img src="docs/readme-demo.png" alt="jobfindsme 真实四平台 MCP 输出示例" width="900">
 </p>
 
 ---

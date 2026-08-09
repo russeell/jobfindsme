@@ -15,12 +15,13 @@ import html
 import json
 import re
 from pathlib import Path
+from urllib.parse import urlsplit
 
 CSS = """
-:root{--bg:#0b0f14;--win:#0f172a;--win2:#111c31;--card:#151f36;--card2:#1a2742;
---line:#26334d;--text:#e7eef8;--muted:#8fa4bd;--blue:#5b9bff;--green:#34d399;
---amber:#fbbf24;--red:#f87171;--chip:rgba(91,155,255,.13);--chip2:rgba(52,211,153,.14);
---grad:linear-gradient(135deg,#2563eb,#3b82f6)}
+:root{--bg:#050708;--win:#080b0d;--win2:#0b0f12;--card:#0f1418;--card2:#12191e;
+--line:#253038;--text:#f4f7f8;--muted:#8b9aa3;--blue:#58c8ff;--green:#b9f227;
+--amber:#ffcb5c;--red:#ff7171;--chip:rgba(88,200,255,.11);--chip2:rgba(185,242,39,.11);
+--grad:linear-gradient(135deg,#b9f227,#74df73)}
 body[data-theme="light"]{--bg:#edf1f6;--win:#ffffff;--win2:#f7f9fc;--card:#f7f9fc;
 --card2:#ffffff;--line:#e3e9f1;--text:#101828;--muted:#5f6f82;--blue:#2563eb;
 --green:#059669;--amber:#d97706;--red:#dc2626;--chip:rgba(37,99,235,.09);
@@ -30,24 +31,25 @@ html,body{height:100%}
 body{background:var(--bg);font-family:"PingFang SC","Hiragino Sans GB",
 "Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;color:var(--text);
 display:block;padding:0}
-.win{width:1220px;border-radius:22px;background:var(--win);border:1px solid var(--line);
-box-shadow:0 24px 70px rgba(2,6,23,.45);overflow:hidden}
+.win{width:1280px;border-radius:18px;background:var(--win);border:1px solid var(--line);
+box-shadow:0 24px 70px rgba(0,0,0,.55);overflow:hidden}
 body[data-theme="light"] .win{box-shadow:0 22px 60px rgba(15,23,42,.14)}
-.bar{display:flex;align-items:center;gap:14px;padding:18px 26px;background:var(--win2);
+.bar{display:flex;align-items:center;gap:14px;padding:18px 28px;background:var(--win2);
 border-bottom:1px solid var(--line)}
 .dot{width:12px;height:12px;border-radius:50%}
 .brand{font-weight:700;font-size:17px;display:flex;align-items:center;gap:10px}
-.logo{width:30px;height:30px;border-radius:9px;background:var(--grad);color:#fff;
-display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--grad);color:#071008;
+display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;letter-spacing:-.4px}
 .sub{color:var(--muted);font-weight:500;font-size:13px}
 .pill{margin-left:auto;font-size:12px;color:var(--blue);background:var(--chip);
 border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-weight:600}
-.body{padding:24px 28px 10px;display:flex;flex-direction:column;gap:14px}
+.body{padding:24px 28px 12px;display:flex;flex-direction:column;gap:14px}
 .user{display:flex;gap:12px;align-items:flex-start}
-.avatar{flex:none;width:36px;height:36px;border-radius:11px;background:var(--grad);
-color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
-.bubble{background:var(--grad);color:#fff;border-radius:4px 16px 16px 16px;
-padding:12px 16px;font-size:15px;line-height:1.6;max-width:840px;min-height:22px}
+.avatar{flex:none;width:36px;height:36px;border-radius:10px;background:var(--green);
+color:#071008;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+.bubble{background:#10171b;color:var(--text);border:1px solid #34424b;border-left:3px solid var(--green);
+border-radius:5px 14px 14px 14px;padding:12px 16px;font-size:15px;line-height:1.6;
+max-width:920px;min-height:22px}
 .status{display:none;color:var(--green);font-size:13px;padding-left:48px;font-weight:600}
 .status.on{display:block}
 .dots{display:inline-block;animation:blink 1.2s steps(1) infinite}
@@ -56,38 +58,41 @@ padding:12px 16px;font-size:15px;line-height:1.6;max-width:840px;min-height:22px
 .card.vis{opacity:1;transform:none}
 .job,.more{opacity:0;transform:translateY(8px);transition:opacity .45s ease,transform .45s ease}
 .job.vis,.more.vis{opacity:1;transform:none}
-.sec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.sec{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 17px}
 .sec h3{font-size:13px;color:var(--green);font-weight:700;letter-spacing:.2px;
 display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .sec h3::before{content:"";width:8px;height:8px;border-radius:3px;background:var(--green)}
 .stats{display:flex;gap:10px;flex-wrap:wrap}
-.stat{background:var(--card2);border:1px solid var(--line);border-radius:10px;
+.stat{background:var(--card2);border:1px solid var(--line);border-radius:8px;
 padding:7px 12px;font-size:13px;color:var(--muted)}
 .stat b{color:var(--text)}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
-.chip{font-size:12.5px;padding:6px 11px;border-radius:999px;background:var(--chip);
+.chip{font-size:12.5px;padding:6px 11px;border-radius:8px;background:var(--chip);
 color:var(--blue);font-weight:600}
 .chip.ok{background:var(--chip2);color:var(--green)}
 .chip.warn{background:rgba(251,191,36,.13);color:var(--amber)}
 .caption{font-size:12.5px;color:var(--muted);margin-top:9px}
-.job{border:1px solid var(--line);border-radius:14px;background:var(--card2);
-padding:13px 15px;margin-bottom:10px}
+.job{border:1px solid var(--line);border-radius:11px;background:var(--card2);
+padding:14px 15px;margin-bottom:10px;min-height:184px;display:flex;flex-direction:column}
 .jobs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .jobs .job{margin-bottom:0}
 .jobs .reason{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .job .top{display:flex;align-items:center;gap:10px}
 .tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;background:var(--chip2);color:var(--green)}
-.job h4{font-size:14.5px;font-weight:700;color:var(--text);flex:1}
+.job h4{font-size:14.5px;font-weight:750;color:var(--text);flex:1;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis}
 .score{margin-left:auto;font-size:12.5px;font-weight:800;padding:5px 11px;border-radius:999px}
 .score.g{background:var(--chip2);color:var(--green)}
 .score.b{background:var(--chip);color:var(--blue)}
 .score.a{background:rgba(251,191,36,.13);color:var(--amber)}
-.meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.company{font-size:12.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.salary{font-size:15px;font-weight:800;color:var(--green);margin-top:7px}
+.meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
 .tag-s{font-size:11.5px;padding:3px 9px;border-radius:7px;background:var(--chip);color:var(--blue)}
 .tag-s.n{background:rgba(248,113,113,.12);color:var(--red)}
-.link{margin-top:9px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
-font-size:11.8px;color:var(--blue);word-break:break-all}
-.reason{margin-top:7px;font-size:12.6px;color:var(--muted);line-height:1.65}
+.link{margin-top:auto;padding-top:9px;font-size:12px;color:var(--blue);font-weight:700}
+.link .domain{color:var(--muted);font-weight:500;margin-left:6px}
+.reason{margin-top:7px;font-size:12.3px;color:var(--muted);line-height:1.55}
 .more{border:1px dashed var(--line);border-radius:12px;padding:10px 14px;font-size:12.5px;
 color:var(--muted);text-align:center}
 .summary{display:grid;gap:8px}
@@ -110,13 +115,17 @@ def parse_sources(line: str) -> list[dict]:
     sources = []
     for part in re.split(r"\s+·\s+", line):
         part = part.strip()
-        ok = re.search(r"(.+?)\s+✓\((\d+)\)", part)
-        warn = re.search(r"(.+?)\s+-\((.*)\)", part)
-        if ok:
-            sources.append({"name": ok.group(1), "state": "ok", "count": ok.group(2)})
-        elif warn:
+        current = re.match(r"(.+?)\s+([✓△✗-])\s+(.+)$", part)
+        legacy = re.match(r"(.+?)\s+([✓△✗-])\((.*)\)$", part)
+        match = current or legacy
+        if match:
+            marker = match.group(2)
             sources.append(
-                {"name": warn.group(1), "state": "warn", "count": warn.group(2)}
+                {
+                    "name": match.group(1),
+                    "state": "ok" if marker == "✓" else "warn",
+                    "count": match.group(3),
+                }
             )
         else:
             sources.append({"name": part, "state": "muted", "count": ""})
@@ -209,7 +218,7 @@ def parse(text: str) -> dict:
             for line in lines[1:]:
                 if line.startswith("检索"):
                     parsed["sources"] = parse_sources(line[3:])
-                elif line.startswith("本轮") or line.startswith("远程"):
+                elif line.startswith(("覆盖", "本轮", "远程")):
                     parsed["source_caption"] = line.strip()
         elif "过滤说明" in header:
             for line in lines[1:]:
@@ -232,6 +241,25 @@ def score_class(score: int) -> str:
     return "a"
 
 
+def source_label(link: str) -> tuple[str, str]:
+    host = urlsplit(link).netloc.removeprefix("www.")
+    if "zhipin" in host:
+        return "BOSS直聘", host
+    if "liepin" in host:
+        return "猎聘", host
+    if "zhaopin" in host:
+        return "智联招聘", host
+    if "51job" in host:
+        return "前程无忧", host
+    return "查看岗位", host
+
+
+def evidence_line(job: dict) -> str:
+    if job["skills"]:
+        return "技能证据：" + " / ".join(job["skills"])
+    return "硬条件证据：角色、城市、薪资与招聘类型符合"
+
+
 def render(data: dict, theme: str) -> str:
     p = data["parsed"]
 
@@ -243,11 +271,21 @@ def render(data: dict, theme: str) -> str:
         f"{esc(s['name'])} {s['count']}</span>"
         for s in p["sources"]
     )
-    caption = esc(p.get("source_caption", ""))
+    caption_text = p.get("source_caption", "")
+    top_counts = data.get("top_counts", {})
+    if top_counts:
+        distribution = "、".join(
+            f"{name} {count}" for name, count in top_counts.items() if count
+        )
+        if distribution:
+            caption_text += f" 入选 Top {sum(top_counts.values())}：{distribution}。"
+    caption = esc(caption_text)
     filters = "".join(f'<span class="chip">{esc(f)}</span>' for f in p["filters"])
 
     jobs = []
     for job in p["jobs"]:
+        source, domain = source_label(job["link"])
+        evidence = evidence_line(job)
         tag = f'<span class="tag">{esc(job["tag"])}</span>' if job["tag"] else ""
         skills = "".join(f'<span class="tag-s">{esc(s)}</span>' for s in job["skills"])
         exp = f'<span class="tag-s">{esc(job["exp"])}</span>' if job["exp"] else ""
@@ -256,17 +294,19 @@ def render(data: dict, theme: str) -> str:
         )
         jobs.append(
             f'<div class="job" id="job-{job["index"]}"><div class="top">{tag}<h4>{esc(job["title"])}'
-            f'<span style="color:var(--muted);font-weight:500"> ｜ {esc(job["company"])}'
-            f" ｜ {esc(job['city'])}</span></h4>"
+            f"</h4>"
             f'<span class="score {score_class(job["score"])}">{job["score"]}%</span></div>'
+            f'<div class="company">{esc(job["company"])} · {esc(job["city"])}</div>'
+            f'<div class="salary">{esc(job["salary"])}</div>'
             f'<div class="meta">{skills}{exp}{degree}</div>'
-            f'<div class="link">{esc(job["link"])}</div>'
-            f'<div class="reason">{esc(job["reason"])}</div></div>'
+            f'<div class="reason">{esc(evidence)}</div>'
+            f'<div class="link">{esc(source)} · 查看岗位 ↗<span class="domain">{esc(domain)}</span></div></div>'
         )
     job_list = f'<div class="jobs">{"".join(jobs[:8])}</div>'
-    extra = len(p["jobs"]) - 8
+    total = int(p.get("result_count", len(p["jobs"])))
+    extra = max(0, total - 8)
     more = (
-        f'<div class="more" id="more">还有 {extra} 个匹配岗位未展示，完整结果见实际输出</div>'
+        f'<div class="more" id="more">本轮共 {total} 个匹配岗位 · 下方省略 {extra} 个 · 实际输出均含完整投递链接</div>'
         if extra > 0
         else ""
     )
@@ -296,8 +336,8 @@ def render(data: dict, theme: str) -> str:
     <span class="dot" style="background:#f87171"></span>
     <span class="dot" style="background:#fbbf24"></span>
     <span class="dot" style="background:#34d399"></span>
-    <div class="brand"><span class="logo">jf</span>jobfindsme<span class="sub">AI 求职雷达</span></div>
-    <div class="pill">本地优先 · MCP Server</div>
+    <div class="brand"><span class="logo">jfm</span>jobfindsme<span class="sub">AI 求职雷达</span></div>
+    <div class="pill">4 平台 · 本地优先 · MCP Server</div>
   </div>
   <div class="body">
     <div class="user"><div class="avatar">你</div><div class="bubble" id="prompt"></div></div>

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-09T03:12:44+00:00",
+  "generated_at": "2026-08-09T10:04:30+00:00",
   "database": "~/.jobfindsme/data/jobfindsme.db",
   "query": {
     "target_roles": [
@@ -80,13 +80,13 @@
     ]
   },
   "search": {
-    "elapsed_seconds": 7.007,
-    "matching_seconds": 0.098,
+    "elapsed_seconds": 6.653,
+    "matching_seconds": 0.09,
     "total_discovered": 84,
     "total_unique": 79,
     "duplicates_removed": 5,
     "result_count": 20,
-    "new_count": 0,
+    "new_count": 1,
     "changed_count": 0,
     "reopened_count": 0,
     "closed_count": 0
@@ -97,7 +97,7 @@
       "family": "猎聘",
       "kind": "liepin_http",
       "status": "success",
-      "elapsed_seconds": 1.401,
+      "elapsed_seconds": 0.938,
       "discovered": 42,
       "unique": 39,
       "versions_created": 2,
@@ -110,7 +110,7 @@
       "family": "智联招聘",
       "kind": "zhilian_http",
       "status": "degraded",
-      "elapsed_seconds": 4.486,
+      "elapsed_seconds": 4.463,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
@@ -123,10 +123,10 @@
       "family": "猎聘",
       "kind": "liepin_http",
       "status": "success",
-      "elapsed_seconds": 1.444,
+      "elapsed_seconds": 0.908,
       "discovered": 42,
       "unique": 40,
-      "versions_created": 1,
+      "versions_created": 2,
       "cache_used": false,
       "top_count": 10,
       "error": null
@@ -136,7 +136,7 @@
       "family": "前程无忧",
       "kind": "wuyou_http",
       "status": "degraded",
-      "elapsed_seconds": 3.431,
+      "elapsed_seconds": 3.48,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
@@ -149,20 +149,20 @@
       "family": "BOSS直聘",
       "kind": "boss_cdp",
       "status": "degraded",
-      "elapsed_seconds": 0.534,
+      "elapsed_seconds": 0.474,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
       "cache_used": true,
       "top_count": 10,
-      "error": "browser refresh returned no jobs; using cached records"
+      "error": "CDP Runtime.evaluate failed: {'code': -32000, 'message': 'Inspected target navigated or closed'}"
     },
     {
       "source": "智联招聘·上海",
       "family": "智联招聘",
       "kind": "zhilian_http",
       "status": "degraded",
-      "elapsed_seconds": 4.326,
+      "elapsed_seconds": 4.055,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
@@ -175,7 +175,7 @@
       "family": "前程无忧",
       "kind": "wuyou_http",
       "status": "degraded",
-      "elapsed_seconds": 3.129,
+      "elapsed_seconds": 3.328,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
@@ -188,7 +188,7 @@
       "family": "BOSS直聘",
       "kind": "boss_cdp",
       "status": "degraded",
-      "elapsed_seconds": 0.271,
+      "elapsed_seconds": 0.347,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
@@ -208,5 +208,5 @@
     "sections_present": true,
     "link_present": true
   },
-  "final_text": "【1·简历解析】\n简历解析：技能 17 项 ｜ 项目 2 项 ｜ 经验 3 项 ｜ 学历：硕士\n\n【2·检索概览】\n检索：猎聘·深圳 ✓(42) · 智联招聘·深圳 △(0·缓存) · 猎聘·上海 ✓(42) · 前程无忧·上海 △(0·缓存) · BOSS直聘·上海 △(0·缓存) · 智联招聘·上海 △(0·缓存) · 前程无忧·深圳 △(0·缓存) · BOSS直聘·深圳 △(0·缓存)\n本轮远程发现 84 条，本地岗位库匹配到 20 条。\n\n【3·过滤说明】\n过滤：角色(AI应用工程师) + 城市(上海/深圳) + 薪资20K+ + 经验≤3年 + 社招 + 正式 → 给出 20 个\n\n【4·岗位列表】\n1. 智能体与AI应用算法工程师｜某知名计算机软件上市公司｜上海｜社招｜正式｜40-60K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/c52395f558addf050nF73Nu4E1NS.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n2. AI应用工程师（Agent/RAG base杭州）｜边锋｜上海 · 浦东新区 · 金桥｜社招｜正式｜20-40K·14薪\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent、RAG ｜ 经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/4ac2ccaadd0350770nF93ti_EVpW.html\n\n   推荐理由：简历技能命中：Agent、RAG；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent、RAG；薪资信息明确。\n\n3. AI Agent应用工程师（LLM/智能体开发）｜速帆科技｜深圳 · 南山区 · 科技园｜社招｜正式｜20-30K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/9c97d3d494d9c8020nFz2tS0GVJU.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n4. ai应用工程师｜LLM/RAG/MCP｜智慧工厂｜塔牌集团｜深圳 · 福田区 · 香蜜湖｜社招｜正式｜35-55K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：MCP、RAG ｜ 经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/d4e0b0b425d5ed6d0nB-09q-FlBR.html\n\n   推荐理由：简历技能命中：MCP、RAG；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 MCP、RAG；薪资信息明确。\n\n5. AI 智能体工程师/技术合伙人（智能体应用）｜上海凯洛天翊科技｜上海 · 长宁区 · 新华路｜社招｜正式｜30-50K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/49704c1734ea57320nJ62d20F1VU.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n6. AI 应用开发工程师（Agent / 低代码方向）｜全家Familymart｜上海 · 闵行区 · 龙柏｜社招｜正式｜25-40K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/d417ed875020f9eb031529-8GVZQ.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n7. Ai应用工程师｜好买财富管理｜上海 · 浦东新区 · 陆家嘴｜社招｜正式｜20-35K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：1-3年 ｜ 学历：硕士\n\n   投递链接：https://www.zhipin.com/job_detail/91994623e387dc0d0nF42Ny7ElpW.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n8. AI Agent 应用开发 / AI 工作流工程师｜它石智航｜上海 · 闵行区 · 莘庄｜社招｜正式｜25-45K·15薪\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：1-3年 ｜ 学历：硕士\n\n   投递链接：https://www.zhipin.com/job_detail/b66ccfc9916c3bd30nBz2NS9ElJX.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n9. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪\n   匹配度：87%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：不限\n\n   投递链接：https://www.liepin.com/a/78197081.shtml\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 87%；JD 明确涉及 Agent；薪资信息明确。\n\n10. AI Agent / LLM 应用工程师｜致邃投资｜上海 · 浦东新区 · 陆家嘴｜社招｜正式｜50-55K·16薪\n   匹配度：85%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：不限\n\n   投递链接：https://www.zhipin.com/job_detail/742b6ccc9335e3960nB-39S5EVVX.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 85%；JD 明确涉及 Agent；薪资信息明确。\n\n11. AI 应用工程师 / Agent 工程师｜Foldin Design｜上海 · 静安区 · 静安寺｜社招｜正式｜20-30K·16薪\n   匹配度：81%（信号匹配，非录用概率）\n   技能：Agent、Java、Python ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/058551bde00bc0a70nB83dm8E1pX.html\n\n   推荐理由：简历技能命中：Agent、Python；岗位要求但简历未体现：Java；简历事实与岗位信号综合匹配度为 81%；JD 明确涉及 Agent、Java、Python；薪资信息明确。\n\n12. AI应用工程师｜上海蓬海涞讯数据技术有限公司｜上海-徐汇区｜社招｜正式｜25-45k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1984208289.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n13. AI应用工程师｜某上海大型汽车公司｜上海｜社招｜正式｜30-50k\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-6年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/76748249.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n14. AI应用工程师｜某上海银行公司｜上海｜社招｜正式｜20-28k·14薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/77060257.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n15. AI应用工程师｜某上海咨询服务公司｜上海-浦东新区｜社招｜正式｜30-50k·15薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/77783219.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n16. AI应用工程师(J10929)｜三问家居科技集团｜上海-闵行区｜社招｜正式｜20-25k\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/job/1984556081.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n17. AI应用工程师｜泰胜风能｜上海-徐汇区｜社招｜正式｜20-40k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1981999319.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n18. AI应用工程师｜禾赛科技｜上海-长宁区｜社招｜正式｜30-50k·15薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/job/1984107833.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n19. AI应用工程师90M0151538｜某北京大型互联网公司｜上海｜社招｜正式｜30-60k·15薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：硕士\n\n   投递链接：https://www.liepin.com/a/77073855.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n20. AI应用工程师（可远程办公）｜某上海IT服务公司｜上海｜社招｜正式｜20-40k·14薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/77440445.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n【5·说明】\n结果：历史共匹配 228 个合适岗位；本次展示 20 个（含新增 0 条、变更 0 条、重开 0 条）；累计展示 876 次；另有 327 个岗位已关闭（不再推荐）。\n建议：优先投 #1（某知名计算机软件上市公司，40-60K，技能：Agent） → #2（边锋，20-40K·14薪，技能：Agent、RAG） → #3（速帆科技，20-30K，技能：Agent）。\n下一步建议（和 AI 聊天就能用）：\n- 📬 定时推送：对我说「每天早上 9 点推送新岗位给我」（可改任意时间频率）\n- 📋 查看历史：对我说「我投过哪些岗位？」或「我之前看过的岗位有哪些？」\nBOSS直聘说明：本次 BOSS 刷新未返回新数据（浏览器桥可能不在线或需重新登录）。解决方案：对我说「帮我重新登录 BOSS直聘」，或让我运行 jobfindsme setup 确认窗口在线。\n智联招聘·深圳、前程无忧·上海、智联招聘·上海、前程无忧·深圳 本次刷新未成功，已使用缓存或跳过；对我说「重新搜索一次」即可重试。\n投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。"
+  "final_text": "【1·简历解析】\n简历解析：技能 17 项 ｜ 项目 2 项 ｜ 经验 3 项 ｜ 学历：硕士\n\n【2·检索概览】\n检索：BOSS直聘 △ 缓存 · 猎聘 ✓ 84（深圳42、上海42） · 智联招聘 △ 缓存 · 前程无忧 △ 缓存\n覆盖 4 个平台、8 个城市来源；本轮远程发现 84 条，本地岗位库匹配到 20 条。\n\n【3·过滤说明】\n过滤：角色(AI应用工程师) + 城市(上海/深圳) + 薪资20K+ + 经验≤3年 + 社招 + 正式 → 给出 20 个\n\n【4·岗位列表】\n1. 智能体与AI应用算法工程师｜某知名计算机软件上市公司｜上海｜社招｜正式｜40-60K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/c52395f558addf050nF73Nu4E1NS.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n2. AI应用工程师（Agent/RAG base杭州）｜边锋｜上海 · 浦东新区 · 金桥｜社招｜正式｜20-40K·14薪\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent、RAG ｜ 经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/4ac2ccaadd0350770nF93ti_EVpW.html\n\n   推荐理由：简历技能命中：Agent、RAG；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent、RAG；薪资信息明确。\n\n3. AI Agent应用工程师（LLM/智能体开发）｜速帆科技｜深圳 · 南山区 · 科技园｜社招｜正式｜20-30K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/9c97d3d494d9c8020nFz2tS0GVJU.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n4. ai应用工程师｜LLM/RAG/MCP｜智慧工厂｜塔牌集团｜深圳 · 福田区 · 香蜜湖｜社招｜正式｜35-55K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：MCP、RAG ｜ 经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/d4e0b0b425d5ed6d0nB-09q-FlBR.html\n\n   推荐理由：简历技能命中：MCP、RAG；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 MCP、RAG；薪资信息明确。\n\n5. AI 智能体工程师/技术合伙人（智能体应用）｜上海凯洛天翊科技｜上海 · 长宁区 · 新华路｜社招｜正式｜30-50K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/49704c1734ea57320nJ62d20F1VU.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n6. AI 应用开发工程师（Agent / 低代码方向）｜全家Familymart｜上海 · 闵行区 · 龙柏｜社招｜正式｜25-40K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/d417ed875020f9eb031529-8GVZQ.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n7. Ai应用工程师｜好买财富管理｜上海 · 浦东新区 · 陆家嘴｜社招｜正式｜20-35K\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：1-3年 ｜ 学历：硕士\n\n   投递链接：https://www.zhipin.com/job_detail/91994623e387dc0d0nF42Ny7ElpW.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n8. AI Agent 应用开发 / AI 工作流工程师｜它石智航｜上海 · 闵行区 · 莘庄｜社招｜正式｜25-45K·15薪\n   匹配度：88%（信号匹配，非录用概率）\n   技能：Agent ｜ 经验：1-3年 ｜ 学历：硕士\n\n   投递链接：https://www.zhipin.com/job_detail/b66ccfc9916c3bd30nBz2NS9ElJX.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 88%；JD 明确涉及 Agent；薪资信息明确。\n\n9. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪\n   匹配度：87%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：不限\n\n   投递链接：https://www.liepin.com/a/78197081.shtml\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 87%；JD 明确涉及 Agent；薪资信息明确。\n\n10. AI Agent / LLM 应用工程师｜致邃投资｜上海 · 浦东新区 · 陆家嘴｜社招｜正式｜50-55K·16薪\n   匹配度：85%（信号匹配，非录用概率）\n   技能：Agent ｜ 学历：不限\n\n   投递链接：https://www.zhipin.com/job_detail/742b6ccc9335e3960nB-39S5EVVX.html\n\n   推荐理由：简历技能命中：Agent；简历事实与岗位信号综合匹配度为 85%；JD 明确涉及 Agent；薪资信息明确。\n\n11. AI 应用工程师 / Agent 工程师｜Foldin Design｜上海 · 静安区 · 静安寺｜社招｜正式｜20-30K·16薪\n   匹配度：81%（信号匹配，非录用概率）\n   技能：Agent、Java、Python ｜ 学历：本科\n\n   投递链接：https://www.zhipin.com/job_detail/058551bde00bc0a70nB83dm8E1pX.html\n\n   推荐理由：简历技能命中：Agent、Python；岗位要求但简历未体现：Java；简历事实与岗位信号综合匹配度为 81%；JD 明确涉及 Agent、Java、Python；薪资信息明确。\n\n12. AI应用工程师｜记忆科技(深圳)有限公司｜深圳-南山区｜社招｜正式｜30-60k·17薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-8年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/job/1982420763.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n13. [新增] AI应用工程师｜成都星汉致远科技有限公司｜深圳-宝安区｜社招｜正式｜20-35k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1984486543.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n14. AI应用工程师-远程｜某深圳大型其他金融公司｜深圳｜社招｜正式｜40-70k·18薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：3-5年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/77987567.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n15. AI应用工程师｜内蒙古福瑞医疗科技股份有限公司｜深圳-南山区｜社招｜正式｜20-30k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1984481955.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n16. AI应用工程师｜深圳市万邑通信息科技有限公司｜深圳-宝安区｜社招｜正式｜30-40k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1983562195.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n17. AI应用工程师｜国民技术股份有限公司｜深圳-南山区｜社招｜正式｜20-30k·15薪\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/job/1983118125.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n18. AI应用工程师｜奥维领芯｜深圳-龙岗区｜社招｜正式｜20-45k·15薪\n   匹配度：68%（信号匹配，非录用概率）\n   经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/job/1984230717.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n19. AI应用工程师｜某上海计算机软件公司｜深圳｜社招｜正式｜30-50k\n   匹配度：68%（信号匹配，非录用概率）\n   学历：本科\n\n   投递链接：https://www.liepin.com/a/78539291.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n20. AI应用工程师｜某深圳互联网上市公司｜深圳-南山区｜社招｜正式｜30-50k\n   匹配度：68%（信号匹配，非录用概率）\n   经验：1-3年 ｜ 学历：本科\n\n   投递链接：https://www.liepin.com/a/76604243.shtml\n\n   推荐理由：简历事实与岗位信号综合匹配度为 68%；薪资信息明确。\n\n【5·说明】\n结果：历史共匹配 229 个合适岗位；本次展示 20 个（含新增 1 条、变更 0 条、重开 0 条）；累计展示 916 次；另有 330 个岗位已关闭（不再推荐）。\n建议：优先投 #1（某知名计算机软件上市公司，40-60K，技能：Agent） → #2（边锋，20-40K·14薪，技能：Agent、RAG） → #3（速帆科技，20-30K，技能：Agent）。\n下一步建议（和 AI 聊天就能用）：\n- 📬 定时推送：对我说「每天早上 9 点推送新岗位给我」（可改任意时间频率）\n- 📋 查看历史：对我说「我投过哪些岗位？」或「我之前看过的岗位有哪些？」\nBOSS直聘说明：本次 BOSS 刷新未返回新数据（浏览器桥可能不在线或需重新登录）。解决方案：对我说「帮我重新登录 BOSS直聘」，或让我运行 jobfindsme setup 确认窗口在线。\n本次 1 个新增来自缓存岗位，已正常纳入。\n智联招聘·深圳、前程无忧·上海、智联招聘·上海、前程无忧·深圳 本次刷新未成功，已使用缓存或跳过；对我说「重新搜索一次」即可重试。\n投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。"
 }
