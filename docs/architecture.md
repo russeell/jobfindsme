@@ -40,8 +40,9 @@ Where each decision happens:
 - **过滤** — `matching/ranker.py::_hard_filter` (location, salary, track,
   type, exclusions, seniority, stale liveness)
 - **排序** — `matching/ranker.py::_score_signals` (deterministic
-  signal-match score: skills 50% / experience 25% / degree 10% /
-  liveness 5% / salary 5%)
+  signal-match score: 60% hard-condition floor + up to 40% evidence
+  bonus from skill overlap, experience, degree, liveness, and salary
+  visibility)
 - **记录变化** — `job_impressions.py` (select_and_record: new, changed,
   reopened, closed, repeated suppression; applied jobs are never
   re-suggested)

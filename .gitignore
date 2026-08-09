@@ -15,4 +15,8 @@ reports/*
 reports/features/*
 !reports/features/.gitkeep
 !reports/features/*.json
+!reports/real-world/
+reports/real-world/*
+!reports/real-world/latest_four_source_search.json
+!reports/real-world/latest_four_source_search.md
 build/

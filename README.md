@@ -70,6 +70,10 @@
 推荐理由由 jobfindsme 基于硬条件和结构化岗位信号生成，首次结果由 Agent 原样返回。
 只有你另行要求比较岗位时，Agent 才会在结果之后追加独立的证据化分析。
 
+<p align="center">
+  <img src="docs/readme-terminal.png" alt="jobfindsme 真实 MCP 输出示例" width="860">
+</p>
+
 ---
 
 ## ✨ 特性
