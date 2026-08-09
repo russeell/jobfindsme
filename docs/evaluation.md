@@ -45,6 +45,23 @@ Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`:
 
 1. Add a canonical skill and its real-world aliases.
 2. Do not reuse an alias owned by another skill.
+
+## Agent behavior
+
+Core and MCP unit tests do not prove that a host Agent selects the right tools
+or preserves the Server response. `evals/agent_behavior/` therefore treats the
+canonical Agent Skill as executable behavior:
+
+- six fixed prompts cover first search, five-section output, apply links,
+  source degradation, applied state, incremental search, and resume privacy;
+- the no-Skill fixture must fail and the Skill fixture must pass in CI;
+- fixture reports are marked `contract_fixture` and cannot satisfy a
+  `live_agent` evidence gate;
+- release compatibility claims require redacted Codex, Claude, and Cursor
+  transcripts.
+
+See `evals/agent_behavior/README.md` for commands and the normalized event
+schema.
 3. Run `python -m scripts.validate_taxonomy` and
    `python -m pytest tests/test_taxonomy.py`.
 4. Include one realistic resume or job-description example in the PR.

@@ -16,26 +16,28 @@
 
 ## Install
 
-Ask the current Agent:
-
-```text
-Follow this installation recipe exactly. Detect which Agent host you are.
-Do not clone the repository or run its tests:
-https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
-```
-
-Or install manually:
+Install the local runtime once:
 
 ```bash
-python3 -m venv ~/.jobfindsme/runtime
-~/.jobfindsme/runtime/bin/python -m pip install \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.9.0/jobfindsme-0.9.0-py3-none-any.whl"
-~/.jobfindsme/runtime/bin/python -m jobfindsme connect claude
-~/.jobfindsme/runtime/bin/python -m jobfindsme setup
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-Replace `claude` with `codex`, `cursor`, or `zcode`. Other MCP clients can use
-`jobfindsme config` for standard JSON or `jobfindsme connect --path <file>`.
+Then install the native Agent plugin:
+
+```bash
+# Codex
+codex plugin marketplace add russeell/jobfindsme --ref main
+codex plugin add jobfindsme@jobfindsme
+
+# Claude Code
+claude plugin marketplace add russeell/jobfindsme
+claude plugin install jobfindsme@jobfindsme
+```
+
+The Cursor manifest is maintained in this repository. Until its marketplace
+listing is approved, use `jobfindsme connect cursor`. Other MCP clients can use
+`jobfindsme config` or `jobfindsme connect --path <file>`. See
+[INSTALL.md](INSTALL.md) for upgrades and fallback installation.
 
 ## Use
 

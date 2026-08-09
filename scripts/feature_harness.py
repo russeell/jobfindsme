@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-FEATURES_PATH = ROOT / "specs" / "feature_list.json"
+FEATURES_PATH = ROOT / "docs" / "internal" / "feature_list.json"
 
 
 class HarnessError(RuntimeError):

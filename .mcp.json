@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "jobfindsme": {
+      "command": "bash",
+      "args": [
+        "-lc",
+        "exec \"${JOBFINDSME_PYTHON:-$HOME/.jobfindsme/runtime/bin/python}\" -m jobfindsme.mcp"
+      ]
+    }
+  }
+}

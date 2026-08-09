@@ -1,0 +1,20 @@
+{
+  "name": "jobfindsme",
+  "interface": {
+    "displayName": "jobfindsme"
+  },
+  "plugins": [
+    {
+      "name": "jobfindsme",
+      "source": {
+        "source": "url",
+        "url": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

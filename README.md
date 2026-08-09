@@ -46,25 +46,37 @@
 
 ## 🚀 快速开始
 
-### 方式一：让 Agent 帮你安装（推荐）
+先安装一次本地运行时：
 
-把这段话发给 Claude Code / Codex / Cursor / ZCode：
-
-```text
-请严格按说明快速安装 jobfindsme。请识别你当前是哪一种 Agent；
-不要克隆仓库或运行测试：
-https://github.com/russeell/jobfindsme/blob/main/INSTALL.md
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-安装后重启 Agent，然后说：
+再用当前 Agent 的原生插件系统安装 Skill 与 MCP 适配层：
+
+```bash
+# Codex
+codex plugin marketplace add russeell/jobfindsme --ref main
+codex plugin add jobfindsme@jobfindsme
+
+# Claude Code
+claude plugin marketplace add russeell/jobfindsme
+claude plugin install jobfindsme@jobfindsme
+```
+
+Cursor 插件清单已经随仓库维护；市场上架前使用兼容入口：
+
+```bash
+jobfindsme connect cursor
+```
+
+重启 Agent，然后说：
 
 ```text
 用 jobfindsme，根据 ~/Documents/resume.pdf 找上海的 AI 应用工程师，20K以上，社招。
 ```
 
-### 方式二：自己安装
-
-完整安装说明见 [INSTALL.md](INSTALL.md)。安装后先自检：
+完整安装、升级和其他 MCP 客户端接入见 [INSTALL.md](INSTALL.md)。安装后先自检：
 
 ```bash
 jobfindsme doctor

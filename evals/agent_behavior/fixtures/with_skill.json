@@ -1,0 +1,60 @@
+{
+  "suite_version": "1.0.0",
+  "skill_enabled": true,
+  "evidence_kind": "contract_fixture",
+  "transcripts": [
+    {
+      "case_id": "find_jobs_with_resume",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "setup_profile", "arguments": {"action": "import", "resume_path": "/tmp/resume.pdf"}},
+        {"type": "tool_call", "name": "configure_search", "arguments": {"target_roles": ["AI应用工程师"], "locations": ["上海"], "salary_min_k": 20, "recruitment_track": "social", "employment_type": "full_time"}},
+        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true, "use_profile": true}},
+        {"type": "tool_result", "name": "search_jobs", "content": "【1·简历解析】\n简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) + 薪资20K+ → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：技能与薪资信号匹配。\n【5·说明】\n结果：本次展示 1 个。"},
+        {"type": "assistant", "content": "【1·简历解析】\n简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) + 薪资20K+ → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：技能与薪资信号匹配。\n【5·说明】\n结果：本次展示 1 个。"}
+      ]
+    },
+    {
+      "case_id": "preserve_five_sections_and_links",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true}},
+        {"type": "tool_result", "name": "search_jobs", "content": "【1·简历解析】\n本次未使用简历。\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：角色、地点和薪资条件符合。\n【5·说明】\n结果：本次展示 1 个。"},
+        {"type": "assistant", "content": "【1·简历解析】\n本次未使用简历。\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：角色、地点和薪资条件符合。\n【5·说明】\n结果：本次展示 1 个。"}
+      ]
+    },
+    {
+      "case_id": "explain_source_degradation",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true}},
+        {"type": "tool_result", "name": "search_jobs", "content": "【1·简历解析】\n本次未使用简历。\n【2·检索概览】\n检索：BOSS直聘 △(缓存，Chrome未连接) · 猎聘 ✓(42)\n【3·过滤说明】\n过滤：角色(AI应用工程师) → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：角色和薪资条件符合。\n【5·说明】\n结果：本次展示 1 个。\n来源说明：BOSS直聘使用缓存；要刷新，请对我说「帮我重新登录 BOSS直聘」。"},
+        {"type": "assistant", "content": "【1·简历解析】\n本次未使用简历。\n【2·检索概览】\n检索：BOSS直聘 △(缓存，Chrome未连接) · 猎聘 ✓(42)\n【3·过滤说明】\n过滤：角色(AI应用工程师) → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：角色和薪资条件符合。\n【5·说明】\n结果：本次展示 1 个。\n来源说明：BOSS直聘使用缓存；要刷新，请对我说「帮我重新登录 BOSS直聘」。"}
+      ]
+    },
+    {
+      "case_id": "mark_job_applied",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "update_job_state", "arguments": {"job_id": "job-2", "state": "applied"}},
+        {"type": "assistant", "content": "已将第 2 个岗位标记为已投递。"}
+      ]
+    },
+    {
+      "case_id": "incremental_search",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": false, "refresh_mode": "fast"}},
+        {"type": "assistant", "content": "今天暂无新增岗位。"}
+      ]
+    },
+    {
+      "case_id": "protect_resume_context",
+      "host": "skill-contract",
+      "events": [
+        {"type": "tool_call", "name": "setup_profile", "arguments": {"action": "import", "resume_path": "/tmp/resume.pdf"}},
+        {"type": "assistant", "content": "已由本地 Core 解析简历，未把完整正文读入对话。"}
+      ]
+    }
+  ]
+}

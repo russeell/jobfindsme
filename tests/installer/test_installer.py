@@ -110,12 +110,10 @@ def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
     version = project["project"]["version"]
     script = (root / "scripts" / "install.sh").read_text()
     install_doc = (root / "INSTALL.md").read_text()
-    english_readme = (root / "README.en.md").read_text()
     wheel = f"jobfindsme-{version}-py3-none-any.whl"
 
     assert f'VERSION="{version}"' in script
     assert wheel in install_doc
-    assert wheel in english_readme
     assert "CHECKSUM_GH=" in script
     assert "SHA-256 校验失败" in script
     assert "ghproxy" not in script

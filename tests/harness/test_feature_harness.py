@@ -3,6 +3,7 @@ import json
 import pytest
 
 from scripts.feature_harness import (
+    FEATURES_PATH,
     CheckResult,
     HarnessError,
     check_allowed_paths,
@@ -36,6 +37,11 @@ def make_spec():
             },
         ]
     }
+
+
+def test_default_feature_path_tracks_the_current_internal_spec() -> None:
+    assert FEATURES_PATH.parts[-3:] == ("docs", "internal", "feature_list.json")
+    assert FEATURES_PATH.is_file()
 
 
 def test_next_feature_prefers_executable_in_progress_work() -> None:

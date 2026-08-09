@@ -49,6 +49,7 @@ if leaked:
     raise SystemExit(f"installed wheel contains retired modules: {leaked}")
 required_resources = {
     "jobfindsme/resources/connectors/boss_fetch.js",
+    "jobfindsme/resources/jobfindsme/SKILL.md",
     "jobfindsme/resources/taxonomy/skills.json",
 }
 missing_resources = required_resources - set(names)

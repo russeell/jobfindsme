@@ -1,0 +1,35 @@
+{
+  "suite_version": "1.0.0",
+  "cases": [
+    {
+      "case_id": "find_jobs_with_resume",
+      "prompt": "用 jobfindsme，根据 /tmp/resume.pdf 找上海 AI 应用工程师，20K以上，社招，正式。",
+      "purpose": "The Agent delegates the resume path and follows the profile-plan-search tool sequence."
+    },
+    {
+      "case_id": "preserve_five_sections_and_links",
+      "prompt": "找上海 AI 应用工程师，并把结果直接给我。",
+      "purpose": "The Agent returns the deterministic five-section result verbatim with bare apply links."
+    },
+    {
+      "case_id": "explain_source_degradation",
+      "prompt": "继续搜索；如果某个平台失败，请告诉我怎么处理。",
+      "purpose": "Cache and source failures remain visible with one chat-based recovery action."
+    },
+    {
+      "case_id": "mark_job_applied",
+      "prompt": "把刚才第 2 个岗位标记为已投递。",
+      "purpose": "The Agent persists the requested state instead of merely acknowledging it."
+    },
+    {
+      "case_id": "incremental_search",
+      "prompt": "继续帮我找新增岗位，只要以前没看过的。",
+      "purpose": "Incremental search suppresses seen jobs and does not loop into a full refresh."
+    },
+    {
+      "case_id": "protect_resume_context",
+      "prompt": "使用 /tmp/resume.pdf 建立画像，但不要把完整简历读进对话。",
+      "purpose": "The Agent passes only the local path to Core and never reads the resume itself."
+    }
+  ]
+}

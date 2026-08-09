@@ -58,3 +58,31 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: bash scripts/smoke_fast_install.sh
+
+  agent-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Canonical Skill is synchronized into the wheel package
+        run: python scripts/sync_skill.py --check
+      - name: No-Skill baseline must fail
+        run: >-
+          python -m jobfindsme.evaluation.agent_behavior.cli
+          --cases evals/agent_behavior/cases.json
+          --transcripts evals/agent_behavior/fixtures/baseline.json
+          --report ${{ runner.temp }}/agent-baseline.json
+          --expect fail
+          --require-evidence contract_fixture
+      - name: Skill contract must pass
+        run: >-
+          python -m jobfindsme.evaluation.agent_behavior.cli
+          --cases evals/agent_behavior/cases.json
+          --transcripts evals/agent_behavior/fixtures/with_skill.json
+          --report ${{ runner.temp }}/agent-with-skill.json
+          --expect pass
+          --require-evidence contract_fixture

@@ -19,7 +19,9 @@
   "quality_gates": [
     "python3 -m pytest",
     "python3 -m ruff check .",
-    "python3 -m ruff format --check ."
+    "python3 -m ruff format --check .",
+    "python3 scripts/sync_skill.py --check",
+    "python3 -m jobfindsme.evaluation.agent_behavior.cli --cases evals/agent_behavior/cases.json --transcripts evals/agent_behavior/fixtures/with_skill.json --report /tmp/jobfindsme-agent-contract.json --expect pass --require-evidence contract_fixture"
   ],
   "features": [
     {
@@ -127,7 +129,7 @@
         "integrations/**",
         "pyproject.toml",
         "scripts/**",
-        "integrations/shared/SKILL.md",
+        "skills/jobfindsme/SKILL.md",
         "docs/internal/feature_list.json",
         "src/**",
         "tests/**",
@@ -352,6 +354,88 @@
         "No public quality claim is made until provenance gates pass."
       ],
       "evidence_path": "reports/features/EVAL-001.json"
+    },
+    {
+      "id": "AGENT-EVAL-001",
+      "title": "Distribute one Skill and test Agent behavior as code",
+      "status": "done",
+      "blocked_by": [
+        "MCP-001",
+        "UX-001"
+      ],
+      "allowed_paths": [
+        ".agents/**",
+        ".claude-plugin/**",
+        ".codex-plugin/**",
+        ".cursor-plugin/**",
+        ".github/workflows/ci.yml",
+        ".mcp.json",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "INSTALL.md",
+        "README.md",
+        "README.en.md",
+        "docs/**",
+        "evals/agent_behavior/**",
+        "integrations/**",
+        "pyproject.toml",
+        "reports/features/AGENT-EVAL-001.json",
+        "scripts/**",
+        "skills/jobfindsme/SKILL.md",
+        "src/jobfindsme/evaluation/agent_behavior/**",
+        "src/jobfindsme/resources/jobfindsme/SKILL.md",
+        "tests/cli/**",
+        "tests/evaluation/test_agent_behavior.py",
+        "tests/harness/test_feature_harness.py",
+        "tests/installer/**",
+        "tests/integrations/**",
+        "tests/plugins/**"
+      ],
+      "acceptance": [
+        "Codex, Claude, and Cursor plugin adapters reference one canonical Skill and one MCP definition.",
+        "The packaged wheel contains an exact generated copy of the canonical Skill.",
+        "Six fixed prompts verify tool routing, output preservation, links, source degradation, job-state updates, incremental search, and resume privacy.",
+        "The no-Skill fixture fails and the Skill fixture passes in CI.",
+        "Contract fixtures cannot be presented as live cross-Agent evidence.",
+        "Legacy host configuration writes remain a documented compatibility fallback rather than the primary path."
+      ],
+      "checks": [
+        [
+          "python3",
+          "scripts/sync_skill.py",
+          "--check"
+        ],
+        [
+          "python3",
+          "-m",
+          "pytest",
+          "tests/plugins",
+          "tests/evaluation/test_agent_behavior.py"
+        ]
+      ],
+      "design_research_required": true,
+      "research_refs": [
+        {
+          "category": "open_source",
+          "title": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "adopted_pattern": "Keep skills host-neutral, add thin native adapters, and test behavioral workflows rather than only library functions.",
+          "rejected_or_not_adopted": "Do not copy a software-development workflow into a job-search domain without domain-specific acceptance prompts."
+        },
+        {
+          "category": "official_guide",
+          "title": "Claude Code plugins",
+          "url": "https://docs.anthropic.com/en/docs/claude-code/plugins",
+          "adopted_pattern": "Use a repository marketplace and native plugin manifest for Skill and MCP discovery.",
+          "rejected_or_not_adopted": "Do not require the Agent to rewrite user configuration when a native plugin is available."
+        }
+      ],
+      "local_constraints": [
+        "The local Python runtime is installed once and remains independent of the Agent host.",
+        "Cursor marketplace publication remains pending until its signed-in submission is approved.",
+        "Live Agent evidence must be redacted and must never contain complete resume text or browser secrets."
+      ],
+      "evidence_path": "reports/features/AGENT-EVAL-001.json"
     },
     {
       "id": "REGISTRY-001",

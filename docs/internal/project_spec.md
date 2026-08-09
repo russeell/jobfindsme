@@ -137,7 +137,7 @@ evidence, but must not silently reorder, omit, or rewrite the base result.
 ## 6. MCP contract
 
 The server name and all public product identifiers use lowercase `jobfindsme`.
-The MCP surface contains nine focused tools:
+The MCP surface contains eight focused tools:
 
 1. `setup_profile`
 2. `configure_search`

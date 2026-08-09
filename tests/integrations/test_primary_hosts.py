@@ -1,35 +1,28 @@
 from __future__ import annotations
 
 import json
-import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
-INTEGRATIONS = ROOT / "integrations"
 
 
 def test_primary_host_configs_launch_the_same_local_stdio_server() -> None:
-    codex = tomllib.loads(
-        (INTEGRATIONS / "codex" / "config.toml.template").read_text()
-    )["mcp_servers"]["jobfindsme"]
-    claude = json.loads((INTEGRATIONS / "claude" / ".mcp.json.template").read_text())[
-        "mcpServers"
-    ]["jobfindsme"]
-    cursor = json.loads((INTEGRATIONS / "cursor" / ".mcp.json.template").read_text())[
-        "mcpServers"
-    ]["jobfindsme"]
+    mcp = json.loads((ROOT / ".mcp.json").read_text())["mcpServers"]["jobfindsme"]
+    assert mcp["command"] == "bash"
+    assert "jobfindsme.mcp" in " ".join(mcp["args"])
 
-    for config in (codex, claude, cursor):
-        assert config["command"] == "__PYTHON__"
-        assert config["args"] == ["-m", "jobfindsme.mcp"]
-        assert config["env"]["PYTHONPATH"] == "__PROJECT_ROOT__/src"
-        assert config["env"]["JOBFINDSME_DB_PATH"].endswith("jobfindsme.db")
-    assert cursor["cwd"] == "__PROJECT_ROOT__"
-    assert codex["default_tools_approval_mode"] == "prompt"
+    for manifest_path in (
+        ".codex-plugin/plugin.json",
+        ".claude-plugin/plugin.json",
+        ".cursor-plugin/plugin.json",
+    ):
+        manifest = json.loads((ROOT / manifest_path).read_text())
+        assert manifest["skills"] == "./skills/"
+        assert manifest["mcpServers"] == "./.mcp.json"
 
 
 def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
-    shared = (INTEGRATIONS / "shared" / "SKILL.md").read_text()
+    shared = (ROOT / "skills" / "jobfindsme" / "SKILL.md").read_text()
 
     required_phrases = [
         "Never read",
@@ -82,14 +75,9 @@ def test_search_jobs_tool_description_declares_text_immutability() -> None:
     assert "verbatim" in desc
 
 
-def test_each_primary_host_ships_a_discoverable_skill() -> None:
-    paths = [
-        INTEGRATIONS / "codex" / "skills" / "jobfindsme" / "SKILL.md",
-        INTEGRATIONS / "claude" / "skills" / "jobfindsme" / "SKILL.md",
-        INTEGRATIONS / "cursor" / "skills" / "jobfindsme" / "SKILL.md",
-    ]
+def test_primary_hosts_share_one_discoverable_skill() -> None:
+    content = (ROOT / "skills" / "jobfindsme" / "SKILL.md").read_text()
 
-    for path in paths:
-        content = path.read_text()
-        assert content.startswith("---\nname: jobfindsme\n")
-        assert "integrations/shared/SKILL.md" in content
+    assert content.startswith("---\nname: jobfindsme\n")
+    assert "Never read" in content
+    assert not (ROOT / "integrations" / "shared" / "SKILL.md").exists()

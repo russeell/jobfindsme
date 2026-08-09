@@ -65,6 +65,28 @@ Dependency direction is one way. Core must not import MCP, an Agent SDK,
 a hosted model provider, or a notification SDK. Adapters must not
 duplicate matching rules.
 
+## Agent distribution
+
+```text
+skills/jobfindsme/SKILL.md                 canonical behavior source
+  ├─ .codex-plugin/plugin.json            Codex adapter
+  ├─ .claude-plugin/plugin.json           Claude adapter
+  ├─ .cursor-plugin/plugin.json           Cursor adapter
+  └─ src/jobfindsme/resources/jobfindsme/ generated wheel mirror
+
+.mcp.json                                 shared stdio MCP definition
+```
+
+Host adapters contain metadata and paths only. They must not fork workflow
+instructions. `scripts/sync_skill.py --check` and plugin distribution tests
+enforce this boundary.
+
+Agent behavior has a separate gate from Python correctness. Fixed prompts and
+normalized transcripts under `evals/agent_behavior/` test tool routing,
+five-section output, direct links, degraded-source handling, state updates,
+incremental search, and resume privacy. Contract fixtures run in CI; live
+Codex/Claude/Cursor transcripts are required for release compatibility claims.
+
 ## Modules
 
 | Path | Role |
@@ -78,8 +100,10 @@ duplicate matching rules.
 | `tracking` | impressions (incremental radar) and user job state |
 | `presentation/` | deterministic rendering of results and blocks |
 | `mcp/` | protocol entry, registry, handlers, responses |
-| `installer/` | host adapter installation (Codex / Claude / Cursor / ZCode) |
+| `installer/` | compatibility installation for hosts without native plugins |
 | `evaluation/` | dev-time quality gates (datasets, metrics, regression, field trials) |
+| `skills/` | canonical Agent behavior shared by native host adapters |
+| `evals/agent_behavior/` | fixed prompts and cross-Agent behavior evidence |
 | `cli.py` | CLI for setup, doctor, profile import, admin |
 
 A complete engineering spec lives at `docs/internal/project_spec.md`;

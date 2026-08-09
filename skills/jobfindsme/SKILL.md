@@ -1,6 +1,6 @@
 ---
 name: jobfindsme
-description: Find, compare, save, and track jobs with the local jobfindsme engine. Two user-facing scenarios: find matching jobs fast, and schedule pushes at any time/frequency.
+description: "Find, compare, save, and track jobs with the local jobfindsme engine. Two user-facing scenarios: find matching jobs fast, and schedule pushes at any time/frequency."
 ---
 
 # jobfindsme

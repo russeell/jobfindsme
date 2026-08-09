@@ -3,24 +3,26 @@
 # jobfindsme 一键安装
 # 本地求职雷达 · 聚合四大招聘平台 · Agent 语义匹配 · 增量岗位追踪
 #
-# 用法（人类用户）:
+# 用法（推荐，只安装本地运行时）:
 #   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
-#     | bash -s -- <agent>
+#     | bash
 #
+# 兼容旧式 MCP 配置:
+#   bash scripts/install.sh <agent>
 #   <agent>: codex | claude | cursor | zcode
-#   （其他 Agent 用 jobfindsme config 输出标准 JSON 手动配置）
 #
 # 也可直接: bash scripts/install.sh <agent>
 #
 # 设计原则:
-#   - 一条命令完成「检测 Python → 建运行时 → 装包 → 接入 Agent → 打印下一步」
+#   - 默认只完成「检测 Python → 建运行时 → 装包 → 打印原生插件命令」
+#   - 只有显式传入 <agent> 才写旧式 MCP 配置
 #   - 清华镜像加速依赖下载；Release wheel 必须通过 SHA-256 校验
 #   - 检测到 uv 则用 uv pip 加速；运行时布局与 venv 一致，可重复执行
 #   - 不克隆源码、不装开发依赖、不下载浏览器
 
 set -euo pipefail
 
-VERSION="0.9.0"
+VERSION="0.10.0"
 WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
 CHECKSUM_GH="${WHEEL_GH}.sha256"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -102,10 +104,18 @@ green "✓ 安装完成: $("${BIN[@]}" --version 2>&1)"
 # ── 4. 接入 Agent ────────────────────────────────────────────────────────────
 if [ -z "$AGENT" ]; then
   echo
-  bold "📎 接入你的 AI Agent（任选其一）:"
-  for a in "${AGENTS[@]}"; do
-    printf '    %s\n' "~/.jobfindsme/runtime/bin/python -m jobfindsme connect $a"
-  done
+  bold "📎 安装当前 Agent 的原生插件:"
+  echo
+  echo "  Codex:"
+  echo "    codex plugin marketplace add russeell/jobfindsme --ref main"
+  echo "    codex plugin add jobfindsme@jobfindsme"
+  echo
+  echo "  Claude Code:"
+  echo "    claude plugin marketplace add russeell/jobfindsme"
+  echo "    claude plugin install jobfindsme@jobfindsme"
+  echo
+  echo "  Cursor（市场上架前兼容入口）:"
+  echo "    ~/.jobfindsme/runtime/bin/python -m jobfindsme connect cursor"
   echo
   bold "🚀 两步启动:"
   echo
@@ -122,6 +132,7 @@ if [ -z "$AGENT" ]; then
   echo "  │    用 jobfindsme 根据简历找上海 AI 应用工程师           │"
   echo "  └─────────────────────────────────────────────────────┘"
   echo
+  dim  "其他 MCP 客户端: jobfindsme config"
   dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
   exit 0
 fi

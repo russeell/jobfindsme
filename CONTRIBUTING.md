@@ -1,5 +1,22 @@
 # Contributing
 
+## Agent Skill
+
+`skills/jobfindsme/SKILL.md` is the only source of Agent behavior. Do not edit
+the packaged copy under `src/jobfindsme/resources/` directly and do not create
+host-specific Skill forks.
+
+```bash
+python scripts/sync_skill.py
+python scripts/sync_skill.py --check
+python -m pytest tests/plugins tests/evaluation/test_agent_behavior.py
+```
+
+Changes to tool routing, output preservation, source recovery, job-state
+updates, incremental search, or resume privacy need a RED baseline transcript
+and a GREEN Skill transcript. Fixtures are not live Agent evidence; release
+claims require redacted Codex, Claude, and Cursor runs.
+
 ## Skill taxonomy
 
 Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`.

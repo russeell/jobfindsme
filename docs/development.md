@@ -23,10 +23,27 @@ python -m pytest
 python -m ruff check .
 python -m ruff format --check .
 bash scripts/smoke_installed_package.sh   # built-wheel sanity
+python scripts/sync_skill.py --check       # canonical Skill matches wheel copy
 ```
 
 CI (`ci.yml`) runs tests on Python 3.11/3.12/3.13 plus the synthetic
-evaluation regression gate and the clean-install smoke test.
+evaluation regression gate, the clean-install smoke test, and the Agent
+behavior RED/GREEN contract in `evals/agent_behavior/`.
+
+## Changing Agent behavior
+
+Edit only `skills/jobfindsme/SKILL.md`, then generate the packaged wheel copy:
+
+```bash
+python scripts/sync_skill.py
+python -m pytest tests/plugins tests/evaluation/test_agent_behavior.py
+```
+
+The same Skill is consumed by the Codex, Claude, and Cursor plugin manifests.
+The old host-specific `connect` installer is a compatibility adapter, not a
+second Skill source. Fixture behavior tests are deterministic CI evidence;
+cross-Agent release claims require redacted `live_agent` transcripts from all
+three hosts. See `evals/agent_behavior/README.md`.
 
 ## Release
 
