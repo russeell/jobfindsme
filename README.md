@@ -2,7 +2,7 @@
 
 # jobfindsme · AI 求职雷达
 
-**一句话同时搜 BOSS直聘、猎聘、智联招聘、前程无忧，找到匹配你简历的岗位。**
+**一句话聚合 BOSS直聘、猎聘、智联招聘和前程无忧，按简历筛选并持续追踪岗位。**
 
 <p>
   <a href="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml"><img src="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -29,7 +29,7 @@
 
 | 问题 | jobfindsme 的做法 |
 |---|---|
-| 多个平台来回切 | 一句话同时搜 BOSS直聘、猎聘、智联招聘、前程无忧 |
+| 多个平台来回切 | 统一检索四个来源；单源失败会明确提示并返回其他来源 |
 | 推荐一堆不相关岗位 | 先硬过滤角色、城市、薪资、社招/校招、正式/实习，再排序 |
 | 反复看到同一个岗位 | 本地记录已看、已投、已忽略，只汇报变化 |
 | 不知道为什么推荐 | 每个岗位固定给出匹配度、证据、风险和投递链接 |
@@ -41,12 +41,6 @@
 用 jobfindsme，根据本地简历（路径：~/Documents/resume.pdf），
 找上海和深圳的 AI 应用工程师，20K以上，社招，正式。
 ```
-
-真实 MCP 输出示例：
-
-<p align="center">
-  <img src="docs/readme-demo.png" alt="jobfindsme 真实四平台 MCP 输出示例" width="900">
-</p>
 
 ---
 

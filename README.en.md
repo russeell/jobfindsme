@@ -1,6 +1,6 @@
 # jobfindsme · AI Job Search Radar
 
-**One sentence searches BOSS直聘, 猎聘 (Liepin), 智联招聘 and 前程无忧 together, matching jobs against your resume.**
+**One sentence brings together jobs from BOSS直聘, 猎聘 (Liepin), 智联招聘 and 前程无忧, then filters and tracks them against your resume.**
 
 [Chinese](README.md) · [Install](INSTALL.md) · [Architecture](docs/architecture.md)
 
