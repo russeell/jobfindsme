@@ -2,18 +2,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from evaluation.field_trial.improvement import (
+    analyze_engineering_improvements,
+)
+from evaluation.field_trial.live_loop import (
+    LiveSearchLoopReport,
+    LoopJob,
+    LoopQuality,
+)
 from jobfindsme.contracts import (
     SearchRunDiagnostics,
     SourceRunStats,
     SourceRunStatus,
-)
-from jobfindsme.evaluation.field_trial.improvement import (
-    analyze_engineering_improvements,
-)
-from jobfindsme.evaluation.field_trial.live_loop import (
-    LiveSearchLoopReport,
-    LoopJob,
-    LoopQuality,
 )
 
 

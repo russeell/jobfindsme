@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from jobfindsme.evaluation.agent_behavior.evaluator import evaluate_behavior_suite
+from evaluation.agent_behavior.evaluator import evaluate_behavior_suite
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = ROOT / "evals/agent_behavior/cases.json"
@@ -58,7 +58,7 @@ def test_contract_fixture_cannot_be_claimed_as_live_agent_evidence(
         [
             sys.executable,
             "-m",
-            "jobfindsme.evaluation.agent_behavior.cli",
+            "evaluation.agent_behavior.cli",
             "--cases",
             str(CASES),
             "--transcripts",

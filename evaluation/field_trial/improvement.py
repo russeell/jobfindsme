@@ -17,9 +17,9 @@ from pathlib import Path
 
 from pydantic import Field
 
+from evaluation.field_trial.live_loop import LiveSearchLoopReport
+from evaluation.metrics.runner import ChineseBenchmarkReport
 from jobfindsme.contracts import SourceRunStatus, StrictModel
-from jobfindsme.evaluation.field_trial.live_loop import LiveSearchLoopReport
-from jobfindsme.evaluation.metrics.runner import ChineseBenchmarkReport
 
 
 class ActionPriority(StrEnum):

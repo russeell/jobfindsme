@@ -13,8 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.contracts import JobMatch, JobPosting, SearchPlan, StrictModel
-from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
 
 # ── L1: Snapshot save / replay ───────────────────────────────────────────────
 
@@ -300,7 +300,7 @@ def diff_loop_reports(
     later_label: str = "later",
 ) -> WindowDiffReport:
     """Diff two Live Loop reports to identify new, changed, and closed jobs."""
-    from jobfindsme.evaluation.field_trial.live_loop import LiveSearchLoopReport
+    from evaluation.field_trial.live_loop import LiveSearchLoopReport
 
     earlier = LiveSearchLoopReport.model_validate_json(
         Path(earlier_path).read_text(encoding="utf-8")

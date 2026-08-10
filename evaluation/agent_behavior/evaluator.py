@@ -5,7 +5,7 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from jobfindsme.evaluation.agent_behavior.models import (
+from evaluation.agent_behavior.models import (
     BehaviorCaseResult,
     BehaviorCaseSuite,
     BehaviorEvent,

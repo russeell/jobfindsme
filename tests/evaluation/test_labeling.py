@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from jobfindsme.contracts import SearchRunDiagnostics
-from jobfindsme.evaluation.datasets.labels import (
+from evaluation.datasets.labels import (
     JobLabel,
     assemble_field_trial_dataset,
     assemble_labeled_dataset,
@@ -19,12 +18,13 @@ from jobfindsme.evaluation.datasets.labels import (
     new_daily_template,
     write_daily_template,
 )
-from jobfindsme.evaluation.field_trial.live_loop import (
+from evaluation.field_trial.live_loop import (
     LiveSearchLoopReport,
     LoopJob,
     LoopQuality,
 )
-from jobfindsme.evaluation.metrics.runner import evaluate_chinese_dataset
+from evaluation.metrics.runner import evaluate_chinese_dataset
+from jobfindsme.contracts import SearchRunDiagnostics
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ def test_daily_template_roundtrip(tmp_path) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2))
 
     # Read back
-    from jobfindsme.evaluation.datasets.labels import read_daily_labels
+    from evaluation.datasets.labels import read_daily_labels
 
     loaded = read_daily_labels(path)
     assert loaded.labels[0].relevance == 3
@@ -252,7 +252,7 @@ def test_evaluate_chinese_dataset(tmp_path) -> None:
         day_paths=[tmp_path / "day_01.json", tmp_path / "day_02.json"],
     )
 
-    from jobfindsme.evaluation.datasets.labels import write_labeled_dataset
+    from evaluation.datasets.labels import write_labeled_dataset
 
     dataset_path = tmp_path / "labeled.json"
     write_labeled_dataset(dataset_path, dataset)
@@ -300,7 +300,7 @@ def test_chinese_metrics_macro_average_each_day(tmp_path) -> None:
         provenance={"labeler": "test"},
         day_paths=paths,
     )
-    from jobfindsme.evaluation.datasets.labels import write_labeled_dataset
+    from evaluation.datasets.labels import write_labeled_dataset
 
     dataset_path = tmp_path / "macro.json"
     write_labeled_dataset(dataset_path, dataset)
@@ -327,7 +327,7 @@ def test_unannotated_template_is_not_counted_as_human_evidence(tmp_path) -> None
         provenance={"labeler": "pending"},
         day_paths=[path],
     )
-    from jobfindsme.evaluation.datasets.labels import write_labeled_dataset
+    from evaluation.datasets.labels import write_labeled_dataset
 
     dataset_path = tmp_path / "pending.json"
     write_labeled_dataset(dataset_path, dataset)
@@ -375,7 +375,7 @@ def test_synthetic_50_job_dataset_is_never_claim_ready(tmp_path) -> None:
             "labeler": "builder-script",
         },
     )
-    from jobfindsme.evaluation.datasets.labels import write_labeled_dataset
+    from evaluation.datasets.labels import write_labeled_dataset
 
     dataset_path = tmp_path / "synthetic.json"
     write_labeled_dataset(dataset_path, dataset)
@@ -454,7 +454,7 @@ def test_field_claim_requires_hashed_live_loop_reports(tmp_path) -> None:
         },
         day_paths=day_paths,
     )
-    from jobfindsme.evaluation.datasets.labels import write_labeled_dataset
+    from evaluation.datasets.labels import write_labeled_dataset
 
     dataset_path = tmp_path / "field.json"
     write_labeled_dataset(dataset_path, dataset)

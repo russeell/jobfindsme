@@ -18,6 +18,10 @@ from uuid import uuid4
 
 from pydantic import Field
 
+from evaluation.datasets.labels import (
+    new_daily_template,
+    write_daily_template,
+)
 from jobfindsme.contracts import (
     EmploymentType,
     RecruitmentTrack,
@@ -27,10 +31,6 @@ from jobfindsme.contracts import (
     StrictModel,
 )
 from jobfindsme.core import jobfindsmecore
-from jobfindsme.evaluation.datasets.labels import (
-    new_daily_template,
-    write_daily_template,
-)
 
 
 class LoopJob(StrictModel):

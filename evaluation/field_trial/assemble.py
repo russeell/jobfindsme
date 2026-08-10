@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from jobfindsme.evaluation.datasets.labels import (
+from evaluation.datasets.labels import (
     assemble_field_trial_dataset,
     write_labeled_dataset,
 )

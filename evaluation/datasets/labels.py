@@ -247,7 +247,7 @@ def assemble_field_trial_dataset(
     modified report, changed profile, or changed Search Plan must stop assembly
     instead of silently producing plausible-looking metrics.
     """
-    from jobfindsme.evaluation.field_trial.live_loop import LiveSearchLoopReport
+    from evaluation.field_trial.live_loop import LiveSearchLoopReport
 
     if not labeler.strip():
         raise ValueError("labeler must not be empty")

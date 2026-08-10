@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from jobfindsme.evaluation.metrics.runner import (
+from evaluation.metrics.runner import (
     evaluate_chinese_dataset,
     evaluate_dataset,
 )

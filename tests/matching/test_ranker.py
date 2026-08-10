@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
     EmploymentType,
@@ -10,7 +11,6 @@ from jobfindsme.contracts import (
     SearchPlan,
     SourceKind,
 )
-from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching.ranker import (
     filter_jobs,

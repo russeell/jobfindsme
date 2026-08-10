@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from jobfindsme.evaluation.datasets.builder import build_dataset, write_dataset
-from jobfindsme.evaluation.metrics.runner import evaluate_dataset
+from evaluation.datasets.builder import build_dataset, write_dataset
+from evaluation.metrics.runner import evaluate_dataset
 
 
 def test_versioned_dataset_has_120_balanced_cases() -> None:

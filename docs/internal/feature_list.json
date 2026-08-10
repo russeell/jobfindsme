@@ -21,7 +21,7 @@
     "python3 -m ruff check .",
     "python3 -m ruff format --check .",
     "python3 scripts/sync_skill.py --check",
-    "python3 -m jobfindsme.evaluation.agent_behavior.cli --cases evals/agent_behavior/cases.json --transcripts evals/agent_behavior/fixtures/with_skill.json --report /tmp/jobfindsme-agent-contract.json --expect pass --require-evidence contract_fixture"
+    "python3 -m evaluation.agent_behavior.cli --cases evals/agent_behavior/cases.json --transcripts evals/agent_behavior/fixtures/with_skill.json --report /tmp/jobfindsme-agent-contract.json --expect pass --require-evidence contract_fixture"
   ],
   "features": [
     {
@@ -235,7 +235,7 @@
         [
           "python3",
           "-m",
-          "jobfindsme.evaluation.cli",
+          "evaluation.cli",
           "--dataset",
           "data/eval/v0.1.json",
           "--report",

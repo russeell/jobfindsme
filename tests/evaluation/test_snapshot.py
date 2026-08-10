@@ -2,20 +2,20 @@
 
 from pathlib import Path
 
+from evaluation.regression.legacy_matcher import LegacyBM25Matcher
+from evaluation.regression.snapshot import (
+    compare_results,
+    diff_loop_reports,
+    load_job_snapshot,
+    replay_snapshot,
+    save_job_snapshot,
+)
 from jobfindsme.contracts import (
     JobLiveness,
     JobPosting,
     SearchPlan,
     SourceEvidence,
     SourceKind,
-)
-from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
-from jobfindsme.evaluation.regression.snapshot import (
-    compare_results,
-    diff_loop_reports,
-    load_job_snapshot,
-    replay_snapshot,
-    save_job_snapshot,
 )
 
 

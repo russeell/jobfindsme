@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from jobfindsme.contracts import DiscoverySource, SourceRunStatus
-from jobfindsme.core import jobfindsmecore
-from jobfindsme.evaluation.field_trial.live_loop import (
+from evaluation.field_trial.live_loop import (
     run_live_search_loop,
     write_loop_report,
 )
+from jobfindsme.contracts import DiscoverySource, SourceRunStatus
+from jobfindsme.core import jobfindsmecore
 
 
 def _configured_core(tmp_path: Path) -> jobfindsmecore:

@@ -38,6 +38,7 @@ import zipfile
 wheel = sys.argv[1]
 forbidden = (
     "jobfindsme/connectors/http_platforms.py",
+    "jobfindsme/evaluation/",
     "jobfindsme/monitor_configs.py",
     "jobfindsme/monitoring/",
     "jobfindsme/notifications/",

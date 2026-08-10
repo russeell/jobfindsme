@@ -8,6 +8,14 @@ from typing import Any
 
 from pydantic import Field, ValidationError
 
+from evaluation.datasets.labels import (
+    LabeledDataset,
+    compute_hard_filter_fnr,
+    compute_ndcg_at_k,
+    compute_precision_at_k,
+    compute_valid_link_rate,
+)
+from evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
     JobLiveness,
@@ -15,14 +23,6 @@ from jobfindsme.contracts import (
     SourceKind,
     StrictModel,
 )
-from jobfindsme.evaluation.datasets.labels import (
-    LabeledDataset,
-    compute_hard_filter_fnr,
-    compute_ndcg_at_k,
-    compute_precision_at_k,
-    compute_valid_link_rate,
-)
-from jobfindsme.evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.importing.normalizer import normalize_job
 
 
@@ -270,7 +270,7 @@ def evaluate_chinese_dataset(path: str | Path) -> ChineseBenchmarkReport:
 def _verify_field_provenance(
     dataset: LabeledDataset,
 ) -> tuple[bool, tuple[str, ...]]:
-    from jobfindsme.evaluation.field_trial.live_loop import LiveSearchLoopReport
+    from evaluation.field_trial.live_loop import LiveSearchLoopReport
 
     provenance = dataset.provenance
     issues = []

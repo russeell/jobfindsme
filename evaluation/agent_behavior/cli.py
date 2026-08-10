@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from jobfindsme.evaluation.agent_behavior.evaluator import evaluate_behavior_suite
+from evaluation.agent_behavior.evaluator import evaluate_behavior_suite
 
 
 def main() -> int:

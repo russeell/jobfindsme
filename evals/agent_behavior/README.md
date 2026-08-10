@@ -20,13 +20,13 @@ workflow.
 The deterministic fixtures keep the Skill contract under CI:
 
 ```bash
-python -m jobfindsme.evaluation.agent_behavior.cli \
+python -m evaluation.agent_behavior.cli \
   --cases evals/agent_behavior/cases.json \
   --transcripts evals/agent_behavior/fixtures/baseline.json \
   --report /tmp/jobfindsme-agent-red.json \
   --expect fail
 
-python -m jobfindsme.evaluation.agent_behavior.cli \
+python -m evaluation.agent_behavior.cli \
   --cases evals/agent_behavior/cases.json \
   --transcripts evals/agent_behavior/fixtures/with_skill.json \
   --report /tmp/jobfindsme-agent-green.json \
@@ -43,7 +43,7 @@ Before claiming cross-Agent compatibility, record normalized transcripts from
 Codex, Claude, and Cursor with `evidence_kind: live_agent`, then run:
 
 ```bash
-python -m jobfindsme.evaluation.agent_behavior.cli \
+python -m evaluation.agent_behavior.cli \
   --cases evals/agent_behavior/cases.json \
   --transcripts reports/agent-behavior/live-vX.Y.Z.json \
   --report reports/agent-behavior/live-vX.Y.Z-report.json \
