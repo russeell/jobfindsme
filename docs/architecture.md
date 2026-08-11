@@ -11,7 +11,7 @@ Everything the user ever hears about reduces to four concepts:
 | Concept | 中文 | Meaning | Owned by |
 |---|---|---|---|
 | Profile | 我是谁 | resume parsed into reviewable facts (skills, experience, education) | `core/profile_service.py` |
-| Search | 我找什么 | roles, locations, salary, track, type — the active plan | `core/search_service.py` |
+| Search | 我找什么 | roles, locations, salary, track, type — the active plan | `core/search.py` |
 | Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `core/job_service.py` |
 | Tracking | 和上次相比有什么变化 | new / changed / reopened / closed, and applied-saved-rejected state | `tracking` (impressions, states) |
 
@@ -25,13 +25,12 @@ A search request follows one fixed path:
 
 ```text
 MCP Handler (mcp/handlers/search.py)
-  → Core Search Service (core/search_service.py)
   → SearchOrchestrator (core/search.py)
       → Connectors (connectors/boss_zhipin.py, connectors/pure_http.py)
       → Normalize / Deduplicate (importing/normalizer.py, importing/repository.py)
       → Filter / Rank (matching/ranker.py)
       → Tracking (job_impressions.py)
-  → Presentation (presentation.py)
+  → Presentation (presentation/search_result.py, presentation/job_block.py)
   → MCP Response (mcp/responses.py)
 ```
 
@@ -87,14 +86,14 @@ Codex/Claude/Cursor transcripts are required for release compatibility claims.
 
 | Path | Role |
 |---|---|
-|  domain types, one file per domain, unified exports | domain types, one file per domain, unified exports |
+| `contracts/` | domain types, one file per domain, unified exports |
 | `core/` | application layer: facade + four use cases |
 | `profiles/` | resume extraction + parser + service |
 | `matching/` | hard filter, signal extraction, deterministic coarse rank |
 | `importing/` | connectors output → normalized canonical jobs |
 | `connectors/` | BOSS直聘、猎聘、智联招聘、前程无忧的来源适配器 |
-| `tracking` | impressions (incremental radar) and user job state |
-| `presentation.py` | deterministic rendering of results and blocks |
+| `job_impressions.py`, `job_states.py` | impressions (incremental radar) and user job state |
+| `presentation/` | deterministic rendering of search results and job blocks |
 | `mcp/` | protocol entry, registry, handlers, responses |
 | `installer/` | compatibility installation for hosts without native plugins |
 | `evaluation/` | dev-time quality gates (datasets, metrics, regression, field trials) |

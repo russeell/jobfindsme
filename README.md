@@ -106,14 +106,14 @@ BOSS直聘需要登录态时，对 Agent 说：
 
 | 发布门禁 | 当前结果 |
 |---|---:|
-| Python 测试 | 315 项通过 |
+| Python 测试 | 301 项通过 |
 | 干净环境安装 + Cursor 接入 | 12 秒 |
 | Agent 行为契约 | 无 Skill 0/6，安装 Skill 后 6/6 |
-| Wheel 冒烟 | CLI、SQLite migration、8 个 MCP tools 全链路通过 |
+| Wheel 冒烟 | CLI、SQLite migration、5 个 MCP tools 全链路通过 |
 
 四来源的实时可用性会随平台安全策略和本机登录状态变化。项目不会把缓存或
 被拦截响应伪装成实时结果；每次搜索都返回逐来源状态。最新实盘报告见
-[four-source search report](reports/real-world/latest_four_source_search.md)。
+[four-source search report](evaluation/evidence/latest_four_source_search.md)。
 
 ---
 

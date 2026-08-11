@@ -14,6 +14,10 @@ uv.lock
 # Generated evaluation outputs — regenerated on demand, not committed
 evaluation/data/field_trial/*_labels.json
 evaluation/data/regression/
+evaluation/data/field_trial/
+evaluation/data/chinese_real_*.json
+evaluation/evidence/field_trial/
+evaluation/evidence/chinese_real_*.json
 evaluation/evidence/*_search_*.json
 evaluation/evidence/*_search_*.md
 build/

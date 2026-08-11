@@ -27,7 +27,7 @@ the installed wheel; it is a development-time tool, never a runtime import.
 - `pytest` — full suite (CI runs it on Python 3.11/3.12/3.13)
 - `ruff check .` and `ruff format --check .`
 - Synthetic evaluation regression gate (CI):
-  `python -m evaluation.cli --dataset data/eval/v0.1.json --report <tmp>/synthetic-evaluation.json --type synthetic`
+  `python -m evaluation.cli --dataset evaluation/data/v0.1.json --report <tmp>/synthetic-evaluation.json --type synthetic`
 - `scripts/smoke_installed_package.sh` — built wheel sanity
 
 ## Claims policy

@@ -18,15 +18,15 @@
 
 | Release gate | Current result |
 |---|---:|
-| Python tests | 315 passing |
+| Python tests | 301 passing |
 | Clean install + Cursor setup | 12 seconds |
 | Agent behavior contract | 0/6 without the Skill, 6/6 with it |
-| Wheel smoke test | CLI, SQLite migrations, and all 8 MCP tools pass end to end |
+| Wheel smoke test | CLI, SQLite migrations, and all 5 MCP tools pass end to end |
 
 Live availability changes with platform controls and local login state.
 jobfindsme never presents cache or a blocked response as fresh data; every
 search returns per-source diagnostics. See the latest
-[four-source search report](reports/real-world/latest_four_source_search.md).
+[four-source search report](evaluation/evidence/latest_four_source_search.md).
 
 ## Install
 

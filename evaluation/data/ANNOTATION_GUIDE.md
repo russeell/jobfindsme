@@ -4,7 +4,7 @@
 
 ## 标注流程
 
-每天搜索完成后，打开 `data/eval/field_trial/day_0N.json`，对每个岗位填写以下字段：
+每天搜索完成后，打开 `evaluation/data/field_trial/day_0N.json`，对每个岗位填写以下字段：
 
 只有人工检查完成后，才把该条岗位的 `annotated` 改成 `true`。模板中的
 `relevance: 0` 只是占位值；`annotated: false` 的记录不会进入正式指标。
@@ -76,16 +76,17 @@
 - provenance 保存至少 3 份原始 Live Loop 报告路径及 SHA256；
 - 评测时原始报告仍存在且 Hash 一致。
 
-手工构造、脚本生成或从 fixture 复制的岗位只能放在 `data/eval/synthetic/`，
-即使数量和指标达标也不能成为 M14 证据。
+手工构造、脚本生成或从 fixture 复制的岗位必须以 `synthetic` 或
+`chinese_seed` 标识保存在 `evaluation/data/`，即使数量和指标达标也不能成为
+正式实盘证据。
 
 ## 每日标注文件位置
 
 ```
-data/eval/field_trial/day_01.json  # 第 1 天
-data/eval/field_trial/day_02.json  # 第 2 天
+evaluation/data/field_trial/day_01.json  # 第 1 天
+evaluation/data/field_trial/day_02.json  # 第 2 天
 ...
-data/eval/field_trial/day_07.json  # 第 7 天
+evaluation/data/field_trial/day_07.json  # 第 7 天
 ```
 
 每天直接运行 Live Loop，同时保存机器报告和待标注 Top 10：
@@ -95,8 +96,8 @@ python -m evaluation.field_trial.live_loop \
   --agent-host codex \
   --allow-browser-sources \
   --day 1 \
-  --output reports/field-trials/loops/day_01.json \
-  --annotation-output data/eval/field_trial/day_01.json
+  --output evaluation/evidence/field_trial/day_01.json \
+  --annotation-output evaluation/data/field_trial/day_01.json
 ```
 
 人工逐条打开投递链接后填写标签。不要修改 Loop 原始报告；它的 Hash 会进入最终
@@ -115,9 +116,9 @@ M14 的原则门槛是“至少 3 天且至少 50 条”，但每日模板最多
 python -m evaluation.field_trial.assemble \
   --version v1.0.0 \
   --labeler russeell \
-  --days data/eval/field_trial/day_*.json \
-  --loop-reports reports/field-trials/loops/day_*.json \
-  --output data/eval/field_trial/chinese_real_v1.0.json
+  --days evaluation/data/field_trial/day_*.json \
+  --loop-reports evaluation/evidence/field_trial/day_*.json \
+  --output evaluation/data/chinese_real_v1.0.json
 ```
 
 组装器会拒绝待标注项、不同 Search Plan、不同简历画像，以及与原始报告不一致的
@@ -128,7 +129,7 @@ python -m evaluation.field_trial.assemble \
 ```bash
 python -m evaluation.cli \
   --type chinese \
-  --dataset data/eval/field_trial/chinese_real_v1.0.json \
+  --dataset evaluation/data/chinese_real_v1.0.json \
   --require-claim-ready \
-  --report reports/evaluation/chinese_real_v1.0.json
+  --report evaluation/evidence/chinese_real_v1.0.json
 ```
