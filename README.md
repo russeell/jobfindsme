@@ -46,28 +46,23 @@
 
 ## 🚀 快速开始
 
-先安装一次本地运行时：
+需要 Python 3.11+。安装一次本地运行时：
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-再用当前 Agent 的原生插件系统安装 Skill 与 MCP 适配层：
+然后把标准 MCP 配置交给 Agent（仓库根目录的 `.mcp.json` 就是这份配置）：
 
-```bash
-# Codex
-codex plugin marketplace add russeell/jobfindsme --ref main
-codex plugin add jobfindsme@jobfindsme
-
-# Claude Code
-claude plugin marketplace add russeell/jobfindsme
-claude plugin install jobfindsme@jobfindsme
-```
-
-Cursor 插件清单已经随仓库维护；市场上架前使用兼容入口：
-
-```bash
-jobfindsme connect cursor
+```json
+{
+  "mcpServers": {
+    "jobfindsme": {
+      "command": "bash",
+      "args": ["-lc", "exec \"${JOBFINDSME_PYTHON:-$HOME/.jobfindsme/runtime/bin/python}\" -m jobfindsme.mcp"]
+    }
+  }
+}
 ```
 
 重启 Agent，然后说：
@@ -76,7 +71,10 @@ jobfindsme connect cursor
 用 jobfindsme，根据 ~/Documents/resume.pdf 找上海的 AI 应用工程师，20K以上，社招。
 ```
 
-完整安装、升级和其他 MCP 客户端接入见 [INSTALL.md](INSTALL.md)。安装后先自检：
+完整简历由本地 Core 解析。Agent 只应把路径传给 `setup_profile`，不得先读取全文。
+其他客户端可用 `jobfindsme config` 打印同一份 JSON，或 `jobfindsme connect --path <配置文件>` 直接写入。
+
+安装后先自检：
 
 ```bash
 jobfindsme doctor
@@ -88,7 +86,7 @@ BOSS直聘需要登录态时，对 Agent 说：
 帮我登录 BOSS直聘
 ```
 
-它会打开专用 Chrome 窗口。扫码登录后保持窗口运行即可。
+它会打开专用 Chrome 窗口。扫码登录后保持窗口运行即可。跳过此步仍可使用无需登录的来源。
 
 ---
 
@@ -229,6 +227,31 @@ Agent 负责自然语言交互；用户追问岗位对比时，才基于返回�
 
 ---
 
+## 🔧 安装与维护
+
+**更新**：重新运行安装脚本，数据库自动迁移，历史岗位和状态保留：
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
+```
+
+**手动安装**（脚本不可用时）：
+
+```bash
+python3 -m venv ~/.jobfindsme/runtime
+~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
+  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.10.0/jobfindsme-0.10.0-py3-none-any.whl"
+```
+
+**卸载**：`jobfindsme uninstall <host>` 只移除 Agent 配置，不删数据。彻底删除前先导出：
+
+```bash
+rm -rf ~/.jobfindsme
+```
+
+---
+
 ## ❓ FAQ
 
 **Q：平台都要登录吗？**
@@ -249,6 +272,10 @@ Agent 负责自然语言交互；用户追问岗位对比时，才基于返回�
 **Q：和直接把简历发给 AI 让它搜，有什么区别？**
 通用 Agent 没有平台接入、没有跨天去重和状态记忆、也不能稳定解析 PDF 简历成结构化
 事实。jobfindsme 把这三件事做成了确定性的本地服务，Agent 只负责对话。
+
+**Q：安装超过 5 分钟？**
+停止当前命令，保留最后输出并提交 Issue。不要让 Agent 克隆仓库、安装测试依赖或下载
+整套浏览器来尝试修复。
 
 ---
 

@@ -7,23 +7,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def _json(path: str) -> dict:
-    return json.loads((ROOT / path).read_text(encoding="utf-8"))
-
-
-def test_all_host_manifests_share_identity_version_and_skill_source() -> None:
-    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
-    manifests = (
-        _json(".codex-plugin/plugin.json"),
-        _json(".claude-plugin/plugin.json"),
-        _json(".cursor-plugin/plugin.json"),
-    )
-
-    assert {manifest["name"] for manifest in manifests} == {"jobfindsme"}
-    assert {manifest["version"] for manifest in manifests} == {version}
-    assert {manifest["skills"] for manifest in manifests} == {"./skills/"}
-    assert {manifest["mcpServers"] for manifest in manifests} == {"./.mcp.json"}
-    assert (ROOT / "skills/jobfindsme/SKILL.md").is_file()
+def test_single_standard_mcp_config_is_present_and_correct() -> None:
+    """One standard MCP config in the repo root is the single source of truth."""
+    mcp = json.loads((ROOT / ".mcp.json").read_text(encoding="utf-8"))
+    server = mcp["mcpServers"]["jobfindsme"]
+    assert server["command"] == "bash"
+    assert "jobfindsme.mcp" in " ".join(server["args"])
+    assert "config.toml" not in json.dumps(mcp)
+    assert ".claude.json" not in json.dumps(mcp)
 
 
 def test_packaged_skill_is_generated_from_canonical_skill() -> None:
@@ -33,25 +24,20 @@ def test_packaged_skill_is_generated_from_canonical_skill() -> None:
     assert packaged == canonical
 
 
-def test_native_plugins_share_one_mcp_definition() -> None:
-    codex = _json(".codex-plugin/plugin.json")
-    cursor = _json(".cursor-plugin/plugin.json")
-    mcp = _json(".mcp.json")
+def test_cli_config_prints_a_valid_standard_mcp_json() -> None:
+    from jobfindsme.cli import _mcp_json_config
 
-    assert codex["mcpServers"] == "./.mcp.json"
-    assert cursor["mcpServers"] == "./.mcp.json"
-    server = mcp["mcpServers"]["jobfindsme"]
-    assert server["command"] == "bash"
+    config = _mcp_json_config()
+    server = config["mcpServers"]["jobfindsme"]
+    # Either the current interpreter or the bash wrapper is acceptable —
+    # both launch the same local stdio MCP server.
     assert "jobfindsme.mcp" in " ".join(server["args"])
-    assert "config.toml" not in json.dumps(mcp)
-    assert ".claude.json" not in json.dumps(mcp)
 
 
-def test_marketplaces_point_to_the_repository_plugin() -> None:
-    codex = _json(".agents/plugins/marketplace.json")
-    claude = _json(".claude-plugin/marketplace.json")
-
-    assert codex["plugins"][0]["name"] == "jobfindsme"
-    assert codex["plugins"][0]["source"] == {"source": "url", "url": "./"}
-    assert claude["plugins"][0]["name"] == "jobfindsme"
-    assert claude["plugins"][0]["source"] == "./"
+def test_project_version_is_consistent_across_package_and_docs() -> None:
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"][
+        "version"
+    ]
+    wheel = f"jobfindsme-{version}-py3-none-any.whl"
+    readme = (ROOT / "README.md").read_text()
+    assert wheel in readme

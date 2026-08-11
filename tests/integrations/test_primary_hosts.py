@@ -11,14 +11,8 @@ def test_primary_host_configs_launch_the_same_local_stdio_server() -> None:
     assert mcp["command"] == "bash"
     assert "jobfindsme.mcp" in " ".join(mcp["args"])
 
-    for manifest_path in (
-        ".codex-plugin/plugin.json",
-        ".claude-plugin/plugin.json",
-        ".cursor-plugin/plugin.json",
-    ):
-        manifest = json.loads((ROOT / manifest_path).read_text())
-        assert manifest["skills"] == "./skills/"
-        assert manifest["mcpServers"] == "./.mcp.json"
+    # Every host uses the same standard MCP config in the repo root
+    assert (ROOT / ".mcp.json").is_file()
 
 
 def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:

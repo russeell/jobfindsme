@@ -109,7 +109,7 @@ def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
     project = tomllib.loads((root / "pyproject.toml").read_text())
     version = project["project"]["version"]
     script = (root / "scripts" / "install.sh").read_text()
-    install_doc = (root / "INSTALL.md").read_text()
+    install_doc = (root / "README.md").read_text()
     wheel = f"jobfindsme-{version}-py3-none-any.whl"
 
     assert f'VERSION="{version}"' in script

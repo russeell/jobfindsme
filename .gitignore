@@ -10,13 +10,10 @@ build/
 *.egg-info/
 .jobfindsme/
 uv.lock
-reports/*
-!reports/features/
-reports/features/*
-!reports/features/.gitkeep
-!reports/features/*.json
-!reports/real-world/
-reports/real-world/*
-!reports/real-world/latest_four_source_search.json
-!reports/real-world/latest_four_source_search.md
+
+# Generated evaluation/report noise — regenerated on demand
+reports/evaluation/
+reports/features/
+reports/real-world/
+reports/improvements/
 build/

@@ -69,17 +69,13 @@ duplicate matching rules.
 
 ```text
 skills/jobfindsme/SKILL.md                 canonical behavior source
-  ├─ .codex-plugin/plugin.json            Codex adapter
-  ├─ .claude-plugin/plugin.json           Claude adapter
-  ├─ .cursor-plugin/plugin.json           Cursor adapter
-  └─ src/jobfindsme/resources/jobfindsme/ generated wheel mirror
+  └─ src/jobfindsme/resources/jobfindsme/  generated wheel mirror
 
 .mcp.json                                 shared stdio MCP definition
 ```
 
-Host adapters contain metadata and paths only. They must not fork workflow
-instructions. `scripts/sync_skill.py --check` and plugin distribution tests
-enforce this boundary.
+One standard MCP config plus one Skill serves every MCP-compatible host.
+`scripts/sync_skill.py --check` and distribution tests enforce the boundary.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and
 normalized transcripts under `evaluation/agent_behavior/data/` test tool routing,

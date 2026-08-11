@@ -2,7 +2,7 @@
 
 **One sentence brings together jobs from BOSS直聘, 猎聘 (Liepin), 智联招聘 and 前程无忧, then filters and tracks them against your resume.**
 
-[Chinese](README.md) · [Install](INSTALL.md) · [Architecture](docs/architecture.md)
+[Chinese](README.md) · [Architecture](docs/architecture.md)
 
 > ⭐ If jobfindsme saves you time, give it a star so more job seekers can find it.
 
@@ -50,8 +50,7 @@ claude plugin install jobfindsme@jobfindsme
 
 The Cursor manifest is maintained in this repository. Until its marketplace
 listing is approved, use `jobfindsme connect cursor`. Other MCP clients can use
-`jobfindsme config` or `jobfindsme connect --path <file>`. See
-[INSTALL.md](INSTALL.md) for upgrades and fallback installation.
+`jobfindsme config` or `jobfindsme connect --path <file>`.
 
 ## Use
 
