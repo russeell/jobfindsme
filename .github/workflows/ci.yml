@@ -26,7 +26,7 @@ jobs:
       - name: Synthetic evaluation regression gate
         run: >-
           python -m evaluation.cli
-          --dataset data/eval/v0.1.json
+          --dataset evaluation/data/v0.1.json
           --report ${{ runner.temp }}/synthetic-evaluation.json
           --type synthetic
       - run: ruff check .

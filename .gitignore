@@ -11,9 +11,9 @@ build/
 .jobfindsme/
 uv.lock
 
-# Generated evaluation/report noise — regenerated on demand
-reports/evaluation/
-reports/features/
-reports/real-world/
-reports/improvements/
+# Generated evaluation outputs — regenerated on demand, not committed
+evaluation/data/field_trial/*_labels.json
+evaluation/data/regression/
+evaluation/evidence/*_search_*.json
+evaluation/evidence/*_search_*.md
 build/

@@ -35,7 +35,6 @@ from jobfindsme.core.job_service import JobUseCase
 from jobfindsme.core.privacy_service import PrivacyUseCase
 from jobfindsme.core.profile_service import ProfileUseCase
 from jobfindsme.core.search import SearchOrchestrator
-from jobfindsme.core.search_service import SearchUseCase
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
@@ -82,6 +81,7 @@ class jobfindsmecore:
             discovery=discovery,
             impressions=job_impressions,
             subscriptions=subscriptions,
+            search_plans=search_plans,
         )
 
         # Domain services referenced by tests and the doctor.
@@ -102,13 +102,7 @@ class jobfindsmecore:
             context=self.context,
             profiles=profiles,
         )
-        self.search_use_case = SearchUseCase(
-            context=self.context,
-            search_plans=search_plans,
-            profiles=profiles,
-            subscriptions=subscriptions,
-            orchestrator=orchestrator,
-        )
+        self.search_use_case = orchestrator
         self.job_use_case = JobUseCase(
             context=self.context,
             jobs=jobs,

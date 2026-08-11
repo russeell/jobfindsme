@@ -70,4 +70,4 @@ def write_dataset(path: str | Path) -> None:
 
 
 if __name__ == "__main__":
-    write_dataset("data/eval/v0.1.json")
+    write_dataset("evaluation/data/v0.1.json")
