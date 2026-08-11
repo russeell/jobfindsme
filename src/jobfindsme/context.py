@@ -74,7 +74,8 @@ class ActiveContextService:
             plan = plans[-1] if plans else None
         if require_plan and plan is None:
             raise ValueError(
-                "search is not configured; call configure_search before searching"
+                "search is not configured; "
+                "run setup (with target_roles) before searching"
             )
         self.activate(
             workspace_id=workspace.workspace_id,

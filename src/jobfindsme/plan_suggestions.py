@@ -43,7 +43,7 @@ def suggest_search_plan(summary: ProfileSummary | None) -> SuggestedPlan:
         return SuggestedPlan(
             target_roles=(),
             ready=False,
-            reasoning="尚未确认简历。请先调用 setup_profile 导入并确认简历。",
+            reasoning="尚未确认简历。请先调用 setup 导入并确认简历。",
         )
 
     facts = list(summary.facts)

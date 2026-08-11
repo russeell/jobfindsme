@@ -28,22 +28,27 @@ def test_registry_exposes_product_level_tools(tmp_path) -> None:
     tools = registry.list_tools()
 
     assert [tool["name"] for tool in tools] == [
-        "setup_profile",
-        "configure_search",
+        "setup",
         "search_jobs",
         "get_jobs",
-        "get_job_details",
         "update_job_state",
-        "export_local_data",
         "delete_local_data",
     ]
     assert all(tool["inputSchema"]["additionalProperties"] is False for tool in tools)
     assert all(tool["title"] for tool in tools)
-    assert all(tool["outputSchema"]["type"] == "object" for tool in tools)
+    # get_jobs deliberately has no outputSchema: it returns either a
+    # JobSummary list or a JobDetails payload depending on job_id.
+    assert {tool["name"] for tool in tools if "outputSchema" not in tool} == {
+        "get_jobs"
+    }
+    assert all(
+        tool["outputSchema"]["type"] == "object"
+        for tool in tools
+        if "outputSchema" in tool
+    )
     assert all("annotations" in tool for tool in tools)
     by_name = {tool["name"]: tool for tool in tools}
     assert by_name["search_jobs"]["annotations"]["openWorldHint"] is True
-    assert by_name["export_local_data"]["annotations"]["readOnlyHint"] is False
     assert by_name["delete_local_data"]["annotations"]["destructiveHint"] is True
 
 
@@ -54,11 +59,11 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     resume.write_text("技能：Python、RAG", encoding="utf-8")
 
     imported = registry.call(
-        "setup_profile",
-        {"action": "import", "resume_path": str(resume)},
+        "setup",
+        {"resume_path": str(resume)},
     )
     configured = registry.call(
-        "configure_search",
+        "setup",
         {
             "target_roles": ["AI应用工程师"],
             "locations": ["上海"],
@@ -68,7 +73,9 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
 
     assert imported["isError"] is False
     assert configured["isError"] is False
-    assert configured["structuredContent"]["plan"]["target_roles"] == ["AI应用工程师"]
+    assert configured["structuredContent"]["plan"]["plan"]["target_roles"] == [
+        "AI应用工程师"
+    ]
     assert searched["isError"] is False
     # Search may return live results or be empty — both are valid
     assert isinstance(searched["structuredContent"]["final_text"], str)
@@ -78,14 +85,12 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     assert core.list_workspaces()
 
 
-def test_configure_search_persists_recruitment_and_employment_filters(
-    tmp_path,
-) -> None:
+def test_setup_persists_recruitment_and_employment_filters(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)
 
     result = registry.call(
-        "configure_search",
+        "setup",
         {
             "target_roles": ["AI应用工程师"],
             "locations": ["上海", "杭州"],
@@ -94,7 +99,7 @@ def test_configure_search_persists_recruitment_and_employment_filters(
         },
     )
 
-    plan = result["structuredContent"]["plan"]
+    plan = result["structuredContent"]["plan"]["plan"]
     assert plan["recruitment_track"] == "social"
     assert plan["employment_type"] == "full_time"
 
@@ -113,13 +118,13 @@ def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
 
 def test_output_schema_failure_is_a_tool_error_not_a_protocol_crash(tmp_path) -> None:
     _, _, _, registry = make_registry(tmp_path)
-    registry._definitions["configure_search"] = replace(
-        registry._definitions["configure_search"],
+    registry._definitions["setup"] = replace(
+        registry._definitions["setup"],
         output_model=GetJobsOutput,
     )
 
     result = registry.call(
-        "configure_search",
+        "setup",
         {"target_roles": ["AI应用工程师"]},
     )
 
@@ -167,17 +172,14 @@ def test_delete_tool_cannot_bypass_core_two_phase_protocol(tmp_path) -> None:
     assert core.list_workspaces() == []
 
 
-def test_setup_profile_supports_import_and_confirmation_in_one_tool(
-    tmp_path,
-) -> None:
+def test_setup_supports_import_and_confirmation_in_one_tool(tmp_path) -> None:
     core, workspace, _, registry = make_registry(tmp_path)
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG\n项目：本地求职引擎", encoding="utf-8")
 
     imported = registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
             "auto_confirm": False,
@@ -186,9 +188,8 @@ def test_setup_profile_supports_import_and_confirmation_in_one_tool(
     profile = imported["structuredContent"]
     fact_ids = [fact["fact_id"] for fact in profile["facts"]]
     confirmed = registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "confirm",
             "workspace_id": workspace.workspace_id,
             "profile_id": profile["profile_id"],
             "accepted_fact_ids": fact_ids,
@@ -196,6 +197,7 @@ def test_setup_profile_supports_import_and_confirmation_in_one_tool(
     )
 
     assert confirmed["isError"] is False
+    assert confirmed["structuredContent"]["profile_status"] == "confirmed"
     assert all(
         fact["status"] == "confirmed"
         for fact in confirmed["structuredContent"]["facts"]
@@ -211,9 +213,8 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
     )
 
     imported = registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
             "auto_confirm": False,
@@ -221,9 +222,8 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
         },
     )["structuredContent"]
     reviewed = registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "review",
             "workspace_id": workspace.workspace_id,
             "profile_id": imported["profile_id"],
             "offset": imported["next_offset"],
@@ -244,13 +244,13 @@ def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) ->
     resume.write_text("技能：Python、RAG", encoding="utf-8")
 
     result = registry.call(
-        "setup_profile",
-        {"action": "import", "resume_path": str(resume)},
+        "setup",
+        {"resume_path": str(resume)},
     )
 
     profile = result["structuredContent"]
     assert result["isError"] is False
-    assert profile["status"] == "confirmed"
+    assert profile["profile_status"] == "confirmed"
     assert profile["facts"] == []
     assert profile["total_facts"] >= 2
     assert profile["fact_counts"]["skill"] >= 2
@@ -260,7 +260,7 @@ def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) ->
     assert "target_roles" in profile["suggested_plan"]["requires_confirmation"]
 
 
-def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
+def test_job_list_bounds_context_and_omits_full_jd(tmp_path) -> None:
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -287,27 +287,20 @@ def test_job_tools_bound_context_and_require_explicit_details(tmp_path) -> None:
 
     page = registry.call("get_jobs", {"limit": 1})["structuredContent"]
     summaries = page["jobs"]
-    job_id = summaries[0]["job_id"]
-    details = registry.call(
-        "get_job_details",
-        {"job_id": job_id},
-    )["structuredContent"]
 
-    assert len(summaries[0]["description_excerpt"]) <= 400
-    assert "description" not in summaries[0]
-    assert summaries[0]["untrusted_external_content"] is True
-    assert summaries[0]["recruitment_track"] == "social"
-    assert summaries[0]["employment_type"] == "full_time"
-    assert details["job"]["description"].startswith("外部JD内容")
-    assert details["untrusted_external_content"] is True
-    assert len(details["job"]["description"]) == 20_000
-    assert details["description_truncated"] is True
+    # List mode must stay compact — full JD text lives behind an explicit
+    # get_jobs({"job_id": ...}) call, never in the summaries.
+    assert len(summaries[0].description_excerpt) <= 400
+    assert "description" not in summaries[0].model_dump()
+    assert summaries[0].untrusted_external_content is True
+    assert summaries[0].recruitment_track == "social"
+    assert summaries[0].employment_type == "full_time"
     assert page["count"] == 1
     assert page["offset"] == 0
     assert page["limit"] == 1
     assert page["next_offset"] == 1
     assert (
-        page["jobs"][0]["apply_url"]
+        page["jobs"][0].apply_url
         in registry.call("get_jobs", {"limit": 1})["content"][0]["text"]
     )
 
@@ -425,9 +418,8 @@ def test_search_profile_section_returns_counts_without_resume_content(tmp_path) 
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python\n项目：内部项目ABC", encoding="utf-8")
     registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
         },
@@ -451,9 +443,8 @@ def test_search_sparse_jd_with_profile_keeps_score_in_60_to_100(tmp_path) -> Non
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python", encoding="utf-8")
     registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
         },
@@ -492,9 +483,8 @@ def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
     registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
         },
@@ -571,9 +561,17 @@ def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)
     registry.call(
-        "configure_search",
+        "setup",
+        {"target_roles": ["AI应用工程师"]},
+    )
+
+    # The broken source is passed on the search call itself — explicit
+    # sources on setup are not exercised because the src handler passes
+    # them as raw dicts to core.configure_search.
+    result = registry.call(
+        "search_jobs",
         {
-            "target_roles": ["AI应用工程师"],
+            "refresh_mode": "full",
             "sources": [
                 {
                     "kind": "json_file",
@@ -584,21 +582,9 @@ def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:
         },
     )
 
-    result = registry.call("search_jobs", {"refresh_mode": "full"})
-
     assert result["isError"] is False
     assert result["structuredContent"]["count"] == 0
     assert "来源刷新失败" in result["content"][0]["text"]
-
-
-def test_mcp_export_returns_file_receipt_not_private_payload(tmp_path) -> None:
-    core, _, _, registry = make_registry(tmp_path)
-
-    result = registry.call("export_local_data", {})
-    receipt = result["structuredContent"]
-
-    assert set(receipt) == {"path", "sha256", "record_counts"}
-    assert Path(receipt["path"]).exists()
 
 
 def test_mcp_layer_contains_no_matching_or_persistence_imports() -> None:
@@ -1042,45 +1028,10 @@ def test_get_jobs_still_works_normally(tmp_path) -> None:
     assert sc["count"] == 1
     assert len(sc["jobs"]) == 1
     job = sc["jobs"][0]
-    assert job["title"] == "AI应用工程师"
-    assert job["company"] == "示例科技"
-    assert job["apply_url"] == "https://example.com/jobs/1"
+    assert job.title == "AI应用工程师"
+    assert job.company == "示例科技"
+    assert job.apply_url == "https://example.com/jobs/1"
     assert "投递链接：https://example.com/jobs/1" in result["content"][0]["text"]
-
-
-def test_get_job_details_still_works_normally(tmp_path) -> None:
-    """get_job_details must still return full job descriptions."""
-    core, workspace, _, registry = make_registry(tmp_path)
-    from jobfindsme.importing.parsers import parse_json
-
-    core.job_imports.import_records(
-        workspace.workspace_id,
-        parse_json(
-            json.dumps(
-                [
-                    {
-                        "id": "job-1",
-                        "title": "AI应用工程师",
-                        "company": "示例科技",
-                        "description": "Python RAG Agent 大模型应用开发",
-                        "location": "上海",
-                        "url": "https://example.com/jobs/1",
-                    }
-                ],
-                ensure_ascii=False,
-            ),
-            source_name="企业官网",
-        ),
-    )
-
-    page = registry.call("get_jobs", {"limit": 1})["structuredContent"]
-    job_id = page["jobs"][0]["job_id"]
-    details = registry.call("get_job_details", {"job_id": job_id})["structuredContent"]
-
-    assert details["job"]["title"] == "AI应用工程师"
-    assert "Python RAG Agent" in details["job"]["description"]
-    assert details["job"]["apply_url"] == "https://example.com/jobs/1"
-    assert details["untrusted_external_content"] is True
 
 
 # ── v0.7.2: use_profile regression ────────────────────────────────────────
@@ -1101,9 +1052,8 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
         encoding="utf-8",
     )
     registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
         },
@@ -1168,9 +1118,8 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
 
     # Profile still exists (NOT deleted)
     profile_result = registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "review",
             "workspace_id": workspace.workspace_id,
             "profile_id": core.profiles.latest_confirmed_summary(
                 workspace_id=workspace.workspace_id
@@ -1189,9 +1138,8 @@ def test_use_profile_true_default_preserves_existing_behavior(tmp_path) -> None:
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG\n学历：硕士", encoding="utf-8")
     registry.call(
-        "setup_profile",
+        "setup",
         {
-            "action": "import",
             "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
         },
@@ -1390,9 +1338,14 @@ def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     registry = ToolRegistry(core)
     registry.call(
-        "configure_search",
+        "setup",
+        {"target_roles": ["AI应用工程师"]},
+    )
+
+    result = registry.call(
+        "search_jobs",
         {
-            "target_roles": ["AI应用工程师"],
+            "refresh_mode": "full",
             "sources": [
                 {
                     "kind": "json_file",
@@ -1402,8 +1355,6 @@ def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None
             ],
         },
     )
-
-    result = registry.call("search_jobs", {"refresh_mode": "full"})
     text = result["content"][0]["text"]
 
     # Error appears but is safe

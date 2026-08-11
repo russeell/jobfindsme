@@ -71,7 +71,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 用 jobfindsme，根据 ~/Documents/resume.pdf 找上海的 AI 应用工程师，20K以上，社招。
 ```
 
-完整简历由本地 Core 解析。Agent 只应把路径传给 `setup_profile`，不得先读取全文。
+完整简历由本地 Core 解析。Agent 只应把路径传给 `setup`，不得先读取全文。
 其他客户端可用 `jobfindsme config` 打印同一份 JSON，或 `jobfindsme connect --path <配置文件>` 直接写入。
 
 安装后先自检：
@@ -267,7 +267,7 @@ rm -rf ~/.jobfindsme
 
 **Q：简历会被上传吗？**
 不会。简历只在本地解析成结构化事实存入 SQLite，完整简历文本不进入 Agent 上下文。
-`export_local_data` / `delete_local_data` 可随时导出和清除。
+`jobfindsme export` / `delete_local_data` 可随时导出和清除。
 
 **Q：和直接把简历发给 AI 让它搜，有什么区别？**
 通用 Agent 没有平台接入、没有跨天去重和状态记忆、也不能稳定解析 PDF 简历成结构化

@@ -329,7 +329,7 @@ def main() -> int:
 
     doctor = Doctor(args.db).run()
     config_response = registry.call(
-        "configure_search",
+        "setup",
         {
             "name": "Real World Smoke",
             "target_roles": tuple(args.role),

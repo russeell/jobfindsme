@@ -137,17 +137,13 @@ evidence, but must not silently reorder, omit, or rewrite the base result.
 ## 6. MCP contract
 
 The server name and all public product identifiers use lowercase `jobfindsme`.
-The MCP surface contains eight focused tools:
+The MCP surface contains five focused tools:
 
-1. `setup_profile`
-2. `configure_search`
-3. `suggest_plan`
-4. `search_jobs`
-5. `get_jobs`
-6. `get_job_details`
-7. `update_job_state`
-8. `export_local_data`
-9. `delete_local_data`
+1. `setup` — profile import/review/confirm and search-plan configuration
+2. `search_jobs`
+3. `get_jobs` — list/paginate, or pass `job_id` for one job's full details
+4. `update_job_state`
+5. `delete_local_data`
 
 Every tool must provide:
 
@@ -163,7 +159,7 @@ also carries validated `structuredContent` — but deliberately minimal: only
 `final_text`, `count`, `changes`, `diagnostic_summary`, and an `integrity`
 hash. The full jobs array, evidence, JD excerpts, and apply URLs are NOT
 exposed in structuredContent. Clients that need structured job data must use
-`get_jobs` / `get_job_details` instead.
+`get_jobs` instead (passing `job_id` for one job's full details).
 
 `search_jobs` returns both strict structured content and a complete five-part
 human-facing result, in this fixed order:

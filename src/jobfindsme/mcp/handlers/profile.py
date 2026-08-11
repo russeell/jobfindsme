@@ -1,8 +1,8 @@
-"""setup_profile handler — import / review / confirm a local resume.
+"""setup handler — initialize profile and search conditions in one call.
 
-The response always carries ``suggested_plan`` (profile-derived search
-constraints), so the Agent can jump straight to configure_search without
-a separate tool call.
+Profile part: import / review / confirm a local resume (auto-confirm by
+default).  Search part: create or update the active search plan.  Either
+part may be omitted — call setup again later to extend.
 """
 
 from __future__ import annotations
@@ -15,28 +15,12 @@ from jobfindsme.mcp.handlers import HandlerResult
 from jobfindsme.profiles.models import FactType
 
 
-def setup_profile(core: Any, request: BaseModel) -> HandlerResult:
+def setup(core: Any, request: BaseModel) -> HandlerResult:
     values = request.model_dump()
-    if values["action"] == "confirm":
-        profile = core.confirm_profile(
-            workspace_id=values["workspace_id"],
-            profile_id=values["profile_id"],
-            accepted_fact_ids=values["accepted_fact_ids"],
-            corrections=values["corrections"],
-        )
-        page = _profile_page(
-            profile,
-            offset=values["offset"],
-            limit=values["limit"],
-        )
-        page["suggested_plan"] = core.suggest_plan(workspace_id=values["workspace_id"])
-        return None, page
-    if values["action"] == "review":
-        profile = core.review_profile(
-            workspace_id=values["workspace_id"],
-            profile_id=values["profile_id"],
-        )
-    else:
+    page: dict[str, Any] = {}
+
+    # ── Profile part ────────────────────────────────────────────────────
+    if values.get("resume_path"):
         profile = core.import_resume(
             workspace_id=values["workspace_id"],
             source_path=values["resume_path"],
@@ -48,14 +32,61 @@ def setup_profile(core: Any, request: BaseModel) -> HandlerResult:
                 profile_id=profile.profile_id,
                 accepted_fact_ids=[fact.fact_id for fact in profile.facts],
             )
-    page = _profile_page(
-        profile,
-        offset=values["offset"],
-        limit=values["limit"],
-        include_facts=not (values["action"] == "import" and values["auto_confirm"]),
-    )
-    if values["auto_confirm"] and values["action"] == "import":
+            include_facts = False
+        else:
+            include_facts = True
+        page.update(
+            _profile_page(
+                profile,
+                offset=values["offset"],
+                limit=values["limit"],
+                include_facts=include_facts,
+            )
+        )
         page["suggested_plan"] = core.suggest_plan(workspace_id=values["workspace_id"])
+    elif values.get("profile_id"):
+        if values.get("accepted_fact_ids"):
+            profile = core.confirm_profile(
+                workspace_id=values["workspace_id"],
+                profile_id=values["profile_id"],
+                accepted_fact_ids=values["accepted_fact_ids"],
+                corrections=values["corrections"],
+            )
+        else:
+            profile = core.review_profile(
+                workspace_id=values["workspace_id"],
+                profile_id=values["profile_id"],
+            )
+        page.update(
+            _profile_page(
+                profile,
+                offset=values["offset"],
+                limit=values["limit"],
+            )
+        )
+        page["suggested_plan"] = core.suggest_plan(workspace_id=values["workspace_id"])
+
+    # ── Search plan part ────────────────────────────────────────────────
+    if values.get("target_roles"):
+        # Keep typed fields (sources is a tuple of DiscoverySource models —
+        # model_dump would corrupt them into raw dicts).
+        plan = core.configure_search(
+            workspace_id=request.workspace_id,
+            plan_id=request.plan_id,
+            name=request.name,
+            target_roles=request.target_roles,
+            locations=request.locations,
+            salary_min_k=request.salary_min_k,
+            salary_max_k=request.salary_max_k,
+            salary_policy=request.salary_policy,
+            experience_min_years=request.experience_min_years,
+            experience_max_years=request.experience_max_years,
+            recruitment_track=request.recruitment_track,
+            employment_type=request.employment_type,
+            exclusions=request.exclusions,
+            sources=request.sources,
+        )
+        page["plan"] = plan
     return None, page
 
 
@@ -75,7 +106,7 @@ def _profile_page(
     next_offset = offset + len(selected) if include_facts else 0
     return {
         "profile_id": profile.profile_id,
-        "status": getattr(profile, "status", "confirmed"),
+        "profile_status": getattr(profile, "status", "confirmed"),
         "parser_version": getattr(profile, "parser_version", None),
         "fact_counts": counts,
         "facts": selected,

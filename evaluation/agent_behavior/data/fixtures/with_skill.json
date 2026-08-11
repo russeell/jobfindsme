@@ -7,8 +7,7 @@
       "case_id": "find_jobs_with_resume",
       "host": "skill-contract",
       "events": [
-        {"type": "tool_call", "name": "setup_profile", "arguments": {"action": "import", "resume_path": "/tmp/resume.pdf"}},
-        {"type": "tool_call", "name": "configure_search", "arguments": {"target_roles": ["AI应用工程师"], "locations": ["上海"], "salary_min_k": 20, "recruitment_track": "social", "employment_type": "full_time"}},
+        {"type": "tool_call", "name": "setup", "arguments": {"resume_path": "/tmp/resume.pdf", "target_roles": ["AI应用工程师"], "locations": ["上海"], "salary_min_k": 20, "recruitment_track": "social", "employment_type": "full_time"}},
         {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true, "use_profile": true}},
         {"type": "tool_result", "name": "search_jobs", "content": "【1·简历解析】\n简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) + 薪资20K+ → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：技能与薪资信号匹配。\n【5·说明】\n结果：本次展示 1 个。"},
         {"type": "assistant", "content": "【1·简历解析】\n简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士\n【2·检索概览】\n检索：猎聘·上海 ✓(42)\n【3·过滤说明】\n过滤：城市(上海) + 薪资20K+ → 给出 1 个\n【4·岗位列表】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n投递链接：https://example.com/job-1\n推荐理由：技能与薪资信号匹配。\n【5·说明】\n结果：本次展示 1 个。"}
@@ -52,7 +51,7 @@
       "case_id": "protect_resume_context",
       "host": "skill-contract",
       "events": [
-        {"type": "tool_call", "name": "setup_profile", "arguments": {"action": "import", "resume_path": "/tmp/resume.pdf"}},
+        {"type": "tool_call", "name": "setup", "arguments": {"resume_path": "/tmp/resume.pdf"}},
         {"type": "assistant", "content": "已由本地 Core 解析简历，未把完整正文读入对话。"}
       ]
     }

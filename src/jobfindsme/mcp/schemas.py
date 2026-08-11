@@ -8,8 +8,6 @@ from pydantic import Field, model_validator
 from jobfindsme.contracts import (
     DiscoverySource,
     EmploymentType,
-    ExportReceipt,
-    JobDetails,
     JobState,
     JobStateKind,
     JobSummary,
@@ -26,20 +24,24 @@ from jobfindsme.contracts import (
 from jobfindsme.profiles.models import ProfileFact, ResumeImportMode
 
 
-class SetupProfileInput(StrictModel):
-    action: Literal["import", "review", "confirm"] = Field(
-        default="import",
-        description=(
-            "import: parse resume; review: paginate facts; confirm: accept facts by ID"
-        ),
-    )
+class SetupInput(StrictModel):
+    """Initialize the local profile and search conditions in one call.
+
+    Profile part (optional): pass resume_path to import and auto-confirm a
+    resume. Pass profile_id + accepted_fact_ids to confirm after review.
+    Search part (optional): pass target_roles to create/update the active
+    search plan. Either part may be omitted — call setup again later.
+    """
+
     workspace_id: str | None = Field(
         default=None,
         description="Workspace ID (omit to use active context)",
     )
+
+    # ── Profile ─────────────────────────────────────────────────────────
     resume_path: str | None = Field(
         default=None,
-        description="Absolute path to resume file (required for import)",
+        description="Absolute path to resume file (import when provided)",
     )
     mode: ResumeImportMode = Field(
         default=ResumeImportMode.FORGET_SOURCE,
@@ -47,44 +49,89 @@ class SetupProfileInput(StrictModel):
     )
     auto_confirm: bool = Field(
         default=True,
-        description="If true, auto-accepts all facts so search can proceed",
+        description="If true, auto-accepts all parsed facts so search can proceed",
     )
     profile_id: str | None = Field(
         default=None,
-        description="Profile ID (required for review and confirm)",
+        description="Profile ID (required for review/confirm)",
     )
     accepted_fact_ids: tuple[str, ...] = Field(
         default_factory=tuple,
-        description="Fact IDs the user confirms (required for confirm)",
+        description="Fact IDs to confirm (required for confirm)",
     )
     corrections: dict[str, str] = Field(
         default_factory=dict,
         description="Map of fact_id to corrected value (optional)",
     )
-    offset: int = Field(
-        default=0,
-        ge=0,
-        description="Pagination offset for review (0-based)",
+    offset: int = Field(default=0, ge=0, description="Facts page offset")
+    limit: int = Field(default=12, ge=1, le=50, description="Facts per page")
+
+    # ── Search plan ─────────────────────────────────────────────────────
+    plan_id: str | None = Field(
+        default=None,
+        description="Search Plan ID (omit to use active context)",
     )
-    limit: int = Field(
-        default=12,
-        ge=1,
-        le=50,
-        description="Max facts per review page (1–50)",
+    name: str = Field(
+        default="Default Search",
+        min_length=1,
+        max_length=120,
+        description="Human-readable label for this search plan",
+    )
+    target_roles: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description=("Job titles to search, e.g. ['AI应用工程师', '大模型应用开发']"),
+    )
+    locations: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Cities, e.g. ['上海', '深圳']; empty = nationwide",
+    )
+    salary_min_k: int | None = Field(
+        default=None, ge=0, le=1000, description="Min monthly salary in thousands"
+    )
+    salary_max_k: int | None = Field(
+        default=None, ge=0, le=1000, description="Max monthly salary in thousands"
+    )
+    salary_policy: SalaryPolicy = Field(
+        default=SalaryPolicy.STRICT,
+        description=(
+            "strict excludes jobs without salary when a salary filter is set; "
+            "include_undisclosed keeps them with an explicit warning"
+        ),
+    )
+    experience_min_years: int | None = Field(
+        default=None, ge=0, le=80, description="Min years of experience"
+    )
+    experience_max_years: int | None = Field(
+        default=None, ge=0, le=80, description="Max years of experience"
+    )
+    recruitment_track: RecruitmentTrack | None = Field(
+        default=None,
+        description="social (社招) or campus (校招); omit = both",
+    )
+    employment_type: EmploymentType | None = Field(
+        default=None,
+        description="full_time (正式), internship (实习), part_time (兼职); omit = all",
+    )
+    exclusions: tuple[str, ...] = Field(
+        default_factory=tuple,
+        description="Keywords to exclude, e.g. ['外包', '996']",
+    )
+    sources: tuple[DiscoverySource, ...] | None = Field(
+        default=None,
+        description="Explicit sources; omit = maintained platforms auto-selected",
     )
 
     @model_validator(mode="after")
     def validate_action_fields(self) -> Self:
-        if self.action == "import" and not self.resume_path:
-            raise ValueError("resume_path is required for import")
-        if self.action == "confirm" and (
-            not self.profile_id or not self.accepted_fact_ids
-        ):
+        if self.resume_path and self.profile_id:
             raise ValueError(
-                "profile_id and accepted_fact_ids are required for confirm"
+                "use either resume_path (import) or profile_id (review/confirm)"
             )
-        if self.action == "review" and not self.profile_id:
-            raise ValueError("profile_id is required for review")
+        if not self.resume_path and not self.profile_id and not self.target_roles:
+            raise ValueError(
+                "provide resume_path, profile_id, or target_roles — "
+                "setup has nothing to do"
+            )
         return self
 
 
@@ -141,84 +188,17 @@ class SearchJobsInput(StrictModel):
     )
 
 
-class ConfigureSearchInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
-    plan_id: str | None = Field(
-        default=None,
-        description="Search Plan ID (omit to use active context)",
-    )
-    name: str = Field(
-        default="Default Search",
-        min_length=1,
-        max_length=120,
-        description="Human-readable label for this search plan",
-    )
-    target_roles: tuple[str, ...] = Field(
-        min_length=1,
-        description=(
-            "Job titles to search, e.g. ['AI应用工程师', '大模型应用开发'] (required)"
-        ),
-    )
-    locations: tuple[str, ...] = Field(
-        default_factory=tuple,
-        description="Cities, e.g. ['上海', '深圳']; empty = nationwide",
-    )
-    salary_min_k: int | None = Field(
-        default=None,
-        ge=0,
-        le=1000,
-        description="Min monthly salary in thousands, e.g. 20 = 20K/月",
-    )
-    salary_max_k: int | None = Field(
-        default=None,
-        ge=0,
-        le=1000,
-        description="Max monthly salary in thousands, e.g. 50 = 50K/月",
-    )
-    salary_policy: SalaryPolicy = Field(
-        default=SalaryPolicy.STRICT,
-        description=(
-            "strict excludes jobs without salary when a salary filter is set; "
-            "include_undisclosed keeps them with an explicit warning"
-        ),
-    )
-    experience_min_years: int | None = Field(
-        default=None,
-        ge=0,
-        le=80,
-        description="Min years of experience required by the job",
-    )
-    experience_max_years: int | None = Field(
-        default=None,
-        ge=0,
-        le=80,
-        description="Max years of experience to consider",
-    )
-    recruitment_track: RecruitmentTrack | None = Field(
-        default=None,
-        description="social (社招) or campus (校招); omit = both",
-    )
-    employment_type: EmploymentType | None = Field(
-        default=None,
-        description="full_time (正式), internship (实习), part_time (兼职); omit = all",
-    )
-    exclusions: tuple[str, ...] = Field(
-        default_factory=tuple,
-        description="Keywords to exclude, e.g. ['外包', '996']",
-    )
-    sources: tuple[DiscoverySource, ...] | None = Field(
-        default=None,
-        description="Explicit sources; omit = four maintained platforms auto-selected",
-    )
-
-
 class GetJobsInput(StrictModel):
     workspace_id: str | None = Field(
         default=None,
         description="Workspace ID (omit to use active context)",
+    )
+    job_id: str | None = Field(
+        default=None,
+        description=(
+            "One specific job ID — returns the full description and source "
+            "provenance for that job (same as the former get_job_details)."
+        ),
     )
     job_ids: tuple[str, ...] = Field(
         default_factory=tuple,
@@ -243,16 +223,6 @@ class GetJobsInput(StrictModel):
     )
 
 
-class GetJobDetailsInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
-    job_id: str = Field(
-        description="Job ID from a get_jobs or search_jobs result",
-    )
-
-
 class UpdateJobStateInput(StrictModel):
     workspace_id: str | None = Field(
         default=None,
@@ -270,13 +240,6 @@ class UpdateJobStateInput(StrictModel):
         default="",
         max_length=1000,
         description="Optional note (max 1000 chars)",
-    )
-
-
-class ExportLocalDataInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
     )
 
 
@@ -304,16 +267,17 @@ class DeleteLocalDataInput(StrictModel):
     )
 
 
-class SetupProfileOutput(StrictModel):
-    profile_id: str
-    status: str
+class SetupOutput(StrictModel):
+    profile_id: str | None = None
+    profile_status: str | None = None
     parser_version: str | None = None
-    fact_counts: dict[str, int]
+    fact_counts: dict[str, int] = Field(default_factory=dict)
     facts: tuple[ProfileFact, ...] = ()
     next_offset: int | None = None
-    total_facts: int
-    review_available: bool
+    total_facts: int = 0
+    review_available: bool = False
     suggested_plan: SuggestedPlan | None = None
+    plan: SearchConfiguration | None = None
 
 
 class SearchJobsOutput(StrictModel):
@@ -363,12 +327,10 @@ class DeleteLocalDataOutput(StrictModel):
 
 
 MCP_OUTPUT_MODELS: dict[str, type[StrictModel]] = {
-    "setup_profile": SetupProfileOutput,
-    "configure_search": SearchConfiguration,
+    "setup": SetupOutput,
     "search_jobs": SearchJobsOutput,
-    "get_jobs": GetJobsOutput,
-    "get_job_details": JobDetails,
+    # get_jobs returns either a JobSummary list or a JobDetails payload
+    # depending on whether job_id is set — schema validation is skipped.
     "update_job_state": JobState,
-    "export_local_data": ExportReceipt,
     "delete_local_data": DeleteLocalDataOutput,
 }

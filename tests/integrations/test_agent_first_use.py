@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import subprocess
+import sys
 
 from jobfindsme.contracts import (
     EmploymentType,
@@ -53,18 +54,14 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
-    registry = ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db"))
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    registry = ToolRegistry(core)
 
-    profile = call(
-        registry,
-        "setup_profile",
-        action="import",
-        resume_path=str(resume),
-    )
-    assert profile["status"] == "confirmed"
+    profile = call(registry, "setup", resume_path=str(resume))
+    assert profile["profile_status"] == "confirmed"
     call(
         registry,
-        "configure_search",
+        "setup",
         target_roles=["AI应用工程师"],
         locations=["上海"],
         sources=[
@@ -83,20 +80,39 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
 
     history = call(registry, "get_jobs", limit=10)
     matches = history["jobs"]
-    companies = {item["company"] for item in matches}
+    companies = {item.company for item in matches}
     assert companies == {"甲公司", "乙公司"}
-    assert "description" not in matches[0]
-    assert matches[0]["untrusted_external_content"] is True
+    summary = matches[0].model_dump()
+    assert "description" not in summary
+    assert summary["untrusted_external_content"] is True
 
     call(
         registry,
         "update_job_state",
-        job_id=matches[0]["job_id"],
+        job_id=matches[0].job_id,
         state="saved",
     )
-    receipt = call(registry, "export_local_data")
+    export_path = tmp_path / "export.json"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "jobfindsme",
+            "--db",
+            str(tmp_path / "jobfindsme.db"),
+            "export",
+            "--workspace",
+            core.context.resolve_workspace().workspace_id,
+            "--path",
+            str(export_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
 
-    assert Path(receipt["path"]).exists()
+    assert export_path.exists()
 
 
 def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
@@ -132,7 +148,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     registry = ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db"))
     call(
         registry,
-        "configure_search",
+        "setup",
         target_roles=["AI应用工程师"],
         locations=["上海"],
         salary_min_k=20,
@@ -158,7 +174,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     assert structured["final_text"] == rendered
     assert "jobs" not in structured
     history_companies = {
-        item["company"] for item in call(registry, "get_jobs", limit=10)["jobs"]
+        item.company for item in call(registry, "get_jobs", limit=10)["jobs"]
     }
     assert history_companies == {"甲公司", "乙公司"}
     assert "乙公司" not in rendered

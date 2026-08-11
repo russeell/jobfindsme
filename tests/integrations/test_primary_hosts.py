@@ -21,7 +21,7 @@ def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
     required_phrases = [
         "Never read",
         "complete resume",
-        "setup_profile",
+        "setup",
         "Ask only when a missing constraint",
         "auto_confirm: false",
         "Never ask ordinary users",

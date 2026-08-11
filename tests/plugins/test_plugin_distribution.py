@@ -35,9 +35,7 @@ def test_cli_config_prints_a_valid_standard_mcp_json() -> None:
 
 
 def test_project_version_is_consistent_across_package_and_docs() -> None:
-    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"][
-        "version"
-    ]
+    version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
     wheel = f"jobfindsme-{version}-py3-none-any.whl"
     readme = (ROOT / "README.md").read_text()
     assert wheel in readme

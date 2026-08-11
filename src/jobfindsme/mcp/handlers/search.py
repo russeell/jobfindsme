@@ -1,4 +1,4 @@
-"""configure_search / search_jobs handlers — the core search workflow.
+"""search_jobs handler — the core search workflow.
 
 search_jobs renders the five-section contract text and the deliberately
 minimal structuredContent.  The host MUST return content[0].text verbatim;
@@ -13,29 +13,8 @@ from pydantic import BaseModel
 
 from jobfindsme.mcp.handlers import HandlerResult
 from jobfindsme.mcp.responses import build_search_output
-from jobfindsme.mcp.schemas import ConfigureSearchInput, SearchJobsInput
+from jobfindsme.mcp.schemas import SearchJobsInput
 from jobfindsme.presentation import format_search_results
-
-
-def configure_search(core: Any, request: BaseModel) -> HandlerResult:
-    assert isinstance(request, ConfigureSearchInput)
-    configuration = core.configure_search(
-        workspace_id=request.workspace_id,
-        plan_id=request.plan_id,
-        name=request.name,
-        target_roles=request.target_roles,
-        locations=request.locations,
-        salary_min_k=request.salary_min_k,
-        salary_max_k=request.salary_max_k,
-        salary_policy=request.salary_policy,
-        experience_min_years=request.experience_min_years,
-        experience_max_years=request.experience_max_years,
-        recruitment_track=request.recruitment_track,
-        employment_type=request.employment_type,
-        exclusions=request.exclusions,
-        sources=request.sources,
-    )
-    return None, configuration
 
 
 def search_jobs(core: Any, request: BaseModel) -> HandlerResult:

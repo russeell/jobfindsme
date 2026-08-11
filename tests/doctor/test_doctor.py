@@ -23,7 +23,7 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
     }
     assert all(item.message for item in report.diagnostics)
     mcp = next(item for item in report.diagnostics if item.name == "mcp")
-    assert mcp.message == "8 tools"
+    assert mcp.message == "5 tools"
 
 
 def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(

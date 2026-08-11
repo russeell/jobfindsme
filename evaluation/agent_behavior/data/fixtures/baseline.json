@@ -46,7 +46,7 @@
       "host": "baseline",
       "events": [
         {"type": "file_read", "path": "/tmp/resume.pdf", "content": "完整简历正文"},
-        {"type": "tool_call", "name": "setup_profile", "arguments": {"resume_content": "完整简历正文"}}
+        {"type": "tool_call", "name": "setup", "arguments": {"resume_content": "完整简历正文"}}
       ]
     }
   ]

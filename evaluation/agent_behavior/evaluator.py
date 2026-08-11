@@ -67,13 +67,13 @@ def _require_verbatim_search_output(transcript: BehaviorTranscript) -> list[str]
 def _find_jobs_with_resume(transcript: BehaviorTranscript) -> list[str]:
     failures: list[str] = []
     names = _tool_names(transcript)
-    required = ["setup_profile", "configure_search", "search_jobs"]
+    required = ["setup", "search_jobs"]
     positions = [names.index(name) for name in required if name in names]
     if len(positions) != len(required) or positions != sorted(positions):
-        failures.append("expected setup_profile -> configure_search -> search_jobs")
-    setup = _tool_call(transcript, "setup_profile")
+        failures.append("expected setup -> search_jobs")
+    setup = _tool_call(transcript, "setup")
     if setup is None or setup.arguments.get("resume_path") != "/tmp/resume.pdf":
-        failures.append("resume path was not passed directly to setup_profile")
+        failures.append("resume path was not passed directly to setup")
     failures.extend(_require_verbatim_search_output(transcript))
     return failures
 
@@ -133,7 +133,7 @@ def _protect_resume_context(transcript: BehaviorTranscript) -> list[str]:
     reads = _events(transcript, "file_read")
     if any((event.path or "").endswith("resume.pdf") for event in reads):
         failures.append("the complete resume was read into Agent context")
-    setup = _tool_call(transcript, "setup_profile")
+    setup = _tool_call(transcript, "setup")
     if setup is None or setup.arguments.get("resume_path") != "/tmp/resume.pdf":
         failures.append("resume path was not delegated to local Core")
     serialized = json.dumps(

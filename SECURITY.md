@@ -26,7 +26,7 @@ and tracking state live in a local SQLite database on your machine.
 
 ## Data control
 
-- **Export** (`export_local_data`) writes a local file and returns
+- **Export** (CLI `jobfindsme export`) writes a local file and returns
   only its path, SHA-256 hash, and record counts. The file stays on
   your machine.
 - **Deletion** (`delete_local_data`) is a two-phase protocol: preview

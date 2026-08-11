@@ -216,7 +216,9 @@ class SearchUseCase:
     ) -> SearchPresentationContext:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
-            raise ValueError("no active Search Plan — run configure_search first")
+            raise ValueError(
+                "no active Search Plan — run setup (with target_roles) first"
+            )
         if use_profile:
             profile = self.profiles.latest_confirmed_summary(
                 workspace_id=context.workspace.workspace_id
