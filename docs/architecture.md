@@ -82,7 +82,7 @@ instructions. `scripts/sync_skill.py --check` and plugin distribution tests
 enforce this boundary.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and
-normalized transcripts under `evals/agent_behavior/` test tool routing,
+normalized transcripts under `evaluation/agent_behavior/data/` test tool routing,
 five-section output, direct links, degraded-source handling, state updates,
 incremental search, and resume privacy. Contract fixtures run in CI; live
 Codex/Claude/Cursor transcripts are required for release compatibility claims.
@@ -103,7 +103,7 @@ Codex/Claude/Cursor transcripts are required for release compatibility claims.
 | `installer/` | compatibility installation for hosts without native plugins |
 | `evaluation/` | dev-time quality gates (datasets, metrics, regression, field trials) |
 | `skills/` | canonical Agent behavior shared by native host adapters |
-| `evals/agent_behavior/` | fixed prompts and cross-Agent behavior evidence |
+| `evaluation/agent_behavior/data/` | fixed prompts and cross-Agent behavior evidence |
 | `cli.py` | CLI for setup, doctor, profile import, admin |
 
 A complete engineering spec lives at `docs/internal/project_spec.md`;

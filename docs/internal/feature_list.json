@@ -21,7 +21,7 @@
     "python3 -m ruff check .",
     "python3 -m ruff format --check .",
     "python3 scripts/sync_skill.py --check",
-    "python3 -m evaluation.agent_behavior.cli --cases evals/agent_behavior/cases.json --transcripts evals/agent_behavior/fixtures/with_skill.json --report /tmp/jobfindsme-agent-contract.json --expect pass --require-evidence contract_fixture"
+    "python3 -m evaluation.agent_behavior.cli --cases evaluation/agent_behavior/data/cases.json --transcripts evaluation/agent_behavior/data/fixtures/with_skill.json --report /tmp/jobfindsme-agent-contract.json --expect pass --require-evidence contract_fixture"
   ],
   "features": [
     {
@@ -311,8 +311,6 @@
       ],
       "allowed_paths": [
         "data/eval/**",
-        "reports/evaluation/**",
-        "reports/loops/**",
         "reports/features/EVAL-001.json",
         "docs/internal/feature_list.json",
         "evaluation/**",
@@ -376,7 +374,7 @@
         "README.md",
         "README.en.md",
         "docs/**",
-        "evals/agent_behavior/**",
+        "evaluation/agent_behavior/data/**",
         "integrations/**",
         "pyproject.toml",
         "reports/features/AGENT-EVAL-001.json",

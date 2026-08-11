@@ -49,7 +49,7 @@ Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`:
 ## Agent behavior
 
 Core and MCP unit tests do not prove that a host Agent selects the right tools
-or preserves the Server response. `evals/agent_behavior/` therefore treats the
+or preserves the Server response. `evaluation/agent_behavior/data/` therefore treats the
 canonical Agent Skill as executable behavior:
 
 - six fixed prompts cover first search, five-section output, apply links,
@@ -60,7 +60,7 @@ canonical Agent Skill as executable behavior:
 - release compatibility claims require redacted Codex, Claude, and Cursor
   transcripts.
 
-See `evals/agent_behavior/README.md` for commands and the normalized event
+See `evaluation/agent_behavior/data/README.md` for commands and the normalized event
 schema.
 3. Run `python -m scripts.validate_taxonomy` and
    `python -m pytest tests/test_taxonomy.py`.

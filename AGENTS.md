@@ -3,7 +3,7 @@
 The canonical Agent Skill is `skills/jobfindsme/SKILL.md`. Codex, Claude, and
 Cursor adapters must consume that file without host-specific workflow forks.
 After changing it, run `python scripts/sync_skill.py` and the Agent behavior
-tests in `evals/agent_behavior/`.
+tests in `evaluation/agent_behavior/data/`.
 
 jobfindsme helps users find more qualified jobs across sources with less time,
 fewer irrelevant results, and minimal setup. It hard-filters jobs by user

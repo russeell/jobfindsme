@@ -46,17 +46,14 @@ def test_shared_suite_covers_protocol_privacy_and_deletion() -> None:
     assert any("untrusted" in item for item in scenarios)
 
 
-def test_no_client_is_claimed_supported_before_a_real_field_test() -> None:
-    report = load(ROOT / "reports" / "compatibility" / "v0.1.json")
-
-    assert {item["client"] for item in report["clients"]} == {
-        "Cursor",
-        "Cline",
-        "Roo Code",
-        "OpenCode",
-        "Cherry Studio",
-    }
-    for item in report["clients"]:
-        assert item["status"] == "contract_tested"
-        assert item["officially_supported"] is False
-        assert item["field_tested_version"] is None
+def test_no_client_is_claimed_officially_supported_without_field_evidence() -> None:
+    evidence = ROOT / "reports" / "compatibility"
+    assert not list(evidence.glob("*.json")), (
+        "field evidence must be generated before any client is claimed supported"
+    )
+    docs = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "README.md", ROOT / "README.en.md", ROOT / "INSTALL.md")
+    )
+    assert "官方支持" not in docs
+    assert "officially supported" not in docs.casefold()

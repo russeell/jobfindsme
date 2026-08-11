@@ -73,16 +73,16 @@ jobs:
       - name: No-Skill baseline must fail
         run: >-
           python -m evaluation.agent_behavior.cli
-          --cases evals/agent_behavior/cases.json
-          --transcripts evals/agent_behavior/fixtures/baseline.json
+          --cases evaluation/agent_behavior/data/cases.json
+          --transcripts evaluation/agent_behavior/data/fixtures/baseline.json
           --report ${{ runner.temp }}/agent-baseline.json
           --expect fail
           --require-evidence contract_fixture
       - name: Skill contract must pass
         run: >-
           python -m evaluation.agent_behavior.cli
-          --cases evals/agent_behavior/cases.json
-          --transcripts evals/agent_behavior/fixtures/with_skill.json
+          --cases evaluation/agent_behavior/data/cases.json
+          --transcripts evaluation/agent_behavior/data/fixtures/with_skill.json
           --report ${{ runner.temp }}/agent-with-skill.json
           --expect pass
           --require-evidence contract_fixture

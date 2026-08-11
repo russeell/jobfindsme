@@ -8,9 +8,9 @@ from pathlib import Path
 from evaluation.agent_behavior.evaluator import evaluate_behavior_suite
 
 ROOT = Path(__file__).resolve().parents[2]
-CASES = ROOT / "evals/agent_behavior/cases.json"
-BASELINE = ROOT / "evals/agent_behavior/fixtures/baseline.json"
-WITH_SKILL = ROOT / "evals/agent_behavior/fixtures/with_skill.json"
+CASES = ROOT / "evaluation/agent_behavior/data/cases.json"
+BASELINE = ROOT / "evaluation/agent_behavior/data/fixtures/baseline.json"
+WITH_SKILL = ROOT / "evaluation/agent_behavior/data/fixtures/with_skill.json"
 
 
 def test_acceptance_prompts_cover_the_six_user_critical_behaviors() -> None:

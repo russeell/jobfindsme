@@ -21,14 +21,14 @@ The deterministic fixtures keep the Skill contract under CI:
 
 ```bash
 python -m evaluation.agent_behavior.cli \
-  --cases evals/agent_behavior/cases.json \
-  --transcripts evals/agent_behavior/fixtures/baseline.json \
+  --cases evaluation/agent_behavior/data/cases.json \
+  --transcripts evaluation/agent_behavior/data/fixtures/baseline.json \
   --report /tmp/jobfindsme-agent-red.json \
   --expect fail
 
 python -m evaluation.agent_behavior.cli \
-  --cases evals/agent_behavior/cases.json \
-  --transcripts evals/agent_behavior/fixtures/with_skill.json \
+  --cases evaluation/agent_behavior/data/cases.json \
+  --transcripts evaluation/agent_behavior/data/fixtures/with_skill.json \
   --report /tmp/jobfindsme-agent-green.json \
   --expect pass
 ```
@@ -44,7 +44,7 @@ Codex, Claude, and Cursor with `evidence_kind: live_agent`, then run:
 
 ```bash
 python -m evaluation.agent_behavior.cli \
-  --cases evals/agent_behavior/cases.json \
+  --cases evaluation/agent_behavior/data/cases.json \
   --transcripts reports/agent-behavior/live-vX.Y.Z.json \
   --report reports/agent-behavior/live-vX.Y.Z-report.json \
   --expect pass \

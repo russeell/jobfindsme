@@ -28,7 +28,7 @@ python scripts/sync_skill.py --check       # canonical Skill matches wheel copy
 
 CI (`ci.yml`) runs tests on Python 3.11/3.12/3.13 plus the synthetic
 evaluation regression gate, the clean-install smoke test, and the Agent
-behavior RED/GREEN contract in `evals/agent_behavior/`.
+behavior RED/GREEN contract in `evaluation/agent_behavior/data/`.
 
 ## Changing Agent behavior
 
@@ -43,7 +43,7 @@ The same Skill is consumed by the Codex, Claude, and Cursor plugin manifests.
 The old host-specific `connect` installer is a compatibility adapter, not a
 second Skill source. Fixture behavior tests are deterministic CI evidence;
 cross-Agent release claims require redacted `live_agent` transcripts from all
-three hosts. See `evals/agent_behavior/README.md`.
+three hosts. See `evaluation/agent_behavior/data/README.md`.
 
 ## Release
 
