@@ -1,9 +1,4 @@
-"""Tracking contracts: job state and incremental changes.
-
-"Tracking" is the user-facing concept behind these types: what changed
-compared to the last search, and what the user did with each job
-(applied / saved / rejected).
-"""
+"""Tracking contracts: job state and incremental changes."""
 
 from __future__ import annotations
 
@@ -12,8 +7,11 @@ from enum import StrEnum
 
 from pydantic import Field
 
-from jobfindsme.contracts.base import StrictModel
-from jobfindsme.contracts.job import JobPosting, MatchEvidence
+from jobfindsme.contracts.models import (
+    JobPosting,
+    MatchEvidence,
+    StrictModel,
+)
 
 
 class JobStateKind(StrEnum):

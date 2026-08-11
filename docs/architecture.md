@@ -31,7 +31,7 @@ MCP Handler (mcp/handlers/search.py)
       → Normalize / Deduplicate (importing/normalizer.py, importing/repository.py)
       → Filter / Rank (matching/ranker.py)
       → Tracking (job_impressions.py)
-  → Presentation (presentation/search_result.py)
+  → Presentation (presentation.py)
   → MCP Response (mcp/responses.py)
 ```
 
@@ -87,14 +87,14 @@ Codex/Claude/Cursor transcripts are required for release compatibility claims.
 
 | Path | Role |
 |---|---|
-| `contracts/` | domain types, one file per domain, unified exports |
+|  domain types, one file per domain, unified exports | domain types, one file per domain, unified exports |
 | `core/` | application layer: facade + four use cases |
-| `profiles/` | resume extraction (PDF/DOCX/MD/TXT) → facts |
+| `profiles/` | resume extraction + parser + service |
 | `matching/` | hard filter, signal extraction, deterministic coarse rank |
 | `importing/` | connectors output → normalized canonical jobs |
 | `connectors/` | BOSS直聘、猎聘、智联招聘、前程无忧的来源适配器 |
 | `tracking` | impressions (incremental radar) and user job state |
-| `presentation/` | deterministic rendering of results and blocks |
+| `presentation.py` | deterministic rendering of results and blocks |
 | `mcp/` | protocol entry, registry, handlers, responses |
 | `installer/` | compatibility installation for hosts without native plugins |
 | `evaluation/` | dev-time quality gates (datasets, metrics, regression, field trials) |

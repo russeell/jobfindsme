@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
-from jobfindsme.profiles.extractor import ResumeTextExtractor
 from jobfindsme.profiles.models import (
     CandidateProfile,
     FactStatus,
@@ -18,7 +17,7 @@ from jobfindsme.profiles.models import (
     ResumeImportMode,
     SourceDocument,
 )
-from jobfindsme.profiles.parser import DeterministicResumeParser
+from jobfindsme.profiles.parser import DeterministicResumeParser, ResumeTextExtractor
 from jobfindsme.storage import Database
 
 

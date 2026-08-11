@@ -14,8 +14,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from jobfindsme.presentation import format_job_list
-from jobfindsme.presentation.diagnostics import _source_line_from_runs
+from jobfindsme.presentation import _source_line_from_runs, format_job_list
 
 
 def validate_output(model: type[Any], value: Any) -> dict[str, Any]:

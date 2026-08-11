@@ -1,59 +1,32 @@
-"""Domain contracts, split by domain but exported from one namespace.
+"""Domain contracts, exported from one unified namespace.
 
 External code keeps importing the unified surface:
 
     from jobfindsme.contracts import JobSummary, SearchPlan
 
-Each module below owns one domain:
-
-    base.py      — StrictModel, Workspace
-    source.py    — platforms, provenance, subscriptions, run stats
-    job.py       — postings, salary, summaries, match evidence
-    search.py    — plans, constraints, run diagnostics
-    tracking.py  — job state and incremental changes
-    profile.py   — suggested plans and presentation facts
-    mcp.py       — adapter-facing wire outputs
+    models.py   — workspace, sources, jobs, salary, match evidence
+    search.py   — plans, constraints, configuration, run diagnostics
+    tracking.py — job state and incremental changes
 """
 
 from __future__ import annotations
 
-from jobfindsme.contracts.base import StrictModel, Workspace
-from jobfindsme.contracts.job import (
+from jobfindsme.contracts.models import (
+    DiscoverySource,
+    DiscoverySourceKind,
     EmploymentType,
     EvidencePair,
+    JobDetailLevel,
     JobDetails,
+    JobLiveness,
     JobMatchSummary,
     JobPosting,
+    JobSourceRecord,
     JobSummary,
     MatchEvidence,
     RecruitmentTrack,
     SalaryDetails,
     SalaryPeriod,
-)
-from jobfindsme.contracts.mcp import (
-    ExportReceipt,
-    SearchConfiguration,
-    SearchDiagnosticSummary,
-    SearchIntegrity,
-)
-from jobfindsme.contracts.profile import (
-    SearchPresentationContext,
-    SuggestedPlan,
-)
-from jobfindsme.contracts.search import (
-    SalaryPolicy,
-    SearchChanges,
-    SearchPlan,
-    SearchRefreshMode,
-    SearchRunDiagnostics,
-    SearchRunResult,
-)
-from jobfindsme.contracts.source import (
-    DiscoverySource,
-    DiscoverySourceKind,
-    JobDetailLevel,
-    JobLiveness,
-    JobSourceRecord,
     SourceEvidence,
     SourceHealth,
     SourceKind,
@@ -61,6 +34,22 @@ from jobfindsme.contracts.source import (
     SourceRunStats,
     SourceRunStatus,
     SourceSubscription,
+    StrictModel,
+    Workspace,
+)
+from jobfindsme.contracts.search import (
+    ExportReceipt,
+    SalaryPolicy,
+    SearchChanges,
+    SearchConfiguration,
+    SearchDiagnosticSummary,
+    SearchIntegrity,
+    SearchPlan,
+    SearchPresentationContext,
+    SearchRefreshMode,
+    SearchRunDiagnostics,
+    SearchRunResult,
+    SuggestedPlan,
 )
 from jobfindsme.contracts.tracking import (
     JobChangeType,

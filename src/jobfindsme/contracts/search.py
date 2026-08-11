@@ -1,21 +1,22 @@
-"""Search-side contracts: plans, constraints, run diagnostics.
-
-SearchPlan is the internal model behind the user-facing "Search" concept
-(我找什么).  SalaryPolicy controls how strict an explicit salary
-constraint is.
-"""
+"""Search contracts: plans, constraints, configuration, diagnostics."""
 
 from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 
-from jobfindsme.contracts.base import StrictModel
-from jobfindsme.contracts.job import EmploymentType, RecruitmentTrack
-from jobfindsme.contracts.source import SourceRunStats
+from jobfindsme.contracts.models import (
+    EmploymentType,
+    RecruitmentTrack,
+    SourceLink,
+    SourceRunStats,
+    SourceSubscription,
+    StrictModel,
+    Workspace,
+)
 from jobfindsme.contracts.tracking import JobMatch
 
 
@@ -107,3 +108,83 @@ class SearchRunResult(StrictModel):
     matches: tuple[JobMatch, ...]
     diagnostics: SearchRunDiagnostics
     changes: SearchChanges = SearchChanges()
+
+
+class SearchConfiguration(StrictModel):
+    workspace: Workspace
+    plan: SearchPlan
+    sources: tuple[SourceSubscription, ...] = ()
+    source_links: tuple[SourceLink, ...] = ()
+
+
+class SearchDiagnosticSummary(StrictModel):
+    """Compact per-source status for structuredContent.
+
+    Deliberately omits raw errors, timestamps, per-source discovered counts,
+    and full SourceRunStats so the host model cannot reconstruct job listings
+    human-facing final_text (section 2).
+    """
+
+    refresh_mode: SearchRefreshMode
+    source_summary: str = Field(
+        default="",
+        description=(
+            "Pre-formatted source line, for example "
+            "'BOSS直聘 △ 缓存 · 猎聘 ✓ 84 · 智联招聘 ✓ 30 · 前程无忧 △ 缓存'"
+        ),
+    )
+    total_discovered: int = Field(default=0, ge=0)
+    result_count: int = Field(default=0, ge=0)
+
+
+class SearchIntegrity(StrictModel):
+    """Evidence that final_text was not modified by the transport layer."""
+
+    sha256: str = Field(
+        min_length=64,
+        max_length=64,
+        description="SHA-256 hex digest of final_text (UTF-8 encoded)",
+    )
+
+
+class ExportReceipt(StrictModel):
+    path: str
+    sha256: str
+    record_counts: dict[str, int]
+
+
+class SuggestedPlan(StrictModel):
+    """A search plan proposal derived from confirmed profile facts."""
+
+    target_roles: tuple[str, ...]
+    locations: tuple[str, ...] = ()
+    salary_min_k: int | None = None
+    salary_max_k: int | None = None
+    experience_min_years: int | None = None
+    experience_max_years: int | None = None
+    recruitment_track: RecruitmentTrack | None = None
+    employment_type: EmploymentType | None = None
+    exclusions: tuple[str, ...] = ()
+    candidate_experience_years: int | None = Field(default=None, ge=0, le=80)
+    confidence: Literal["low", "medium", "high"] = "low"
+    requires_confirmation: tuple[str, ...] = ()
+    reasoning: str = ""
+    ready: bool = Field(
+        default=True,
+        description="False when no confirmed profile exists yet.",
+    )
+
+
+class SearchPresentationContext(StrictModel):
+    """Bounded facts required to render one search consistently."""
+
+    profile_used: bool = False
+    skill_count: int = Field(default=0, ge=0)
+    project_count: int = Field(default=0, ge=0)
+    experience_count: int = Field(default=0, ge=0)
+    education_count: int = Field(default=0, ge=0)
+    highest_degree: str | None = None
+    applied_filters: tuple[str, ...] = ()
+    total_matched_count: int = Field(default=0, ge=0)
+    cumulative_shown_count: int = Field(default=0, ge=0)
+    closed_count: int = Field(default=0, ge=0)

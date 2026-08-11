@@ -6,7 +6,7 @@ import zipfile
 import pytest
 from pypdf import PdfWriter
 
-from jobfindsme.profiles.extractor import (
+from jobfindsme.profiles.parser import (
     MAX_RESUME_BYTES,
     ResumeExtractionError,
     ResumeTextExtractor,
