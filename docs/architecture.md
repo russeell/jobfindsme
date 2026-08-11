@@ -102,5 +102,4 @@ Codex/Claude/Cursor transcripts are required for release compatibility claims.
 | `evaluation/agent_behavior/data/` | fixed prompts and cross-Agent behavior evidence |
 | `cli.py` | CLI for setup, doctor, profile import, admin |
 
-A complete engineering spec lives at `docs/internal/project_spec.md`;
-feature tracking at `docs/internal/feature_list.json`.
+A complete engineering spec lives at `docs/internal/project_spec.md`.

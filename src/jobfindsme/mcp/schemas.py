@@ -197,7 +197,7 @@ class GetJobsInput(StrictModel):
         default=None,
         description=(
             "One specific job ID — returns the full description and source "
-            "provenance for that job (same as the former get_job_details)."
+            "provenance for that job."
         ),
     )
     job_ids: tuple[str, ...] = Field(
@@ -286,7 +286,7 @@ class SearchJobsOutput(StrictModel):
     Contains ONLY the final rendered text, summary counts, and integrity
     evidence.  Does NOT expose the jobs array, JobSummary, MatchEvidence,
     JD excerpts, apply URLs, or full SearchRunDiagnostics — the host
-    model MUST use get_jobs / get_job_details for structured job data
+    model MUST use get_jobs for structured job data
     and must never rebuild or rewrite the Server's final_text.
     """
 
