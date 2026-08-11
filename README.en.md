@@ -30,27 +30,44 @@ search returns per-source diagnostics. See the latest
 
 ## Install
 
-Install the local runtime once:
+### Option 1: just ask your Agent (recommended)
+
+In Claude Code, Codex, Cursor, or ZCode, say:
+
+```text
+Use jobfindsme to find AI application engineer roles in Shanghai, 20K+.
+```
+
+The Agent installs the local runtime, wires the MCP config, and searches.
+If the Agent does not know jobfindsme, tell it to read this repository's
+README and AGENTS.md first, then retry.
+
+### Option 2: manual (about 1 minute)
+
+Install the local runtime once (Python 3.11+):
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-Then install the native Agent plugin:
+Wire the MCP config to your Agent, then restart it:
 
 ```bash
-# Codex
-codex plugin marketplace add russeell/jobfindsme --ref main
-codex plugin add jobfindsme@jobfindsme
-
-# Claude Code
-claude plugin marketplace add russeell/jobfindsme
-claude plugin install jobfindsme@jobfindsme
+jobfindsme connect claude      # Claude Code
+jobfindsme connect codex       # Codex
+jobfindsme connect cursor      # Cursor
+jobfindsme connect zcode       # ZCode
 ```
 
-The Cursor manifest is maintained in this repository. Until its marketplace
-listing is approved, use `jobfindsme connect cursor`. Other MCP clients can use
-`jobfindsme config` or `jobfindsme connect --path <file>`.
+Other MCP clients: `jobfindsme config` prints the standard JSON to paste, or
+`jobfindsme connect --path <file>` writes it directly. The `.mcp.json` at the
+repo root is the same standard config.
+
+Self-check, then start:
+
+```bash
+jobfindsme doctor
+```
 
 ## Use
 

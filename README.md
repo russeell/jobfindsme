@@ -46,39 +46,50 @@
 
 ## 🚀 快速开始
 
+### 方式一：直接和 Agent 说（推荐）
+
+在 Claude Code、Codex、Cursor、ZCode 里直接说：
+
+```text
+用 jobfindsme 找上海和杭州的 AI 应用工程师岗位，20K 以上，社招
+```
+
+Agent 会自动完成：安装本地运行时 → 写入 MCP 配置 → 提示重启 → 搜索。
+首次安装需要几分钟；如果 Agent 不认识 jobfindsme，让它先读本仓库的
+README 和 AGENTS.md，再重试。
+
+### 方式二：手动安装（1 分钟）
+
 需要 Python 3.11+。安装一次本地运行时：
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-然后把标准 MCP 配置交给 Agent（仓库根目录的 `.mcp.json` 就是这份配置）：
+一条命令把 MCP 配置交给当前 Agent，然后重启 Agent：
 
-```json
-{
-  "mcpServers": {
-    "jobfindsme": {
-      "command": "bash",
-      "args": ["-lc", "exec \"${JOBFINDSME_PYTHON:-$HOME/.jobfindsme/runtime/bin/python}\" -m jobfindsme.mcp"]
-    }
-  }
-}
+```bash
+jobfindsme connect claude      # Claude Code
+jobfindsme connect codex       # Codex
+jobfindsme connect cursor      # Cursor
+jobfindsme connect zcode       # ZCode
 ```
 
-重启 Agent，然后说：
+其他 MCP 客户端：`jobfindsme config` 打印标准 JSON 手动粘贴，或
+`jobfindsme connect --path <配置文件>` 直接写入。仓库根目录的 `.mcp.json`
+就是同一份标准配置。
+
+自检并开始：
+
+```bash
+jobfindsme doctor
+```
 
 ```text
 用 jobfindsme，根据 ~/Documents/resume.pdf 找上海的 AI 应用工程师，20K以上，社招。
 ```
 
 完整简历由本地 Core 解析。Agent 只应把路径传给 `setup`，不得先读取全文。
-其他客户端可用 `jobfindsme config` 打印同一份 JSON，或 `jobfindsme connect --path <配置文件>` 直接写入。
-
-安装后先自检：
-
-```bash
-jobfindsme doctor
-```
 
 BOSS直聘需要登录态时，对 Agent 说：
 
