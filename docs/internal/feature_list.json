@@ -315,7 +315,7 @@
         "reports/loops/**",
         "reports/features/EVAL-001.json",
         "docs/internal/feature_list.json",
-        "src/jobfindsme/evaluation/**",
+        "evaluation/**",
         "tests/evaluation/**"
       ],
       "acceptance": [
@@ -382,11 +382,10 @@
         "reports/features/AGENT-EVAL-001.json",
         "scripts/**",
         "skills/jobfindsme/SKILL.md",
-        "src/jobfindsme/evaluation/agent_behavior/**",
+        "evaluation/agent_behavior/**",
         "src/jobfindsme/resources/jobfindsme/SKILL.md",
         "tests/cli/**",
         "tests/evaluation/test_agent_behavior.py",
-        "tests/harness/test_feature_harness.py",
         "tests/installer/**",
         "tests/integrations/**",
         "tests/plugins/**"
