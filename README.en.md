@@ -62,6 +62,7 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 Wire the MCP config to your Agent, then restart it:
 
 ```bash
+jobfindsme connect             # auto-detect the current Agent (recommended)
 jobfindsme connect claude      # Claude Code
 jobfindsme connect codex       # Codex
 jobfindsme connect cursor      # Cursor

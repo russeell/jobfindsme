@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -79,6 +80,12 @@ def test_contract_fixture_cannot_be_claimed_as_live_agent_evidence(
         check=False,
         capture_output=True,
         text=True,
+        # Resolve the src-layout package from the repo regardless of how (or
+        # whether) the current interpreter has jobfindsme installed.
+        env={
+            **os.environ,
+            "PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src"),
+        },
     )
 
     assert completed.returncode == 1

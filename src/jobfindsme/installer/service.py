@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -30,6 +31,51 @@ _STANDARD_JSON_HOSTS: dict[str, tuple[str, str]] = {
     "claude": (".claude.json", ".claude/skills"),
     "cursor": (".cursor/mcp.json", ".cursor/skills"),
 }
+
+# Env vars that prove the process runs inside a specific agent session.
+_HOST_ENV_SIGNALS: tuple[tuple[str, str], ...] = (
+    ("claude", "CLAUDE_CODE_ENTRYPOINT"),
+    ("cursor", "CURSOR_TRACE_ID"),
+)
+
+# Config files per host — persistent evidence for `connect` auto-detection.
+# Ordered so the strongest single file per host is checked first.
+_HOST_CONFIG_FILES: tuple[tuple[str, str], ...] = (
+    ("claude", ".claude/settings.json"),
+    ("claude", ".claude.json"),
+    ("codex", ".codex/config.toml"),
+    ("cursor", ".cursor/mcp.json"),
+    ("zcode", ".zcode/cli/config.json"),
+)
+
+# Stable display order for prompts and help.
+HOST_ORDER: tuple[str, ...] = ("codex", "claude", "cursor", "zcode")
+
+
+def detect_host(home: str | Path | None = None) -> tuple[str | None, list[str]]:
+    """Guess the current agent host for a bare `connect` invocation.
+
+    Env-var signals win (the command runs inside that agent's session);
+    otherwise the owner of the most recently modified config file wins.
+    Returns (best_guess, candidates) where candidates lists every host with
+    config evidence, so a caller can prompt when the guess is ambiguous.
+    """
+    home = Path(home).expanduser() if home else Path.home()
+    for host, var in _HOST_ENV_SIGNALS:
+        if os.environ.get(var):
+            return host, [host]
+    found: dict[str, float] = {}
+    for host, rel in _HOST_CONFIG_FILES:
+        path = home / rel
+        try:
+            if path.exists():
+                found[host] = path.stat().st_mtime
+        except OSError:
+            continue
+    if not found:
+        return None, []
+    best = max(found, key=found.get)
+    return best, sorted(found)
 
 
 class HostInstaller:

@@ -17,7 +17,7 @@ from jobfindsme.contracts import JobStateKind
 from jobfindsme.core import jobfindsmecore
 from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
-from jobfindsme.installer import HostInstaller
+from jobfindsme.installer import HostInstaller, detect_host
 from jobfindsme.presentation import format_job_list
 from jobfindsme.profiles.models import ResumeImportMode
 
@@ -392,6 +392,23 @@ def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
     raise AssertionError("argparse accepted an unsupported command")
 
 
+def _prompt_host(candidates: list[str]) -> str | None:
+    """Interactive fallback for `jobfindsme connect` when nothing was detected."""
+    from jobfindsme.installer import HOST_ORDER
+
+    print("未检测到明确的 Agent 配置，请选择要接入的 Agent：", file=sys.stderr)
+    for index, host in enumerate(HOST_ORDER, start=1):
+        mark = "（检测到配置）" if host in candidates else ""
+        print(f"  {index}) {host} {mark}", file=sys.stderr)
+    try:
+        choice = input("输入序号: ").strip()
+    except EOFError:
+        return None
+    if choice.isdigit() and 1 <= int(choice) <= len(HOST_ORDER):
+        return HOST_ORDER[int(choice) - 1]
+    return None
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.group == "self-update":
@@ -417,6 +434,24 @@ def run(argv: Sequence[str] | None = None) -> int:
             result = getattr(installer, args.group)("generic", config_path=custom_path)
         elif args.host:
             result = getattr(installer, args.group)(args.host)
+        elif args.group == "connect":
+            # Bare `jobfindsme connect`: detect the current agent automatically.
+            host, candidates = detect_host(installer.home)
+            if host is None and sys.stdin.isatty():
+                host = _prompt_host(candidates)
+            if host is None:
+                _emit(
+                    {
+                        "ok": False,
+                        "error": "未检测到当前 Agent，请显式指定",
+                        "detected_candidates": candidates,
+                        "hint": "jobfindsme connect <codex|claude|cursor|zcode>",
+                    },
+                    args.output,
+                )
+                return 1
+            print(f"自动探测到当前 Agent: {host}", file=sys.stderr)
+            result = installer.connect(host)
         else:
             raise ValueError("either host or --path is required")
     else:

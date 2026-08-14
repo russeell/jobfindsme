@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 from jobfindsme.contracts import (
     EmploymentType,
@@ -109,6 +111,12 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         check=False,
         capture_output=True,
         text=True,
+        # Resolve the src-layout package from the repo regardless of how (or
+        # whether) the current interpreter has jobfindsme installed.
+        env={
+            **os.environ,
+            "PYTHONPATH": str(Path(__file__).resolve().parents[2] / "src"),
+        },
     )
     assert completed.returncode == 0, completed.stderr
 

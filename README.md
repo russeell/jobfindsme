@@ -77,6 +77,7 @@ Codex / Claude Code 支持原生插件，一条命令装好 Skill + MCP 配置�
 其他 MCP 客户端用 `connect` 把配置交给当前 Agent，然后重启 Agent：
 
 ```bash
+jobfindsme connect             # 自动探测当前 Agent（推荐）
 jobfindsme connect claude      # Claude Code
 jobfindsme connect codex       # Codex
 jobfindsme connect cursor      # Cursor
