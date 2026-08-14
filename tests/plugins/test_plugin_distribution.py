@@ -51,8 +51,10 @@ def test_plugin_marketplace_manifests_are_present_and_valid() -> None:
         if "version" in data:
             assert data["version"] == version, path
     # Marketplace plugin entries must reference the same name.
-    for path in (ROOT / ".claude-plugin/marketplace.json",
-                 ROOT / ".agents/plugins/marketplace.json"):
+    for path in (
+        ROOT / ".claude-plugin/marketplace.json",
+        ROOT / ".agents/plugins/marketplace.json",
+    ):
         data = json.loads(path.read_text(encoding="utf-8"))
         assert all(p["name"] == "jobfindsme" for p in data["plugins"])
 
