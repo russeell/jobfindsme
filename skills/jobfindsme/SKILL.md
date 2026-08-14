@@ -80,7 +80,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    `career_url`, `board_name`, `board_token`, or other connector internals.
    Use `salary_policy: strict` when a salary constraint is present. Use
    `salary_policy: include_undisclosed` only when the user explicitly asks to
-   retain jobs with undisclosed or negotiable salary.5. Call `search_jobs` without IDs in the same turn. The `content[0].text`
+   retain jobs with undisclosed or negotiable salary.
+5. Call `search_jobs` without IDs in the same turn. The `content[0].text`
    IS the final output — return it verbatim. `structuredContent` contains
    only `final_text`, `count`, `changes`, `diagnostic_summary`, and
    `integrity` — it does NOT expose the jobs array, evidence, or apply URLs.
@@ -101,13 +102,17 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    Use `get_jobs` only for later pagination or state filtering, and with
    `job_id` only when the user explicitly asks about one specific
    job. Never auto-call it to rebuild or supplement the initial result.
-   Set `allow_browser_sources: true`. Do not begin by asking technical setup
-   questions. If diagnostics show that the browser is unavailable or BOSS is
-   logged out, give one recovery action: run `jobfindsme setup`, complete login
-   if needed, and retry once. Never start or restart it without the user's knowledge.
-   Use the default `fast` refresh for interactive requests. Use `full` only
-   when the user explicitly asks for exhaustive multi-platform refresh or for
-   scheduled monitoring/evaluation. Use `cache` for instant follow-up sorting.
+   Do not begin by asking technical setup questions. If diagnostics show that
+   the browser is unavailable or BOSS is logged out, give one recovery action:
+   run `jobfindsme setup`, complete login if needed, and retry once. Never
+   start or restart it without the user's knowledge.
+   Keep the default `fast` refresh for interactive requests and scheduled
+   pushes — the server auto-degrades to a labeled cache when a source fails.
+   `full`/`cache` are special cases; do not pass them unless the situation is
+   explicit. All other search parameters (`allow_browser_sources`,
+   `refresh_mode`, `use_profile`, `sources`) have server defaults that are
+   correct for every ordinary request; only `include_seen` and `limit` ever
+   need adjusting (see above and the Daily Push section).
    Reuse the active Search Plan on later requests. Do not recreate the profile
    or plan merely because the user asks for an update.
    The tool text is already the complete five-section answer. Preserve it;

@@ -151,13 +151,15 @@ class SearchJobsInput(StrictModel):
     allow_browser_sources: bool = Field(
         default=True,
         description=(
-            "If false, skip browser-only BOSS直聘; maintained HTTP sources still run"
+            "Usually leave at the default (true). Set false only to skip "
+            "browser-only BOSS直聘; maintained HTTP sources still run"
         ),
     )
     refresh_mode: SearchRefreshMode = Field(
         default=SearchRefreshMode.FAST,
         description=(
-            "fast: concurrently refresh the maintained bounded sources. "
+            "Usually leave at the default (fast): concurrently refresh the "
+            "maintained sources, auto-degrading to labeled cache on failure. "
             "cache: no remote access. full: refresh all sources"
         ),
     )

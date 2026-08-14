@@ -65,7 +65,10 @@ their resume or search constraints.
    - `employment_type` — "full_time", "internship", "part_time"
    - exclusions — e.g. `["外包", "996"]`
 
-2. **search_jobs** — call in the same turn. Set `allow_browser_sources: true`.
+2. **search_jobs** — call in the same turn. All search parameters have
+   server defaults that are correct for ordinary requests — do not pass
+   `allow_browser_sources`, `refresh_mode`, `use_profile`, or `sources`
+   unless the user explicitly changes them.
    Set `include_seen: true` for ordinary interactive "find/show jobs"
    requests. Use `include_seen: false` only for explicitly incremental
    requests such as "new jobs today", "continue finding new jobs", or a
