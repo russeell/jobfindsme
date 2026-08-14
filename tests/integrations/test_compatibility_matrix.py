@@ -53,7 +53,7 @@ def test_no_client_is_claimed_officially_supported_without_field_evidence() -> N
     )
     docs = "\n".join(
         path.read_text(encoding="utf-8")
-        for path in (ROOT / "README.md", ROOT / "README.en.md")
+        for path in (ROOT / "README.md", ROOT / "README.zh.md")
     )
     assert "官方支持" not in docs
     assert "officially supported" not in docs.casefold()
