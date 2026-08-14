@@ -115,7 +115,9 @@ def build_parser() -> argparse.ArgumentParser:
     _workspace_argument(state_list)
 
     export = groups.add_parser("export")
-    _workspace_argument(export)
+    # Workspace is an internal concept; export resolves the active one when
+    # omitted. Only the MCP delete tool and admin flows expose workspace IDs.
+    export.add_argument("--workspace", default=None)
     export.add_argument("--path", type=Path)
 
     delete = groups.add_parser("delete")
@@ -368,7 +370,9 @@ def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
             )
         return core.list_job_states(args.workspace)
     if args.group == "export":
-        exported = core.export_local_data(args.workspace)
+        # The workspace is an internal concept — never require it from users.
+        workspace_id = args.workspace or core.context.resolve_workspace().workspace_id
+        exported = core.export_local_data(workspace_id)
         if args.path:
             args.path.write_text(
                 json.dumps(exported, ensure_ascii=False, indent=2) + "\n",

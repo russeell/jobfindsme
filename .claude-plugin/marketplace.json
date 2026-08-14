@@ -9,7 +9,7 @@
       "name": "jobfindsme",
       "source": "./",
       "description": "Local-first job search MCP server and Agent Skill.",
-      "version": "0.10.0",
+      "version": "0.11.0",
       "category": "productivity",
       "tags": ["jobs", "mcp", "resume", "local-first"]
     }

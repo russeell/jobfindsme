@@ -29,6 +29,12 @@ jobs:
           wheel="$(find dist -name '*.whl' -print -quit)"
           wheel_name="$(basename "${wheel}")"
           (cd dist && sha256sum "${wheel_name}" > "${wheel_name}.sha256")
+      # Ship the installer as a release asset too: the fixed URL
+      # .../releases/latest/download/install.sh always points at the newest
+      # script (no CDN cache lag), and install.sh downloads the same-version
+      # wheel from the same release.
+      - name: Stage installer as release asset
+        run: cp scripts/install.sh dist/install.sh
       - name: Verify release wheel
         run: |
           wheel="$(find dist -name '*.whl' -print -quit)"

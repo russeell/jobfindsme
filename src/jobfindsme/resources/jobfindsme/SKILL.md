@@ -325,12 +325,16 @@ facts, score, evidence confidence, reasons, gaps, change state, and direct link.
 
 ## Deletion
 
-Deletion always takes two separate calls:
+Deletion always takes two separate calls with an explicit `scope` —
+`"jobs"` (all job records), `"profile"` (resume data), or `"workspace"`
+(everything):
 
-1. Call `delete_local_data` with `action: preview`.
+1. Call `delete_local_data` with `scope: "workspace"` (or the narrower
+   scope the user asked for) and `action: preview`.
 2. Show the exact scope and counts to the user.
 3. Ask for explicit confirmation.
-4. Only then call it again with `action: confirm` and the returned token.
+4. Only then call it again with the same `scope` and `action: confirm`
+   plus the returned `confirmation_token`.
 
 Never invent, reuse, or bypass a confirmation token.
 

@@ -57,9 +57,13 @@ Install jobfindsme by following the README at https://github.com/russeell/jobfin
 ```
 
 The agent reads this README, installs the local runtime
-(`curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash`),
+(`curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash`),
 wires the MCP config, and asks you to restart. First install takes a few
 minutes; if the agent cannot reach the network, use Option 2.
+`install.sh` is published as a release asset, so this fixed URL always serves
+the newest script (no CDN cache lag). CN fallback:
+`https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh`
+(jsdelivr cache may lag up to 12h after a push).
 
 Once installed, just say what you need:
 
@@ -73,7 +77,7 @@ engineer roles in Shanghai, 20K+.
 Install the local runtime once (Python 3.11+):
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
+curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
 ```
 
 Wire the MCP config to your Agent, then restart it:
@@ -272,7 +276,7 @@ model API.
 history/state are kept:
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
+curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
 ```
 
 **Manual install** (when the script is unavailable): create a venv and install

@@ -67,6 +67,6 @@ def test_install_script_and_readme_are_version_agnostic() -> None:
     assert "releases/download/v0.10.0" not in install
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "scripts/install.sh" in readme
+    assert "releases/latest/download/install.sh" in readme
     assert "releases/latest" in readme
     assert "jobfindsme-0.10.0-py3-none-any.whl" not in readme

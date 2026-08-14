@@ -4,6 +4,10 @@
 # 本地求职雷达 · 聚合四大招聘平台 · 确定性匹配 · 增量岗位追踪
 #
 # 用法（推荐，只安装本地运行时）:
+#   curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh \
+#     | bash
+#
+# 国内备选（jsdelivr CDN，push 后缓存可能滞后 12h）:
 #   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
 #     | bash
 #
@@ -21,7 +25,7 @@
 
 set -euo pipefail
 
-PINNED_VERSION="0.10.0"
+PINNED_VERSION="0.11.0"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
 LAUNCHER_DIR="$HOME/.local/bin"

@@ -55,9 +55,12 @@
 ```
 
 Agent 会读取仓库 README 完成：安装本地运行时（
-`curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash`）
+`curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash`）
 → 写入 MCP 配置（`jobfindsme connect <当前Agent>`）→ 提示重启。
 首次安装需要几分钟；如果 Agent 无法访问网络，改用下面的手动方式。
+`install.sh` 随 Release 发布，此固定链接始终指向最新脚本（无 CDN 缓存滞后）。
+国内备选：`https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh`
+（jsdelivr 缓存可能在 push 后滞后最多 12 小时）。
 
 装好后，直接说需求即可：
 
@@ -70,7 +73,7 @@ Agent 会读取仓库 README 完成：安装本地运行时（
 需要 Python 3.11+。安装一次本地运行时：
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
+curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
 ```
 
 Codex / Claude Code 支持原生插件，一条命令装好 Skill + MCP 配置（安装脚本结束时会打印对应命令）；
@@ -252,7 +255,7 @@ Agent 负责自然语言交互；用户追问岗位对比时，才基于返回�
 **更新**：重新运行安装脚本，数据库自动迁移，历史岗位和状态保留：
 
 ```bash
-curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
+curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
 ```
 
 **手动安装**（脚本不可用时）：

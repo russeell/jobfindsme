@@ -282,3 +282,45 @@ def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) ->
     output = capsys.readouterr().out
     assert "匹配度：" in output  # profile exists → signal score shown
     assert "投递链接：https://example.com/jobs/1" in output
+
+
+def test_export_resolves_active_workspace_without_internal_id(tmp_path, capsys) -> None:
+    """Export must not require a workspace ID — it is an internal concept."""
+    database = tmp_path / "jobfindsme.db"
+    core = jobfindsmecore(database)
+    workspace = core.create_workspace("导出测试")
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "job-1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Agent，1-3年，25-40K",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="企业官网",
+        ),
+    )
+
+    assert (
+        run(
+            [
+                "--db",
+                str(database),
+                "export",
+                "--path",
+                str(tmp_path / "export.json"),
+            ]
+        )
+        == 0
+    )
+    exported = json.loads((tmp_path / "export.json").read_text(encoding="utf-8"))
+    assert exported["jobs"]
+    assert exported["jobs"][0]["title"] == "AI应用工程师"

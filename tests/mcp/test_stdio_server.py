@@ -4,6 +4,7 @@ import io
 import json
 
 from jobfindsme.core import jobfindsmecore
+from jobfindsme.importing import parse_json
 from jobfindsme.mcp.registry import ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer
 
@@ -69,6 +70,68 @@ def test_stdio_protocol_initializes_lists_and_calls_tools(tmp_path) -> None:
         "next_offset": None,
     }
     assert isinstance(responses[2]["result"]["structuredContent"], dict)
+
+
+def test_get_jobs_with_records_is_json_serializable(tmp_path) -> None:
+    """Regression: get_jobs returning JobSummary objects used to crash
+    json.dumps and kill the stdio server mid-session."""
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    workspace = core.create_workspace("MCP")
+    core.job_imports.import_records(
+        workspace.workspace_id,
+        parse_json(
+            json.dumps(
+                [
+                    {
+                        "id": "job-1",
+                        "title": "AI应用工程师",
+                        "company": "示例科技",
+                        "description": "Python RAG Agent 大模型 3-5年 25-40K",
+                        "location": "上海",
+                        "url": "https://example.com/jobs/1",
+                    }
+                ],
+                ensure_ascii=False,
+            ),
+            source_name="测试来源",
+        ),
+    )
+    input_stream = io.StringIO(
+        "\n".join(
+            [
+                request(
+                    1,
+                    "initialize",
+                    {
+                        "protocolVersion": "2025-11-25",
+                        "clientInfo": {"name": "test", "version": "1"},
+                        "capabilities": {},
+                    },
+                ),
+                json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+                request(
+                    2,
+                    "tools/call",
+                    {
+                        "name": "get_jobs",
+                        "arguments": {"workspace_id": workspace.workspace_id},
+                    },
+                ),
+            ]
+        )
+        + "\n"
+    )
+    output_stream = io.StringIO()
+
+    StdioMcpServer(ToolRegistry(core)).run(input_stream, output_stream)
+
+    lines = output_stream.getvalue().splitlines()
+    assert len(lines) == 2, lines
+    result = json.loads(lines[1])["result"]
+    jobs = result["structuredContent"]["jobs"]
+    assert result["structuredContent"]["count"] == 1
+    assert jobs[0]["job_id"].startswith("job_")
+    assert jobs[0]["title"] == "AI应用工程师"
 
 
 def test_unknown_rpc_method_returns_json_rpc_error(tmp_path) -> None:
