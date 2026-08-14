@@ -65,7 +65,7 @@ def test_bare_connect_without_evidence_fails_cleanly(
     result = json.loads(capsys.readouterr().out)
     assert result["ok"] is False
     assert "未检测到当前 Agent" in result["error"]
-    assert "connect <codex|claude|cursor|zcode>" in result["hint"]
+    assert "connect <codex|claude|cursor>" in result["hint"]
 
 
 def test_bare_connect_prompt_accepts_numbered_choice(

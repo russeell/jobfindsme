@@ -583,7 +583,7 @@ def test_field_trial_labels_may_cover_top_ten_of_a_larger_loop(tmp_path) -> None
     now = datetime(2026, 7, 30, tzinfo=UTC)
     loop_report = LiveSearchLoopReport(
         run_id="loop-with-more-than-ten",
-        agent_host="zcode",
+        agent_host="cursor",
         workspace_id="workspace",
         plan_id="plan-1",
         profile_hash="profile-hash",

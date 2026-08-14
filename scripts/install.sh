@@ -11,10 +11,6 @@
 #   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
 #     | bash
 #
-# 兼容旧式 MCP 配置:
-#   bash scripts/install.sh <agent>
-#   <agent>: codex | claude | cursor | zcode
-#
 # 设计原则:
 #   - 默认只完成「检测 Python → 建运行时 → 装包 → 注入 PATH → 打印接入方式」
 #   - 版本动态取自 GitHub 最新 Release；API 不可用时回退到内置 PIN 版本
@@ -30,8 +26,6 @@ MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
 LAUNCHER_DIR="$HOME/.local/bin"
 LAUNCHER="$LAUNCHER_DIR/jobfindsme"
-AGENTS=(codex claude cursor zcode)
-AGENT="${1:-}"
 DOWNLOAD_DIR="$(mktemp -d)"
 trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
@@ -151,63 +145,24 @@ else
 fi
 
 # ── 5. 接入 Agent ────────────────────────────────────────────────────────────
-if [ -z "$AGENT" ]; then
-  echo
-  bold "📎 接入你的 Agent（三选一）:"
-  echo
-  echo "  Codex:"
-  echo "    codex plugin marketplace add russeell/jobfindsme --ref main"
-  echo "    codex plugin add jobfindsme@jobfindsme"
-  echo
-  echo "  Claude Code:"
-  echo "    claude plugin marketplace add russeell/jobfindsme"
-  echo "    claude plugin install jobfindsme@jobfindsme"
-  echo
-  echo "  其他 MCP 客户端（Cursor / Cline / Roo / OpenCode…）:"
-  echo "    jobfindsme connect cursor     # Cursor"
-  echo "    jobfindsme connect            # 自动探测当前 Agent"
-  echo "    jobfindsme config             # 打印标准 MCP JSON 手动粘贴"
-  echo
-  bold "🚀 两步启动:"
-  echo
-  echo "  ┌─────────────────────────────────────────────────────┐"
-  echo "  │ ① 登录 BOSS直聘（猎聘不需要）                         │"
-  echo "  │    jobfindsme setup                                  │"
-  echo "  │    在打开的专用 Chrome 窗口扫码，保持窗口运行            │"
-  echo "  │                                                     │"
-  echo "  │ 💡 不想装浏览器？跳过这步也能用 ——                     │"
-  echo "  │    猎聘纯 HTTP 直连，不需要登录，先试试看结果             │"
-  echo "  │    觉得岗位不够再加 BOSS                                │"
-  echo "  │                                                     │"
-  echo "  │ ② 重启 Agent，然后说：                                 │"
-  echo "  │    用 jobfindsme 根据本地简历路径找上海 AI 应用工程师   │"
-  echo "  └─────────────────────────────────────────────────────┘"
-  echo
-  dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
-  exit 0
-fi
-
-if [[ ! " ${AGENTS[*]} " == *" $AGENT "* ]]; then
-  red "✗ 未知 Agent: $AGENT"; yellow "可选: ${AGENTS[*]}"; exit 1
-fi
-
-"$RUNTIME/bin/python" -m jobfindsme connect "$AGENT"
-green "✓ 已接入 $AGENT"
 echo
-bold "🚀 三步启动:"
+bold "📎 接入你的 Agent:"
 echo
-echo "  ┌─────────────────────────────────────────────────────┐"
-echo "  │ ① 登录 BOSS直聘（猎聘不需要）                         │"
-echo "  │    jobfindsme setup                                  │"
-echo "  │    在专用 Chrome 扫码，保持窗口运行                      │"
-echo "  │                                                     │"
-echo "  │ 💡 跳过 BOSS 也能搜 —— 猎聘纯 HTTP 直连不需要浏览器      │"
-echo "  │                                                     │"
-echo "  │ ② 重启 $AGENT                                        │"
-echo "  │                                                     │"
-echo "  │ ③ 对 Agent 说：                                      │"
-echo "  │    用 jobfindsme 根据简历找上海 AI 应用工程师，20K以上   │"
-echo "  └─────────────────────────────────────────────────────┘"
+echo "  Codex / Claude Code（原生插件）:"
+echo "    codex plugin marketplace add russeell/jobfindsme --ref main"
+echo "    codex plugin add jobfindsme@jobfindsme"
+echo "    claude plugin marketplace add russeell/jobfindsme"
+echo "    claude plugin install jobfindsme@jobfindsme"
+echo
+echo "  其他 MCP 客户端:"
+echo "    jobfindsme connect            # 自动探测当前 Agent"
+echo "    jobfindsme connect cursor     # 显式指定宿主"
+echo "    jobfindsme config             # 打印标准 MCP JSON 手动粘贴"
+echo
+bold "🚀 两步启动:"
+echo
+echo "  ① jobfindsme setup   # 登录 BOSS直聘（猎聘不需要，可跳过）"
+echo "  ② 重启 Agent 后说：用 jobfindsme 根据简历找上海 AI 应用工程师，20K以上"
 echo
 dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
 dim  "完整文档: https://github.com/russeell/jobfindsme"

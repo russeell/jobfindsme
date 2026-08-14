@@ -143,7 +143,6 @@ def build_parser() -> argparse.ArgumentParser:
                 "codex",
                 "claude",
                 "cursor",
-                "zcode",
             ),
         )
         host_action.add_argument("--home", type=Path)
@@ -449,7 +448,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                         "ok": False,
                         "error": "未检测到当前 Agent，请显式指定",
                         "detected_candidates": candidates,
-                        "hint": "jobfindsme connect <codex|claude|cursor|zcode>",
+                        "hint": "jobfindsme connect <codex|claude|cursor>",
                     },
                     args.output,
                 )

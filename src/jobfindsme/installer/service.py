@@ -45,11 +45,10 @@ _HOST_CONFIG_FILES: tuple[tuple[str, str], ...] = (
     ("claude", ".claude.json"),
     ("codex", ".codex/config.toml"),
     ("cursor", ".cursor/mcp.json"),
-    ("zcode", ".zcode/cli/config.json"),
 )
 
 # Stable display order for prompts and help.
-HOST_ORDER: tuple[str, ...] = ("codex", "claude", "cursor", "zcode")
+HOST_ORDER: tuple[str, ...] = ("codex", "claude", "cursor")
 
 
 def detect_host(home: str | Path | None = None) -> tuple[str | None, list[str]]:
@@ -83,7 +82,6 @@ class HostInstaller:
         "codex",
         "claude",
         "cursor",
-        "zcode",  # developer-host, kept for the project's own usage
     }
 
     def __init__(
@@ -153,13 +151,6 @@ class HostInstaller:
         if host == "codex":
             content = _remove_codex_config(config_path.read_text())
             config_path.write_text(content, encoding="utf-8")
-        elif host == "zcode":
-            document = json.loads(config_path.read_text())
-            document.get("mcp", {}).get("servers", {}).pop("jobfindsme", None)
-            config_path.write_text(
-                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
         elif host in _STANDARD_JSON_HOSTS:
             document = json.loads(config_path.read_text())
             document.get("mcpServers", {}).pop("jobfindsme", None)
@@ -224,21 +215,6 @@ class HostInstaller:
                 existing.rstrip() + self._codex_block() + "\n",
                 encoding="utf-8",
             )
-        elif host == "zcode":
-            document = (
-                json.loads(config_path.read_text()) if config_path.exists() else {}
-            )
-            mcp = document.setdefault("mcp", {})
-            servers = mcp.setdefault("servers", {})
-            if "jobfindsme" in servers and not replace:
-                if backup:
-                    backup.unlink()
-                raise FileExistsError("ZCode jobfindsme MCP config already exists")
-            servers["jobfindsme"] = self._json_server()
-            config_path.write_text(
-                json.dumps(document, ensure_ascii=False, indent=2) + "\n",
-                encoding="utf-8",
-            )
         elif host in _STANDARD_JSON_HOSTS:
             document = (
                 json.loads(config_path.read_text()) if config_path.exists() else {}
@@ -291,11 +267,6 @@ class HostInstaller:
             return (
                 self.home / ".codex" / "config.toml",
                 self.home / ".codex" / "skills" / "jobfindsme" / "SKILL.md",
-            )
-        if host == "zcode":
-            return (
-                self.home / ".zcode" / "cli" / "config.json",
-                self.home / ".zcode" / "skills" / "jobfindsme" / "SKILL.md",
             )
         if host in _STANDARD_JSON_HOSTS:
             cfg_rel, skill_rel = _STANDARD_JSON_HOSTS[host]

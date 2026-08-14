@@ -87,7 +87,6 @@ jobfindsme connect             # auto-detect the current Agent (recommended)
 jobfindsme connect claude      # Claude Code
 jobfindsme connect codex       # Codex
 jobfindsme connect cursor      # Cursor
-jobfindsme connect zcode       # ZCode
 ```
 
 Other MCP clients: `jobfindsme config` prints the standard JSON to paste, or
@@ -123,8 +122,8 @@ claude plugin install jobfindsme@jobfindsme
 
 ### Works with
 
-Claude Code · Codex · Cursor · Cline · Roo · OpenCode · Cherry Studio · Zed ·
-any MCP-compatible client — one standard MCP config + one Skill serves them all.
+Claude Code · Codex · Cursor · any MCP-compatible client — one standard MCP
+config + one Skill serves them all.
 
 ---
 

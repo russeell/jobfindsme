@@ -18,7 +18,7 @@
 
 ---
 
-> 给 Claude Code、Codex、Cursor、ZCode 等 Agent 装一个本地求职 MCP Server。
+> 给 Claude Code、Codex、Cursor 等 Agent 装一个本地求职 MCP Server。
 > 它负责搜岗位、去重、排序和记住状态；Agent 负责和你聊天。
 
 ---
@@ -48,7 +48,7 @@
 
 ### 方式一：直接和 Agent 说（推荐）
 
-在 Claude Code、Codex、Cursor、ZCode 里直接说（复制整段）：
+在 Claude Code、Codex、Cursor 里直接说（复制整段）：
 
 ```text
 按 https://github.com/russeell/jobfindsme 的 README 安装 jobfindsme
@@ -84,7 +84,6 @@ jobfindsme connect             # 自动探测当前 Agent（推荐）
 jobfindsme connect claude      # Claude Code
 jobfindsme connect codex       # Codex
 jobfindsme connect cursor      # Cursor
-jobfindsme connect zcode       # ZCode
 ```
 
 其他 MCP 客户端：`jobfindsme config` 打印标准 JSON 手动粘贴，或
