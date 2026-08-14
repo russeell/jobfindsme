@@ -35,17 +35,21 @@ search returns per-source diagnostics. See the latest
 In Claude Code, Codex, Cursor, or ZCode, paste the whole sentence:
 
 ```text
-Install jobfindsme by following the README at
-https://github.com/russeell/jobfindsme, then use my local resume at
-~/Documents/resume.pdf to find AI application engineer roles in
-Shanghai, 20K+.
+Install jobfindsme by following the README at https://github.com/russeell/jobfindsme
 ```
 
 The Agent reads the repository README, installs the local runtime
 (`curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash`),
-wires the MCP config (`jobfindsme connect <current-agent>`), asks you to
-restart, and searches. First install takes a few minutes; if the Agent
-cannot reach the network, use Option 2.
+wires the MCP config (`jobfindsme connect <current-agent>`), and asks you to
+restart. First install takes a few minutes; if the Agent cannot reach the
+network, use Option 2.
+
+Once installed, just say what you need:
+
+```text
+Use my local resume at ~/Documents/resume.pdf to find AI application
+engineer roles in Shanghai, 20K+.
+```
 
 ### Option 2: manual (about 1 minute)
 
