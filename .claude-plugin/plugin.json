@@ -1,0 +1,14 @@
+{
+  "name": "jobfindsme",
+  "version": "0.10.0",
+  "description": "Find, rank, and track jobs through the local jobfindsme MCP server.",
+  "author": {
+    "name": "russeell"
+  },
+  "homepage": "https://github.com/russeell/jobfindsme",
+  "repository": "https://github.com/russeell/jobfindsme",
+  "license": "MIT",
+  "keywords": ["job-search", "mcp", "local-first", "resume"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

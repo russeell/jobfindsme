@@ -11,27 +11,24 @@
 #   bash scripts/install.sh <agent>
 #   <agent>: codex | claude | cursor | zcode
 #
-# 也可直接: bash scripts/install.sh <agent>
-#
 # 设计原则:
-#   - 默认只完成「检测 Python → 建运行时 → 装包 → 打印原生插件命令」
-#   - 只有显式传入 <agent> 才写旧式 MCP 配置
-#   - 清华镜像加速依赖下载；Release wheel 必须通过 SHA-256 校验
+#   - 默认只完成「检测 Python → 建运行时 → 装包 → 注入 PATH → 打印接入方式」
+#   - 版本动态取自 GitHub 最新 Release；API 不可用时回退到内置 PIN 版本
+#   - 依赖默认走 PyPI（尊重 PIP_INDEX_URL / UV_INDEX_URL），失败时自动换清华镜像
+#   - Release wheel 必须通过 SHA-256 校验
 #   - 检测到 uv 则用 uv pip 加速；运行时布局与 venv 一致，可重复执行
 #   - 不克隆源码、不装开发依赖、不下载浏览器
 
 set -euo pipefail
 
-VERSION="0.10.0"
-WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
-CHECKSUM_GH="${WHEEL_GH}.sha256"
+PINNED_VERSION="0.10.0"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
+LAUNCHER_DIR="$HOME/.local/bin"
+LAUNCHER="$LAUNCHER_DIR/jobfindsme"
 AGENTS=(codex claude cursor zcode)
 AGENT="${1:-}"
 DOWNLOAD_DIR="$(mktemp -d)"
-WHEEL_FILE="$DOWNLOAD_DIR/jobfindsme-${VERSION}-py3-none-any.whl"
-CHECKSUM_FILE="${WHEEL_FILE}.sha256"
 trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
 red()    { printf '\033[31m%s\033[0m\n' "$*"; }
@@ -39,6 +36,28 @@ green()  { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
 bold()   { printf '\033[1m%s\033[0m\n' "$*"; }
 dim()    { printf '\033[2m%s\033[0m\n' "$*"; }
+
+# ── 0. 解析最新版本号（GitHub API，失败回退 PINNED_VERSION）───────────────────
+VERSION="$PINNED_VERSION"
+LATEST_TAG="$(curl -fsSL --connect-timeout 8 --max-time 15 \
+    https://api.github.com/repos/russeell/jobfindsme/releases/latest \
+    2>/dev/null | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+    tag = d.get("tag_name", "")
+    sys.stdout.write(tag[1:] if tag.startswith("v") else tag)
+except Exception:
+    pass
+')"
+if printf '%s' "$LATEST_TAG" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  VERSION="$LATEST_TAG"
+fi
+
+WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
+CHECKSUM_GH="${WHEEL_GH}.sha256"
+WHEEL_FILE="$DOWNLOAD_DIR/jobfindsme-${VERSION}-py3-none-any.whl"
+CHECKSUM_FILE="${WHEEL_FILE}.sha256"
 
 echo
 bold "🤖 jobfindsme v${VERSION} · AI 求职雷达"
@@ -93,18 +112,44 @@ if command -v uv >/dev/null 2>&1; then
   PIP=( uv pip install --python "$RUNTIME/bin/python" )
 fi
 
-yellow "· 安装 jobfindsme[browser]（依赖走清华镜像）…"
-"${PIP[@]}" --quiet \
-  --index-url "$MIRROR" --upgrade \
-  "$WHEEL_FILE[browser]"
+# 依赖默认走 PyPI，尊重用户环境变量；失败时自动换清华镜像重试一次。
+INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"
+# 注意：macOS 自带 bash 3.2 会把变量名后紧跟的全角字符并入变量名，
+# 因此所有后面跟非 ASCII 字符的变量一律使用 ${VAR} 花括号形式。
+yellow "· 安装 jobfindsme[browser]（index: ${INDEX_URL}）…"
+if ! "${PIP[@]}" --quiet \
+    --index-url "$INDEX_URL" --upgrade \
+    "$WHEEL_FILE[browser]"; then
+  if [ "$INDEX_URL" != "$MIRROR" ]; then
+    yellow "· 默认源失败，改用清华镜像重试…"
+    INDEX_URL="$MIRROR"
+    "${PIP[@]}" --quiet \
+      --index-url "$INDEX_URL" --upgrade \
+      "$WHEEL_FILE[browser]"
+  else
+    red "✗ pip 安装失败（index: ${INDEX_URL}），请检查网络后重试"
+    exit 1
+  fi
+fi
 
-BIN=( "$RUNTIME/bin/python" -m jobfindsme )
-green "✓ 安装完成: $("${BIN[@]}" --version 2>&1)"
+green "✓ 安装完成: $("$RUNTIME/bin/python" -m jobfindsme --version 2>&1)"
 
-# ── 4. 接入 Agent ────────────────────────────────────────────────────────────
+# ── 4. 注入 PATH（~/.local/bin/jobfindsme）───────────────────────────────────
+mkdir -p "$LAUNCHER_DIR"
+ln -sf "$RUNTIME/bin/jobfindsme" "$LAUNCHER"
+if [ "$(command -v jobfindsme 2>/dev/null || true)" = "$LAUNCHER" ]; then
+  green "✓ jobfindsme 已加入 PATH（${LAUNCHER}）"
+else
+  yellow "· 提示: 命令 jobfindsme 当前不可用或指向其他版本（PATH 里已有同名程序？）"
+  yellow "  可用全路径执行:"
+  yellow "    $LAUNCHER"
+  yellow "  或临时加入: export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
+
+# ── 5. 接入 Agent ────────────────────────────────────────────────────────────
 if [ -z "$AGENT" ]; then
   echo
-  bold "📎 安装当前 Agent 的原生插件:"
+  bold "📎 接入你的 Agent（三选一）:"
   echo
   echo "  Codex:"
   echo "    codex plugin marketplace add russeell/jobfindsme --ref main"
@@ -114,14 +159,16 @@ if [ -z "$AGENT" ]; then
   echo "    claude plugin marketplace add russeell/jobfindsme"
   echo "    claude plugin install jobfindsme@jobfindsme"
   echo
-  echo "  Cursor（市场上架前兼容入口）:"
-  echo "    ~/.jobfindsme/runtime/bin/python -m jobfindsme connect cursor"
+  echo "  其他 MCP 客户端（Cursor / Cline / Roo / OpenCode…）:"
+  echo "    jobfindsme connect cursor     # Cursor"
+  echo "    jobfindsme connect            # 自动探测当前 Agent"
+  echo "    jobfindsme config             # 打印标准 MCP JSON 手动粘贴"
   echo
   bold "🚀 两步启动:"
   echo
   echo "  ┌─────────────────────────────────────────────────────┐"
   echo "  │ ① 登录 BOSS直聘（猎聘不需要）                         │"
-  echo "  │    ~/.jobfindsme/runtime/bin/python -m jobfindsme setup │"
+  echo "  │    jobfindsme setup                                  │"
   echo "  │    在打开的专用 Chrome 窗口扫码，保持窗口运行            │"
   echo "  │                                                     │"
   echo "  │ 💡 不想装浏览器？跳过这步也能用 ——                     │"
@@ -132,7 +179,6 @@ if [ -z "$AGENT" ]; then
   echo "  │    用 jobfindsme 根据本地简历路径找上海 AI 应用工程师   │"
   echo "  └─────────────────────────────────────────────────────┘"
   echo
-  dim  "其他 MCP 客户端: jobfindsme config"
   dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
   exit 0
 fi
@@ -141,14 +187,14 @@ if [[ ! " ${AGENTS[*]} " == *" $AGENT "* ]]; then
   red "✗ 未知 Agent: $AGENT"; yellow "可选: ${AGENTS[*]}"; exit 1
 fi
 
-"${BIN[@]}" connect "$AGENT"
+"$RUNTIME/bin/python" -m jobfindsme connect "$AGENT"
 green "✓ 已接入 $AGENT"
 echo
 bold "🚀 三步启动:"
 echo
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │ ① 登录 BOSS直聘（猎聘不需要）                         │"
-echo "  │    ~/.jobfindsme/runtime/bin/python -m jobfindsme setup │"
+echo "  │    jobfindsme setup                                  │"
 echo "  │    在专用 Chrome 扫码，保持窗口运行                      │"
 echo "  │                                                     │"
 echo "  │ 💡 跳过 BOSS 也能搜 —— 猎聘纯 HTTP 直连不需要浏览器      │"

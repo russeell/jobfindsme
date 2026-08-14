@@ -110,13 +110,18 @@ def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
     version = project["project"]["version"]
     script = (root / "scripts" / "install.sh").read_text()
     install_doc = (root / "README.md").read_text()
-    wheel = f"jobfindsme-{version}-py3-none-any.whl"
 
-    assert f'VERSION="{version}"' in script
-    assert wheel in install_doc
+    # Offline fallback pin must match the package version; the live path
+    # resolves the latest release dynamically so releases need no script edit.
+    assert f'PINNED_VERSION="{version}"' in script
+    assert "releases/latest" in script
     assert "CHECKSUM_GH=" in script
     assert "SHA-256 校验失败" in script
     assert "ghproxy" not in script
+    # The installer must put jobfindsme on PATH after installation.
+    assert "$HOME/.local/bin" in script or "LAUNCHER" in script
+    # README manual install points at latest release instead of a pinned wheel.
+    assert "releases/latest" in install_doc
 
 
 @pytest.mark.parametrize("host", ["codex", "claude", "cursor"])

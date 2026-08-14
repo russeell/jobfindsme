@@ -73,7 +73,8 @@ Agent 会读取仓库 README 完成：安装本地运行时（
 curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash
 ```
 
-一条命令把 MCP 配置交给当前 Agent，然后重启 Agent：
+Codex / Claude Code 支持原生插件，一条命令装好 Skill + MCP 配置（安装脚本结束时会打印对应命令）；
+其他 MCP 客户端用 `connect` 把配置交给当前 Agent，然后重启 Agent：
 
 ```bash
 jobfindsme connect claude      # Claude Code
@@ -258,9 +259,12 @@ curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.
 ```bash
 python3 -m venv ~/.jobfindsme/runtime
 ~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
-  --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-  "jobfindsme[browser] @ https://github.com/russeell/jobfindsme/releases/download/v0.10.0/jobfindsme-0.10.0-py3-none-any.whl"
+  "jobfindsme[browser] @ <最新版 wheel 链接>"
 ```
+
+wheel 链接从 [Releases](https://github.com/russeell/jobfindsme/releases/latest)
+复制，形如 `jobfindsme-X.Y.Z-py3-none-any.whl`（安装脚本自动取最新版本，无需关心）。
+网络受限时可加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple`。
 
 **卸载**：`jobfindsme uninstall <host>` 只移除 Agent 配置，不删数据。彻底删除前先导出：
 

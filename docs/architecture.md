@@ -71,9 +71,16 @@ skills/jobfindsme/SKILL.md                 canonical behavior source
   └─ src/jobfindsme/resources/jobfindsme/  generated wheel mirror
 
 .mcp.json                                 shared stdio MCP definition
+.codex-plugin/plugin.json                 Codex plugin marketplace manifest
+.claude-plugin/marketplace.json
+  + .claude-plugin/plugin.json            Claude Code plugin marketplace manifest
+.agents/plugins/marketplace.json          Agents SDK plugin marketplace manifest
+.cursor-plugin/plugin.json                Cursor plugin manifest
 ```
 
 One standard MCP config plus one Skill serves every MCP-compatible host.
+Native plugin marketplaces (Codex / Claude Code) install the Skill and the
+MCP config in a single command; `jobfindsme connect` covers every other host.
 `scripts/sync_skill.py --check` and distribution tests enforce the boundary.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and

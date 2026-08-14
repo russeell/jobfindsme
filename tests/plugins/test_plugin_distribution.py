@@ -34,8 +34,37 @@ def test_cli_config_prints_a_valid_standard_mcp_json() -> None:
     assert "jobfindsme.mcp" in " ".join(server["args"])
 
 
-def test_project_version_is_consistent_across_package_and_docs() -> None:
+def test_plugin_marketplace_manifests_are_present_and_valid() -> None:
+    """Native plugin marketplaces (Codex / Claude Code / Agents / Cursor)
+    must ship manifests with the project name and matching version."""
     version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
-    wheel = f"jobfindsme-{version}-py3-none-any.whl"
-    readme = (ROOT / "README.md").read_text()
-    assert wheel in readme
+    manifests = [
+        ROOT / ".codex-plugin/plugin.json",
+        ROOT / ".claude-plugin/marketplace.json",
+        ROOT / ".claude-plugin/plugin.json",
+        ROOT / ".agents/plugins/marketplace.json",
+        ROOT / ".cursor-plugin/plugin.json",
+    ]
+    for path in manifests:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["name"] == "jobfindsme"
+        if "version" in data:
+            assert data["version"] == version, path
+    # Marketplace plugin entries must reference the same name.
+    for path in (ROOT / ".claude-plugin/marketplace.json",
+                 ROOT / ".agents/plugins/marketplace.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert all(p["name"] == "jobfindsme" for p in data["plugins"])
+
+
+def test_install_script_and_readme_are_version_agnostic() -> None:
+    """Releases must not require touching install.sh or README per version."""
+    install = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
+    assert "releases/latest" in install
+    # A pinned wheel URL would break the next release without an edit.
+    assert "releases/download/v0.10.0" not in install
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "scripts/install.sh" in readme
+    assert "releases/latest" in readme
+    assert "jobfindsme-0.10.0-py3-none-any.whl" not in readme
