@@ -48,15 +48,18 @@
 
 ### 方式一：直接和 Agent 说（推荐）
 
-在 Claude Code、Codex、Cursor、ZCode 里直接说：
+在 Claude Code、Codex、Cursor、ZCode 里直接说（复制整段）：
 
 ```text
-用 jobfindsme 找上海和杭州的 AI 应用工程师岗位，20K 以上，社招
+按 https://github.com/russeell/jobfindsme 的 README 安装 jobfindsme，
+然后根据本地简历 ~/Documents/resume.pdf 找上海和杭州的
+AI 应用工程师岗位，20K 以上，社招。
 ```
 
-Agent 会自动完成：安装本地运行时 → 写入 MCP 配置 → 提示重启 → 搜索。
-首次安装需要几分钟；如果 Agent 不认识 jobfindsme，让它先读本仓库的
-README 和 AGENTS.md，再重试。
+Agent 会读取仓库 README 完成：安装本地运行时（
+`curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash`）
+→ 写入 MCP 配置（`jobfindsme connect <当前Agent>`）→ 提示重启 → 搜索。
+首次安装需要几分钟；如果 Agent 无法访问网络，改用下面的手动方式。
 
 ### 方式二：手动安装（1 分钟）
 

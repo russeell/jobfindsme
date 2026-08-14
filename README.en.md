@@ -32,15 +32,20 @@ search returns per-source diagnostics. See the latest
 
 ### Option 1: just ask your Agent (recommended)
 
-In Claude Code, Codex, Cursor, or ZCode, say:
+In Claude Code, Codex, Cursor, or ZCode, paste the whole sentence:
 
 ```text
-Use jobfindsme to find AI application engineer roles in Shanghai, 20K+.
+Install jobfindsme by following the README at
+https://github.com/russeell/jobfindsme, then use my local resume at
+~/Documents/resume.pdf to find AI application engineer roles in
+Shanghai, 20K+.
 ```
 
-The Agent installs the local runtime, wires the MCP config, and searches.
-If the Agent does not know jobfindsme, tell it to read this repository's
-README and AGENTS.md first, then retry.
+The Agent reads the repository README, installs the local runtime
+(`curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh | bash`),
+wires the MCP config (`jobfindsme connect <current-agent>`), asks you to
+restart, and searches. First install takes a few minutes; if the Agent
+cannot reach the network, use Option 2.
 
 ### Option 2: manual (about 1 minute)
 
