@@ -39,7 +39,7 @@
 
 ```text
 用 jobfindsme，根据本地简历（路径：~/Documents/resume.pdf），
-找上海和深圳的 AI 应用工程师，20K以上，社招，正式。
+找上海的 AI 应用工程师，20K以上，社招，正式。
 ```
 
 ---
@@ -62,7 +62,7 @@ Agent 会读取仓库 README 完成：安装本地运行时（
 装好后，直接说需求即可：
 
 ```text
-根据本地简历 ~/Documents/resume.pdf 找上海和杭州的 AI 应用工程师岗位，20K 以上，社招。
+根据本地简历 ~/Documents/resume.pdf 找上海的 AI 应用工程师岗位，20K 以上，社招。
 ```
 
 ### 方式二：手动安装（1 分钟）

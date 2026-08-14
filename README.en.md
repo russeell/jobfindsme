@@ -82,7 +82,7 @@ jobfindsme doctor
 
 ```text
 Use jobfindsme and my local resume at ~/Documents/resume.pdf
-to find full-time AI application engineer roles in Shanghai and Hangzhou,
+to find full-time AI application engineer roles in Shanghai,
 20K+ monthly salary, experienced hiring.
 ```
 
