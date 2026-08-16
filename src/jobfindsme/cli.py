@@ -240,13 +240,17 @@ def _select_release_wheel(release: dict[str, Any]) -> str:
 
 
 def _mcp_json_config() -> dict:
-    """Standard MCP JSON — paste into any agent's config file."""
-    import sys
+    """Standard MCP JSON — paste into any agent's config file.
+
+    Prefers the jobfindsme runtime interpreter so the config works even
+    when this CLI was invoked from a dev checkout or foreign Python.
+    """
+    from jobfindsme.installer.service import _resolve_runtime_python
 
     return {
         "mcpServers": {
             "jobfindsme": {
-                "command": sys.executable,
+                "command": _resolve_runtime_python(),
                 "args": ["-m", "jobfindsme.mcp"],
             }
         }

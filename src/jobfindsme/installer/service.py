@@ -22,6 +22,23 @@ class InstallResult(StrictModel):
     commands: tuple[str, ...] = Field(default_factory=tuple)
 
 
+def _resolve_runtime_python() -> str:
+    """Prefer the jobfindsme runtime interpreter over sys.executable.
+
+    ``jobfindsme connect`` is often invoked from a dev checkout or a
+    foreign interpreter (system python.org, miniconda) that does not
+    contain the installed jobfindsme module. Baking sys.executable into
+    the host MCP config makes the server crash at startup —
+    "connection closed: initialize response" — because the command cannot
+    import jobfindsme. The dedicated runtime (created by install.sh) is
+    the only interpreter guaranteed to have the module.
+    """
+    runtime = Path.home() / ".jobfindsme" / "runtime" / "bin" / "python"
+    if runtime.is_file():
+        return str(runtime)
+    return sys.executable
+
+
 # Core hosts with code-level adapters (config formats differ).
 # Everything else: use `jobfindsme config` (standard mcpServers JSON) or
 # `jobfindsme connect --path <file>` for any client. Aligned with the
@@ -88,12 +105,16 @@ class HostInstaller:
         self,
         *,
         home: str | Path | None = None,
-        python: str | Path = sys.executable,
+        python: str | Path | None = None,
         data_dir: str | Path | None = None,
         now: datetime | None = None,
     ) -> None:
         self.home = Path(home).expanduser() if home else Path.home()
-        self.python = str(Path(python).expanduser())
+        self.python = (
+            str(Path(python).expanduser())
+            if python is not None
+            else _resolve_runtime_python()
+        )
         self.data_dir = (
             Path(data_dir).expanduser()
             if data_dir
