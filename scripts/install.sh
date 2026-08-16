@@ -148,16 +148,15 @@ fi
 echo
 bold "📎 接入你的 Agent:"
 echo
-echo "  Codex / Claude Code（原生插件）:"
-echo "    codex plugin marketplace add russeell/jobfindsme --ref main"
-echo "    codex plugin add jobfindsme@jobfindsme"
-echo "    claude plugin marketplace add russeell/jobfindsme"
-echo "    claude plugin install jobfindsme@jobfindsme"
+echo "  一条命令写入 MCP 配置，然后重启 Agent:"
+echo "    jobfindsme connect claude      # Claude Code"
+echo "    jobfindsme connect codex       # Codex"
+echo "    jobfindsme connect cursor      # Cursor"
+echo "    jobfindsme connect             # 自动探测当前 Agent"
 echo
 echo "  其他 MCP 客户端:"
-echo "    jobfindsme connect            # 自动探测当前 Agent"
-echo "    jobfindsme connect cursor     # 显式指定宿主"
 echo "    jobfindsme config             # 打印标准 MCP JSON 手动粘贴"
+echo "    jobfindsme connect --path <配置文件>   # 写入任意配置文件"
 echo
 bold "🚀 两步启动:"
 echo
