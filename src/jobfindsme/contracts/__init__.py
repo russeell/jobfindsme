@@ -39,13 +39,13 @@ from jobfindsme.contracts.models import (
 )
 from jobfindsme.contracts.search import (
     ExportReceipt,
+    Preferences,
     SalaryPolicy,
     SearchChanges,
     SearchConfiguration,
     SearchDiagnosticSummary,
     SearchIntegrity,
     SearchPlan,
-    Preferences,
     SearchPresentationContext,
     SearchRefreshMode,
     SearchRunDiagnostics,

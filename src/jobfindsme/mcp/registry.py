@@ -99,13 +99,10 @@ TOOL_DEFINITIONS = (
         "setup",
         (
             "Initialize the local profile and search conditions in one call.  "
-            "Pass resume_path to import and (by default) auto-confirm a local "
-            "resume — the response includes suggested_plan so no separate "
-            "plan-suggestion call is needed.  "
-            "Pass profile_id + accepted_fact_ids to confirm after review.  "
+            "Pass resume_path to import and store a local resume snapshot.  "
             "Pass target_roles (plus optional locations, salary, "
             "recruitment_track, employment_type, exclusions) to create or "
-            "update the active search plan.  "
+            "update the local preferences.  "
             "Either part may be omitted — call setup again later to extend.  "
             "Does NOT return or store the complete resume text — only "
             "structured facts and minimal evidence snippets."

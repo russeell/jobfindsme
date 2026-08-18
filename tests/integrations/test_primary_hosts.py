@@ -23,7 +23,6 @@ def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
         "complete resume",
         "setup",
         "Ask only when a missing constraint",
-        "auto_confirm: false",
         "Never ask ordinary users",
         "delete_local_data",
         "action: preview",

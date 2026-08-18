@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import Field, model_validator
 
@@ -15,7 +15,6 @@ from jobfindsme.contracts.models import (
     SourceRunStats,
     SourceSubscription,
     StrictModel,
-    Workspace,
 )
 from jobfindsme.contracts.tracking import JobMatch
 
@@ -60,7 +59,6 @@ class SearchPlan(StrictModel):
         ):
             raise ValueError("experience_min_years cannot exceed experience_max_years")
         return self
-
 
     def to_preferences(self) -> Preferences:
         return Preferences(

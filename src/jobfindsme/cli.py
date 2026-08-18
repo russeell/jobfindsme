@@ -78,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
     state_set.add_argument("--job", required=True)
     state_set.add_argument("--state", choices=tuple(JobStateKind), required=True)
     state_set.add_argument("--note", default="")
-    state_list = state_actions.add_parser("list")
+    state_actions.add_parser("list")
 
     export = groups.add_parser("export")
     # Workspace is an internal concept; export resolves the active one when

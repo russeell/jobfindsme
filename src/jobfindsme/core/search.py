@@ -12,7 +12,6 @@ from jobfindsme.contracts import (
     EmploymentType,
     JobMatch,
     MatchEvidence,
-    Preferences,
     RecruitmentTrack,
     SalaryPolicy,
     SearchConfiguration,
@@ -240,7 +239,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no active Search Plan — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_roles) first"
             )
         if use_profile:
             profile = self.profiles.latest_confirmed_summary(
@@ -295,7 +294,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no active Search Plan — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_roles) first"
             )
         if use_profile:
             profile = self.profiles.latest_confirmed_summary(
@@ -398,7 +397,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no active Search Plan — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_roles) first"
             )
 
         effective_sources = tuple(sources) or tuple(

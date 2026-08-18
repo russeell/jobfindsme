@@ -15,9 +15,7 @@ def get_jobs(core: Any, request: BaseModel) -> HandlerResult:
     values = request.model_dump()
     job_id = values.pop("job_id", None)
     if job_id:
-        details = core.get_job_details(
-            job_id=job_id
-        )
+        details = core.get_job_details(job_id=job_id)
         return None, details
     jobs = core.list_job_summaries(**values)
     next_offset = values["offset"] + len(jobs) if len(jobs) == values["limit"] else None

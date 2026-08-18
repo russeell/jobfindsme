@@ -47,8 +47,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 
 ## Workflow
 
-1. Do not ask the user for Workspace or Search Plan IDs. Core resolves the
-   active context automatically.
+1. Do not ask the user for Workspace or Search Plan IDs; those are internal.
+   The product has one local context and one set of preferences.
 2. Extract role, location, salary, experience, recruitment track
    (`campus`/`social`), employment type (`internship`/`full_time`), and
    exclusions from the user's request. Ask only when a missing constraint
@@ -58,14 +58,10 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    - If the user says "我的简历" but gives no path, ask once for the local
      path. Never search, list, or scan the user's directories to guess it.
    - **With a resume path**: call `setup` with `resume_path`. It imports and
-     confirms parsed facts automatically by default so the first search can
-     continue in the same turn. Its response includes `suggested_plan`. Merge
-     that proposal with constraints the user stated explicitly, show the
-     inferred fields and `requires_confirmation`, and ask for one concise
-     confirmation before saving the plan. Explicit user input always overrides
-     resume-derived hints. Never infer a salary floor when the proposal leaves
-     it empty. Set `auto_confirm: false` only when the user asks to review or
-     edit facts, then use paginated review and explicit confirmation.
+     stores parsed facts automatically so the first search can continue in the
+     same turn. If the user wants to correct facts, call `get_jobs`-style
+     review flows only when explicitly asked; otherwise proceed. Preferences
+     come from what the user says, not from resume-derived guessing.
    - **Without a resume** (user has none, or prefers not to share one): skip
      the profile part of `setup` entirely. Call `setup` with the user's
      stated search conditions (`target_roles` plus optional constraints),
@@ -113,8 +109,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    `refresh_mode`, `use_profile`, `sources`) have server defaults that are
    correct for every ordinary request; only `include_seen` and `limit` ever
    need adjusting (see above and the Daily Push section).
-   Reuse the active Search Plan on later requests. Do not recreate the profile
-   or plan merely because the user asks for an update.
+   Reuse the stored preferences on later requests. Do not recreate the profile
+   or preferences merely because the user asks for an update.
    The tool text is already the complete five-section answer. Preserve it;
    never rebuild it as a table. A zero-result incremental run with
    `repeated_suppressed` is successful: those are previously shown unchanged
@@ -326,8 +322,8 @@ facts, score, evidence confidence, reasons, gaps, change state, and direct link.
 ## Deletion
 
 Deletion always takes two separate calls with an explicit `scope` —
-`"jobs"` (all job records), `"profile"` (resume data), or `"workspace"`
-(everything):
+   `"jobs"` (all job records), `"profile"` (resume data), or `"workspace"`
+   (everything; kept as a legacy scope name meaning "all local data"):
 
 1. Call `delete_local_data` with `scope: "workspace"` (or the narrower
    scope the user asked for) and `action: preview`.

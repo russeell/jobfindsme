@@ -90,12 +90,13 @@ def test_core_configures_and_reuses_active_search_without_ids(tmp_path) -> None:
     )
 
     assert second.preferences.target_roles == ("RAG工程师",)
+    assert second.preferences != first.preferences
     assert isinstance(core.search_jobs(), list)  # may be empty or have live results
 
 
 def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    configuration = core.configure_search(target_roles=["AI应用工程师"])
+    core.configure_search(target_roles=["AI应用工程师"])
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
     profile = core.import_resume(source_path=resume)
@@ -124,7 +125,9 @@ def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
         """,
         source_name="fixture",
     )
-    core.job_imports.import_records(core.context.resolve_workspace().workspace_id, records)
+    core.job_imports.import_records(
+        core.context.resolve_workspace().workspace_id, records
+    )
 
     matches = core.match_jobs()
 
@@ -142,7 +145,7 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
     tmp_path,
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    configured = core.configure_search(
+    core.configure_search(
         target_roles=["AI应用工程师"],
         sources=(
             DiscoverySource(
@@ -292,7 +295,7 @@ def test_complete_snapshot_can_close_absent_jobs(tmp_path, monkeypatch) -> None:
 
 def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    configured = core.configure_search(
+    core.configure_search(
         target_roles=["AI应用工程师"],
         sources=(
             DiscoverySource(
@@ -317,7 +320,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
     monkeypatch,
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    configured = core.configure_search(
+    core.configure_search(
         target_roles=["AI应用工程师"],
         locations=["上海", "杭州"],
     )
@@ -362,7 +365,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
 
 def test_cache_search_performs_no_remote_discovery(tmp_path, monkeypatch) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    configured = core.configure_search(
+    core.configure_search(
         target_roles=["AI应用工程师"],
         locations=["上海"],
     )
