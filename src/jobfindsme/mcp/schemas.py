@@ -41,12 +41,11 @@ class _LegacyAwareInput(StrictModel):
 
 
 class SetupInput(_LegacyAwareInput):
-    """Initialize the local profile and search conditions in one call.
+    """Initialize the local profile snapshot and search preferences in one call.
 
-    Profile part (optional): pass resume_path to import and auto-confirm a
-    resume. Pass profile_id + accepted_fact_ids to confirm after review.
-    Search part (optional): pass target_roles to create/update the active
-    search plan. Either part may be omitted — call setup again later.
+    Profile part (optional): pass resume_path to import and store a local
+    snapshot.  Search part (optional): pass target_roles to create/update the
+    local preferences.  Either part may be omitted — call setup again later.
     """
 
     # ── Profile ─────────────────────────────────────────────────────────
@@ -60,19 +59,10 @@ class SetupInput(_LegacyAwareInput):
     )
     auto_confirm: bool = Field(
         default=True,
-        description="If true, auto-accepts all parsed facts so search can proceed",
-    )
-    profile_id: str | None = Field(
-        default=None,
-        description="Profile ID (required for review/confirm)",
-    )
-    accepted_fact_ids: tuple[str, ...] = Field(
-        default_factory=tuple,
-        description="Fact IDs to confirm (required for confirm)",
-    )
-    corrections: dict[str, str] = Field(
-        default_factory=dict,
-        description="Map of fact_id to corrected value (optional)",
+        description=(
+            "If true (default), parsed facts are stored directly so the first "
+            "search can proceed. Set false only for a facts review page."
+        ),
     )
     offset: int = Field(default=0, ge=0, description="Facts page offset")
     limit: int = Field(default=12, ge=1, le=50, description="Facts per page")
@@ -124,14 +114,9 @@ class SetupInput(_LegacyAwareInput):
 
     @model_validator(mode="after")
     def validate_action_fields(self) -> Self:
-        if self.resume_path and self.profile_id:
+        if not self.resume_path and not self.target_roles:
             raise ValueError(
-                "use either resume_path (import) or profile_id (review/confirm)"
-            )
-        if not self.resume_path and not self.profile_id and not self.target_roles:
-            raise ValueError(
-                "provide resume_path, profile_id, or target_roles — "
-                "setup has nothing to do"
+                "provide resume_path or target_roles — setup has nothing to do"
             )
         return self
 
@@ -165,11 +150,12 @@ class SearchJobsInput(_LegacyAwareInput):
         ),
     )
     include_seen: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "Include previously-seen unchanged jobs for ordinary interactive "
-            "searches. Set false only for explicitly incremental or scheduled "
-            "radar requests."
+            "Default false: incremental radar behavior — only new, changed, "
+            "reopened, or re-qualified jobs are returned. Set true when the "
+            "user asks for the current full matching list even if some jobs "
+            "were shown before."
         ),
     )
     limit: int = Field(

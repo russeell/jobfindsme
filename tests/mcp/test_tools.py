@@ -172,40 +172,8 @@ def test_delete_tool_cannot_bypass_core_two_phase_protocol(tmp_path) -> None:
     assert core.list_workspaces() == []
 
 
-def test_setup_supports_import_and_confirmation_in_one_tool(tmp_path) -> None:
-    core, workspace, _, registry = make_registry(tmp_path)
-    resume = tmp_path / "resume.txt"
-    resume.write_text("技能：Python、RAG\n项目：本地求职引擎", encoding="utf-8")
-
-    imported = registry.call(
-        "setup",
-        {
-            "workspace_id": workspace.workspace_id,
-            "resume_path": str(resume),
-            "auto_confirm": False,
-        },
-    )
-    profile = imported["structuredContent"]
-    fact_ids = [fact["fact_id"] for fact in profile["facts"]]
-    confirmed = registry.call(
-        "setup",
-        {
-            "workspace_id": workspace.workspace_id,
-            "profile_id": profile["profile_id"],
-            "accepted_fact_ids": fact_ids,
-        },
-    )
-
-    assert confirmed["isError"] is False
-    assert confirmed["structuredContent"]["profile_status"] == "confirmed"
-    assert all(
-        fact["status"] == "confirmed"
-        for fact in confirmed["structuredContent"]["facts"]
-    )
-
-
 def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> None:
-    _, workspace, _, registry = make_registry(tmp_path)
+    _, _, _, registry = make_registry(tmp_path)
     resume = tmp_path / "resume.txt"
     resume.write_text(
         "技能：" + "、".join(["Python", "RAG", "Agent", "MCP", "Docker", "Redis"]),
@@ -215,25 +183,15 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
     imported = registry.call(
         "setup",
         {
-            "workspace_id": workspace.workspace_id,
             "resume_path": str(resume),
             "auto_confirm": False,
-            "limit": 2,
-        },
-    )["structuredContent"]
-    reviewed = registry.call(
-        "setup",
-        {
-            "workspace_id": workspace.workspace_id,
-            "profile_id": imported["profile_id"],
-            "offset": imported["next_offset"],
             "limit": 2,
         },
     )["structuredContent"]
 
     assert len(imported["facts"]) == 2
     assert imported["total_facts"] >= 6
-    assert reviewed["facts"]
+    assert imported["next_offset"] == 2
     assert "fact_counts" in imported
 
 
@@ -1119,10 +1077,7 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
     profile_result = registry.call(
         "setup",
         {
-            "workspace_id": workspace.workspace_id,
-            "profile_id": core.profiles.latest_confirmed_summary(
-                workspace_id=workspace.workspace_id
-            ).profile_id,
+            "resume_path": str(resume),
         },
     )
     assert profile_result["isError"] is False

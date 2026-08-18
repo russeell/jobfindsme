@@ -208,7 +208,13 @@ class SalaryPeriod(StrEnum):
     UNKNOWN = "unknown"
 
 
-class SalaryDetails(StrictModel):
+class Salary(StrictModel):
+    """The single salary truth for a job.
+
+    Raw/structured salary is the fact; monthly K values are computed
+    projections, never a second stored truth.
+    """
+
     raw_text: str
     currency: str | None = None
     period: SalaryPeriod = SalaryPeriod.UNKNOWN
@@ -218,6 +224,32 @@ class SalaryDetails(StrictModel):
     normalized_annual_min: int | None = Field(default=None, ge=0)
     normalized_annual_max: int | None = Field(default=None, ge=0)
 
+    @property
+    def monthly_min_k(self) -> int | None:
+        """Conservative monthly lower bound in K, or None when not comparable."""
+        if self.currency not in {None, "CNY"} or self.min_amount is None:
+            return None
+        if self.period is SalaryPeriod.MONTH:
+            return self.min_amount // 1000
+        if self.period is SalaryPeriod.YEAR:
+            return self.min_amount // 1000 // 12
+        return None
+
+    @property
+    def monthly_max_k(self) -> int | None:
+        """Conservative monthly upper bound in K, or None when not comparable."""
+        if self.currency not in {None, "CNY"} or self.max_amount is None:
+            return None
+        if self.period is SalaryPeriod.MONTH:
+            return self.max_amount // 1000
+        if self.period is SalaryPeriod.YEAR:
+            return self.max_amount // 1000 // 12
+        return None
+
+
+# Backwards-compatible name for clients imported before the Step-1 rename.
+SalaryDetails = Salary
+
 
 class JobPosting(StrictModel):
     job_id: str = Field(min_length=1, max_length=128)
@@ -226,9 +258,11 @@ class JobPosting(StrictModel):
     company: str = Field(min_length=1, max_length=300)
     description: str = ""
     locations: tuple[str, ...] = ()
+    # Legacy mirrors of salary.monthly_min_k/max_k, kept for DB/presentation
+    # compatibility.  The canonical truth is the `salary` field.
     salary_min_k: int | None = Field(default=None, ge=0, le=1000)
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
-    salary: SalaryDetails | None = None
+    salary: Salary | None = None
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
     recruitment_track: RecruitmentTrack = RecruitmentTrack.UNKNOWN
@@ -278,7 +312,7 @@ class JobSummary(StrictModel):
     title: str
     company: str
     locations: tuple[str, ...] = ()
-    salary: SalaryDetails | None = None
+    salary: Salary | None = None
     recruitment_track: RecruitmentTrack = RecruitmentTrack.UNKNOWN
     employment_type: EmploymentType = EmploymentType.UNKNOWN
     apply_url: str

@@ -18,7 +18,6 @@ from jobfindsme.contracts import (
     JobLiveness,
     JobPosting,
     RecruitmentTrack,
-    SalaryPeriod,
     SalaryPolicy,
     SearchPlan,
 )
@@ -381,18 +380,16 @@ def _monthly_salary_min_k(job: JobPosting) -> int | None:
 
     Uses the most conservative available source so the strict filter
     never passes a job whose visible monthly salary is below threshold.
-
-    - MONTH data / raw ``x-yK·N薪``: uses ``x`` (monthly base; bonus
-      months are NOT factored in because the plan threshold is in
-      monthly-K terms).
-    - YEAR data: conservatively divides by 12.
-    - DAY / HOUR / UNKNOWN: returns None (do not pretend to be monthly).
+    The canonical source is ``job.salary`` (Salary.monthly_min_k); the
+    legacy ``salary_min_k`` mirror and raw-text parsing are conservative
+    cross-checks only.
     """
     candidates: list[int] = []
 
-    # salary_min_k is already monthly K (set during normalization)
-    if job.salary_min_k is not None:
-        candidates.append(job.salary_min_k)
+    if job.salary:
+        derived = job.salary.monthly_min_k
+        if derived is not None:
+            candidates.append(derived)
 
     # Parse raw_text for monthly K via the shared function
     if job.salary and job.salary.raw_text:
@@ -400,15 +397,9 @@ def _monthly_salary_min_k(job: JobPosting) -> int | None:
         if monthly is not None:
             candidates.append(int(monthly))
 
-    # Structured salary details
-    if job.salary and job.salary.currency in {None, "CNY"}:
-        period = job.salary.period
-        amount = job.salary.min_amount
-        if period is SalaryPeriod.MONTH and amount is not None:
-            candidates.append(amount // 1000)
-        elif period is SalaryPeriod.YEAR and amount is not None:
-            candidates.append(amount // 1000 // 12)  # conservative /12
-        # DAY / HOUR / UNKNOWN: skip
+    # Legacy mirror cross-check (always derived from salary during import).
+    if job.salary_min_k is not None:
+        candidates.append(job.salary_min_k)
 
     if not candidates:
         return None
@@ -418,15 +409,12 @@ def _monthly_salary_min_k(job: JobPosting) -> int | None:
 def _monthly_salary_max_k(job: JobPosting) -> int | None:
     """Conservative monthly maximum salary in K (月薪K上限)."""
     candidates: list[int] = []
+    if job.salary:
+        derived = job.salary.monthly_max_k
+        if derived is not None:
+            candidates.append(derived)
     if job.salary_max_k is not None:
         candidates.append(job.salary_max_k)
-    if job.salary and job.salary.currency in {None, "CNY"}:
-        period = job.salary.period
-        amount = job.salary.max_amount
-        if period is SalaryPeriod.MONTH and amount is not None:
-            candidates.append(amount // 1000)
-        elif period is SalaryPeriod.YEAR and amount is not None:
-            candidates.append(amount // 1000 // 12)
     if not candidates:
         return None
     return max(candidates)

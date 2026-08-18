@@ -41,24 +41,6 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
                 include_facts=include_facts,
             )
         )
-    elif values.get("profile_id"):
-        if values.get("accepted_fact_ids"):
-            profile = core.confirm_profile(
-                profile_id=values["profile_id"],
-                accepted_fact_ids=values["accepted_fact_ids"],
-                corrections=values["corrections"],
-            )
-        else:
-            profile = core.review_profile(
-                profile_id=values["profile_id"],
-            )
-        page.update(
-            _profile_page(
-                profile,
-                offset=values["offset"],
-                limit=values["limit"],
-            )
-        )
     # ── Search plan part ────────────────────────────────────────────────
     if values.get("target_roles"):
         # Keep typed fields (sources is a tuple of DiscoverySource models —
