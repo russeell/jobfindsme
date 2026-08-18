@@ -117,9 +117,9 @@ TOOL_DEFINITIONS = (
         "search_jobs",
         (
             "Search for matching jobs across configured platforms.  "
-            "In fast mode (default): concurrently refreshes the two maintained "
-            "bounded sources. In cache mode: no remote access, "
-            "local DB only. In full mode: refreshes all sources.  "
+            "In live mode (default): concurrently refreshes the maintained "
+            "sources. In cache mode: no remote access, "
+            "local DB only.  "
             "Returns hard-filtered, coarse-ranked jobs with extracted "
             "signals (skills, experience, degree) used by server-side ranking.  "
             "The radar suppresses previously-seen unchanged jobs; use "
@@ -127,7 +127,7 @@ TOOL_DEFINITIONS = (
             "Use include_seen=false only for explicitly incremental or "
             "scheduled radar requests.  "
             "A zero-result incremental run is valid and must not be retried "
-            "automatically with full mode.  "
+            "automatically with live mode.  "
             "CRITICAL: content[0].text IS THE FINAL USER-FACING OUTPUT — "
             "the host MUST return it verbatim without renumbering, deleting, "
             "reordering, or rewriting any block.  "

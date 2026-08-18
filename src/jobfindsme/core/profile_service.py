@@ -1,6 +1,7 @@
 """Profile use case — the user-facing "Profile" concept (我是谁).
 
-Owns resume import/review/confirm and profile-derived plan suggestions.
+Owns resume import/review/confirm.  Search preferences are owned by the
+Agent conversation; the Server never guesses the user's preferences.
 """
 
 from __future__ import annotations
@@ -9,8 +10,6 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from jobfindsme.context import ActiveContextService
-from jobfindsme.contracts import SuggestedPlan
-from jobfindsme.plan_suggestions import suggest_search_plan
 from jobfindsme.profiles.models import (
     CandidateProfile,
     ProfileSummary,
@@ -70,10 +69,3 @@ class ProfileUseCase:
             workspace_id=workspace.workspace_id,
             profile_id=profile_id,
         )
-
-    def suggest_plan(self, *, workspace_id: str | None = None) -> SuggestedPlan:
-        workspace = self.context.resolve_workspace(workspace_id)
-        summary = self.profiles.latest_confirmed_summary(
-            workspace_id=workspace.workspace_id
-        )
-        return suggest_search_plan(summary)

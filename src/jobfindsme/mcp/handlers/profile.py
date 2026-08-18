@@ -22,13 +22,11 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
     # ── Profile part ────────────────────────────────────────────────────
     if values.get("resume_path"):
         profile = core.import_resume(
-            workspace_id=values["workspace_id"],
             source_path=values["resume_path"],
             mode=values["mode"],
         )
         if values["auto_confirm"]:
             profile = core.confirm_profile(
-                workspace_id=values["workspace_id"],
                 profile_id=profile.profile_id,
                 accepted_fact_ids=[fact.fact_id for fact in profile.facts],
             )
@@ -43,18 +41,15 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
                 include_facts=include_facts,
             )
         )
-        page["suggested_plan"] = core.suggest_plan(workspace_id=values["workspace_id"])
     elif values.get("profile_id"):
         if values.get("accepted_fact_ids"):
             profile = core.confirm_profile(
-                workspace_id=values["workspace_id"],
                 profile_id=values["profile_id"],
                 accepted_fact_ids=values["accepted_fact_ids"],
                 corrections=values["corrections"],
             )
         else:
             profile = core.review_profile(
-                workspace_id=values["workspace_id"],
                 profile_id=values["profile_id"],
             )
         page.update(
@@ -64,16 +59,11 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
                 limit=values["limit"],
             )
         )
-        page["suggested_plan"] = core.suggest_plan(workspace_id=values["workspace_id"])
-
     # ── Search plan part ────────────────────────────────────────────────
     if values.get("target_roles"):
         # Keep typed fields (sources is a tuple of DiscoverySource models —
         # model_dump would corrupt them into raw dicts).
         plan = core.configure_search(
-            workspace_id=request.workspace_id,
-            plan_id=request.plan_id,
-            name=request.name,
             target_roles=request.target_roles,
             locations=request.locations,
             salary_min_k=request.salary_min_k,

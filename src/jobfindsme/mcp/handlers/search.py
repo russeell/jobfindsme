@@ -20,8 +20,6 @@ from jobfindsme.presentation import format_search_results
 def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
     assert isinstance(request, SearchJobsInput)
     result = core.search_jobs_with_diagnostics(
-        workspace_id=request.workspace_id,
-        plan_id=request.plan_id,
         sources=request.sources,
         limit=request.limit,
         allow_browser_sources=request.allow_browser_sources,
@@ -33,7 +31,6 @@ def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
     summaries = {
         item.job_id: item
         for item in core.list_job_summaries(
-            workspace_id=request.workspace_id,
             job_ids=[match.job.job_id for match in matches],
             limit=request.limit,
         )
@@ -50,8 +47,6 @@ def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
         for match in matches
     ]
     presentation = core.search_presentation_context(
-        workspace_id=request.workspace_id,
-        plan_id=request.plan_id,
         use_profile=request.use_profile,
     )
     text = format_search_results(

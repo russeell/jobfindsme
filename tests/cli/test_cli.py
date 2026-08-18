@@ -6,63 +6,6 @@ from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
 
-def test_cli_workspace_and_plan_flow(tmp_path, capsys) -> None:
-    database = tmp_path / "jobfindsme.db"
-
-    assert (
-        run(
-            [
-                "--db",
-                str(database),
-                "workspace",
-                "init",
-                "--name",
-                "My Search",
-            ]
-        )
-        == 0
-    )
-    workspace = json.loads(capsys.readouterr().out)
-
-    assert (
-        run(
-            [
-                "--db",
-                str(database),
-                "plan",
-                "add",
-                "--workspace",
-                workspace["workspace_id"],
-                "--name",
-                "杭州 AI",
-                "--role",
-                "AI应用工程师",
-                "--city",
-                "杭州",
-            ]
-        )
-        == 0
-    )
-    created_plan = json.loads(capsys.readouterr().out)
-
-    assert (
-        run(
-            [
-                "--db",
-                str(database),
-                "plan",
-                "list",
-                "--workspace",
-                workspace["workspace_id"],
-            ]
-        )
-        == 0
-    )
-    plans = json.loads(capsys.readouterr().out)
-
-    assert plans == [created_plan]
-
-
 def test_self_update_selects_prebuilt_release_wheel() -> None:
     url = _select_release_wheel(
         {
@@ -141,14 +84,9 @@ def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(
 def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    workspace = core.create_workspace("CLI")
-    plan = core.create_search_plan(
-        workspace_id=workspace.workspace_id,
-        name="AI",
-        target_roles=["AI应用工程师"],
-    )
+    core.configure_search(target_roles=["AI应用工程师"])
     core.job_imports.import_records(
-        workspace.workspace_id,
+        core.context.resolve_workspace().workspace_id,
         parse_json(
             json.dumps(
                 [
@@ -178,10 +116,6 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
                 "markdown",
                 "jobs",
                 "search",
-                "--workspace",
-                workspace.workspace_id,
-                "--plan",
-                plan.plan_id,
             ]
         )
         == 0
@@ -198,12 +132,7 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
 def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    workspace = core.create_workspace("CLI")
-    plan = core.create_search_plan(
-        workspace_id=workspace.workspace_id,
-        name="AI",
-        target_roles=["AI应用工程师"],
-    )
+    core.configure_search(target_roles=["AI应用工程师"])
 
     assert (
         run(
@@ -214,10 +143,6 @@ def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> N
                 "markdown",
                 "jobs",
                 "search",
-                "--workspace",
-                workspace.workspace_id,
-                "--plan",
-                plan.plan_id,
             ]
         )
         == 0
@@ -229,12 +154,7 @@ def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> N
 def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    workspace = core.create_workspace("CLI")
-    plan = core.create_search_plan(
-        workspace_id=workspace.workspace_id,
-        name="AI",
-        target_roles=["AI应用工程师"],
-    )
+    core.configure_search(target_roles=["AI应用工程师"])
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG、Agent", encoding="utf-8")
     imported = core.import_resume(source_path=str(resume))
@@ -243,7 +163,7 @@ def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) ->
         accepted_fact_ids=[f.fact_id for f in imported.facts],
     )
     core.job_imports.import_records(
-        workspace.workspace_id,
+        core.context.resolve_workspace().workspace_id,
         parse_json(
             json.dumps(
                 [
@@ -272,10 +192,6 @@ def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) ->
             "markdown",
             "jobs",
             "search",
-            "--workspace",
-            workspace.workspace_id,
-            "--plan",
-            plan.plan_id,
         ]
     )
 

@@ -44,16 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     groups = parser.add_subparsers(dest="group", required=True)
 
-    workspace = groups.add_parser("workspace")
-    workspace_actions = workspace.add_subparsers(dest="action", required=True)
-    workspace_init = workspace_actions.add_parser("init")
-    workspace_init.add_argument("--name", default="My Job Search")
-    workspace_actions.add_parser("list")
-
     profile = groups.add_parser("profile")
     profile_actions = profile.add_subparsers(dest="action", required=True)
     profile_import = profile_actions.add_parser("import")
-    profile_import.add_argument("--workspace")
     profile_import.add_argument("path", type=Path)
     profile_import.add_argument(
         "--mode",
@@ -66,53 +59,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="keep parsed facts in draft state instead of accepting them",
     )
     profile_review = profile_actions.add_parser("review")
-    _workspace_argument(profile_review)
     profile_review.add_argument("--profile", required=True)
     profile_confirm = profile_actions.add_parser("confirm")
-    _workspace_argument(profile_confirm)
     profile_confirm.add_argument("--profile", required=True)
     profile_confirm.add_argument("--fact", action="append", required=True)
-
-    plan = groups.add_parser("plan")
-    plan_actions = plan.add_subparsers(dest="action", required=True)
-    plan_add = plan_actions.add_parser("add")
-    _workspace_argument(plan_add)
-    plan_add.add_argument("--name", required=True)
-    plan_add.add_argument("--role", action="append", required=True)
-    plan_add.add_argument("--city", action="append", default=[])
-    plan_add.add_argument("--salary-min-k", type=int)
-    plan_add.add_argument("--salary-max-k", type=int)
-    plan_add.add_argument(
-        "--salary-policy",
-        choices=("strict", "include_undisclosed"),
-        default="strict",
-    )
-    plan_add.add_argument("--experience-min-years", type=int)
-    plan_add.add_argument("--experience-max-years", type=int)
-    plan_add.add_argument("--exclude", action="append", default=[])
-    plan_list = plan_actions.add_parser("list")
-    _workspace_argument(plan_list)
 
     jobs = groups.add_parser("jobs")
     job_actions = jobs.add_subparsers(dest="action", required=True)
     job_import = job_actions.add_parser("import")
-    _workspace_argument(job_import)
     job_import.add_argument("path", type=Path)
     job_import.add_argument("--source-name", default="local-import")
     job_search = job_actions.add_parser("search")
-    _workspace_argument(job_search)
-    job_search.add_argument("--plan", required=True)
     job_search.add_argument("--limit", type=int, default=20)
 
     state = groups.add_parser("state")
     state_actions = state.add_subparsers(dest="action", required=True)
     state_set = state_actions.add_parser("set")
-    _workspace_argument(state_set)
     state_set.add_argument("--job", required=True)
     state_set.add_argument("--state", choices=tuple(JobStateKind), required=True)
     state_set.add_argument("--note", default="")
     state_list = state_actions.add_parser("list")
-    _workspace_argument(state_list)
 
     export = groups.add_parser("export")
     # Workspace is an internal concept; export resolves the active one when
@@ -123,12 +89,12 @@ def build_parser() -> argparse.ArgumentParser:
     delete = groups.add_parser("delete")
     delete_actions = delete.add_subparsers(dest="action", required=True)
     delete_preview = delete_actions.add_parser("preview")
-    _workspace_argument(delete_preview)
+    delete_preview.add_argument("--workspace", default=None)
     delete_preview.add_argument(
         "--scope", choices=("jobs", "profile", "workspace"), required=True
     )
     delete_confirm = delete_actions.add_parser("confirm")
-    _workspace_argument(delete_confirm)
+    delete_confirm.add_argument("--workspace", default=None)
     delete_confirm.add_argument(
         "--scope", choices=("jobs", "profile", "workspace"), required=True
     )
@@ -306,49 +272,26 @@ def _emit(value: Any, output: str, *, job_list: bool = False) -> None:
 
 
 def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
-    if args.group == "workspace":
-        if args.action == "init":
-            return core.create_workspace(args.name)
-        return core.list_workspaces()
     if args.group == "profile":
         if args.action == "import":
             profile = core.import_resume(
-                workspace_id=args.workspace,
                 source_path=args.path,
                 mode=ResumeImportMode(args.mode),
             )
             if args.review:
                 return profile
             return core.confirm_profile(
-                workspace_id=args.workspace,
                 profile_id=profile.profile_id,
                 accepted_fact_ids=[fact.fact_id for fact in profile.facts],
             )
         if args.action == "review":
             return core.profiles.load_review(
-                workspace_id=args.workspace,
                 profile_id=args.profile,
             )
         return core.confirm_profile(
-            workspace_id=args.workspace,
             profile_id=args.profile,
             accepted_fact_ids=args.fact,
         )
-    if args.group == "plan":
-        if args.action == "add":
-            return core.create_search_plan(
-                workspace_id=args.workspace,
-                name=args.name,
-                target_roles=args.role,
-                locations=args.city,
-                salary_min_k=args.salary_min_k,
-                salary_max_k=args.salary_max_k,
-                salary_policy=args.salary_policy,
-                experience_min_years=args.experience_min_years,
-                experience_max_years=args.experience_max_years,
-                exclusions=args.exclude,
-            )
-        return core.list_search_plans(args.workspace)
     if args.group == "jobs":
         if args.action == "import":
             content = args.path.read_text(encoding="utf-8")
@@ -357,21 +300,19 @@ def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
                 if args.path.suffix.casefold() == ".csv"
                 else parse_json(content, source_name=args.source_name)
             )
-            return core.job_imports.import_records(args.workspace, records)
+            workspace = core.context.resolve_workspace()
+            return core.job_imports.import_records(workspace.workspace_id, records)
         return core.match_jobs(
-            workspace_id=args.workspace,
-            plan_id=args.plan,
             limit=args.limit,
         )
     if args.group == "state":
         if args.action == "set":
             return core.update_job_state(
-                workspace_id=args.workspace,
                 job_id=args.job,
                 state=JobStateKind(args.state),
                 note=args.note,
             )
-        return core.list_job_states(args.workspace)
+        return core.list_job_states(core.context.resolve_workspace().workspace_id)
     if args.group == "export":
         # The workspace is an internal concept — never require it from users.
         workspace_id = args.workspace or core.context.resolve_workspace().workspace_id

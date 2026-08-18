@@ -79,7 +79,7 @@ def build_search_output(
         "count": count,
         "changes": changes,
         "diagnostic_summary": {
-            "refresh_mode": diag_dict.get("refresh_mode", "fast"),
+            "refresh_mode": diag_dict.get("refresh_mode", "live"),
             "source_summary": build_source_summary(diag_dict),
             "total_discovered": diag_dict.get("total_discovered", 0),
             "result_count": diag_dict.get("result_count", count),
@@ -103,7 +103,7 @@ def build_source_summary(diagnostics: dict[str, Any]) -> str:
     runs = diagnostics.get("source_runs", [])
     if runs:
         return _source_line_from_runs(runs)
-    refresh_mode = diagnostics.get("refresh_mode", "fast")
+    refresh_mode = diagnostics.get("refresh_mode", "live")
     if refresh_mode == "cache":
         return "检索：本地缓存（本轮未刷新外部来源）"
     return "检索：本地缓存"

@@ -62,11 +62,69 @@ class SearchPlan(StrictModel):
         return self
 
 
-class SearchRefreshMode(StrEnum):
-    """Control how much remote discovery an interactive search performs."""
+    def to_preferences(self) -> Preferences:
+        return Preferences(
+            name=self.name,
+            target_roles=self.target_roles,
+            locations=self.locations,
+            salary_min_k=self.salary_min_k,
+            salary_max_k=self.salary_max_k,
+            salary_policy=self.salary_policy,
+            experience_min_years=self.experience_min_years,
+            experience_max_years=self.experience_max_years,
+            recruitment_track=self.recruitment_track,
+            employment_type=self.employment_type,
+            exclusions=self.exclusions,
+        )
 
-    FAST = "fast"
-    FULL = "full"
+
+class Preferences(StrictModel):
+    """The user's search conditions — one profile + one set of preferences.
+
+    Public contract replaces the internal Workspace/SearchPlan concepts.
+    `target_roles` is the single primary role used for discovery.
+    """
+
+    name: str = Field(default="Default Search", min_length=1, max_length=120)
+    target_roles: tuple[str, ...] = Field(min_length=1)
+    locations: tuple[str, ...] = ()
+    salary_min_k: int | None = Field(default=None, ge=0, le=1000)
+    salary_max_k: int | None = Field(default=None, ge=0, le=1000)
+    salary_policy: SalaryPolicy = SalaryPolicy.STRICT
+    experience_min_years: int | None = Field(default=None, ge=0, le=80)
+    experience_max_years: int | None = Field(default=None, ge=0, le=80)
+    recruitment_track: RecruitmentTrack | None = None
+    employment_type: EmploymentType | None = None
+    exclusions: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_ranges(self) -> Self:
+        if (
+            self.salary_min_k is not None
+            and self.salary_max_k is not None
+            and self.salary_min_k > self.salary_max_k
+        ):
+            raise ValueError("salary_min_k cannot exceed salary_max_k")
+        if (
+            self.experience_min_years is not None
+            and self.experience_max_years is not None
+            and self.experience_min_years > self.experience_max_years
+        ):
+            raise ValueError("experience_min_years cannot exceed experience_max_years")
+        return self
+
+
+class SearchRefreshMode(StrEnum):
+    """Control how much remote discovery an interactive search performs.
+
+    LIVE refreshes maintained sources concurrently and degrades to labeled
+    cache on per-source failure.  CACHE performs no remote access.  FAST and
+    FULL are compatibility aliases of LIVE (they always behaved identically).
+    """
+
+    LIVE = "live"
+    FAST = "live"  # deprecated alias
+    FULL = "live"  # deprecated alias
     CACHE = "cache"
 
 
@@ -111,8 +169,7 @@ class SearchRunResult(StrictModel):
 
 
 class SearchConfiguration(StrictModel):
-    workspace: Workspace
-    plan: SearchPlan
+    preferences: Preferences
     sources: tuple[SourceSubscription, ...] = ()
     source_links: tuple[SourceLink, ...] = ()
 
@@ -151,28 +208,6 @@ class ExportReceipt(StrictModel):
     path: str
     sha256: str
     record_counts: dict[str, int]
-
-
-class SuggestedPlan(StrictModel):
-    """A search plan proposal derived from confirmed profile facts."""
-
-    target_roles: tuple[str, ...]
-    locations: tuple[str, ...] = ()
-    salary_min_k: int | None = None
-    salary_max_k: int | None = None
-    experience_min_years: int | None = None
-    experience_max_years: int | None = None
-    recruitment_track: RecruitmentTrack | None = None
-    employment_type: EmploymentType | None = None
-    exclusions: tuple[str, ...] = ()
-    candidate_experience_years: int | None = Field(default=None, ge=0, le=80)
-    confidence: Literal["low", "medium", "high"] = "low"
-    requires_confirmation: tuple[str, ...] = ()
-    reasoning: str = ""
-    ready: bool = Field(
-        default=True,
-        description="False when no confirmed profile exists yet.",
-    )
 
 
 class SearchPresentationContext(StrictModel):

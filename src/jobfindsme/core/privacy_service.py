@@ -29,18 +29,28 @@ class PrivacyUseCase:
         workspace = self.context.resolve_workspace(workspace_id)
         return self.privacy.export_workspace_to_file(workspace.workspace_id)
 
-    def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
-        return self.privacy.preview_delete(workspace_id=workspace_id, scope=scope)
+    def preview_delete(
+        self,
+        *,
+        workspace_id: str | None = None,
+        scope: str,
+    ) -> DeletionPreview:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.privacy.preview_delete(
+            workspace_id=workspace.workspace_id,
+            scope=scope,
+        )
 
     def confirm_delete(
         self,
         *,
-        workspace_id: str,
+        workspace_id: str | None = None,
         scope: str,
         confirmation_token: str,
     ) -> DeletionResult:
+        workspace = self.context.resolve_workspace(workspace_id)
         return self.privacy.confirm_delete(
-            workspace_id=workspace_id,
+            workspace_id=workspace.workspace_id,
             scope=scope,
             confirmation_token=confirmation_token,
         )

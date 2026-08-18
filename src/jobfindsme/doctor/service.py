@@ -264,13 +264,8 @@ class Doctor:
 
     @staticmethod
     def _secrets() -> Diagnostic:
-        configured = [name for name in ("FEISHU_WEBHOOK_URL",) if os.getenv(name)]
         return Diagnostic(
             name="secrets",
             ok=True,
-            message=(
-                f"optional configured: {', '.join(configured)}"
-                if configured
-                else "no optional secrets configured"
-            ),
+            message="no optional secrets configured",
         )

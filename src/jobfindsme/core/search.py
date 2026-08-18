@@ -12,6 +12,7 @@ from jobfindsme.contracts import (
     EmploymentType,
     JobMatch,
     MatchEvidence,
+    Preferences,
     RecruitmentTrack,
     SalaryPolicy,
     SearchConfiguration,
@@ -224,8 +225,7 @@ class SearchOrchestrator:
             else existing
         )
         return SearchConfiguration(
-            workspace=context.workspace,
-            plan=plan,
+            preferences=plan.to_preferences(),
             sources=subscriptions,
             source_links=source_links(tuple(target_roles), tuple(locations)),
         )
@@ -364,7 +364,7 @@ class SearchOrchestrator:
         sources: tuple[DiscoverySource, ...] = (),
         limit: int = 20,
         allow_browser_sources: bool = False,
-        refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
+        refresh_mode: SearchRefreshMode = SearchRefreshMode.LIVE,
         include_seen: bool = False,
         use_profile: bool = True,
     ) -> list[JobMatch]:
@@ -389,7 +389,7 @@ class SearchOrchestrator:
         sources: tuple[DiscoverySource, ...] = (),
         limit: int = 20,
         allow_browser_sources: bool = False,
-        refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST,
+        refresh_mode: SearchRefreshMode = SearchRefreshMode.LIVE,
         include_seen: bool = False,
         use_profile: bool = True,
     ) -> SearchRunResult:
@@ -544,11 +544,18 @@ class SearchOrchestrator:
     def _discover_sources(
         self,
         *,
-        workspace_id: str,
-        plan_id: str,
+        workspace_id: str | None = None,
+        plan_id: str | None = None,
         sources: Sequence[DiscoverySource],
         allow_browser: bool = True,
     ) -> tuple[SourceRunStats, ...]:
+        context = self.context.resolve(
+            workspace_id=workspace_id,
+            plan_id=plan_id,
+            require_plan=False,
+        )
+        workspace_id = context.workspace.workspace_id
+        plan_id = context.plan.plan_id if context.plan else None
         try:
             from jobfindsme.connectors.boss_zhipin import _CDPSession
 
@@ -660,10 +667,9 @@ def select_refresh_sources(
 ) -> tuple[tuple[DiscoverySource, ...], tuple[DiscoverySource, ...]]:
     if isinstance(mode, str):
         mode = SearchRefreshMode(mode)
-    if mode is SearchRefreshMode.FULL:
-        return sources, ()
     if mode is SearchRefreshMode.CACHE:
         return (), sources
-    # Refresh all maintained sources concurrently. Per-source failures are
-    # isolated, so one challenged platform never blocks results from others.
+    # LIVE (and deprecated FAST/FULL aliases) refresh all maintained sources
+    # concurrently. Per-source failures are isolated, so one challenged
+    # platform never blocks results from others.
     return sources, ()

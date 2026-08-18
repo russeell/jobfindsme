@@ -27,35 +27,17 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         """,
         encoding="utf-8",
     )
-    workspace = invoke(
-        database,
-        capsys,
-        "workspace",
-        "init",
-        "--name",
-        "求职",
-    )
-    plan = invoke(
-        database,
-        capsys,
-        "plan",
-        "add",
-        "--workspace",
-        workspace["workspace_id"],
-        "--name",
-        "杭州AI",
-        "--role",
-        "AI应用工程师",
-        "--city",
-        "杭州",
+    from jobfindsme.core import jobfindsmecore
+
+    jobfindsmecore(database).configure_search(
+        target_roles=["AI应用工程师"],
+        locations=["杭州"],
     )
     imported = invoke(
         database,
         capsys,
         "jobs",
         "import",
-        "--workspace",
-        workspace["workspace_id"],
         str(jobs_file),
     )
     assert imported["unique"] == 1
@@ -65,10 +47,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         capsys,
         "jobs",
         "search",
-        "--workspace",
-        workspace["workspace_id"],
-        "--plan",
-        plan["plan_id"],
     )
     assert matches[0]["job"]["external_id"] == "job-1"
     job_id = matches[0]["job"]["job_id"]
@@ -78,8 +56,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         capsys,
         "state",
         "set",
-        "--workspace",
-        workspace["workspace_id"],
         "--job",
         job_id,
         "--state",
@@ -91,8 +67,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         capsys,
         "state",
         "set",
-        "--workspace",
-        workspace["workspace_id"],
         "--job",
         job_id,
         "--state",
@@ -114,8 +88,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         database,
         capsys,
         "export",
-        "--workspace",
-        workspace["workspace_id"],
     )
     assert exported["job_states"][0]["state"] == "applied"
     assert [
@@ -128,8 +100,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         capsys,
         "delete",
         "preview",
-        "--workspace",
-        workspace["workspace_id"],
         "--scope",
         "jobs",
     )
@@ -138,8 +108,6 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         capsys,
         "delete",
         "confirm",
-        "--workspace",
-        workspace["workspace_id"],
         "--scope",
         "jobs",
         "--token",
@@ -156,12 +124,9 @@ def test_cli_supports_markdown_output(tmp_path, capsys) -> None:
                 str(tmp_path / "jobfindsme.db"),
                 "--output",
                 "markdown",
-                "workspace",
-                "init",
-                "--name",
-                "My Search",
+                "doctor",
             ]
         )
         == 0
     )
-    assert "**workspace_id**" in capsys.readouterr().out
+    assert "**" in capsys.readouterr().out

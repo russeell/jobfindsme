@@ -73,7 +73,7 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
 
     assert imported["isError"] is False
     assert configured["isError"] is False
-    assert configured["structuredContent"]["plan"]["plan"]["target_roles"] == [
+    assert configured["structuredContent"]["plan"]["preferences"]["target_roles"] == [
         "AI应用工程师"
     ]
     assert searched["isError"] is False
@@ -99,7 +99,7 @@ def test_setup_persists_recruitment_and_employment_filters(tmp_path) -> None:
         },
     )
 
-    plan = result["structuredContent"]["plan"]["plan"]
+    plan = result["structuredContent"]["plan"]["preferences"]
     assert plan["recruitment_track"] == "social"
     assert plan["employment_type"] == "full_time"
 
@@ -256,8 +256,7 @@ def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) ->
     assert profile["fact_counts"]["skill"] >= 2
     assert profile["next_offset"] == 0
     assert profile["review_available"] is True
-    assert profile["suggested_plan"]["ready"] is True
-    assert "target_roles" in profile["suggested_plan"]["requires_confirmation"]
+    assert "suggested_plan" not in profile
 
 
 def test_job_list_bounds_context_and_omits_full_jd(tmp_path) -> None:

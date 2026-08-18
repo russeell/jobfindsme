@@ -84,13 +84,14 @@ class JobUseCase:
     def update_job_state(
         self,
         *,
-        workspace_id: str,
+        workspace_id: str | None = None,
         job_id: str,
         state: JobStateKind,
         note: str = "",
     ) -> JobState:
+        workspace = self.context.resolve_workspace(workspace_id)
         return self.job_states.set(
-            workspace_id=workspace_id,
+            workspace_id=workspace.workspace_id,
             job_id=job_id,
             state=state,
             note=note,

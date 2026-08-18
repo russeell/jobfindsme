@@ -89,9 +89,7 @@ def test_core_configures_and_reuses_active_search_without_ids(tmp_path) -> None:
         locations=["杭州"],
     )
 
-    assert second.workspace.workspace_id == first.workspace.workspace_id
-    assert second.plan.plan_id == first.plan.plan_id
-    assert second.plan.target_roles == ("RAG工程师",)
+    assert second.preferences.target_roles == ("RAG工程师",)
     assert isinstance(core.search_jobs(), list)  # may be empty or have live results
 
 
@@ -126,7 +124,7 @@ def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
         """,
         source_name="fixture",
     )
-    core.job_imports.import_records(configuration.workspace.workspace_id, records)
+    core.job_imports.import_records(core.context.resolve_workspace().workspace_id, records)
 
     matches = core.match_jobs()
 
@@ -160,7 +158,7 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
 
     assert len(updated.sources) == 1
     assert cleared.sources == ()
-    assert updated.plan.plan_id == configured.plan.plan_id
+    assert updated.preferences.target_roles == ("RAG工程师",)
 
 
 def test_updating_catalog_plan_refreshes_primary_role_query(tmp_path) -> None:
@@ -212,8 +210,6 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
     monkeypatch.setattr(core.jobs, "mark_missing_closed", fail_if_closed)
 
     result = core.search._discover_sources(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         sources=(source,),
     )
 
@@ -252,8 +248,6 @@ def test_partial_http_snapshot_never_closes_absent_jobs(
     monkeypatch.setattr(core.jobs, "mark_missing_closed", fail_if_closed)
 
     result = core.search._discover_sources(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         sources=(source,),
     )
 
@@ -288,8 +282,6 @@ def test_complete_snapshot_can_close_absent_jobs(tmp_path, monkeypatch) -> None:
     )
 
     result = core.search._discover_sources(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         sources=(source,),
     )
 
@@ -312,8 +304,6 @@ def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> Non
     )
 
     result = core.search_jobs_with_diagnostics(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         allow_browser_sources=True,
     )
 
@@ -346,8 +336,6 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
     monkeypatch.setattr(core.discovery, "discover", discover)
 
     result = core.search_jobs_with_diagnostics(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         allow_browser_sources=True,
         refresh_mode=SearchRefreshMode.FAST,
     )
@@ -385,8 +373,6 @@ def test_cache_search_performs_no_remote_discovery(tmp_path, monkeypatch) -> Non
     monkeypatch.setattr(core.discovery, "discover", fail_discovery)
 
     result = core.search_jobs_with_diagnostics(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         allow_browser_sources=True,
         refresh_mode=SearchRefreshMode.CACHE,
     )
@@ -414,7 +400,7 @@ def test_empty_browser_refresh_uses_existing_cache_as_degraded(
     )
     source = configured.sources[0].source
     core.job_imports.import_records(
-        configured.workspace.workspace_id,
+        core.context.resolve_workspace().workspace_id,
         parse_json(
             """
             [{
@@ -439,8 +425,6 @@ def test_empty_browser_refresh_uses_existing_cache_as_degraded(
     )
 
     run = core.search._discover_sources(
-        workspace_id=configured.workspace.workspace_id,
-        plan_id=configured.plan.plan_id,
         sources=(source,),
     )[0]
 
@@ -456,109 +440,3 @@ def _setup_profile(core, resume_path):
         profile_id=imported.profile_id,
         accepted_fact_ids=[f.fact_id for f in imported.facts],
     )
-
-
-def test_suggest_plan_returns_ready_false_without_confirmed_profile(tmp_path) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    suggestion = core.suggest_plan()
-    assert suggestion.ready is False
-    assert suggestion.reasoning  # should explain what's missing
-
-
-def test_suggest_plan_derives_roles_from_ai_skills(tmp_path) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    resume = tmp_path / "resume.txt"
-    resume.write_text(
-        "技能：Python、RAG、LangChain、Agent\n"
-        "项目经历：\n"
-        "2023.06-2025.03 某AI公司 大模型应用工程师\n"
-        "负责基于LangGraph的Agent系统开发，使用RAG技术构建知识库问答系统。\n"
-        "教育经历：\n"
-        "2019-2023 上海大学 计算机科学 本科\n",
-        encoding="utf-8",
-    )
-    _setup_profile(core, resume)
-    suggestion = core.suggest_plan()
-    assert suggestion.ready is True
-    assert "AI应用工程师" in suggestion.target_roles
-    assert "上海" in suggestion.locations  # detected from education text
-    assert suggestion.recruitment_track is None
-    assert suggestion.employment_type is None
-
-
-def test_suggest_plan_derives_locations_from_experience(tmp_path) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    resume = tmp_path / "resume.txt"
-    resume.write_text(
-        "技能：Python、Docker、PostgreSQL\n"
-        "工作经历：\n"
-        "2022.07-至今 深圳腾讯 后端开发工程师\n"
-        "2020.03-2022.06 杭州阿里巴巴 Java开发\n"
-        "教育经历：\n"
-        "2016-2020 浙江大学 计算机科学\n",
-        encoding="utf-8",
-    )
-    _setup_profile(core, resume)
-    suggestion = core.suggest_plan()
-    assert suggestion.ready is True
-    assert "深圳" in suggestion.locations or "杭州" in suggestion.locations
-    # Backend signals should suggest backend role
-    assert any(r in str(suggestion.target_roles) for r in ("后端", "AI应用"))
-
-
-def test_suggest_plan_estimates_experience_and_salary(tmp_path) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    resume = tmp_path / "resume.txt"
-    resume.write_text(
-        "技能：PyTorch、TensorFlow、Python\n"
-        "工作经历：\n"
-        "2020.07-至今 北京字节跳动 算法工程师 6年\n"
-        "2018.03-2020.06 上海商汤科技 机器学习研究员\n"
-        "教育经历：\n"
-        "2015-2018 清华大学 计算机科学 硕士\n",
-        encoding="utf-8",
-    )
-    _setup_profile(core, resume)
-    suggestion = core.suggest_plan()
-    assert suggestion.ready is True
-    # Experience is evidence; desired salary is not inferred from years alone.
-    assert suggestion.salary_min_k is None
-    assert "salary_min_k" in suggestion.requires_confirmation
-    assert suggestion.experience_max_years is not None
-    assert suggestion.experience_max_years >= 6
-    assert suggestion.candidate_experience_years == suggestion.experience_max_years
-    # Strong ML signals should suggest 算法工程师
-    assert "算法工程师" in suggestion.target_roles
-
-
-def test_suggest_plan_does_not_force_social_full_time_without_evidence(
-    tmp_path,
-) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    resume = tmp_path / "resume.txt"
-    resume.write_text("技能：Python、RAG、Agent", encoding="utf-8")
-    _setup_profile(core, resume)
-
-    suggestion = core.suggest_plan()
-
-    assert suggestion.recruitment_track is None
-    assert suggestion.employment_type is None
-    assert "recruitment_track" in suggestion.requires_confirmation
-
-
-def test_suggest_plan_does_not_double_count_explicit_years_and_date_ranges(
-    tmp_path,
-) -> None:
-    core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    resume = tmp_path / "resume.txt"
-    resume.write_text(
-        "技能：Python、RAG、Agent\n"
-        "工作经历：\n"
-        "2020.07-2026.06 示例科技 AI应用工程师 6年\n",
-        encoding="utf-8",
-    )
-    _setup_profile(core, resume)
-
-    suggestion = core.suggest_plan()
-
-    assert suggestion.candidate_experience_years == 6

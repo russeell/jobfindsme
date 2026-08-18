@@ -28,7 +28,6 @@ from jobfindsme.contracts import (
     SearchPlan,
     SearchPresentationContext,
     SearchRunResult,
-    SuggestedPlan,
     Workspace,
 )
 from jobfindsme.core.job_service import JobUseCase
@@ -171,9 +170,6 @@ class jobfindsmecore:
             workspace_id=workspace_id,
         )
 
-    def suggest_plan(self, *, workspace_id: str | None = None) -> SuggestedPlan:
-        return self.profile_use_case.suggest_plan(workspace_id=workspace_id)
-
     # ── Search ─────────────────────────────────────────────────────────────
 
     def match_jobs(self, **kwargs) -> list[JobMatch]:
@@ -223,7 +219,7 @@ class jobfindsmecore:
     def preview_delete(
         self,
         *,
-        workspace_id: str,
+        workspace_id: str | None = None,
         scope: str,
     ) -> DeletionPreview:
         return self.privacy_use_case.preview_delete(
@@ -234,7 +230,7 @@ class jobfindsmecore:
     def confirm_delete(
         self,
         *,
-        workspace_id: str,
+        workspace_id: str | None = None,
         scope: str,
         confirmation_token: str,
     ) -> DeletionResult:

@@ -19,12 +19,28 @@ from jobfindsme.contracts import (
     SearchIntegrity,
     SearchRefreshMode,
     StrictModel,
-    SuggestedPlan,
 )
 from jobfindsme.profiles.models import ProfileFact, ResumeImportMode
 
 
-class SetupInput(StrictModel):
+class _LegacyAwareInput(StrictModel):
+    """Accept (and drop) pre-Step-1 workspace/plan IDs for client safety.
+
+    The product no longer exposes Workspace/SearchPlan concepts; old clients
+    that still send these fields must not crash.  Unknown fields other than
+    these two remain rejected by StrictModel(extra="forbid").
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _strip_legacy_ids(cls, values: object) -> object:
+        if isinstance(values, dict):
+            values.pop("workspace_id", None)
+            values.pop("plan_id", None)
+        return values
+
+
+class SetupInput(_LegacyAwareInput):
     """Initialize the local profile and search conditions in one call.
 
     Profile part (optional): pass resume_path to import and auto-confirm a
@@ -32,11 +48,6 @@ class SetupInput(StrictModel):
     Search part (optional): pass target_roles to create/update the active
     search plan. Either part may be omitted — call setup again later.
     """
-
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
 
     # ── Profile ─────────────────────────────────────────────────────────
     resume_path: str | None = Field(
@@ -66,20 +77,10 @@ class SetupInput(StrictModel):
     offset: int = Field(default=0, ge=0, description="Facts page offset")
     limit: int = Field(default=12, ge=1, le=50, description="Facts per page")
 
-    # ── Search plan ─────────────────────────────────────────────────────
-    plan_id: str | None = Field(
-        default=None,
-        description="Search Plan ID (omit to use active context)",
-    )
-    name: str = Field(
-        default="Default Search",
-        min_length=1,
-        max_length=120,
-        description="Human-readable label for this search plan",
-    )
+    # ── Preferences ─────────────────────────────────────────────────────
     target_roles: tuple[str, ...] = Field(
         default_factory=tuple,
-        description=("Job titles to search, e.g. ['AI应用工程师', '大模型应用开发']"),
+        description=("Target role, e.g. ['AI应用工程师']"),
     )
     locations: tuple[str, ...] = Field(
         default_factory=tuple,
@@ -135,15 +136,15 @@ class SetupInput(StrictModel):
         return self
 
 
-class SearchJobsInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
-    plan_id: str | None = Field(
-        default=None,
-        description="Search Plan ID (omit to use active context)",
-    )
+class SearchJobsInput(_LegacyAwareInput):
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_refresh_mode(cls, values: object) -> object:
+        """Map deprecated fast/full strings to the single live mode."""
+        if isinstance(values, dict) and values.get("refresh_mode") in {"fast", "full"}:
+            values["refresh_mode"] = "live"
+        return values
+
     sources: tuple[DiscoverySource, ...] = Field(
         default_factory=tuple,
         description="Explicit source list; omit for auto-selected sources",
@@ -156,11 +157,11 @@ class SearchJobsInput(StrictModel):
         ),
     )
     refresh_mode: SearchRefreshMode = Field(
-        default=SearchRefreshMode.FAST,
+        default=SearchRefreshMode.LIVE,
         description=(
-            "Usually leave at the default (fast): concurrently refresh the "
+            "Usually leave at the default (live): concurrently refresh the "
             "maintained sources, auto-degrading to labeled cache on failure. "
-            "cache: no remote access. full: refresh all sources"
+            "cache: no remote access."
         ),
     )
     include_seen: bool = Field(
@@ -190,11 +191,7 @@ class SearchJobsInput(StrictModel):
     )
 
 
-class GetJobsInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
+class GetJobsInput(_LegacyAwareInput):
     job_id: str | None = Field(
         default=None,
         description=(
@@ -225,11 +222,7 @@ class GetJobsInput(StrictModel):
     )
 
 
-class UpdateJobStateInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
+class UpdateJobStateInput(_LegacyAwareInput):
     job_id: str = Field(
         description="Job ID to update",
     )
@@ -245,11 +238,7 @@ class UpdateJobStateInput(StrictModel):
     )
 
 
-class DeleteLocalDataInput(StrictModel):
-    workspace_id: str | None = Field(
-        default=None,
-        description="Workspace ID (omit to use active context)",
-    )
+class DeleteLocalDataInput(_LegacyAwareInput):
     scope: Literal["jobs", "profile", "workspace"] = Field(
         description=(
             "What to delete: jobs (all jobs), profile (resume data), "
@@ -278,7 +267,6 @@ class SetupOutput(StrictModel):
     next_offset: int | None = None
     total_facts: int = 0
     review_available: bool = False
-    suggested_plan: SuggestedPlan | None = None
     plan: SearchConfiguration | None = None
 
 

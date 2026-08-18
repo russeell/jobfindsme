@@ -45,11 +45,11 @@ from jobfindsme.contracts.search import (
     SearchDiagnosticSummary,
     SearchIntegrity,
     SearchPlan,
+    Preferences,
     SearchPresentationContext,
     SearchRefreshMode,
     SearchRunDiagnostics,
     SearchRunResult,
-    SuggestedPlan,
 )
 from jobfindsme.contracts.tracking import (
     JobChangeType,
@@ -85,6 +85,7 @@ __all__ = [
     "SearchDiagnosticSummary",
     "SearchIntegrity",
     "SearchPlan",
+    "Preferences",
     "SearchPresentationContext",
     "SearchRefreshMode",
     "SearchRunDiagnostics",
@@ -97,6 +98,5 @@ __all__ = [
     "SourceRunStatus",
     "SourceSubscription",
     "StrictModel",
-    "SuggestedPlan",
     "Workspace",
 ]
