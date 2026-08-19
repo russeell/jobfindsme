@@ -24,7 +24,8 @@ count and raw records are not product outcomes.
 ### In scope
 
 - local resume parsing into reviewable structured facts;
-- reusable search plans and active local context;
+- a single local profile snapshot and one set of preferences (no reusable
+  search plans or active-workspace product concepts);
 - BOSS直聘 discovery through a user-authorized local Chrome session;
 - 猎聘 discovery through HTTP, with bounded browser detail enrichment;
 - 智联招聘 and 前程无忧 discovery through HTTP, with bounded browser fallback;
@@ -104,7 +105,7 @@ snapshot may close jobs by absence.
 ## 5. Core search flow
 
 ```text
-resolve active workspace and plan
+resolve active context (internal) and preferences
 -> select refresh sources
 -> discover sources concurrently
 -> validate and normalize source records
@@ -130,16 +131,16 @@ The default remains deterministic and model-free; embeddings are not a hidden
 runtime dependency.
 
 The deterministic score is an explainable ordering signal, not a hiring
-probability. The Server owns the displayed order and the stable human-facing
-result. A host Agent may answer later comparison questions from returned
-evidence, but must not silently reorder, omit, or rewrite the base result.
+probability. The Server owns facts, filtering, ranking, and a compact factual
+summary; the host Agent organizes the final user-facing expression from those
+facts only and never invents jobs, salary, links, scores, or reasons.
 
 ## 6. MCP contract
 
 The server name and all public product identifiers use lowercase `jobfindsme`.
 The MCP surface contains five focused tools:
 
-1. `setup` — profile import/review/confirm and search-plan configuration
+1. `setup` — profile snapshot import and preferences configuration
 2. `search_jobs`
 3. `get_jobs` — list/paginate, or pass `job_id` for one job's full details
 4. `update_job_state`
@@ -161,8 +162,8 @@ apply URL; no full JD text) plus `count`, `changes`, and
 `diagnostic_summary`. Clients that need full job details must use `get_jobs`
 instead (passing `job_id` for one job's full details).
 
-`search_jobs` returns both strict structured content and a complete five-part
-human-facing result, in this fixed order:
+`search_jobs` returns bounded structured facts plus a compact five-part
+factual baseline (the summary), in this order:
 
 ```text
 resume usage -> source diagnostics -> applied filters -> job blocks -> changes

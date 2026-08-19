@@ -70,10 +70,10 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
      signals; recommendation reasons must be based on the job's own
      requirements vs the user's stated preferences — never claim a
      resume-based skill match that has no profile behind it.
-4. Call `setup` with `target_roles` and the extracted constraints, omitting
-   `sources` unless the user explicitly provides one. Core selects maintained
-   sources and returns official search links. Never ask ordinary users for
-   `career_url`, `board_name`, `board_token`, or other connector internals.
+4. Call `setup` with `target_role` and the extracted constraints. Core selects
+   maintained sources and returns official search links. Never ask ordinary users
+   for `career_url`, `board_name`, `board_token`, or other connector
+   internals; custom sources are a CLI feature, not a setup parameter.
    Use `salary_policy: strict` when a salary constraint is present. Use
    `salary_policy: include_undisclosed` only when the user explicitly asks to
    retain jobs with undisclosed or negotiable salary.
@@ -85,7 +85,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    `summary` is the Server's factual baseline — you may adapt wording but
    must not contradict it. Only call `get_jobs` (with `job_id` for one
    job's details) when the user explicitly asks for comparison or analysis
-   in a SUBSEQUENT message — never in the same response.
+   in the same turn only when the user explicitly asks; never auto-call it to
+   rebuild the initial result.
    When the user says "不使用简历" or "不要用简历" or "skip resume",
    pass `use_profile: false` to `search_jobs`; the Server will skip
    profile loading entirely, Section 1 will show "本次未使用简历", and
@@ -98,7 +99,9 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    scheduled radar update.
    Use `get_jobs` only for later pagination or state filtering, and with
    `job_id` only when the user explicitly asks about one specific
-   job. Never auto-call it to rebuild or supplement the initial result.
+   job. If the user explicitly asks for comparison or details in the same
+   turn, calling `get_jobs` with `job_id` is allowed; never auto-call it just
+   to rebuild or supplement the initial result.
    Do not begin by asking technical setup questions. If diagnostics show that
    the browser is unavailable or BOSS is logged out, give one recovery action:
    run `jobfindsme setup`, complete login if needed, and retry once. Never

@@ -30,27 +30,26 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
             source_path=values["resume_path"],
             mode=values["mode"],
         )
-        if values["auto_confirm"]:
-            profile = core.confirm_profile(
-                profile_id=profile.profile_id,
-                accepted_fact_ids=[fact.fact_id for fact in profile.facts],
-            )
-            include_facts = False
-        else:
-            include_facts = True
-        page.update(
-            _profile_page(
-                profile,
-                offset=values["offset"],
-                limit=values["limit"],
-                include_facts=include_facts,
-            )
+        # Import = create the current snapshot; no per-fact approval flow.
+        summary = core.confirm_profile(
+            profile_id=profile.profile_id,
+            accepted_fact_ids=[fact.fact_id for fact in profile.facts],
         )
-    # ── Search plan part ────────────────────────────────────────────────
+        counts = {
+            fact_type.value: sum(fact.fact_type is fact_type for fact in summary.facts)
+            for fact_type in FactType
+        }
+        page.update(
+            {
+                "profile_id": summary.profile_id,
+                "profile_status": "confirmed",
+                "parser_version": profile.parser_version,
+                "fact_counts": counts,
+            }
+        )
+    # ── Preferences part ────────────────────────────────────────────────
     if values.get("target_role"):
-        # Keep typed fields (sources is a tuple of DiscoverySource models —
-        # model_dump would corrupt them into raw dicts).
-        plan = core.configure_search(
+        configuration = core.configure_search(
             target_role=request.target_role,
             locations=request.locations,
             salary_min_k=request.salary_min_k,
@@ -61,36 +60,9 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
             recruitment_track=request.recruitment_track,
             employment_type=request.employment_type,
             exclusions=request.exclusions,
-            sources=request.sources,
         )
-        page["plan"] = plan
+        page["preferences"] = configuration.preferences
     return None, page
-
-
-def _profile_page(
-    profile: Any,
-    *,
-    offset: int,
-    limit: int,
-    include_facts: bool = True,
-) -> dict[str, Any]:
-    facts = tuple(profile.facts)
-    selected = facts[offset : offset + limit] if include_facts else ()
-    counts = {
-        fact_type.value: sum(fact.fact_type is fact_type for fact in facts)
-        for fact_type in FactType
-    }
-    next_offset = offset + len(selected) if include_facts else 0
-    return {
-        "profile_id": profile.profile_id,
-        "profile_status": getattr(profile, "status", "confirmed"),
-        "parser_version": getattr(profile, "parser_version", None),
-        "fact_counts": counts,
-        "facts": selected,
-        "next_offset": next_offset if next_offset < len(facts) else None,
-        "total_facts": len(facts),
-        "review_available": bool(facts),
-    }
 
 
 def search_jobs(core: Any, request: BaseModel) -> HandlerResult:

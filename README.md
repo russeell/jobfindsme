@@ -245,7 +245,7 @@ Agent (Claude / GPT / Qwen / WorkBuddy — interaction and follow-up talk)
   → Local Core
       → pure HTTP (猎聘 / 智联 / 前程无忧)
       → local Chrome CDP (BOSS直聘 inside its logged-in session)
-      → fast mode: bounded concurrent refresh; one failing source never blocks others
+      → live mode: bounded concurrent refresh; one failing source never blocks others
   → normalize → cross-source dedup → hard filter (city/salary/track/type)
   → signal extraction + weighted coarse rank (skills/experience/education/liveness/salary)
   → incremental radar (new / changed / reopened / closed)

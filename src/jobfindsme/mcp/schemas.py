@@ -12,15 +12,15 @@ from jobfindsme.contracts import (
     JobStateKind,
     JobSummary,
     MatchEvidence,
+    Preferences,
     RecruitmentTrack,
     SalaryPolicy,
     SearchChanges,
-    SearchConfiguration,
     SearchDiagnosticSummary,
     SearchRefreshMode,
     StrictModel,
 )
-from jobfindsme.profiles.models import ProfileFact, ResumeImportMode
+from jobfindsme.profiles.models import ResumeImportMode
 
 
 class _LegacyAwareInput(StrictModel):
@@ -44,8 +44,10 @@ class SetupInput(_LegacyAwareInput):
     """Initialize the local profile snapshot and search preferences in one call.
 
     Profile part (optional): pass resume_path to import and store a local
-    snapshot.  Search part (optional): pass target_roles to create/update the
+    snapshot.  Search part (optional): pass target_role to create/update the
     local preferences.  Either part may be omitted — call setup again later.
+    Source selection, browser access, and refresh policy are Server concerns;
+    debug/admin knobs live in the CLI, not here.
     """
 
     # ── Profile ─────────────────────────────────────────────────────────
@@ -57,15 +59,6 @@ class SetupInput(_LegacyAwareInput):
         default=ResumeImportMode.FORGET_SOURCE,
         description="forget-source (default) does not retain the original file",
     )
-    auto_confirm: bool = Field(
-        default=True,
-        description=(
-            "If true (default), parsed facts are stored directly so the first "
-            "search can proceed. Set false only for a facts review page."
-        ),
-    )
-    offset: int = Field(default=0, ge=0, description="Facts page offset")
-    limit: int = Field(default=12, ge=1, le=50, description="Facts per page")
 
     # ── Preferences ─────────────────────────────────────────────────────
     target_role: str | None = Field(
@@ -107,10 +100,6 @@ class SetupInput(_LegacyAwareInput):
     exclusions: tuple[str, ...] = Field(
         default_factory=tuple,
         description="Keywords to exclude, e.g. ['外包', '996']",
-    )
-    sources: tuple[DiscoverySource, ...] | None = Field(
-        default=None,
-        description="Explicit sources; omit = maintained platforms auto-selected",
     )
 
     @model_validator(mode="after")
@@ -250,11 +239,7 @@ class SetupOutput(StrictModel):
     profile_status: str | None = None
     parser_version: str | None = None
     fact_counts: dict[str, int] = Field(default_factory=dict)
-    facts: tuple[ProfileFact, ...] = ()
-    next_offset: int | None = None
-    total_facts: int = 0
-    review_available: bool = False
-    plan: SearchConfiguration | None = None
+    preferences: Preferences | None = None
 
 
 class SearchJobFact(StrictModel):

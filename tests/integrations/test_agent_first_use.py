@@ -8,6 +8,7 @@ from pathlib import Path
 
 from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import (
+    DiscoverySource,
     EmploymentType,
     JobLiveness,
     JobSummary,
@@ -57,6 +58,17 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         encoding="utf-8",
     )
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    core.configure_search(
+        target_role="AI应用工程师",
+        locations=["上海"],
+        sources=[
+            DiscoverySource(
+                kind="json_file",
+                source_name="用户提供岗位",
+                path=str(jobs),
+            )
+        ],
+    )
     registry = ToolRegistry(core)
 
     profile = call(registry, "setup", resume_path=str(resume))
@@ -66,13 +78,6 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
         "setup",
         target_role="AI应用工程师",
         locations=["上海"],
-        sources=[
-            {
-                "kind": "json_file",
-                "source_name": "用户提供岗位",
-                "path": str(jobs),
-            }
-        ],
     )
     search_result = call(registry, "search_jobs")
     assert search_result["count"] == 2
@@ -153,7 +158,22 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
-    registry = ToolRegistry(jobfindsmecore(tmp_path / "jobfindsme.db"))
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    core.configure_search(
+        target_role="AI应用工程师",
+        locations=["上海"],
+        salary_min_k=20,
+        recruitment_track="social",
+        employment_type="full_time",
+        sources=[
+            DiscoverySource(
+                kind="json_file",
+                source_name="用户提供岗位",
+                path=str(jobs),
+            )
+        ],
+    )
+    registry = ToolRegistry(core)
     call(
         registry,
         "setup",
@@ -162,13 +182,6 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
         salary_min_k=20,
         recruitment_track="social",
         employment_type="full_time",
-        sources=[
-            {
-                "kind": "json_file",
-                "source_name": "用户提供岗位",
-                "path": str(jobs),
-            }
-        ],
     )
 
     first = registry.call("search_jobs", {"refresh_mode": "full"})

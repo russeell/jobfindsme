@@ -74,8 +74,7 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     assert imported["isError"] is False
     assert configured["isError"] is False
     assert (
-        configured["structuredContent"]["plan"]["preferences"]["target_role"]
-        == "AI应用工程师"
+        configured["structuredContent"]["preferences"]["target_role"] == "AI应用工程师"
     )
     assert searched["isError"] is False
     # Search may return live results or be empty — both are valid
@@ -100,9 +99,9 @@ def test_setup_persists_recruitment_and_employment_filters(tmp_path) -> None:
         },
     )
 
-    plan = result["structuredContent"]["plan"]["preferences"]
-    assert plan["recruitment_track"] == "social"
-    assert plan["employment_type"] == "full_time"
+    preferences = result["structuredContent"]["preferences"]
+    assert preferences["recruitment_track"] == "social"
+    assert preferences["employment_type"] == "full_time"
 
 
 def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
@@ -173,7 +172,7 @@ def test_delete_tool_cannot_bypass_core_two_phase_protocol(tmp_path) -> None:
     assert core.list_workspaces() == []
 
 
-def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> None:
+def test_profile_import_creates_a_snapshot_with_counts(tmp_path) -> None:
     _, _, _, registry = make_registry(tmp_path)
     resume = tmp_path / "resume.txt"
     resume.write_text(
@@ -183,17 +182,12 @@ def test_profile_import_is_paginated_instead_of_dumping_all_facts(tmp_path) -> N
 
     imported = registry.call(
         "setup",
-        {
-            "resume_path": str(resume),
-            "auto_confirm": False,
-            "limit": 2,
-        },
+        {"resume_path": str(resume)},
     )["structuredContent"]
 
-    assert len(imported["facts"]) == 2
-    assert imported["total_facts"] >= 6
-    assert imported["next_offset"] == 2
-    assert "fact_counts" in imported
+    assert imported["profile_status"] == "confirmed"
+    assert imported["fact_counts"]["skill"] >= 6
+    assert "facts" not in imported
 
 
 def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) -> None:
@@ -210,11 +204,8 @@ def test_profile_import_auto_confirms_by_default_for_fast_first_use(tmp_path) ->
     profile = result["structuredContent"]
     assert result["isError"] is False
     assert profile["profile_status"] == "confirmed"
-    assert profile["facts"] == []
-    assert profile["total_facts"] >= 2
     assert profile["fact_counts"]["skill"] >= 2
-    assert profile["next_offset"] == 0
-    assert profile["review_available"] is True
+    assert "facts" not in profile
     assert "suggested_plan" not in profile
 
 
@@ -1042,7 +1033,7 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
         },
     )
     assert profile_result["isError"] is False
-    assert profile_result["structuredContent"]["total_facts"] > 0
+    assert profile_result["structuredContent"]["fact_counts"]["skill"] > 0
 
 
 def test_use_profile_true_default_preserves_existing_behavior(tmp_path) -> None:

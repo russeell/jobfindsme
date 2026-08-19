@@ -11,7 +11,7 @@ Everything the user ever hears about reduces to four concepts:
 | Concept | 中文 | Meaning | Owned by |
 |---|---|---|---|
 | Profile | 我是谁 | resume parsed into reviewable facts (skills, experience, education) | `profiles/service.py` |
-| Search | 我找什么 | roles, locations, salary, track, type — the active plan | `core/search.py` |
+| Search | 我找什么 | role, locations, salary, track, type — the current preferences | `core/search.py` |
 | Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `tracking.py` |
 | Tracking | 和上次相比有什么变化 | new / changed / reopened / closed, and applied-saved-rejected state | `tracking` (impressions, states) |
 
@@ -56,7 +56,7 @@ CLI / MCP
     ↓
 Application Core (app.py — thin facade)
     ↓
-Domain Services (profiles, search_plans, matching, importing, tracking)
+Domain Services (profiles, preferences, matching, importing, tracking)
     ↓
 Storage / Connectors (storage.py, connectors/)
 ```

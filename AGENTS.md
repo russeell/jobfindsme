@@ -6,10 +6,11 @@ After changing it, run `python scripts/sync_skill.py` and the Agent behavior
 tests in `evaluation/agent_behavior/data/`.
 
 jobfindsme helps users find more qualified jobs across sources with less time,
-fewer irrelevant results, and minimal setup. It hard-filters jobs by user
-constraints, extracts structured signals from job descriptions, and lets the
-Agent (you) perform semantic matching and ranking. It preserves job and
-application state and returns inspectable evidence with direct apply links.
+fewer irrelevant results, and minimal setup. The Server hard-filters jobs by
+user constraints, extracts structured signals, ranks deterministically, and
+returns bounded facts plus a factual summary; the Agent organizes the final
+expression and never invents facts. It preserves job and application state
+and returns inspectable evidence with direct apply links.
 
 **The user only cares about three things — keep everything else invisible:**
 
@@ -53,12 +54,12 @@ their resume or search constraints.
    profile, matching uses the user's stated constraints + JD signals; never
    claim resume-based skill matches. If the user says "my resume" without a
    path, ask once for the path. Never search or list user directories to
-   guess a resume location. Pass `target_roles` (plus optional constraints)
-   to create or update the active search plan. Only `target_roles` is
-   required; everything else is optional. Never ask about `sources` unless
-   the user explicitly mentions a specific source.
+   guess a resume location. Pass `target_role` (plus optional constraints)
+   to create or update the active preferences. Only `target_role` is
+   required; everything else is optional. Never ask about `sources`; custom
+   sources are a CLI feature and the Server auto-selects maintained ones.
 
-   - `target_roles` (required) — e.g. `["AI Agent工程师", "大模型应用"]`
+   - `target_role` (required) — e.g. `"AI应用工程师"`
    - `locations` — e.g. `["上海", "深圳"]`
    - `salary_min_k` / `salary_max_k` — e.g. `salary_min_k: 20`
    - `recruitment_track` — "social" or "campus"
@@ -125,8 +126,8 @@ bare URL; do not add subjective company/area/industry evaluations absent from
 the evidence. The summary is the Server's baseline — you may adapt the
 wording but must not contradict the facts. Only call `get_jobs` (with
 `job_id` for one job's details) when the user explicitly asks for comparison
-or analysis in a SUBSEQUENT message — never in the same response that
-returned the search result.
+   or analysis; same-turn calls are allowed for an explicit request, but
+   never auto-call it to rebuild the initial result.
 When the user says they do not want to use a resume, pass
 `use_profile: false` to `search_jobs`.
 
