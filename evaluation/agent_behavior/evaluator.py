@@ -153,6 +153,35 @@ def _protect_resume_context(transcript: BehaviorTranscript) -> list[str]:
     return failures
 
 
+def _change_city(transcript: BehaviorTranscript) -> list[str]:
+    failures = []
+    setup = _tool_call(transcript, "setup")
+    if setup is None:
+        return ["setup was not called to update locations"]
+    locations = setup.arguments.get("locations") or ()
+    if "深圳" not in locations:
+        failures.append("locations did not include 深圳")
+    names = _tool_names(transcript)
+    if "search_jobs" not in names:
+        failures.append("search_jobs was not called after updating preferences")
+    else:
+        failures.extend(_require_factual_search_output(transcript))
+    return failures
+
+
+def _explain_recommendation(transcript: BehaviorTranscript) -> list[str]:
+    call = _tool_call(transcript, "get_jobs")
+    if call is None:
+        return ["get_jobs was not called for the requested job"]
+    failures = []
+    if call.arguments.get("job_id") != "job-3":
+        failures.append("get_jobs was not called with the requested job_id")
+    last = _last_assistant(transcript)
+    if "job-3" not in last and "AI应用工程师" not in last:
+        failures.append("answer was not grounded in the returned job evidence")
+    return failures
+
+
 _CHECKS: dict[str, Callable[[BehaviorTranscript], list[str]]] = {
     "find_jobs_with_resume": _find_jobs_with_resume,
     "preserve_five_sections_and_links": _preserve_five_sections_and_links,
@@ -160,6 +189,8 @@ _CHECKS: dict[str, Callable[[BehaviorTranscript], list[str]]] = {
     "mark_job_applied": _mark_job_applied,
     "incremental_search": _incremental_search,
     "protect_resume_context": _protect_resume_context,
+    "change_city": _change_city,
+    "explain_recommendation": _explain_recommendation,
 }
 
 

@@ -4,49 +4,113 @@
   "evidence_kind": "contract_fixture",
   "transcripts": [
     {
-      "case_id": "find_jobs_with_resume",
-      "host": "baseline",
+      "case_id": "change_city",
+      "host": "no-skill",
       "events": [
-        {"type": "file_read", "path": "/tmp/resume.pdf", "content": "完整简历正文"},
-        {"type": "assistant", "content": "请先告诉我工作经验和技能。"}
+        {
+          "type": "assistant",
+          "content": "好的，已切换城市，稍后为你重新搜索。"
+        }
       ]
     },
     {
-      "case_id": "preserve_five_sections_and_links",
-      "host": "baseline",
+      "case_id": "explain_recommendation",
+      "host": "no-skill",
       "events": [
-        {"type": "assistant", "content": "| 岗位 | 公司 |\n|---|---|\n| AI工程师 | 示例公司 |"}
+        {
+          "type": "assistant",
+          "content": "因为它匹配度高，值得投递。"
+        }
       ]
     },
     {
       "case_id": "explain_source_degradation",
       "host": "baseline",
       "events": [
-        {"type": "tool_result", "name": "search_jobs", "content": "没有找到岗位。"},
-        {"type": "assistant", "content": "没有找到岗位。"}
+        {
+          "type": "tool_result",
+          "name": "search_jobs",
+          "content": "没有找到岗位。"
+        },
+        {
+          "type": "assistant",
+          "content": "没有找到岗位。"
+        }
       ]
     },
     {
-      "case_id": "mark_job_applied",
+      "case_id": "find_jobs_with_resume",
       "host": "baseline",
       "events": [
-        {"type": "assistant", "content": "好的，我记住了。"}
+        {
+          "type": "file_read",
+          "path": "/tmp/resume.pdf",
+          "content": "完整简历正文"
+        },
+        {
+          "type": "assistant",
+          "content": "请先告诉我工作经验和技能。"
+        }
       ]
     },
     {
       "case_id": "incremental_search",
       "host": "baseline",
       "events": [
-        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true, "refresh_mode": "full"}},
-        {"type": "tool_call", "name": "search_jobs", "arguments": {"include_seen": true, "refresh_mode": "full"}}
+        {
+          "type": "tool_call",
+          "name": "search_jobs",
+          "arguments": {
+            "include_seen": true,
+            "refresh_mode": "full"
+          }
+        },
+        {
+          "type": "tool_call",
+          "name": "search_jobs",
+          "arguments": {
+            "include_seen": true,
+            "refresh_mode": "full"
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "mark_job_applied",
+      "host": "baseline",
+      "events": [
+        {
+          "type": "assistant",
+          "content": "好的，我记住了。"
+        }
+      ]
+    },
+    {
+      "case_id": "preserve_five_sections_and_links",
+      "host": "baseline",
+      "events": [
+        {
+          "type": "assistant",
+          "content": "| 岗位 | 公司 |\n|---|---|\n| AI工程师 | 示例公司 |"
+        }
       ]
     },
     {
       "case_id": "protect_resume_context",
       "host": "baseline",
       "events": [
-        {"type": "file_read", "path": "/tmp/resume.pdf", "content": "完整简历正文"},
-        {"type": "tool_call", "name": "setup", "arguments": {"resume_content": "完整简历正文"}}
+        {
+          "type": "file_read",
+          "path": "/tmp/resume.pdf",
+          "content": "完整简历正文"
+        },
+        {
+          "type": "tool_call",
+          "name": "setup",
+          "arguments": {
+            "resume_content": "完整简历正文"
+          }
+        }
       ]
     }
   ]

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "A",
+    "title": "AI应用工程师",
+    "company": "星河科技",
+    "location": "上海",
+    "description": "Python RAG Agent MCP 3-5年 28-45K",
+    "url": "https://example.com/jobs/A"
+  },
+  {
+    "id": "C",
+    "title": "AI Agent开发工程师",
+    "company": "知行数据",
+    "location": "上海",
+    "description": "Agent LangGraph FastAPI 2-4年 25-45K",
+    "url": "https://example.com/jobs/C"
+  },
+  {
+    "id": "C-dup",
+    "title": "AI Agent开发工程师",
+    "company": "知行数据",
+    "location": "上海",
+    "description": "Agent LangGraph FastAPI 2-4年 25-45K",
+    "url": "https://example.com/jobs/C-dup"
+  },
+  {
+    "id": "D",
+    "title": "AI应用工程师",
+    "company": "深蓝汽车",
+    "location": "上海",
+    "description": "车载大模型 RAG 3-5年 30-50K 新增多模态要求",
+    "url": "https://example.com/jobs/D"
+  },
+  {
+    "id": "E",
+    "title": "大模型应用开发工程师",
+    "company": "天工智能",
+    "location": "上海",
+    "description": "LLM RAG Agent 1-3年 22-38K",
+    "url": "https://example.com/jobs/E"
+  }
+]

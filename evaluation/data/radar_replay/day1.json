@@ -1,0 +1,26 @@
+[
+  {
+    "id": "A",
+    "title": "AI应用工程师",
+    "company": "星河科技",
+    "location": "上海",
+    "description": "Python RAG Agent MCP 3-5年 25-40K",
+    "url": "https://example.com/jobs/A"
+  },
+  {
+    "id": "B",
+    "title": "AI应用工程师",
+    "company": "云帆智能",
+    "location": "上海",
+    "description": "大模型应用 Java Spring 1-3年 20-35K",
+    "url": "https://example.com/jobs/B"
+  },
+  {
+    "id": "C",
+    "title": "AI Agent开发工程师",
+    "company": "知行数据",
+    "location": "上海",
+    "description": "Agent LangGraph FastAPI 2-4年 25-45K",
+    "url": "https://example.com/jobs/C"
+  }
+]

@@ -29,6 +29,12 @@ jobs:
           --dataset evaluation/data/v0.1.json
           --report ${{ runner.temp }}/synthetic-evaluation.json
           --type synthetic
+      - name: Golden matching regression gate
+        run: >-
+          python -m evaluation.cli
+          --dataset evaluation/data/golden/golden_v1.json
+          --report ${{ runner.temp }}/golden-evaluation.json
+          --type golden
       - run: ruff check .
       - run: ruff format --check .
       - run: bash scripts/smoke_installed_package.sh

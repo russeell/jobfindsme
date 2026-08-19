@@ -61,6 +61,32 @@ therefore treats the canonical Agent Skill as executable behavior:
 - release compatibility claims require redacted Codex, Claude, and Cursor
   transcripts.
 
+## Four-layer verification (not "use it for a week")
+
+Product correctness is proven by compressed-time assets instead of waiting
+for a week of dogfooding:
+
+1. **Multi-day Radar replay** — `evaluation/regression/radar_replay.py` replays
+   deterministic Day 1/2/3 fixtures (`evaluation/data/radar_replay/`) through
+   the real pipeline and verifies new / changed / closed / suppressed /
+   applied-suppression transitions in minutes.
+2. **Golden matching dataset** — `evaluation/data/golden/golden_v1.json`
+   (40 labeled jobs, built by `scripts/build_golden_dataset.py`) plus
+   `evaluation/metrics/golden_runner.py`. Headline metrics are Recall@20 and
+   hard-filter False-Negative rate; the gate runs in CI. Rebuild with
+   `python -m evaluation.cli --dataset evaluation/data/golden/golden_v1.json
+   --report /tmp/golden.json --type golden`.
+3. **Real-platform comparison** — `scripts/platform_compare.py` runs a real
+   search and dumps CSV; manually sample the same query on BOSS直聘/猎聘 and
+   classify coverage / filter / ranking gaps.
+4. **Agent behavior** — fixed prompts (now 8 cases, including city change and
+   recommendation explanation) prove the Skill maps user language to correct
+   MCP calls; the no-Skill baseline must fail and the Skill fixture must pass.
+
+Real dogfooding still matters, but only for things lab tests cannot see
+(platform outages, dirty state over time, UX friction, systematic miss
+patterns) — it is no longer the gate.
+
 See `evaluation/agent_behavior/data/README.md` for commands and the normalized event
 schema.
 3. Run `python -m scripts.validate_taxonomy` and

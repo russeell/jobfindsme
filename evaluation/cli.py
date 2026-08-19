@@ -4,6 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from evaluation.metrics.golden_runner import evaluate_golden_dataset
 from evaluation.metrics.runner import (
     evaluate_chinese_dataset,
     evaluate_dataset,
@@ -16,7 +17,7 @@ def main() -> int:
     parser.add_argument("--report", required=True)
     parser.add_argument(
         "--type",
-        choices=("synthetic", "chinese"),
+        choices=("synthetic", "chinese", "golden"),
         default="synthetic",
         help="Dataset type (default: synthetic)",
     )
@@ -43,6 +44,17 @@ def main() -> int:
         )
         print(report.summary())
         return int(args.require_claim_ready and not report.ready_for_claim)
+
+    if args.type == "golden":
+        report = evaluate_golden_dataset(args.dataset)
+        report_path = Path(args.report)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(
+            report.model_dump_json(indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(report.summary())
+        return 0 if report.gate_passed else 1
 
     report = evaluate_dataset(args.dataset)
     report_path = Path(args.report)

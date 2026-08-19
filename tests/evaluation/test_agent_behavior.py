@@ -14,7 +14,7 @@ BASELINE = ROOT / "evaluation/agent_behavior/data/fixtures/baseline.json"
 WITH_SKILL = ROOT / "evaluation/agent_behavior/data/fixtures/with_skill.json"
 
 
-def test_acceptance_prompts_cover_the_six_user_critical_behaviors() -> None:
+def test_acceptance_prompts_cover_user_critical_behaviors() -> None:
     suite = json.loads(CASES.read_text(encoding="utf-8"))
 
     assert {case["case_id"] for case in suite["cases"]} == {
@@ -24,6 +24,8 @@ def test_acceptance_prompts_cover_the_six_user_critical_behaviors() -> None:
         "mark_job_applied",
         "incremental_search",
         "protect_resume_context",
+        "change_city",
+        "explain_recommendation",
     }
     assert all(case["prompt"].strip() for case in suite["cases"])
 
@@ -40,6 +42,8 @@ def test_baseline_demonstrates_failure_before_the_skill() -> None:
         "mark_job_applied",
         "incremental_search",
         "protect_resume_context",
+        "change_city",
+        "explain_recommendation",
     }
 
 
@@ -49,7 +53,7 @@ def test_skill_fixture_passes_every_behavior_gate() -> None:
     assert report.skill_enabled is True
     assert report.gate_passed is True
     assert report.failed_case_ids == ()
-    assert report.passed == report.total == 6
+    assert report.passed == report.total == 8
 
 
 def test_contract_fixture_cannot_be_claimed_as_live_agent_evidence(

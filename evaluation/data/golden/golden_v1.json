@@ -1,0 +1,550 @@
+{
+  "dataset_version": "golden_v1",
+  "dataset_type": "golden_synthetic_regression",
+  "plan": {
+    "target_roles": [
+      "AI应用工程师"
+    ],
+    "locations": [
+      "上海",
+      "深圳"
+    ],
+    "salary_min_k": 20,
+    "recruitment_track": "social",
+    "employment_type": "full_time",
+    "exclusions": [
+      "外包",
+      "驻场"
+    ]
+  },
+  "provenance": {
+    "evidence_kind": "synthetic",
+    "collection_method": "generated_fixture",
+    "human_annotated": false,
+    "labeler": "script",
+    "notes": "确定性构造的回归集，不可作为对外质量声明"
+  },
+  "jobs": [
+    {
+      "id": "m01",
+      "title": "AI应用工程师",
+      "company": "星河智联科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-40K·14薪 上海 ",
+      "url": "https://example.com/golden/m01",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m02",
+      "title": "AI应用工程师",
+      "company": "云帆智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 30-50K 深圳 ",
+      "url": "https://example.com/golden/m02",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m03",
+      "title": "大模型应用开发工程师",
+      "company": "天工智能科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 28-45K·15薪 上海 ",
+      "url": "https://example.com/golden/m03",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m04",
+      "title": "AI Agent工程师",
+      "company": "知行数据科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-45K 深圳 ",
+      "url": "https://example.com/golden/m04",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m05",
+      "title": "AI应用工程师（Agent方向）",
+      "company": "深蓝智能科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 30-55K 上海 ",
+      "url": "https://example.com/golden/m05",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m06",
+      "title": "AI应用开发工程师",
+      "company": "灵犀智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 22-40K·13薪 深圳 ",
+      "url": "https://example.com/golden/m06",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m07",
+      "title": "大模型应用工程师",
+      "company": "极目数字科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-40K 上海 ",
+      "url": "https://example.com/golden/m07",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m08",
+      "title": "AI应用工程师",
+      "company": "华信数智科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-35K 深圳 ",
+      "url": "https://example.com/golden/m08",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m09",
+      "title": "AI应用工程师",
+      "company": "蓝湖数据科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-30K 上海 ",
+      "url": "https://example.com/golden/m09",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m10",
+      "title": "大模型应用开发工程师",
+      "company": "青云智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 26-42K·14薪 深圳 ",
+      "url": "https://example.com/golden/m10",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m11",
+      "title": "AI应用工程师",
+      "company": "星图软件科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 30-45K 上海 ",
+      "url": "https://example.com/golden/m11",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m12",
+      "title": "AI应用工程师",
+      "company": "微纳智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-35K 深圳 ",
+      "url": "https://example.com/golden/m12",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m13",
+      "title": "AI应用工程师",
+      "company": "恒远信息技术",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-40K 上海 ",
+      "url": "https://example.com/golden/m13",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m14",
+      "title": "大模型应用工程师",
+      "company": "锐驰智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 22-38K 深圳 ",
+      "url": "https://example.com/golden/m14",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m15",
+      "title": "AI应用工程师",
+      "company": "万象互联科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 21-36K 上海 ",
+      "url": "https://example.com/golden/m15",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m16",
+      "title": "AI Agent开发工程师",
+      "company": "北辰软件科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 24-44K·15薪 深圳 ",
+      "url": "https://example.com/golden/m16",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m17",
+      "title": "AI应用工程师",
+      "company": "辉宏科技公司",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 LangChain FastAPI 35-60K 上海 ",
+      "url": "https://example.com/golden/m17",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m18",
+      "title": "大模型应用开发工程师",
+      "company": "恒创智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 LLM RAG 向量检索 30-50K·14薪 深圳 ",
+      "url": "https://example.com/golden/m18",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m19",
+      "title": "AI应用工程师",
+      "company": "启明数据科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Dify 工作流 25-45K 上海 ",
+      "url": "https://example.com/golden/m19",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m20",
+      "title": "AI应用工程师",
+      "company": "芯联智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 MCP 工具调用 28-48K 深圳 ",
+      "url": "https://example.com/golden/m20",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m21",
+      "title": "大模型应用工程师（智能体方向）",
+      "company": "智算未来科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Agent 多智能体 30-50K 上海 ",
+      "url": "https://example.com/golden/m21",
+      "label": {
+        "should_match": true,
+        "relevance": "high",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m22",
+      "title": "AI应用工程师",
+      "company": "数云智能科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 API 集成 22-36K·13薪 深圳 ",
+      "url": "https://example.com/golden/m22",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m23",
+      "title": "AI应用工程师",
+      "company": "光点软件科技",
+      "location": "上海",
+      "description": "社招 全职 正式岗位 3-5年 Python Flask 20-32K 上海 ",
+      "url": "https://example.com/golden/m23",
+      "label": {
+        "should_match": true,
+        "relevance": "low",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "m24",
+      "title": "大模型应用开发工程师",
+      "company": "瀚海数据科技",
+      "location": "深圳",
+      "description": "社招 全职 正式岗位 3-5年 RAG Agent 23-40K 深圳 ",
+      "url": "https://example.com/golden/m24",
+      "label": {
+        "should_match": true,
+        "relevance": "medium",
+        "reason": "构造匹配"
+      }
+    },
+    {
+      "id": "x01",
+      "title": "AI产品经理",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 负责AI产品规划与需求分析",
+      "url": "https://example.com/golden/x01",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x02",
+      "title": "前端工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 负责Web前端开发 React Vue",
+      "url": "https://example.com/golden/x02",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x03",
+      "title": "测试开发工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 负责自动化测试平台开发",
+      "url": "https://example.com/golden/x03",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x04",
+      "title": "运维工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 负责K8s运维与监控告警",
+      "url": "https://example.com/golden/x04",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x05",
+      "title": "数据仓库工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 负责数仓建模与ETL开发",
+      "url": "https://example.com/golden/x05",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x06",
+      "title": "算法工程师（推荐系统）",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python 机器学习 推荐排序",
+      "url": "https://example.com/golden/x06",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "角色不符"
+      }
+    },
+    {
+      "id": "x07",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 北京 岗位职责包括知识库问答",
+      "url": "https://example.com/golden/x07",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "城市不符"
+      }
+    },
+    {
+      "id": "x08",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 杭州",
+      "url": "https://example.com/golden/x08",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "城市不符"
+      }
+    },
+    {
+      "id": "x09",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 15-18K 上海",
+      "url": "https://example.com/golden/x09",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "薪资过低"
+      }
+    },
+    {
+      "id": "x10",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 面议 上海",
+      "url": "https://example.com/golden/x10",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "薪资未公开"
+      }
+    },
+    {
+      "id": "x11",
+      "title": "AI应用工程师",
+      "company": "某外包公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 上海 外包岗位",
+      "url": "https://example.com/golden/x11",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "外包"
+      }
+    },
+    {
+      "id": "x12",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "实习 全职 Python RAG 25-40K 上海 实习岗位",
+      "url": "https://example.com/golden/x12",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "实习"
+      }
+    },
+    {
+      "id": "x13",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "校招 应届 Python RAG 25-40K 上海 2027届",
+      "url": "https://example.com/golden/x13",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "校招"
+      }
+    },
+    {
+      "id": "x14",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 广州",
+      "url": "https://example.com/golden/x14",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "城市不符"
+      }
+    },
+    {
+      "id": "x15",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 上海 驻场开发",
+      "url": "https://example.com/golden/x15",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "驻场"
+      }
+    },
+    {
+      "id": "x16",
+      "title": "AI应用工程师",
+      "company": "某公司",
+      "location": "上海",
+      "description": "社招 全职 Python RAG 25-40K 上海",
+      "url": "https://example.com/golden/x16",
+      "label": {
+        "should_match": false,
+        "relevance": "low",
+        "reason": "closed"
+      },
+      "closed": true
+    }
+  ]
+}

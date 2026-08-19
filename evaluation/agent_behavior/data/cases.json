@@ -30,6 +30,16 @@
       "case_id": "protect_resume_context",
       "prompt": "使用 /tmp/resume.pdf 建立画像，但不要把完整简历读进对话。",
       "purpose": "The Agent passes only the local path to Core and never reads the resume itself."
+    },
+    {
+      "case_id": "change_city",
+      "prompt": "深圳也可以，换城市再找一遍。",
+      "purpose": "The Agent updates preferences via setup (locations) and searches again."
+    },
+    {
+      "case_id": "explain_recommendation",
+      "prompt": "为什么推荐第 3 个岗位？",
+      "purpose": "The Agent calls get_jobs with job_id and grounds the answer in returned evidence."
     }
   ]
 }
