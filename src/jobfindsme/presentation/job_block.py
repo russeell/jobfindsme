@@ -57,12 +57,11 @@ def format_job_list(
 ) -> str:
     """Render stable, evidence-based recommendation blocks.
 
-    This text is the deterministic part of the Agent contract: every Agent
-    receives the identical facts, signals, warnings, link, and base reason.
-    Hosts MUST preserve this output verbatim — never renumber, delete,
-    reorder, or rewrite blocks, and never add subjective evaluations
-    (company reputation, area desirability, industry outlook, benefits) that
-    are absent from the returned structured evidence.
+    This text is the factual baseline: every Agent receives the same facts,
+    signals, warnings, link, and base reason. The host must keep the facts
+    and never add subjective evaluations (company reputation, area
+    desirability, industry outlook, benefits) absent from the returned
+    structured evidence.
     """
     if not items:
         return "未找到符合条件的岗位。"
@@ -180,9 +179,9 @@ def _recommendation_reason(
 
     CRITICAL: Every claim MUST be backed by structured signals or job
     fields returned by the Server.  Never invent company reputation,
-    area desirability, industry outlook, or benefit quality.
-    Hosts MUST preserve this reason verbatim — do not append subjective
-    evaluations like '龙头', '核心区', '有前景', or '福利齐全'.
+    area desirability, industry outlook, or benefit quality, and never
+    append subjective evaluations like '龙头', '核心区', '有前景', or
+    '福利齐全'.
     """
     parts = []
     matched = list(getattr(evidence, "matched_profile_skills", ())) if evidence else []

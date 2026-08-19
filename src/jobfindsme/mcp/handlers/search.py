@@ -1,8 +1,8 @@
 """search_jobs handler — the core search workflow.
 
-search_jobs renders the five-section contract text and the deliberately
-minimal structuredContent.  The host MUST return content[0].text verbatim;
-handlers never expose job arrays through structuredContent.
+The Server renders a compact factual summary and returns bounded structured
+facts (jobs + evidence).  The host Agent organizes the final expression;
+handlers never expose full JD text.
 """
 
 from __future__ import annotations
@@ -57,6 +57,7 @@ def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
     )
     structured = build_search_output(
         text=text,
+        jobs=jobs,
         count=len(jobs),
         changes=result.changes,
         diagnostics=result.diagnostics,

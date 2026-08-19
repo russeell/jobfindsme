@@ -11,12 +11,12 @@ from jobfindsme.contracts import (
     JobState,
     JobStateKind,
     JobSummary,
+    MatchEvidence,
     RecruitmentTrack,
     SalaryPolicy,
     SearchChanges,
     SearchConfiguration,
     SearchDiagnosticSummary,
-    SearchIntegrity,
     SearchRefreshMode,
     StrictModel,
 )
@@ -256,31 +256,43 @@ class SetupOutput(StrictModel):
     plan: SearchConfiguration | None = None
 
 
-class SearchJobsOutput(StrictModel):
-    """search_jobs structuredContent — deliberately minimal.
+class SearchJobFact(StrictModel):
+    """Bounded structured facts for one match (no full JD text)."""
 
-    Contains ONLY the final rendered text, summary counts, and integrity
-    evidence.  Does NOT expose the jobs array, JobSummary, MatchEvidence,
-    JD excerpts, apply URLs, or full SearchRunDiagnostics — the host
-    model MUST use get_jobs for structured job data
-    and must never rebuild or rewrite the Server's final_text.
+    job: JobSummary
+    score: float | None = Field(default=None, ge=0, le=1)
+    state: str | None = None
+    first_seen_at: datetime | None = None
+    change_type: str | None = None
+    evidence: MatchEvidence | None = None
+
+
+class SearchJobsOutput(StrictModel):
+    """search_jobs structuredContent — facts for the host to present.
+
+    The Server decides facts, filtering, ranking, and evidence; the host
+    Agent organizes the final user-facing expression.  `jobs` carries bounded
+    structured facts (no full JD text), and `summary` is the Server's compact
+    factual baseline which the Agent may adapt but must not contradict.
     """
 
-    final_text: str = Field(
+    summary: str = Field(
         description=(
-            "Complete five-section human-facing result.  Byte-identical "
-            "to content[0].text.  The host MUST return this verbatim."
+            "Compact factual baseline rendered by the Server (five sections). "
+            "The host may reorganize wording but must keep every fact and "
+            "apply URL from `jobs`."
         ),
     )
     count: int = Field(ge=0, description="Number of visible job results")
+    jobs: tuple[SearchJobFact, ...] = Field(
+        default_factory=tuple,
+        description="Bounded structured facts per match (no full JD text)",
+    )
     changes: SearchChanges = Field(
         description="Change counts (new/changed/reopened/closed/repeated_suppressed)"
     )
     diagnostic_summary: SearchDiagnosticSummary = Field(
         description="Compact source status without job-level data"
-    )
-    integrity: SearchIntegrity = Field(
-        description="SHA-256 of final_text for transport-integrity verification"
     )
 
 

@@ -77,15 +77,15 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    Use `salary_policy: strict` when a salary constraint is present. Use
    `salary_policy: include_undisclosed` only when the user explicitly asks to
    retain jobs with undisclosed or negotiable salary.
-5. Call `search_jobs` without IDs in the same turn. The `content[0].text`
-   IS the final output — return it verbatim. `structuredContent` contains
-   only `final_text`, `count`, `changes`, `diagnostic_summary`, and
-   `integrity` — it does NOT expose the jobs array, evidence, or apply URLs.
-   **STOP immediately after returning content[0].text.** Do NOT prepend or
-   append separators (`---`, `***`), headings, analysis, highlights,
-   suggestions, or follow-up questions. Only call `get_jobs` (with `job_id`
-   for one job's details) when the user explicitly asks for comparison or
-   analysis in a SUBSEQUENT message — never in the same response.
+5. Call `search_jobs` without IDs in the same turn. `structuredContent`
+   contains `summary` plus bounded `jobs` facts (title, company, location,
+   salary, score, evidence, change state, apply URL). Build the user-facing
+   answer from those facts ONLY; keep every apply URL exactly as returned as
+   a bare URL; never invent jobs, salary, links, scores, or reasons. The
+   `summary` is the Server's factual baseline — you may adapt wording but
+   must not contradict it. Only call `get_jobs` (with `job_id` for one
+   job's details) when the user explicitly asks for comparison or analysis
+   in a SUBSEQUENT message — never in the same response.
    When the user says "不使用简历" or "不要用简历" or "skip resume",
    pass `use_profile: false` to `search_jobs`; the Server will skip
    profile loading entirely, Section 1 will show "本次未使用简历", and
@@ -112,8 +112,9 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    need adjusting (see above and the Daily Push section).
    Reuse the stored preferences on later requests. Do not recreate the profile
    or preferences merely because the user asks for an update.
-   The tool text is already the complete five-section answer. Preserve it;
-   never rebuild it as a table. A zero-result incremental run with
+   The Server's summary is the complete five-section baseline. Use it as the
+   skeleton of your answer; never rebuild results as a table. A zero-result
+   incremental run with
    `repeated_suppressed` is successful: those are previously shown unchanged
    jobs, not duplicates or a failed crawl. Never automatically retry it with
    `live`.
@@ -148,25 +149,29 @@ jobfindsme setup          # runtime: ~/.jobfindsme/runtime/bin/python -m jobfind
 - After login, do not force a re-search unless the user asks. The login state
   persists locally; future searches use it automatically.
 
-## Output Contract (输出契约 — 固定五段结构)
+## Output Contract (输出契约 — Server 定事实，Agent 定表达)
 
-**CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
-The host MUST return it verbatim. Never renumber, delete, reorder, rewrite, or
-rebuild any block. `structuredContent` contains ONLY `final_text`, `count`,
-`changes`, `diagnostic_summary`, and an `integrity` hash — it does NOT include
-the jobs array, evidence, JD excerpts, or apply URLs. Use `get_jobs` (with
-`job_id` for one job's details) for structured job data only when the user
-explicitly asks; never auto-call it to rebuild or supplement the initial
-search result.
-The text is the deterministic contract — identical on every host.
+**`search_jobs` returns bounded structured facts (`structuredContent.jobs`)
+plus a compact factual summary (`structuredContent.summary`).** The Server
+decides facts, filtering, ranking, and evidence; the host Agent organizes the
+final user-facing expression. The answer MUST be grounded only in returned
+facts: never invent jobs, salary, links, scores, or reasons; keep every apply
+URL exactly as returned, as a bare URL; do not add subjective
+company/area/industry evaluations absent from the evidence. The summary is
+the Server's baseline — you may adapt the wording but must not contradict the
+facts. Use `get_jobs` (with `job_id` for one job's details) for structured
+job data only when the user explicitly asks; never auto-call it to rebuild or
+supplement the initial search result.
 
 **Profile reuse:** A previously confirmed profile is used automatically.
 Do NOT set `use_profile=false` unless the user explicitly says not to use
 their resume. If the user provides a resume path, call `setup` with
 `resume_path` to import it first.
 
-Every search result MUST preserve exactly these five Server-rendered sections
-in this order. In no-resume mode, section 1 explicitly says no resume was used.
+The Server's summary uses these five sections, in this order. You may adapt
+wording, but when the user simply asks for results, returning the summary
+(possibly lightly edited) is the fastest correct answer. In no-resume mode,
+section 1 explicitly says no resume was used.
 
 ### 第 1 段 · 简历解析（始终保留）
 
@@ -342,8 +347,9 @@ Never invent, reuse, or bypass a confirmation token.
 - Clearly label unknown salary or freshness.
 - Do not claim that a synthetic evaluation score is field performance.
 - Do not automate applications or external messages.
-- **The text response from search_jobs IS the final output** — return it
-  verbatim. Never renumber, delete, reorder, or rebuild blocks.
+- **Build the answer from `structuredContent.jobs` facts only**; the
+  Server's summary is the baseline, not a verbatim quota. Never invent
+  facts and never drop or rewrite apply URLs.
 - **Never add subjective evaluations** (company reputation, area desirability,
   industry outlook, benefit quality) absent from returned evidence.
 - **No-resume mode** must never fabricate a match percentage or claim

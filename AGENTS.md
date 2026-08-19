@@ -73,19 +73,21 @@ their resume or search constraints.
    requests. Use `include_seen: false` only for explicitly incremental
    requests such as "new jobs today", "continue finding new jobs", or a
    scheduled radar run.
-   The `content[0].text` IS the final output — return it verbatim.
-   `structuredContent` contains ONLY `final_text`, `count`, `changes`,
-   `diagnostic_summary`, and an `integrity` hash — it does NOT expose the
-   jobs array, evidence, JD excerpts, or apply URLs. Use `get_jobs` (with
-   `job_id` for one job's details) for structured job data only when the user
-   explicitly requests it; never auto-call it to rebuild or supplement the
-   initial search result.
+   `structuredContent` contains `summary` plus bounded `jobs` facts (title,
+   company, location, salary, score, evidence, change state, apply URL).
+   Build the answer from those facts ONLY; never invent jobs, salary, links,
+   scores, or reasons; keep every apply URL exactly as returned as a bare
+   URL. The `summary` is the Server's factual baseline — you may adapt the
+   wording but must not contradict it. Use `get_jobs` (with `job_id` for one
+   job's details) for structured job data only when the user explicitly
+   requests it; never auto-call it to rebuild or supplement the initial
+   search result.
 
-3. **Evidence-grounded follow-up** — The Server hard-filters, ranks, and renders
-   the base result. Preserve it verbatim. Only when the user asks for deeper
+3. **Evidence-grounded follow-up** — The Server hard-filters, ranks, and
+   provides the factual baseline. Ground your answer in it. Only when the user asks for deeper
    comparison, use `get_jobs` with `job_id` for specific jobs and compare the
    returned signals against the user's profile and stated preferences. Add a
-   separate observation; never silently reorder or replace the base list.
+   separate observation; never silently drop or rewrite apply URLs.
 
 4. **get_jobs** — use for pagination or state filtering (`states`), or with
    `job_id` when the user asks about one specific job's full details.
@@ -115,26 +117,22 @@ directly.
 
 ## Output Rules
 
-**CRITICAL: `search_jobs` content[0].text IS THE FINAL USER-FACING OUTPUT.**
-Return it verbatim. Never renumber, delete, reorder, rewrite, or rebuild any
-block. `structuredContent` contains ONLY `final_text`, `count`, `changes`,
-`diagnostic_summary`, and an `integrity` hash — it does NOT include the
-jobs array, evidence, JD excerpts, or apply URLs. The text is the
-deterministic contract, identical on every host.
-
-**STOP AFTER final_text:** The initial search response MUST consist ONLY of
-`content[0].text` returned verbatim — then STOP immediately. Do NOT prepend
-or append separators (`---`, `***`), headings, analysis, highlights,
-suggestions, or follow-up questions. Only call `get_jobs` (with `job_id`
-for one job's details) when the user explicitly asks for comparison or
-analysis in a SUBSEQUENT message — never in the same response that returned
-the search result.
+**Server 定事实，Agent 定表达。** `search_jobs` returns bounded structured
+facts in `structuredContent.jobs` plus a compact factual `summary`. Build the
+user-facing answer from the returned facts ONLY: never invent jobs, salary,
+links, scores, or reasons; keep every apply URL exactly as returned, as a
+bare URL; do not add subjective company/area/industry evaluations absent from
+the evidence. The summary is the Server's baseline — you may adapt the
+wording but must not contradict the facts. Only call `get_jobs` (with
+`job_id` for one job's details) when the user explicitly asks for comparison
+or analysis in a SUBSEQUENT message — never in the same response that
+returned the search result.
 When the user says they do not want to use a resume, pass
 `use_profile: false` to `search_jobs`.
 
-Every search result MUST preserve the Server's fixed five-section structure
-(SKILL.md
-Output Contract), in order:
+The Server's summary uses the five-section structure (SKILL.md Output
+Contract), in order. You may adapt wording, but returning the summary (possibly
+lightly edited) is the fastest correct answer:
 
 1. **第 1 段 · 简历解析** — always present. With a resume, show counts only:
    `简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士` — never list actual
@@ -144,13 +142,13 @@ Output Contract), in order:
    `猎聘·上海 ✓(42) · BOSS直聘·上海 ✗(原因)` + 本轮来源返回 N 条记录.
 3. **第 3 段 · 过滤说明** — the plan constraints applied →
    `→ 给出 N 个` (N = `diagnostics.result_count`).
-4. **第 4 段 · 岗位列表** — each job as a deterministic block:
+4. **第 4 段 · 岗位列表** — each job as a block grounded in structured facts:
    fact line (+ 匹配度 X% when score > 0), signal line, bare-URL
-   投递链接, and the Server's 推荐理由.
+   投递链接, and the Server's evidence-grounded 推荐理由.
 5. **第 5 段 · 说明** — preserve new/changed/reopened/closed and
    previously-shown counts without renaming them.
 
-Block rules: keep fact/signal lines verbatim; apply link is a BARE URL on
+Block rules: base fact/signal lines on the returned facts; apply link is a BARE URL on
 its own line (no Markdown/HTML wrapping — terminal clients auto-link bare
 URLs); 推荐理由 derives ONLY from returned signals vs profile (or vs the
 user's stated constraints in no-profile mode); never invent facts.
@@ -162,7 +160,7 @@ evidence only covers role match, salary, skills, experience, degree, and
 liveness — never extrapolate beyond these. In no-resume mode, never
 fabricate a match percentage or claim resume-based skill matches.
 
-Preserve the Server-rendered order and text. Do not rebuild it as a table,
+Do not rebuild results as a table,
 rerank it silently, or pad it with repeated or weak jobs. If the user later
 asks for a comparison, add a separate evidence-grounded analysis.
 

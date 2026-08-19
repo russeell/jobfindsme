@@ -31,10 +31,11 @@ def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
     ]
     assert all(phrase in shared for phrase in required_phrases)
 
-    # v0.5 output contract enforcement phrases
+    # Step 2 output contract phrases: facts ground the answer, no fabrication
     output_contract_phrases = [
-        "FINAL USER-FACING OUTPUT",
-        "verbatim",
+        "structuredContent.jobs",
+        "bare URL",
+        "never invent jobs",
         "STRICTLY FORBIDDEN",
         "龙头",
         "有前景",
@@ -44,28 +45,28 @@ def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
         assert phrase in shared, f"Missing contract phrase: {phrase}"
 
 
-def test_mcp_server_instructions_declare_text_as_final_output() -> None:
-    """The MCP server instructions must declare content[0].text as final."""
+def test_mcp_server_instructions_ground_answers_in_facts() -> None:
+    """The MCP server instructions must ground answers in returned facts."""
     from jobfindsme.mcp.server import _INSTRUCTIONS
 
-    assert "FINAL USER-FACING OUTPUT" in _INSTRUCTIONS
-    assert "verbatim" in _INSTRUCTIONS
-    assert "never renumber" in _INSTRUCTIONS.casefold()
+    assert "structuredContent.jobs" in _INSTRUCTIONS
+    assert "bare URL" in _INSTRUCTIONS
+    assert "never invent jobs" in _INSTRUCTIONS
     assert "龙头" in _INSTRUCTIONS
     assert "jobfindsme setup" in _INSTRUCTIONS
     assert "jobfindsme doctor" in _INSTRUCTIONS
 
 
-def test_search_jobs_tool_description_declares_text_immutability() -> None:
-    """The search_jobs tool description must state the text contract."""
+def test_search_jobs_tool_description_declares_facts_contract() -> None:
+    """The search_jobs tool description must state the facts contract."""
     from jobfindsme.mcp.registry import TOOL_DEFINITIONS
 
     search_def = [t for t in TOOL_DEFINITIONS if t.name == "search_jobs"][0]
     desc = search_def.description
 
-    assert "content[0].text" in desc
-    assert "FINAL USER-FACING OUTPUT" in desc
-    assert "verbatim" in desc
+    assert "structuredContent.jobs" in desc
+    assert "never invent jobs" in desc
+    assert "bare URL" in desc
 
 
 def test_primary_hosts_share_one_discoverable_skill() -> None:

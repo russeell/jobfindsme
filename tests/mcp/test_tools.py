@@ -78,9 +78,9 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     ]
     assert searched["isError"] is False
     # Search may return live results or be empty — both are valid
-    assert isinstance(searched["structuredContent"]["final_text"], str)
+    assert isinstance(searched["structuredContent"]["summary"], str)
     assert isinstance(searched["structuredContent"]["count"], int)
-    assert "integrity" in searched["structuredContent"]
+    assert "jobs" in searched["structuredContent"]
     assert "diagnostic_summary" in searched["structuredContent"]
     assert core.list_workspaces()
 
@@ -334,11 +334,10 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     assert result["structuredContent"]["diagnostic_summary"]["refresh_mode"] == "cache"
     assert result["structuredContent"]["count"] == 1
     assert result["structuredContent"]["changes"]["new"] == 1
-    # v0.7.2: structuredContent no longer exposes jobs/evidence — text is the contract
-    assert "jobs" not in result["structuredContent"]
-    assert "evidence" not in result["structuredContent"]
-    assert "final_text" in result["structuredContent"]
-    assert "integrity" in result["structuredContent"]
+    # Step 2: bounded facts are exposed for the host to present
+    assert len(result["structuredContent"]["jobs"]) == 1
+    assert "evidence" in result["structuredContent"]["jobs"][0]
+    assert "summary" in result["structuredContent"]
 
 
 def test_search_explains_when_only_previously_shown_jobs_remain(tmp_path) -> None:
@@ -390,7 +389,7 @@ def test_search_profile_section_returns_counts_without_resume_content(tmp_path) 
     assert "项目 0 项" in text
     assert "Python" not in text
     assert "内部项目ABC" not in text
-    # v0.7.2: profile_used is now only in final_text section 1, not structuredContent
+    # v0.7.2: profile_used is now only in summary section 1, not structuredContent
     assert "简历解析：技能" in text
 
 
@@ -603,10 +602,10 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
 
     assert result["structuredContent"]["count"] == 21
     # v0.7.2: structuredContent exposes NO jobs array — all 21 blocks are ONLY
-    # in final_text, verified by the per-block assertions below.
-    assert "jobs" not in result["structuredContent"]
-    assert "evidence" not in result["structuredContent"]
-    assert "final_text" in result["structuredContent"]
+    # in summary, verified by the per-block assertions below.
+    assert len(result["structuredContent"]["jobs"]) == 21
+    assert all("evidence" in fact for fact in result["structuredContent"]["jobs"])
+    assert "summary" in result["structuredContent"]
 
     # ── Split into 21 blocks by adjacent numbering ──
     # Find the start of section 4 (岗位列表) and end at section 5 (说明)
@@ -628,7 +627,7 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
 
     assert len(blocks) == 21
 
-    # ── Per-block assertions (from final_text only — no structured jobs) ──
+    # ── Per-block assertions (from summary only — no structured jobs) ──
     for i, block in enumerate(blocks, start=1):
         # Must start with correct number
         assert block.startswith(f"{i}. "), f"Block {i} does not start with '{i}. '"
@@ -776,25 +775,20 @@ def test_search_output_section_headers_are_locked_and_immutable(tmp_path) -> Non
     # The text must be the primary output channel
     assert isinstance(result["content"][0]["text"], str)
     assert len(result["content"][0]["text"]) > 0
-    # v0.7.2: structuredContent is deliberately minimal — no jobs/evidence
-    assert "final_text" in result["structuredContent"]
+    # Step 2: summary + bounded facts; full diagnostics stay server-side
+    assert "summary" in result["structuredContent"]
     assert "count" in result["structuredContent"]
     assert "changes" in result["structuredContent"]
     assert "diagnostic_summary" in result["structuredContent"]
-    assert "integrity" in result["structuredContent"]
-    assert "jobs" not in result["structuredContent"]
-    assert "evidence" not in result["structuredContent"]
+    assert "jobs" in result["structuredContent"]
     assert "diagnostics" not in result["structuredContent"]
 
 
-# ── v0.7.2: structuredContent isolation contract ──────────────────────────
+# ── Step 2: structured facts contract ─────────────────────────────────────
 
 
-def test_search_jobs_structured_content_excludes_jobs_evidence_jd(
-    tmp_path,
-) -> None:
-    """structuredContent must NOT contain jobs, evidence, JD excerpts, or
-    apply URLs that could induce the host model to rebuild the result."""
+def test_search_jobs_structured_content_exposes_bounded_facts(tmp_path) -> None:
+    """structuredContent exposes bounded job facts (no full JD text)."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -823,30 +817,33 @@ def test_search_jobs_structured_content_excludes_jobs_evidence_jd(
 
     # Must have the new top-level keys
     assert set(sc.keys()) == {
-        "final_text",
+        "summary",
         "count",
+        "jobs",
         "changes",
         "diagnostic_summary",
-        "integrity",
     }
 
-    # Must NOT contain jobs, evidence, JD, or apply_url at any nested depth
+    # Facts are bounded: apply URLs present, full JD text absent
     serialized = json.dumps(sc, ensure_ascii=False)
-    assert '"jobs"' not in serialized
-    assert '"evidence"' not in serialized
+    assert '"jobs"' in serialized
+    assert '"evidence"' in serialized
+    assert '"apply_url"' in serialized
     assert '"description"' not in serialized
-    assert '"apply_url"' not in serialized
-    assert '"job"' not in serialized
-    assert '"score"' not in serialized
 
-    # final_text is non-empty and contains the five-section structure
-    assert len(sc["final_text"]) > 0
-    assert "【1·简历解析】" in sc["final_text"]
-    assert "【4·岗位列表】" in sc["final_text"]
+    # summary is non-empty and contains the five-section baseline
+    assert len(sc["summary"]) > 0
+    assert "【1·简历解析】" in sc["summary"]
+    assert "【4·岗位列表】" in sc["summary"]
+
+    fact = sc["jobs"][0]
+    assert fact["job"]["title"] == "AI应用工程师"
+    assert fact["job"]["apply_url"] == "https://example.com/jobs/1"
+    assert "description" not in fact["job"]
 
 
-def test_search_jobs_final_text_equals_content_text(tmp_path) -> None:
-    """content[0].text must be byte-identical to structuredContent.final_text."""
+def test_search_jobs_summary_equals_content_text(tmp_path) -> None:
+    """content[0].text must be byte-identical to structuredContent.summary."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -872,51 +869,15 @@ def test_search_jobs_final_text_equals_content_text(tmp_path) -> None:
 
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     content_text = result["content"][0]["text"]
-    structured_final_text = result["structuredContent"]["final_text"]
+    structured_summary = result["structuredContent"]["summary"]
 
-    assert content_text == structured_final_text
+    assert content_text == structured_summary
     # Byte-level identity
-    assert content_text.encode("utf-8") == structured_final_text.encode("utf-8")
+    assert content_text.encode("utf-8") == structured_summary.encode("utf-8")
 
 
-def test_search_jobs_integrity_hash_matches(tmp_path) -> None:
-    """The integrity.sha256 must be the SHA-256 hex digest of final_text."""
-    import hashlib
-
-    core, workspace, _, registry = make_registry(tmp_path)
-    from jobfindsme.importing.parsers import parse_json
-
-    core.job_imports.import_records(
-        workspace.workspace_id,
-        parse_json(
-            json.dumps(
-                [
-                    {
-                        "id": "job-1",
-                        "title": "AI应用工程师",
-                        "company": "示例科技",
-                        "description": "Python RAG",
-                        "location": "上海",
-                        "url": "https://example.com/jobs/1",
-                    }
-                ],
-                ensure_ascii=False,
-            ),
-            source_name="企业官网",
-        ),
-    )
-
-    result = registry.call("search_jobs", {"refresh_mode": "cache"})
-    final_text = result["structuredContent"]["final_text"]
-    expected_hash = hashlib.sha256(final_text.encode("utf-8")).hexdigest()
-    actual_hash = result["structuredContent"]["integrity"]["sha256"]
-
-    assert len(actual_hash) == 64
-    assert actual_hash == expected_hash
-
-
-def test_21_job_blocks_all_only_in_final_text(tmp_path) -> None:
-    """All 21 job blocks exist ONLY in final_text, not in structured keys."""
+def test_21_job_blocks_appear_in_summary_and_structured_jobs(tmp_path) -> None:
+    """All 21 job blocks exist in summary AND as structured job facts."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -939,19 +900,19 @@ def test_21_job_blocks_all_only_in_final_text(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache", "limit": 21})
     sc = result["structuredContent"]
 
-    # All 21 job blocks are in final_text
-    final_text = sc["final_text"]
+    # All 21 job blocks are in summary
+    summary = sc["summary"]
     for i in range(1, 22):
-        assert f"{i}. " in final_text
-        assert f"示例科技{i}" in final_text
-        assert f"投递链接：https://example.com/jobs/{i}" in final_text
+        assert f"{i}. " in summary
+        assert f"示例科技{i}" in summary
+        assert f"投递链接：https://example.com/jobs/{i}" in summary
 
-    # No job data is repeated outside final_text.
-    metadata = {key: value for key, value in sc.items() if key != "final_text"}
-    serialized = json.dumps(metadata, ensure_ascii=False)
+    # Structured facts carry every apply URL as well
+    facts = {fact["job"]["company"]: fact["job"]["apply_url"] for fact in sc["jobs"]}
+    assert len(facts) == 21
     for i in range(1, 22):
-        assert f"示例科技{i}" not in serialized
-        assert f"https://example.com/jobs/{i}" not in serialized
+        assert f"示例科技{i}" in facts
+        assert facts[f"示例科技{i}"] == f"https://example.com/jobs/{i}"
 
 
 def test_get_jobs_still_works_normally(tmp_path) -> None:
@@ -1067,11 +1028,10 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
     assert "推荐理由：" in text
     assert "本次未使用简历" in text or "按明确条件匹配" in text
 
-    # structuredContent contract unchanged
+    # structured facts exposed, bounded
     sc = result["structuredContent"]
-    assert "jobs" not in sc
-    assert "evidence" not in sc
-    assert "final_text" in sc
+    assert "jobs" in sc
+    assert "summary" in sc
 
     # Profile still exists (NOT deleted)
     profile_result = registry.call(
@@ -1319,12 +1279,11 @@ def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None
     assert "Traceback" not in text
 
 
-# ── v0.7.2: STOP contract — structuredContent isolation ───────────────────
+# ── Step 2: bounded facts contract ─────────────────────────────────────────
 
 
-def test_structured_content_remains_slim_with_use_profile_false(tmp_path) -> None:
-    """structuredContent must remain slim (5 keys, no jobs/evidence) even
-    when use_profile=false."""
+def test_structured_content_stays_bounded_with_empty_results(tmp_path) -> None:
+    """structuredContent stays bounded (no full JD) even with zero results."""
     _, _, _, registry = make_registry(tmp_path)
 
     result = registry.call(
@@ -1333,17 +1292,15 @@ def test_structured_content_remains_slim_with_use_profile_false(tmp_path) -> Non
     sc = result["structuredContent"]
 
     assert set(sc.keys()) == {
-        "final_text",
+        "summary",
         "count",
+        "jobs",
         "changes",
         "diagnostic_summary",
-        "integrity",
     }
     serialized = json.dumps(sc, ensure_ascii=False)
-    assert '"jobs"' not in serialized
-    assert '"evidence"' not in serialized
+    assert sc["jobs"] == []
     assert '"description"' not in serialized
-    assert '"apply_url"' not in serialized
 
 
 def test_search_jobs_validation_rejects_unknown_fields_preserves_use_profile(
@@ -1365,4 +1322,4 @@ def test_search_jobs_validation_rejects_unknown_fields_preserves_use_profile(
         {"refresh_mode": "cache", "use_profile": False},
     )
     assert result2["isError"] is False
-    assert "final_text" in result2["structuredContent"]
+    assert "summary" in result2["structuredContent"]

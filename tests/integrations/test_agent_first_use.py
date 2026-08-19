@@ -76,9 +76,9 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
     )
     search_result = call(registry, "search_jobs")
     assert search_result["count"] == 2
-    assert "jobs" not in search_result
-    assert "甲公司" in search_result["final_text"]
-    assert "乙公司" in search_result["final_text"]
+    assert len(search_result["jobs"]) == 2
+    assert "甲公司" in search_result["summary"]
+    assert "乙公司" in search_result["summary"]
 
     history = call(registry, "get_jobs", limit=10)
     matches = history["jobs"]
@@ -179,8 +179,8 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     section_positions = [rendered.index(f"【{index}·") for index in range(1, 6)]
     assert section_positions == sorted(section_positions)
     assert structured["count"] == 1
-    assert structured["final_text"] == rendered
-    assert "jobs" not in structured
+    assert structured["summary"] == rendered
+    assert len(structured["jobs"]) == 1
     history_companies = {
         item.company for item in call(registry, "get_jobs", limit=10)["jobs"]
     }

@@ -1,14 +1,13 @@
 """MCP response assembly: validation, error conversion, compact output.
 
 ToolRegistry delegates every response-shaping decision here so handlers
-stay focused on use-case work.  The search_jobs output is deliberately
-minimal — the host model must never receive job arrays that could induce
-it to rebuild the Server result.
+stay focused on use-case work.  search_jobs returns bounded structured
+facts plus a compact factual summary; the host Agent owns the final
+user-facing expression and must never invent facts.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Any
 
@@ -58,34 +57,26 @@ def jobs_list_text(jobs: list[Any]) -> str:
 def build_search_output(
     *,
     text: str,
+    jobs: list[Any],
     count: int,
     changes: Any,
     diagnostics: Any,
 ) -> dict[str, Any]:
-    """Build the deliberately minimal structuredContent for search_jobs.
-
-    The returned dict exposes ONLY final_text, count, changes, a compact
-    diagnostic summary, and a SHA-256 integrity hash.  It deliberately
-    OMITS the jobs array, JobSummary, MatchEvidence, JD excerpts, apply
-    URLs, and full SearchRunDiagnostics — the host model cannot rebuild
-    or rewrite the Server result from structuredContent alone.
-    """
+    """Build search_jobs structuredContent: facts + compact summary."""
     # Normalise diagnostics to a plain dict (may be a Pydantic model).
     diag_dict: dict[str, Any] = (
         diagnostics.model_dump() if hasattr(diagnostics, "model_dump") else diagnostics
     )
     return {
-        "final_text": text,
+        "summary": text,
         "count": count,
+        "jobs": [_json_value(item) for item in jobs],
         "changes": changes,
         "diagnostic_summary": {
             "refresh_mode": diag_dict.get("refresh_mode", "live"),
             "source_summary": build_source_summary(diag_dict),
             "total_discovered": diag_dict.get("total_discovered", 0),
             "result_count": diag_dict.get("result_count", count),
-        },
-        "integrity": {
-            "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         },
     }
 

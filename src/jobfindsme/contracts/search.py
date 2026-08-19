@@ -176,8 +176,7 @@ class SearchDiagnosticSummary(StrictModel):
     """Compact per-source status for structuredContent.
 
     Deliberately omits raw errors, timestamps, per-source discovered counts,
-    and full SourceRunStats so the host model cannot reconstruct job listings
-    human-facing final_text (section 2).
+    and full SourceRunStats; job-level facts travel in `jobs` instead.
     """
 
     refresh_mode: SearchRefreshMode
@@ -190,16 +189,6 @@ class SearchDiagnosticSummary(StrictModel):
     )
     total_discovered: int = Field(default=0, ge=0)
     result_count: int = Field(default=0, ge=0)
-
-
-class SearchIntegrity(StrictModel):
-    """Evidence that final_text was not modified by the transport layer."""
-
-    sha256: str = Field(
-        min_length=64,
-        max_length=64,
-        description="SHA-256 hex digest of final_text (UTF-8 encoded)",
-    )
 
 
 class ExportReceipt(StrictModel):

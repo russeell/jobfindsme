@@ -1,6 +1,8 @@
-"""The five-section search result contract (①-⑤) and source diagnostics.
+"""The five-section factual baseline (①-⑤) and source diagnostics.
 
-This text IS the deterministic Agent contract: hosts MUST return it verbatim.
+This text is the Server's compact factual summary. The host Agent organizes
+the final user-facing expression from the returned facts; it must not
+contradict this baseline or invent facts.
 """
 
 from __future__ import annotations

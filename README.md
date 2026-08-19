@@ -134,7 +134,7 @@ config + one Skill serves them all.
 | One-sentence search | Agent calls the local MCP server; search config and results come back automatically |
 | Four sources | BOSS直聘, 猎聘, 智联招聘, 前程无忧; failures are labeled, never hidden |
 | Resume matching | Local PDF/MD/TXT parsing; ranks by skills, experience, education signals |
-| Fixed output | Five deterministic sections: resume summary / search overview / filter note / job list / operating summary |
+| Fact-grounded output | Server returns bounded structured facts + a five-section factual summary; the agent organizes the final wording |
 | Incremental radar | Detects new, changed, reopened, closed jobs — no repeat recommendations |
 | State memory | Save, applied, ignored; applied jobs are never re-suggested |
 | Local-first | No model API key; resume and state stay in local SQLite |
@@ -184,9 +184,11 @@ Mark job #2 as applied; ignore all staffing-agency companies.
 
 ## 📦 Results
 
-The agent returns the Server's fixed five-section output verbatim
+The Server decides facts, filtering, ranking, and evidence; the agent builds
+the final answer from those facts. Each result returns bounded structured
+facts (`structuredContent.jobs`) plus a five-section factual summary
 (resume summary / search overview / filter note / job list / operating
-summary). Each job block is deterministic — identical on every host:
+summary) that the agent may adapt but must not contradict:
 
 ```text
 AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
@@ -247,13 +249,14 @@ Agent (Claude / GPT / Qwen / WorkBuddy — interaction and follow-up talk)
   → normalize → cross-source dedup → hard filter (city/salary/track/type)
   → signal extraction + weighted coarse rank (skills/experience/education/liveness/salary)
   → incremental radar (new / changed / reopened / closed)
-  → Server renders the fixed five-section result; the agent delivers it verbatim
+  → Server returns bounded facts + a five-section summary; the agent composes
+    the answer from the facts (never inventing or dropping apply URLs)
 ```
 
 The MCP Server owns hard filtering, structured signal extraction,
-deterministic ranking, and the five-section rendering. The agent owns natural
+deterministic ranking, and the factual baseline. The agent owns natural
 language; deeper comparison happens only when you ask, using the returned
-evidence — never silently reordering or rewriting the base result.
+evidence — never inventing facts or rewriting apply URLs.
 
 Resumes, job state, and search plans live in local SQLite. Core needs no
 model API.

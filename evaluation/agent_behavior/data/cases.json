@@ -9,7 +9,7 @@
     {
       "case_id": "preserve_five_sections_and_links",
       "prompt": "找上海 AI 应用工程师，并把结果直接给我。",
-      "purpose": "The Agent returns the deterministic five-section result verbatim with bare apply links."
+      "purpose": "The Agent composes the answer from structured facts and preserves every bare apply link."
     },
     {
       "case_id": "explain_source_degradation",

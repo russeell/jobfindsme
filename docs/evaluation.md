@@ -49,11 +49,12 @@ Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`:
 ## Agent behavior
 
 Core and MCP unit tests do not prove that a host Agent selects the right tools
-or preserves the Server response. `evaluation/agent_behavior/data/` therefore treats the
-canonical Agent Skill as executable behavior:
+or grounds its answer in the Server facts. `evaluation/agent_behavior/data/`
+therefore treats the canonical Agent Skill as executable behavior:
 
-- six fixed prompts cover first search, five-section output, apply links,
-  source degradation, applied state, incremental search, and resume privacy;
+- six fixed prompts cover first search, factual output (every apply URL
+  preserved, nothing invented), apply links, source degradation, applied
+  state, incremental search, and resume privacy;
 - the no-Skill fixture must fail and the Skill fixture must pass in CI;
 - fixture reports are marked `contract_fixture` and cannot satisfy a
   `live_agent` evidence gate;

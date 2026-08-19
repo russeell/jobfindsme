@@ -163,9 +163,8 @@ def test_initialize_instructions_carry_the_output_contract(tmp_path) -> None:
     )
 
     instructions = response["result"]["instructions"]
-    assert "five-section" in instructions
-    assert "BARE URL" in instructions
-    assert "投递链接" in instructions
+    assert "five sections" in instructions
+    assert "bare URL" in instructions
     assert "stored confirmed profile is loaded automatically" in instructions
     assert "include_seen=true" in instructions
     assert "never paste complete resumes" in instructions

@@ -45,8 +45,9 @@ Where each decision happens:
 - **记录变化** — `job_impressions.py` (select_and_record: new, changed,
   reopened, closed, repeated suppression; applied jobs are never
   re-suggested)
-- **返回 Agent** — `mcp/responses.py` (final five-section text +
-  minimal structuredContent + SHA-256 integrity)
+- **返回 Agent** — `mcp/responses.py` (bounded structured facts in
+  `structuredContent.jobs` + compact factual `summary`; the host Agent
+  organizes the final user-facing expression)
 
 ## Layering
 
@@ -85,9 +86,10 @@ MCP config in a single command; `jobfindsme connect` covers every other host.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and
 normalized transcripts under `evaluation/agent_behavior/data/` test tool routing,
-five-section output, direct links, degraded-source handling, state updates,
-incremental search, and resume privacy. Contract fixtures run in CI; live
-Codex/Claude/Cursor transcripts are required for release compatibility claims.
+factual output (apply URLs preserved, no fabricated facts), direct links,
+degraded-source handling, state updates, incremental search, and resume
+privacy. Contract fixtures run in CI; live Codex/Claude/Cursor transcripts
+are required for release compatibility claims.
 
 ## Modules
 

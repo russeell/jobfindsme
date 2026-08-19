@@ -154,12 +154,12 @@ Every tool must provide:
 - actionable execution errors returned as tool errors rather than protocol
   failures.
 
-Human-facing `content` is intentionally stable across hosts. The same response
-also carries validated `structuredContent` — but deliberately minimal: only
-`final_text`, `count`, `changes`, `diagnostic_summary`, and an `integrity`
-hash. The full jobs array, evidence, JD excerpts, and apply URLs are NOT
-exposed in structuredContent. Clients that need structured job data must use
-`get_jobs` instead (passing `job_id` for one job's full details).
+Human-facing `content` carries a compact factual summary. The same response
+also carries validated `structuredContent` — bounded structured facts in
+`jobs` (title, company, location, salary, score, evidence, change state,
+apply URL; no full JD text) plus `count`, `changes`, and
+`diagnostic_summary`. Clients that need full job details must use `get_jobs`
+instead (passing `job_id` for one job's full details).
 
 `search_jobs` returns both strict structured content and a complete five-part
 human-facing result, in this fixed order:
@@ -169,10 +169,11 @@ resume usage -> source diagnostics -> applied filters -> job blocks -> changes
 ```
 
 Each job block contains facts, an explainable match signal, bounded warnings,
-a bare apply URL, and a grounded recommendation reason. The host preserves this
-text verbatim instead of rebuilding it as a table or appending observations to
-the initial result. A separate evidence-grounded comparison is allowed only
-when the user asks for one. No-resume mode remains explicit.
+a bare apply URL, and a grounded recommendation reason. The host Agent builds
+the final answer from the returned facts only — never inventing jobs, salary,
+links, scores, or reasons, and keeping every apply URL exactly as returned.
+A separate evidence-grounded comparison is allowed only when the user asks
+for one. No-resume mode remains explicit.
 
 Search-plan salary bounds use the domestic recruiting convention of monthly
 salary in thousands of CNY. Bonus months such as `18-30K·15薪` do not turn an
