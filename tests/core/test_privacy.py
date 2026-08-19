@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from jobfindsme.core import jobfindsmecore
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.profiles.models import ResumeImportMode
 
 

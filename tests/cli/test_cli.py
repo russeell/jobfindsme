@@ -1,8 +1,8 @@
 import json
 import ssl
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.cli import _fetch_latest_release, _select_release_wheel, run
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
 

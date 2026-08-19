@@ -235,7 +235,7 @@ unit.
 
 The historical BM25 algorithm lives only under `evaluation/legacy_matcher.py`
 for snapshot compatibility. Production search uses the typed filter and signal
-ranking functions in `matching/ranker.py`.
+ranking functions in `matching.py`.
 
 Retired source enum values remain readable solely for old SQLite workspaces.
 The active catalog rejects them, and the next major schema migration may remove

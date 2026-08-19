@@ -10,9 +10,9 @@ Everything the user ever hears about reduces to four concepts:
 
 | Concept | 中文 | Meaning | Owned by |
 |---|---|---|---|
-| Profile | 我是谁 | resume parsed into reviewable facts (skills, experience, education) | `core/profile_service.py` |
+| Profile | 我是谁 | resume parsed into reviewable facts (skills, experience, education) | `profiles/service.py` |
 | Search | 我找什么 | roles, locations, salary, track, type — the active plan | `core/search.py` |
-| Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `core/job_service.py` |
+| Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `tracking.py` |
 | Tracking | 和上次相比有什么变化 | new / changed / reopened / closed, and applied-saved-rejected state | `tracking` (impressions, states) |
 
 Internal concepts — `Workspace`, `ActiveContext`, `SearchPlan ID`,
@@ -24,25 +24,25 @@ user-facing docs or Agent conversation.
 A search request follows one fixed path:
 
 ```text
-MCP Handler (mcp/handlers/search.py)
+MCP Handler (mcp/tools.py)
   → SearchOrchestrator (core/search.py)
       → Connectors (connectors/boss_zhipin.py, connectors/pure_http.py)
       → Normalize / Deduplicate (importing/normalizer.py, importing/repository.py)
-      → Filter / Rank (matching/ranker.py)
-      → Tracking (job_impressions.py)
+      → Filter / Rank (matching.py)
+      → Tracking (tracking.py)
   → Presentation (presentation/search_result.py, presentation/job_block.py)
   → MCP Response (mcp/responses.py)
 ```
 
 Where each decision happens:
 
-- **过滤** — `matching/ranker.py::_hard_filter` (location, salary, track,
+- **过滤** — `matching.py::_hard_filter` (location, salary, track,
   type, exclusions, seniority, stale liveness)
-- **排序** — `matching/ranker.py::_score_signals` (deterministic
+- **排序** — `matching.py::_score_signals` (deterministic
   signal-match score: 60% hard-condition floor + up to 40% evidence
   bonus from skill overlap, experience, degree, liveness, and salary
   visibility)
-- **记录变化** — `job_impressions.py` (select_and_record: new, changed,
+- **记录变化** — `tracking.py` (select_and_record: new, changed,
   reopened, closed, repeated suppression; applied jobs are never
   re-suggested)
 - **返回 Agent** — `mcp/responses.py` (bounded structured facts in
@@ -54,7 +54,7 @@ Where each decision happens:
 ```text
 CLI / MCP
     ↓
-Application Core (core/app.py — thin facade + use cases)
+Application Core (app.py — thin facade)
     ↓
 Domain Services (profiles, search_plans, matching, importing, tracking)
     ↓
@@ -96,15 +96,16 @@ are required for release compatibility claims.
 | Path | Role |
 |---|---|
 | `contracts/` | domain types, one file per domain, unified exports |
-| `core/` | application layer: facade + four use cases |
+| `core/search.py` | search use case: preferences → refresh → match → radar |
 | `profiles/` | resume extraction + parser + service |
-| `matching/` | hard filter, signal extraction, deterministic coarse rank |
+| `matching.py` | hard filter, signal extraction, deterministic coarse rank |
 | `importing/` | connectors output → normalized canonical jobs |
 | `connectors/` | BOSS直聘、猎聘、智联招聘、前程无忧的来源适配器 |
-| `job_impressions.py`, `job_states.py` | impressions (incremental radar) and user job state |
+| `tracking.py` | impressions (incremental radar) and user job state |
 | `presentation/` | deterministic rendering of search results and job blocks |
-| `mcp/` | protocol entry, registry, handlers, responses |
-| `installer/` | compatibility installation for hosts without native plugins |
+| `mcp/` | protocol entry (server.py), contracts (schemas.py), tools (tools.py), responses (responses.py) |
+| `installer.py` | compatibility installation for hosts without native plugins |
+| `doctor.py` | local diagnostics |
 | `evaluation/` | dev-time quality gates (datasets, metrics, regression, field trials) |
 | `skills/` | canonical Agent behavior shared by native host adapters |
 | `evaluation/agent_behavior/data/` | fixed prompts and cross-Agent behavior evidence |

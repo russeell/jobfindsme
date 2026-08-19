@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import JobChangeType, JobLiveness, JobStateKind
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 
 

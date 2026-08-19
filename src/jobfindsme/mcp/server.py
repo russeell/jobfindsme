@@ -8,7 +8,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, TextIO
 
-from jobfindsme.core import jobfindsmecore
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.mcp.registry import ToolRegistry
 
 _log = logging.getLogger(__name__)

@@ -27,7 +27,7 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
         """,
         encoding="utf-8",
     )
-    from jobfindsme.core import jobfindsmecore
+    from jobfindsme.app import jobfindsmecore
 
     jobfindsmecore(database).configure_search(
         target_roles=["AI应用工程师"],

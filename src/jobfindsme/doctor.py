@@ -6,8 +6,8 @@ import urllib.request
 from importlib.util import find_spec
 from pathlib import Path
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import StrictModel
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp.registry import TOOL_DEFINITIONS, ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer
 

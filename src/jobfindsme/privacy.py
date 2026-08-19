@@ -6,9 +6,11 @@ import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field
 
+from jobfindsme.context import ActiveContextService
 from jobfindsme.contracts import ExportReceipt, StrictModel
 from jobfindsme.storage import Database
 
@@ -250,3 +252,47 @@ class PrivacyService:
 
 def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+class PrivacyUseCase:
+    def __init__(
+        self,
+        *,
+        context: ActiveContextService,
+        privacy: PrivacyService,
+    ) -> None:
+        self.context = context
+        self.privacy = privacy
+
+    def export_local_data(self, workspace_id: str) -> dict[str, Any]:
+        return self.privacy.export_workspace(workspace_id)
+
+    def export_local_file(self, workspace_id: str | None = None):
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.privacy.export_workspace_to_file(workspace.workspace_id)
+
+    def preview_delete(
+        self,
+        *,
+        workspace_id: str | None = None,
+        scope: str,
+    ) -> DeletionPreview:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.privacy.preview_delete(
+            workspace_id=workspace.workspace_id,
+            scope=scope,
+        )
+
+    def confirm_delete(
+        self,
+        *,
+        workspace_id: str | None = None,
+        scope: str,
+        confirmation_token: str,
+    ) -> DeletionResult:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.privacy.confirm_delete(
+            workspace_id=workspace.workspace_id,
+            scope=scope,
+            confirmation_token=confirmation_token,
+        )

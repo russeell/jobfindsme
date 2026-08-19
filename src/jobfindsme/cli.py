@@ -13,8 +13,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import JobStateKind
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.installer import HostInstaller, detect_host
@@ -211,7 +211,7 @@ def _mcp_json_config() -> dict:
     Prefers the jobfindsme runtime interpreter so the config works even
     when this CLI was invoked from a dev checkout or foreign Python.
     """
-    from jobfindsme.installer.service import _resolve_runtime_python
+    from jobfindsme.installer import _resolve_runtime_python
 
     return {
         "mcpServers": {

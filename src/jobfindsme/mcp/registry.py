@@ -5,7 +5,7 @@ handler, and validates the output:
 
     validate input → find Handler → validate output
 
-Use-case orchestration lives in mcp.handlers; response assembly lives
+Use-case orchestration lives in mcp.tools; response assembly lives
 in mcp.responses.
 """
 
@@ -17,7 +17,6 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-from jobfindsme.mcp.handlers import build_handlers
 from jobfindsme.mcp.responses import (
     _compact_json,
     _json_value,
@@ -33,6 +32,7 @@ from jobfindsme.mcp.schemas import (
     SetupInput,
     UpdateJobStateInput,
 )
+from jobfindsme.mcp.tools import build_handlers
 
 _log = logging.getLogger(__name__)
 

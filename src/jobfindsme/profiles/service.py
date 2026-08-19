@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
+from jobfindsme.context import ActiveContextService
 from jobfindsme.profiles.models import (
     CandidateProfile,
     FactStatus,
@@ -457,3 +458,56 @@ def _normalize_correction(value: str) -> str:
     if len(normalized) > 2000:
         raise ProfileError("corrected fact is too long")
     return normalized
+
+
+class ProfileUseCase:
+    def __init__(
+        self,
+        *,
+        context: ActiveContextService,
+        profiles: ResumeProfileService,
+    ) -> None:
+        self.context = context
+        self.profiles = profiles
+
+    def import_resume(
+        self,
+        *,
+        workspace_id: str | None = None,
+        source_path: str | Path,
+        mode: ResumeImportMode = ResumeImportMode.FORGET_SOURCE,
+    ) -> CandidateProfile:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.profiles.import_resume(
+            workspace_id=workspace.workspace_id,
+            source_path=source_path,
+            mode=mode,
+        )
+
+    def confirm_profile(
+        self,
+        *,
+        workspace_id: str | None = None,
+        profile_id: str,
+        accepted_fact_ids: Sequence[str],
+        corrections: Mapping[str, str] | None = None,
+    ) -> ProfileSummary:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.profiles.confirm_profile(
+            workspace_id=workspace.workspace_id,
+            profile_id=profile_id,
+            accepted_fact_ids=accepted_fact_ids,
+            corrections=corrections,
+        )
+
+    def review_profile(
+        self,
+        *,
+        profile_id: str,
+        workspace_id: str | None = None,
+    ) -> CandidateProfile:
+        workspace = self.context.resolve_workspace(workspace_id)
+        return self.profiles.load_review(
+            workspace_id=workspace.workspace_id,
+            profile_id=profile_id,
+        )

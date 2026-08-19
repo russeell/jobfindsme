@@ -6,7 +6,7 @@ import re
 from dataclasses import replace
 from pathlib import Path
 
-from jobfindsme.core import jobfindsmecore
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
 from jobfindsme.mcp.schemas import GetJobsOutput
 

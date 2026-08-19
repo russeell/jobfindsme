@@ -30,7 +30,7 @@ def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
     tmp_path, monkeypatch
 ) -> None:
     monkeypatch.setattr(
-        "jobfindsme.doctor.service.find_spec",
+        "jobfindsme.doctor.find_spec",
         lambda _name: None,
     )
 
@@ -47,11 +47,11 @@ def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
 
 def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(
-        "jobfindsme.doctor.service.find_spec",
+        "jobfindsme.doctor.find_spec",
         lambda _name: object(),
     )
     monkeypatch.setattr(
-        "jobfindsme.doctor.service._cdp_port_reachable",
+        "jobfindsme.doctor._cdp_port_reachable",
         lambda: False,
     )
 
@@ -105,7 +105,7 @@ def test_boss_login_probe_navigates_to_same_origin_and_closes_resources(
 
     fake = FakeCdp()
     monkeypatch.setattr(
-        "jobfindsme.doctor.service._cdp_port_reachable",
+        "jobfindsme.doctor._cdp_port_reachable",
         lambda: True,
     )
     monkeypatch.setattr(
@@ -125,7 +125,7 @@ def test_boss_login_probe_navigates_to_same_origin_and_closes_resources(
 
 def test_empty_boss_probe_is_not_misreported_as_logged_out(monkeypatch) -> None:
     monkeypatch.setattr(
-        "jobfindsme.doctor.service._cdp_port_reachable",
+        "jobfindsme.doctor._cdp_port_reachable",
         lambda: True,
     )
     monkeypatch.setattr(

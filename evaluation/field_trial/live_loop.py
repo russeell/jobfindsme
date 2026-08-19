@@ -22,6 +22,7 @@ from evaluation.datasets.labels import (
     new_daily_template,
     write_daily_template,
 )
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import (
     EmploymentType,
     RecruitmentTrack,
@@ -30,7 +31,6 @@ from jobfindsme.contracts import (
     SourceRunStatus,
     StrictModel,
 )
-from jobfindsme.core import jobfindsmecore
 
 
 class LoopJob(StrictModel):
@@ -97,7 +97,7 @@ def run_live_search_loop(
         refresh_mode=SearchRefreshMode.FULL,
         limit=limit,
     )
-    from jobfindsme.matching.ranker import score_signals
+    from jobfindsme.matching import score_signals
 
     # The server owns deterministic JobMatch scores. Report the
     # deterministic signal score so averages have operational meaning.

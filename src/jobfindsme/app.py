@@ -30,25 +30,26 @@ from jobfindsme.contracts import (
     SearchRunResult,
     Workspace,
 )
-from jobfindsme.core.job_service import JobUseCase
-from jobfindsme.core.privacy_service import PrivacyUseCase
-from jobfindsme.core.profile_service import ProfileUseCase
 from jobfindsme.core.search import SearchOrchestrator
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
-from jobfindsme.job_impressions import JobImpressionService
-from jobfindsme.job_states import JobStateService
-from jobfindsme.privacy import DeletionPreview, DeletionResult, PrivacyService
+from jobfindsme.privacy import (
+    DeletionPreview,
+    DeletionResult,
+    PrivacyService,
+    PrivacyUseCase,
+)
 from jobfindsme.profiles.models import (
     CandidateProfile,
     ProfileSummary,
     ResumeImportMode,
 )
-from jobfindsme.profiles.service import ResumeProfileService
+from jobfindsme.profiles.service import ProfileUseCase, ResumeProfileService
 from jobfindsme.search_plans import SearchPlanService
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 from jobfindsme.storage import Database
+from jobfindsme.tracking import JobImpressionService, JobStateService, JobUseCase
 from jobfindsme.workspaces import WorkspaceService
 
 

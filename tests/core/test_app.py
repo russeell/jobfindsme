@@ -1,12 +1,12 @@
 import ast
 from pathlib import Path
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import (
     DiscoverySource,
     SearchRefreshMode,
     SourceRunStatus,
 )
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.importing.parsers import parse_json
 from jobfindsme.importing.service import ImportSummary
 

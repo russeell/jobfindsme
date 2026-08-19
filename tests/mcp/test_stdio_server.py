@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 
-from jobfindsme.core import jobfindsmecore
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.importing import parse_json
 from jobfindsme.mcp.registry import ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer

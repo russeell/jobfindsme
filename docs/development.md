@@ -55,7 +55,7 @@ package smoke, and publishes the GitHub release.
 ## Changing the tool surface
 
 Tools are defined in `mcp/registry.py` (definitions + schemas), use
-cases live in `mcp/handlers/`, response assembly in `mcp/responses.py`.
+cases live in `mcp/tools.py`, response assembly in `mcp/responses.py`.
 Add a tool by: 1) input/output models in `mcp/schemas.py`, 2) a
 `ToolDefinition`, 3) a handler in the right `handlers/*.py` module.
 Update the tool-count assertions in `tests/` (`test_stdio_server.py`,

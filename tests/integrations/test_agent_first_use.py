@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import (
     EmploymentType,
     JobLiveness,
@@ -14,7 +15,6 @@ from jobfindsme.contracts import (
     SalaryDetails,
     SalaryPeriod,
 )
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.mcp import ToolRegistry
 from jobfindsme.presentation import format_job_list
 

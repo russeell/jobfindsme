@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from time import perf_counter
 
@@ -26,8 +25,7 @@ from jobfindsme.contracts import (
 )
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.job_impressions import JobImpressionService
-from jobfindsme.matching.ranker import (
+from jobfindsme.matching import (
     eligible_count,
     extract_job_signals,
     filter_jobs,
@@ -44,6 +42,7 @@ from jobfindsme.source_catalog import (
     source_links,
 )
 from jobfindsme.source_subscriptions import SourceSubscriptionService
+from jobfindsme.tracking import JobImpressionService
 
 _log = logging.getLogger(__name__)
 
@@ -553,110 +552,16 @@ class SearchOrchestrator:
             plan_id=plan_id,
             require_plan=False,
         )
-        workspace_id = context.workspace.workspace_id
-        plan_id = context.plan.plan_id if context.plan else None
-        try:
-            from jobfindsme.connectors.boss_zhipin import _CDPSession
+        from jobfindsme.importing.discovery import refresh_sources
 
-            _CDPSession.minimize_windows()
-        except Exception:
-            pass
-
-        subscriptions = {
-            (item.source.kind, item.source.source_name): item
-            for item in self.subscriptions.list(
-                workspace_id=workspace_id,
-                plan_id=plan_id,
-            )
-        }
-
-        def discover_one(source: DiscoverySource) -> SourceRunStats:
-            subscription = subscriptions.get((source.kind, source.source_name))
-            source_started = perf_counter()
-            cached = self.jobs.has_source_jobs(
-                workspace_id=workspace_id,
-                source_name=source.source_name,
-            )
-            try:
-                summary = self.discovery.discover(
-                    workspace_id=workspace_id,
-                    sources=(source,),
-                    allow_browser=allow_browser,
-                )[0]
-                if source.kind.uses_browser and cached and summary.discovered == 0:
-                    error = "browser refresh returned no jobs; using cached records"
-                    if subscription:
-                        self.subscriptions.record_result(
-                            subscription, error=error, degraded=True
-                        )
-                    return SourceRunStats(
-                        source_name=source.source_name,
-                        source_kind=source.kind,
-                        status=SourceRunStatus.DEGRADED,
-                        elapsed_seconds=perf_counter() - source_started,
-                        cache_used=True,
-                        error=error,
-                    )
-                if summary.snapshot_complete:
-                    self.jobs.mark_missing_closed(
-                        workspace_id=workspace_id,
-                        source_name=source.source_name,
-                        observed_job_ids={job.job_id for job in summary.jobs},
-                        observed_at=datetime.now(UTC),
-                    )
-                if subscription:
-                    self.subscriptions.record_result(subscription, error=None)
-                return SourceRunStats(
-                    source_name=source.source_name,
-                    source_kind=source.kind,
-                    status=SourceRunStatus.SUCCESS,
-                    elapsed_seconds=perf_counter() - source_started,
-                    discovered=summary.discovered,
-                    unique=summary.unique,
-                    versions_created=summary.versions_created,
-                )
-            except Exception as error:
-                _log.warning(
-                    "source discovery failed: %s/%s — %s",
-                    source.kind,
-                    source.source_name,
-                    error,
-                )
-                if cached:
-                    self.jobs.mark_source_unknown(
-                        workspace_id=workspace_id,
-                        source_name=source.source_name,
-                        observed_at=datetime.now(UTC),
-                    )
-                if subscription:
-                    self.subscriptions.record_result(
-                        subscription,
-                        error=str(error),
-                        degraded=cached,
-                    )
-                return SourceRunStats(
-                    source_name=source.source_name,
-                    source_kind=source.kind,
-                    status=(
-                        SourceRunStatus.DEGRADED if cached else SourceRunStatus.FAILED
-                    ),
-                    elapsed_seconds=perf_counter() - source_started,
-                    cache_used=cached,
-                    error=str(error)[:1000],
-                )
-
-        with ThreadPoolExecutor(max_workers=min(len(sources), 5)) as executor:
-            futures = {executor.submit(discover_one, source) for source in sources}
-            outcomes = [future.result() for future in as_completed(futures)]
-        order = {
-            (source.kind, source.source_name): index
-            for index, source in enumerate(sources)
-        }
-        return tuple(
-            sorted(
-                outcomes,
-                key=lambda item: order[(item.source_kind, item.source_name)],
-            )
+        return refresh_sources(
+            workspace_id=context.workspace.workspace_id,
+            plan_id=context.plan.plan_id if context.plan else None,
+            sources=sources,
+            allow_browser=allow_browser,
+            discovery=self.discovery,
+            jobs=self.jobs,
+            subscriptions=self.subscriptions,
         )
 
 

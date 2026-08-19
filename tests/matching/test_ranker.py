@@ -12,12 +12,12 @@ from jobfindsme.contracts import (
     SourceKind,
 )
 from jobfindsme.importing.normalizer import normalize_job
-from jobfindsme.matching.ranker import (
+from jobfindsme.matching import (
     filter_jobs,
     score_signals,
+    tokenize,
     undisclosed_salary_counts,
 )
-from jobfindsme.matching.tokenizer import tokenize
 from jobfindsme.profiles.models import FactStatus, FactType, ProfileFact, ProfileSummary
 
 NOW = datetime(2026, 7, 28, tzinfo=UTC)
@@ -582,7 +582,7 @@ def test_18_30K_15salary_filtered_by_strict_20k() -> None:
 def test_monthly_salary_min_k_uses_lowest_candidate_across_sources() -> None:
     """_monthly_salary_min_k returns min(salary_min_k, raw_text, salary details)."""
     from jobfindsme.contracts import SalaryDetails, SalaryPeriod
-    from jobfindsme.matching.ranker import _monthly_salary_min_k
+    from jobfindsme.matching import _monthly_salary_min_k
 
     j = job(
         "conflict",
@@ -610,7 +610,7 @@ def test_monthly_salary_min_k_uses_lowest_candidate_across_sources() -> None:
 def test_monthly_salary_min_k_returns_none_for_day_hour_unknown() -> None:
     """DAY / HOUR / UNKNOWN periods must not pretend to be monthly."""
     from jobfindsme.contracts import SalaryDetails, SalaryPeriod
-    from jobfindsme.matching.ranker import _monthly_salary_min_k
+    from jobfindsme.matching import _monthly_salary_min_k
 
     day_job = job("day-rate", description="AI工程师 500-800/天").model_copy(
         update={
