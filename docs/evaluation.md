@@ -52,9 +52,10 @@ Core and MCP unit tests do not prove that a host Agent selects the right tools
 or grounds its answer in the Server facts. `evaluation/agent_behavior/data/`
 therefore treats the canonical Agent Skill as executable behavior:
 
-- six fixed prompts cover first search, factual output (every apply URL
+- eight fixed prompts cover first search, factual output (every apply URL
   preserved, nothing invented), apply links, source degradation, applied
-  state, incremental search, and resume privacy;
+  state, incremental search, resume privacy, city changes, and recommendation
+  explanations;
 - the no-Skill fixture must fail and the Skill fixture must pass in CI;
 - fixture reports are marked `contract_fixture` and cannot satisfy a
   `live_agent` evidence gate;

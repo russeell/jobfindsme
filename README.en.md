@@ -2,7 +2,7 @@
 
 # jobfindsme · AI Job Search Radar
 
-**One sentence brings together jobs from BOSS直聘, 猎聘 (Liepin), 智联招聘 and 前程无忧, then filters and tracks them against your resume — from inside any MCP-capable agent.**
+**AI browses jobs for you. You only review the ones worth applying to.**
 
 <p>
   <a href="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml"><img src="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
@@ -12,15 +12,15 @@
   <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
 </p>
 
-[中文](README.zh.md) · [Architecture](docs/architecture.md) · [Sources report](evaluation/evidence/latest_four_source_search.md)
+[中文](README.md) · [Architecture](docs/architecture.md) · [Sources report](evaluation/evidence/latest_four_source_search.md)
 
 </div>
 
 ---
 
 > Install a local job-search MCP server for Claude Code, Codex, Cursor, and any
-> MCP-capable agent. **Your agent does the talking — jobfindsme does the
-> searching, filtering, and tracking.**
+> MCP-capable agent. **jobfindsme browses, filters, and remembers; your Agent
+> understands the request and talks with you.**
 
 ---
 
@@ -34,7 +34,7 @@ this repeated grunt work:
 | Switching between platforms | Searches four sources in one call; a failing source is reported explicitly while others still run |
 | Floods of irrelevant results | Hard-filters role, city, salary, social/campus track, full-time/internship, then ranks |
 | Seeing the same jobs again | Remembers what you saw, applied to, and ignored locally — only reports changes |
-| Unexplained recommendations | Every job ships with a match score, evidence, gaps, and a direct apply link |
+| Unexplained recommendations | With a resume, each job ships with a match score, evidence, gaps, and a direct apply link; without one, no score is invented |
 | API-key / account setup | No model API key needed; everything lives in a local SQLite database |
 
 One sentence to start:
@@ -165,7 +165,7 @@ Use jobfindsme with ~/Documents/resume.pdf to find Beijing large-model
 application engineer roles, 30K+, experienced hiring.
 
 # Scheduled push
-Push new jobs to me every morning at 9.
+With a scheduled-task Agent, push only new jobs to me every morning at 9.
 
 # History
 Which jobs have I seen? Which have I applied to?
@@ -184,11 +184,11 @@ Mark job #2 as applied; ignore all staffing-agency companies.
 
 ## 📦 Results
 
-The Server decides facts, filtering, ranking, and evidence; the agent builds
-the final answer from those facts. Each result returns bounded structured
-facts (`structuredContent.jobs`) plus a five-section factual summary
-(resume summary / search overview / filter note / job list / operating
-summary) that the agent may adapt but must not contradict:
+The Server decides job facts, filtering, ranking, evidence, and apply links; the
+agent builds the final answer from those facts. Each result returns bounded
+structured facts (`structuredContent.jobs`) plus a five-section factual
+baseline (resume summary / search overview / filter note / job list / operating
+summary) that the agent may adapt in wording and layout but must not contradict:
 
 ```text
 AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
@@ -201,15 +201,13 @@ AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜2
 需要注意：JD 要求 Kubernetes，简历中未找到直接证据
 ```
 
-A job block always contains: **fact line + match score + blank line + bare
-apply link + blank line + recommendation reason**. The score is a 60% hard-
-condition floor (the job already passed role/city/salary/track/type) plus up
-to 40% evidence bonus (skills > experience > education > liveness > salary
-visibility). All shown jobs are in the 60–100% band, ordered by score.
-
-Facts, scores, links, and reasons are generated deterministically by the
-Server; the agent may not rewrite them in the initial response. Results are
-never padded with weak matches, and missing fields are labeled, not guessed.
+Each recommendation should preserve the **fact line, direct apply link, and
+reason**. With a resume, the Server also returns a deterministic score and
+evidence; without one, it only applies explicit constraints and does not invent
+a match score. Scores use a 60% hard-condition floor plus up to 40% evidence
+bonus, and are ordered from high to low. Agents may change wording and layout,
+but may not invent or alter jobs, salaries, links, scores, or reasons. Missing
+fields are labeled, not guessed.
 
 ---
 
@@ -258,14 +256,14 @@ deterministic ranking, and the factual baseline. The agent owns natural
 language; deeper comparison happens only when you ask, using the returned
 evidence — never inventing facts or rewriting apply URLs.
 
-Resumes, job state, and search plans live in local SQLite. Core needs no
+Resume profile, preferences, jobs, and tracking state live in local SQLite. Core needs no
 model API.
 
 ---
 
 ## 🔒 Privacy & safety
 
-- The full resume never enters the agent's context — only its local path goes to Core;
+- jobfindsme does not require the full resume to be sent to the Agent; with the built-in Skill, the Agent passes only the local path to Core;
 - job descriptions are untrusted external data, never instructions;
 - exports write to local files; deletion uses a preview + confirmation-token protocol;
 - no auto-apply, no CAPTCHA bypass, no claim of full market coverage.
@@ -313,9 +311,10 @@ checks the HTTP path. Degraded or failed sources are labeled explicitly —
 never silently presented as "no jobs".
 
 **Q: Is my resume uploaded?**
-No. It is parsed locally into structured facts in SQLite; the raw text never
-enters the agent context. `jobfindsme export` / `delete_local_data` export and
-clear everything on demand.
+jobfindsme parses it locally into structured facts. With the built-in Skill, the
+Agent passes only the local path; the full resume does not need to enter the
+Agent context. `jobfindsme export` / `delete_local_data` export and clear data
+on demand.
 
 **Q: What's the difference from just asking an AI to search?**
 A generic agent has no platform access, no cross-day dedup or state memory,
