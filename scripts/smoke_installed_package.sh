@@ -65,10 +65,6 @@ python -m venv --system-site-packages "$temporary/venv"
 
 database="$temporary/jobfindsme.db"
 "$temporary/venv/bin/jobfindsme" connect cursor --home "$temporary/home"
-"$temporary/venv/bin/jobfindsme" \
-  --db "$database" \
-  workspace init \
-  --name "Installed Package Smoke"
 "$temporary/venv/bin/jobfindsme" --db "$database" doctor
 
 (
