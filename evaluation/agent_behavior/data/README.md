@@ -6,7 +6,7 @@ workflow.
 
 ## Fixed acceptance prompts
 
-`cases.json` covers six release-critical behaviors:
+`cases.json` covers eight release-critical behaviors:
 
 1. one sentence triggers `setup -> search_jobs`;
 2. the five-section Server output and bare apply links stay intact;
@@ -14,6 +14,8 @@ workflow.
 4. “mark job 2 as applied” calls `update_job_state` correctly;
 5. incremental search suppresses jobs already shown;
 6. the Agent passes a resume path to Core instead of reading the full resume.
+7. a changed city updates preferences before searching again.
+8. a recommendation explanation is grounded in a requested job's evidence.
 
 ## RED then GREEN
 

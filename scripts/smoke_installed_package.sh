@@ -62,6 +62,7 @@ PY
 
 python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
+"$temporary/venv/bin/python" "$root/scripts/smoke_legacy_database.py"
 
 database="$temporary/jobfindsme.db"
 "$temporary/venv/bin/jobfindsme" connect cursor --home "$temporary/home"

@@ -23,6 +23,7 @@ python -m pytest
 python -m ruff check .
 python -m ruff format --check .
 bash scripts/smoke_installed_package.sh   # built-wheel sanity
+python scripts/smoke_legacy_database.py   # pre-0.12 SQLite compatibility
 python scripts/sync_skill.py --check       # canonical Skill matches wheel copy
 ```
 
@@ -47,17 +48,22 @@ three hosts. See `evaluation/agent_behavior/data/README.md`.
 
 ## Release
 
-Version lives in `pyproject.toml`, `scripts/install.sh`, and the git
-tag (release workflow verifies they match). A `release` run builds the
-wheel, verifies it contains no retired modules, runs the installed-
-package smoke, and publishes the GitHub release.
+Version lives in `pyproject.toml`, the offline pin in `scripts/install.sh`,
+the plugin manifests, and the git tag (the release workflow verifies the
+tag and package version). A release run builds the wheel, verifies it
+contains no retired modules, runs the installed-package and pre-0.12 SQLite
+compatibility smokes, and publishes the GitHub release.
+
+The repository loader repairs the old annual-salary mirror shape before
+validating `JobPosting`. Keep that repair at the SQLite boundary; do not
+weaken the public contract to accept inconsistent salary mirrors.
 
 ## Changing the tool surface
 
 Tools are defined in `mcp/registry.py` (definitions + schemas), use
 cases live in `mcp/tools.py`, response assembly in `mcp/responses.py`.
 Add a tool by: 1) input/output models in `mcp/schemas.py`, 2) a
-`ToolDefinition`, 3) a handler in the right `handlers/*.py` module.
+`ToolDefinition`, 3) a handler method in `mcp/tools.py`.
 Update the tool-count assertions in `tests/` (`test_stdio_server.py`,
 `test_doctor.py`, `test_tools.py`) and the `_INSTRUCTIONS` contract in
 `mcp/server.py` if the user-facing workflow changes.

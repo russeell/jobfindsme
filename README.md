@@ -143,9 +143,9 @@ config + one Skill serves them all.
 
 | Release gate | Current result |
 |---|---:|
-| Python tests | 310 passing |
+| Python tests | 313 passing |
 | Clean install + Cursor setup | 12 seconds |
-| Agent behavior contract | 0/6 without the Skill, 6/6 with it |
+| Agent behavior contract | 0/8 without the Skill, 8/8 with it |
 | Wheel smoke test | CLI, SQLite migrations, and all 5 MCP tools pass end to end |
 
 Live availability changes with platform controls and local login state.

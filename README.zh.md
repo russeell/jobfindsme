@@ -128,9 +128,9 @@ BOSS直聘需要登录态时，对 Agent 说：
 
 | 发布门禁 | 当前结果 |
 |---|---:|
-| Python 测试 | 310 项通过 |
+| Python 测试 | 313 项通过 |
 | 干净环境安装 + Cursor 接入 | 12 秒 |
-| Agent 行为契约 | 无 Skill 0/6，安装 Skill 后 6/6 |
+| Agent 行为契约 | 无 Skill 0/8，安装 Skill 后 8/8 |
 | Wheel 冒烟 | CLI、SQLite migration、5 个 MCP tools 全链路通过 |
 
 四来源的实时可用性会随平台安全策略和本机登录状态变化。项目不会把缓存或

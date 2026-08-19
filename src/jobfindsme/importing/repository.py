@@ -9,6 +9,7 @@ from jobfindsme.contracts import (
     JobPosting,
     JobSourceRecord,
     RecruitmentTrack,
+    Salary,
 )
 from jobfindsme.storage import Database
 
@@ -37,7 +38,25 @@ def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
     priority, never by thread completion order.
     """
     if left.source.source_name == right.source.source_name:
-        return right
+        if (
+            left.source.fetched_at == right.source.fetched_at
+            and left.content_hash == right.content_hash
+            and left.external_id == right.external_id
+            and left.apply_url == right.apply_url
+            and left.source.liveness != right.source.liveness
+        ):
+            # A caller explicitly recorded a state transition without a new
+            # fetch timestamp (for example, a close/reopen update).
+            return right
+        return max(
+            (left, right),
+            key=lambda job: (
+                job.source.fetched_at,
+                job.content_hash,
+                job.external_id,
+                job.apply_url,
+            ),
+        )
 
     def quality(job: JobPosting) -> tuple[int, int, int, int]:
         return (
@@ -69,9 +88,7 @@ class JobRepository:
                 (workspace_id, job.job_id),
             ).fetchone()
             existing = (
-                _repair_legacy_boss_classification(
-                    JobPosting.model_validate_json(existing_row["payload_json"])
-                )
+                _load_job_payload(existing_row["payload_json"])
                 if existing_row
                 else None
             )
@@ -181,12 +198,7 @@ class JobRepository:
                 """,
                 (workspace_id,),
             ).fetchall()
-        return [
-            _repair_legacy_boss_classification(
-                JobPosting.model_validate(json.loads(row["payload_json"]))
-            )
-            for row in rows
-        ]
+        return [_load_job_payload(row["payload_json"]) for row in rows]
 
     def has_source_jobs(self, *, workspace_id: str, source_name: str) -> bool:
         with self.database.connect() as connection:
@@ -223,7 +235,7 @@ class JobRepository:
                 (workspace_id, source_name),
             ).fetchall()
             for row in rows:
-                job = JobPosting.model_validate_json(row["payload_json"])
+                job = _load_job_payload(row["payload_json"])
                 updated = job.model_copy(
                     update={
                         "source": job.source.model_copy(
@@ -269,9 +281,7 @@ class JobRepository:
             ).fetchone()
         if row is None:
             raise LookupError(job_id)
-        return _repair_legacy_boss_classification(
-            JobPosting.model_validate(json.loads(row["payload_json"]))
-        )
+        return _load_job_payload(row["payload_json"])
 
     def source_records(
         self,
@@ -359,7 +369,7 @@ class JobRepository:
                     """,
                     (workspace_id, job_id),
                 ).fetchone()
-                job = JobPosting.model_validate_json(row["payload_json"])
+                job = _load_job_payload(row["payload_json"])
                 updated = job.model_copy(
                     update={
                         "source": job.source.model_copy(
@@ -411,6 +421,26 @@ def _closed_content_hash(job: JobPosting) -> str:
 
     value = f"{job.content_hash}|closed|{job.source.fetched_at.isoformat()}"
     return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _load_job_payload(payload_json: str) -> JobPosting:
+    """Load a job after repairing payloads written by pre-0.12 versions.
+
+    Older versions could persist annual salary amounts directly in the legacy
+    ``salary_*_k`` mirrors. Repair those compatibility fields before applying
+    the strict public ``JobPosting`` validator so existing SQLite workspaces
+    remain readable without weakening the contract.
+    """
+
+    payload = json.loads(payload_json)
+    if not isinstance(payload, dict):
+        raise ValueError("job payload must be a JSON object")
+    salary_payload = payload.get("salary")
+    if isinstance(salary_payload, dict):
+        salary = Salary.model_validate(salary_payload)
+        payload["salary_min_k"] = salary.monthly_min_k
+        payload["salary_max_k"] = salary.monthly_max_k
+    return _repair_legacy_boss_classification(JobPosting.model_validate(payload))
 
 
 def _source_record_id(workspace_id: str, source_name: str, external_id: str) -> str:
