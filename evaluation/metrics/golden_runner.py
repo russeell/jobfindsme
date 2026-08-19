@@ -79,7 +79,7 @@ def evaluate_golden_dataset(
         tmp = Path(tempfile.mkdtemp()) / "golden.db"
         core = jobfindsmecore(tmp)
     core.configure_search(
-        target_roles=plan["target_roles"],
+        target_role=plan["target_role"],
         locations=plan["locations"],
         salary_min_k=plan.get("salary_min_k"),
         recruitment_track=plan.get("recruitment_track"),

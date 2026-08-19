@@ -344,10 +344,11 @@ def _hard_filter(
             return False
         if monthly_min is not None and monthly_min < plan.salary_min_k:
             return False
+    monthly_max = _monthly_salary_max_k(job)
     if plan.salary_max_k is not None:
-        if monthly_min is None and plan.salary_policy is SalaryPolicy.STRICT:
+        if monthly_max is None and plan.salary_policy is SalaryPolicy.STRICT:
             return False
-        if monthly_min is not None and monthly_min > plan.salary_max_k:
+        if monthly_max is not None and monthly_max > plan.salary_max_k:
             return False
     if (
         plan.experience_min_years is not None

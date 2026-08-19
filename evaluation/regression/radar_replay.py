@@ -85,7 +85,7 @@ def run_radar_replay(
         source_name=source_name,
         path=str(paths[0]),
     )
-    core.configure_search(target_roles=[role], sources=(placeholder,))
+    core.configure_search(target_role=role, sources=(placeholder,))
     workspace_id = core.context.resolve_workspace().workspace_id
 
     outcomes: list[DayOutcome] = []

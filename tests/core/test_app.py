@@ -4,6 +4,7 @@ from pathlib import Path
 from jobfindsme.app import jobfindsmecore
 from jobfindsme.contracts import (
     DiscoverySource,
+    JobStateKind,
     SearchRefreshMode,
     SourceRunStatus,
 )
@@ -81,22 +82,22 @@ def test_core_configures_and_reuses_active_search_without_ids(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
 
     first = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海"],
     )
     second = core.configure_search(
-        target_roles=["RAG工程师"],
+        target_role="RAG工程师",
         locations=["杭州"],
     )
 
-    assert second.preferences.target_roles == ("RAG工程师",)
+    assert second.preferences.target_role == "RAG工程师"
     assert second.preferences != first.preferences
     assert isinstance(core.search_jobs(), list)  # may be empty or have live results
 
 
 def test_core_passes_confirmed_profile_into_matching(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
-    core.configure_search(target_roles=["AI应用工程师"])
+    core.configure_search(target_role="AI应用工程师")
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG", encoding="utf-8")
     profile = core.import_resume(source_path=resume)
@@ -146,7 +147,7 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="json_file",
@@ -156,23 +157,23 @@ def test_updating_search_constraints_preserves_sources_unless_explicitly_cleared
         ),
     )
 
-    updated = core.configure_search(target_roles=["RAG工程师"])
-    cleared = core.configure_search(target_roles=["RAG工程师"], sources=())
+    updated = core.configure_search(target_role="RAG工程师")
+    cleared = core.configure_search(target_role="RAG工程师", sources=())
 
     assert len(updated.sources) == 1
     assert cleared.sources == ()
-    assert updated.preferences.target_roles == ("RAG工程师",)
+    assert updated.preferences.target_role == "RAG工程师"
 
 
 def test_updating_catalog_plan_refreshes_primary_role_query(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海"],
     )
 
     updated = core.configure_search(
-        target_roles=["RAG工程师", "Agent工程师"],
+        target_role="RAG工程师",
         locations=["上海"],
     )
 
@@ -186,7 +187,7 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="boss_cdp",
@@ -225,7 +226,7 @@ def test_partial_http_snapshot_never_closes_absent_jobs(
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="liepin_http",
@@ -260,7 +261,7 @@ def test_partial_http_snapshot_never_closes_absent_jobs(
 def test_complete_snapshot_can_close_absent_jobs(tmp_path, monkeypatch) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="json_file",
@@ -296,7 +297,7 @@ def test_complete_snapshot_can_close_absent_jobs(tmp_path, monkeypatch) -> None:
 def test_search_skips_retired_source_but_keeps_workspace_usable(tmp_path) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="lagou_cdp",
@@ -321,7 +322,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海", "杭州"],
     )
     discovered = []
@@ -366,7 +367,7 @@ def test_fast_search_refreshes_boss_for_each_city_and_uses_other_caches(
 def test_cache_search_performs_no_remote_discovery(tmp_path, monkeypatch) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海"],
     )
 
@@ -392,7 +393,7 @@ def test_empty_browser_refresh_uses_existing_cache_as_degraded(
 ) -> None:
     core = jobfindsmecore(tmp_path / "jobfindsme.db")
     configured = core.configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="boss_cdp",
@@ -443,3 +444,66 @@ def _setup_profile(core, resume_path):
         profile_id=imported.profile_id,
         accepted_fact_ids=[f.fact_id for f in imported.facts],
     )
+
+
+def test_canonical_merge_is_deterministic_across_import_order(tmp_path) -> None:
+    """Same fingerprint from two sources must pick a stable canonical winner,
+    independent of which source was imported first."""
+    jobs_a = parse_json(
+        '[{"id":"a","title":"AI应用工程师","company":"星河科技",'
+        '"location":"上海","description":"Python RAG Agent MCP 25-40K 社招 全职",'
+        '"url":"https://a.example/jobs/1"}]',
+        source_name="猎聘",
+    )
+    jobs_b = parse_json(
+        '[{"id":"b","title":"AI应用工程师","company":"星河科技",'
+        '"location":"上海","description":"Python RAG Agent 25-40K",'
+        '"url":"https://b.example/jobs/1"}]',
+        source_name="BOSS直聘",
+    )
+
+    first = jobfindsmecore(tmp_path / "first.db")
+    first.configure_search(target_role="AI应用工程师")
+    ws = first.context.resolve_workspace().workspace_id
+    first.job_imports.import_records(ws, jobs_a)
+    first.job_imports.import_records(ws, jobs_b)
+    canonical_first = first.jobs.list(ws)[0]
+
+    second = jobfindsmecore(tmp_path / "second.db")
+    second.configure_search(target_role="AI应用工程师")
+    ws2 = second.context.resolve_workspace().workspace_id
+    second.job_imports.import_records(ws2, jobs_b)
+    second.job_imports.import_records(ws2, jobs_a)
+    canonical_second = second.jobs.list(ws2)[0]
+
+    # Rich description wins (猎聘), regardless of arrival order.
+    assert canonical_first.source.source_name == "猎聘"
+    assert canonical_second.source.source_name == "猎聘"
+    assert canonical_first.content_hash == canonical_second.content_hash
+    assert canonical_first.job_id == canonical_second.job_id
+    # Both sources still count as having cached jobs for this workspace.
+    assert first.jobs.has_source_jobs(workspace_id=ws, source_name="BOSS直聘")
+    assert first.jobs.has_source_jobs(workspace_id=ws, source_name="猎聘")
+
+
+def test_get_jobs_discovered_state_returns_jobs_without_explicit_state(
+    tmp_path,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    core.configure_search(target_role="AI应用工程师")
+    ws = core.context.resolve_workspace().workspace_id
+    core.job_imports.import_records(
+        ws,
+        parse_json(
+            '[{"id":"j1","title":"AI应用工程师","company":"示例",'
+            '"location":"上海","description":"Python RAG 25-40K",'
+            '"url":"https://example.com/j1"}]',
+            source_name="企业官网",
+        ),
+    )
+
+    discovered = core.list_job_summaries(states=[JobStateKind.DISCOVERED])
+    saved = core.list_job_summaries(states=[JobStateKind.SAVED])
+
+    assert len(discovered) == 1
+    assert saved == []

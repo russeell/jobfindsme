@@ -120,7 +120,7 @@ class PrivacyService:
 
     def preview_delete(self, *, workspace_id: str, scope: str) -> DeletionPreview:
         self._validate_scope(scope)
-        counts = self._counts(workspace_id)
+        counts = self._scope_counts(workspace_id, scope)
         # Keep the token safe as a CLI value even if token_urlsafe() would
         # otherwise begin with "-" and be parsed as an option.
         token = f"del_{secrets.token_urlsafe(32)}"
@@ -243,6 +243,17 @@ class PrivacyService:
                 ).fetchone()[0]
                 for name, table in tables.items()
             }
+
+    def _scope_counts(self, workspace_id: str, scope: str) -> dict[str, int]:
+        """Preview counts must describe what this exact scope will delete."""
+        all_counts = self._counts(workspace_id)
+        if scope == "jobs":
+            return {"jobs": all_counts["jobs"]}
+        if scope == "profile":
+            return {
+                "profiles": all_counts["profiles"],
+            }
+        return all_counts
 
     @classmethod
     def _validate_scope(cls, scope: str) -> None:

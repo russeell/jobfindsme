@@ -35,7 +35,7 @@ def _configured_core(tmp_path: Path) -> jobfindsmecore:
     workspace = core.create_workspace("Loop Test")
     core.configure_search(
         workspace_id=workspace.workspace_id,
-        target_roles=("AI应用工程师",),
+        target_role="AI应用工程师",
         locations=("上海",),
         sources=(
             DiscoverySource(
@@ -88,7 +88,7 @@ def test_live_loop_records_source_failure_without_fake_success(tmp_path: Path) -
     workspace = core.create_workspace("Failure Test")
     core.configure_search(
         workspace_id=workspace.workspace_id,
-        target_roles=("AI应用工程师",),
+        target_role="AI应用工程师",
         sources=(
             DiscoverySource(
                 kind="json_file",
@@ -125,7 +125,7 @@ def test_live_loop_excludes_jobs_from_previous_source_configuration(
     core.configure_search(
         workspace_id=context.workspace.workspace_id,
         plan_id=context.plan.plan_id if context.plan else None,
-        target_roles=("AI应用工程师",),
+        target_role="AI应用工程师",
         locations=("上海",),
         sources=(
             DiscoverySource(

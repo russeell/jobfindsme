@@ -47,11 +47,11 @@ def setup(core: Any, request: BaseModel) -> HandlerResult:
             )
         )
     # ── Search plan part ────────────────────────────────────────────────
-    if values.get("target_roles"):
+    if values.get("target_role"):
         # Keep typed fields (sources is a tuple of DiscoverySource models —
         # model_dump would corrupt them into raw dicts).
         plan = core.configure_search(
-            target_roles=request.target_roles,
+            target_role=request.target_role,
             locations=request.locations,
             salary_min_k=request.salary_min_k,
             salary_max_k=request.salary_max_k,
@@ -174,7 +174,7 @@ def delete_local_data(core: Any, request: BaseModel) -> HandlerResult:
         result = core.preview_delete(
             scope=values["scope"],
         )
-        return None, result
+        return None, result.model_dump(mode="json", exclude={"workspace_id"})
     token = values["confirmation_token"]
     if not token:
         raise ValueError("confirmation_token is required for confirm")
@@ -182,7 +182,7 @@ def delete_local_data(core: Any, request: BaseModel) -> HandlerResult:
         scope=values["scope"],
         confirmation_token=token,
     )
-    return None, result
+    return None, result.model_dump(mode="json", exclude={"workspace_id"})
 
 
 def build_handlers() -> dict[str, Any]:

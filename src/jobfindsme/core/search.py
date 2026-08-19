@@ -150,7 +150,7 @@ class SearchOrchestrator:
         workspace_id: str | None = None,
         plan_id: str | None = None,
         name: str = "Default Search",
-        target_roles: Sequence[str],
+        target_role: str,
         locations: Sequence[str] = (),
         salary_min_k: int | None = None,
         salary_max_k: int | None = None,
@@ -169,7 +169,7 @@ class SearchOrchestrator:
         )
         values = {
             "name": name,
-            "target_roles": target_roles,
+            "target_roles": (target_role,),
             "locations": locations,
             "salary_min_k": salary_min_k,
             "salary_max_k": salary_max_k,
@@ -202,14 +202,12 @@ class SearchOrchestrator:
         )
         selected_sources = sources
         if sources is None and not existing:
-            selected_sources = recommended_connectors(
-                tuple(locations), tuple(target_roles)
-            )
+            selected_sources = recommended_connectors(tuple(locations), (target_role,))
         elif sources is None:
             reconciled = reconcile_catalog_sources(
                 tuple(item.source for item in existing),
                 locations=tuple(locations),
-                roles=tuple(target_roles),
+                roles=(target_role,),
             )
             if reconciled != tuple(item.source for item in existing):
                 selected_sources = reconciled
@@ -225,7 +223,7 @@ class SearchOrchestrator:
         return SearchConfiguration(
             preferences=plan.to_preferences(),
             sources=subscriptions,
-            source_links=source_links(tuple(target_roles), tuple(locations)),
+            source_links=source_links((target_role,), tuple(locations)),
         )
 
     def search_presentation_context(
@@ -238,7 +236,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no preferences configured — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_role) first"
             )
         if use_profile:
             profile = self.profiles.latest_confirmed_summary(
@@ -293,7 +291,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no preferences configured — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_role) first"
             )
         if use_profile:
             profile = self.profiles.latest_confirmed_summary(
@@ -396,7 +394,7 @@ class SearchOrchestrator:
         context = self.context.resolve(workspace_id=workspace_id, plan_id=plan_id)
         if context.plan is None:
             raise ValueError(
-                "no preferences configured — run setup (with target_roles) first"
+                "no preferences configured — run setup (with target_role) first"
             )
 
         effective_sources = tuple(sources) or tuple(

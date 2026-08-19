@@ -11,6 +11,7 @@ from jobfindsme.contracts import (
     JobDetailLevel,
     JobLiveness,
     RecruitmentTrack,
+    SalaryPeriod,
     SourceEvidence,
     SourceKind,
 )
@@ -263,6 +264,23 @@ def test_normalization_preserves_source_liveness_and_structured_ranges() -> None
     assert job.salary.normalized_annual_min == 240_000
     assert job.recruitment_track is RecruitmentTrack.UNKNOWN
     assert job.employment_type is EmploymentType.UNKNOWN
+
+
+def test_annual_salary_mirror_is_monthly_derived_not_amount_divided_by_1000() -> None:
+    job = normalize_job(
+        raw_job(
+            payload={
+                "description": "Python RAG Agent，3-5年，30-45万/年",
+            }
+        ),
+        fetched_at=NOW,
+    )
+
+    # 30万/年 is 25K/month; the legacy mirror must never become 300K/month.
+    assert job.salary is not None
+    assert job.salary.period is SalaryPeriod.YEAR
+    assert job.salary_min_k == 25
+    assert job.salary_max_k == 37
 
 
 def test_normalization_keeps_recruitment_and_employment_dimensions_separate() -> None:

@@ -34,7 +34,7 @@ def main() -> int:
 
     core = jobfindsmecore(Path(tempfile.mkdtemp()) / "compare.db")
     core.configure_search(
-        target_roles=[args.role],
+        target_role=args.role,
         locations=args.city,
         salary_min_k=args.salary_min_k,
         recruitment_track=args.track,

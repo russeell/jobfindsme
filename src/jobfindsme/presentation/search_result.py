@@ -325,10 +325,6 @@ def _source_note(
             "解决方案：对我说「帮我重新登录 BOSS直聘」，或让我运行 jobfindsme setup "
             "确认窗口在线。"
         )
-        if any(run.cache_used for run in issues if "BOSS" in run.source_name) and (
-            changes.new
-        ):
-            lines.append(f"本次 {changes.new} 个新增来自缓存岗位，已正常纳入。")
     other = [run.source_name for run in issues if "BOSS" not in run.source_name]
     if other:
         names = "、".join(dict.fromkeys(other))

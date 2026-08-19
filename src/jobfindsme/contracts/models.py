@@ -274,6 +274,14 @@ class JobPosting(StrictModel):
 
     @model_validator(mode="after")
     def validate_ranges(self) -> Self:
+        if self.salary is not None:
+            expected_min = self.salary.monthly_min_k
+            expected_max = self.salary.monthly_max_k
+            if self.salary_min_k != expected_min or self.salary_max_k != expected_max:
+                raise ValueError(
+                    "salary_min_k/salary_max_k must equal salary.monthly_min_k/"
+                    "monthly_max_k when Salary is present"
+                )
         if (
             self.salary_min_k is not None
             and self.salary_max_k is not None

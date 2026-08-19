@@ -59,7 +59,6 @@ def test_delete_confirmation_survives_mcp_process_restart(tmp_path) -> None:
         scope="workspace",
         confirmation_token=preview.confirmation_token,
     )
-
     assert result.deleted is True
 
 
@@ -108,3 +107,28 @@ def test_profile_deletion_removes_managed_resume_copy(tmp_path) -> None:
     )
 
     assert not Path(managed_path).exists()
+
+
+def test_preview_counts_are_scope_aware(tmp_path) -> None:
+    from jobfindsme.importing.parsers import parse_json
+
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    workspace = core.create_workspace("private")
+    ws = workspace.workspace_id
+    core.job_imports.import_records(
+        ws,
+        parse_json(
+            '[{"id":"j1","title":"AI应用工程师","company":"示例",'
+            '"location":"上海","description":"Python RAG 25-40K",'
+            '"url":"https://example.com/j1"}]',
+            source_name="企业官网",
+        ),
+    )
+
+    jobs_preview = core.preview_delete(workspace_id=ws, scope="jobs")
+    profile_preview = core.preview_delete(workspace_id=ws, scope="profile")
+    workspace_preview = core.preview_delete(workspace_id=ws, scope="workspace")
+
+    assert jobs_preview.record_counts == {"jobs": 1}
+    assert profile_preview.record_counts == {"profiles": 0}
+    assert workspace_preview.record_counts["jobs"] == 1

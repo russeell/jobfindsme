@@ -222,6 +222,19 @@ def test_minimum_salary_requires_the_posted_lower_bound_to_match() -> None:
     assert "岗位未公开薪资" not in matches[0].evidence.warnings
 
 
+def test_maximum_salary_uses_the_posted_upper_bound() -> None:
+    matches = DeterministicMatcher().match(
+        plan(salary_max_k=30),
+        [
+            job("too_high", description="Python RAG Agent，1-3年，20-50K"),
+            job("within", description="Python RAG Agent，1-3年，20-25K"),
+            job("unknown", description="Python RAG Agent，1-3年，面议"),
+        ],
+    )
+
+    assert [match.job.external_id for match in matches] == ["within"]
+
+
 def test_strict_track_and_type_do_not_accept_unknown_classification() -> None:
     strict_plan = plan(
         recruitment_track=RecruitmentTrack.SOCIAL,

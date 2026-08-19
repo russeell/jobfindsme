@@ -159,11 +159,13 @@ def normalize_job(
     salary_max = int(payload["salary_max_k"]) if payload.get("salary_max_k") else None
     if salary_match and salary_min is None and salary_max is None:
         salary_min, salary_max = map(int, salary_match.groups())
-    # Fallback: extract K values from parsed salary_details
-    if salary_min is None and salary_details and salary_details.min_amount:
-        salary_min = salary_details.min_amount // 1000
-    if salary_max is None and salary_details and salary_details.max_amount:
-        salary_max = salary_details.max_amount // 1000
+    # Fallback: legacy mirrors are always derived from the canonical Salary
+    # monthly projections (never an independent //1000 on raw amounts, which
+    # would turn an annual 30万 into a bogus 300K/month).
+    if salary_min is None and salary_details:
+        salary_min = salary_details.monthly_min_k
+    if salary_max is None and salary_details:
+        salary_max = salary_details.monthly_max_k
     experience_min = (
         int(payload["experience_min_years"])
         if payload.get("experience_min_years") is not None

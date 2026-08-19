@@ -30,7 +30,7 @@ def test_cli_job_discovery_state_export_and_delete_workflow(tmp_path, capsys) ->
     from jobfindsme.app import jobfindsmecore
 
     jobfindsmecore(database).configure_search(
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["杭州"],
     )
     imported = invoke(

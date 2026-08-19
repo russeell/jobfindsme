@@ -15,7 +15,7 @@ from pathlib import Path
 OUT = Path("evaluation/data/golden/golden_v1.json")
 
 PLAN = {
-    "target_roles": ["AI应用工程师"],
+    "target_role": "AI应用工程师",
     "locations": ["上海", "深圳"],
     "salary_min_k": 20,
     "recruitment_track": "social",

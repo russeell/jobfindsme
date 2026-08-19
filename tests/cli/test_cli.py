@@ -84,7 +84,7 @@ def test_cli_profile_import_needs_no_workspace_and_accepts_facts_by_default(
 def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    core.configure_search(target_roles=["AI应用工程师"])
+    core.configure_search(target_role="AI应用工程师")
     core.job_imports.import_records(
         core.context.resolve_workspace().workspace_id,
         parse_json(
@@ -132,7 +132,7 @@ def test_cli_markdown_job_search_uses_stable_job_blocks(tmp_path, capsys) -> Non
 def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    core.configure_search(target_roles=["AI应用工程师"])
+    core.configure_search(target_role="AI应用工程师")
 
     assert (
         run(
@@ -154,7 +154,7 @@ def test_cli_markdown_empty_job_search_has_stable_message(tmp_path, capsys) -> N
 def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) -> None:
     database = tmp_path / "jobfindsme.db"
     core = jobfindsmecore(database)
-    core.configure_search(target_roles=["AI应用工程师"])
+    core.configure_search(target_role="AI应用工程师")
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python、RAG、Agent", encoding="utf-8")
     imported = core.import_resume(source_path=str(resume))

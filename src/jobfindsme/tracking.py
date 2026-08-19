@@ -370,7 +370,10 @@ class JobUseCase:
                 for item in self.job_states.list(workspace.workspace_id)
             }
             jobs = [
-                job for job in jobs if state_by_job.get(job.job_id) in selected_states
+                job
+                for job in jobs
+                if state_by_job.get(job.job_id, JobStateKind.DISCOVERED)
+                in selected_states
             ]
         return [_summary(job) for job in jobs[offset : offset + limit]]
 

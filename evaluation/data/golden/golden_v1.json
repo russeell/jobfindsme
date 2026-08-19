@@ -2,9 +2,7 @@
   "dataset_version": "golden_v1",
   "dataset_type": "golden_synthetic_regression",
   "plan": {
-    "target_roles": [
-      "AI应用工程师"
-    ],
+    "target_role": "AI应用工程师",
     "locations": [
       "上海",
       "深圳"

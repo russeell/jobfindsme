@@ -68,9 +68,10 @@ class SetupInput(_LegacyAwareInput):
     limit: int = Field(default=12, ge=1, le=50, description="Facts per page")
 
     # ── Preferences ─────────────────────────────────────────────────────
-    target_roles: tuple[str, ...] = Field(
-        default_factory=tuple,
-        description=("Target role, e.g. ['AI应用工程师']"),
+    target_role: str | None = Field(
+        default=None,
+        max_length=120,
+        description="The one target role, e.g. 'AI应用工程师'",
     )
     locations: tuple[str, ...] = Field(
         default_factory=tuple,
@@ -114,9 +115,9 @@ class SetupInput(_LegacyAwareInput):
 
     @model_validator(mode="after")
     def validate_action_fields(self) -> Self:
-        if not self.resume_path and not self.target_roles:
+        if not self.resume_path and not self.target_role:
             raise ValueError(
-                "provide resume_path or target_roles — setup has nothing to do"
+                "provide resume_path or target_role — setup has nothing to do"
             )
         return self
 
@@ -305,7 +306,6 @@ class GetJobsOutput(StrictModel):
 
 
 class DeleteLocalDataOutput(StrictModel):
-    workspace_id: str
     scope: str
     record_counts: dict[str, int] | None = None
     confirmation_token: str | None = None

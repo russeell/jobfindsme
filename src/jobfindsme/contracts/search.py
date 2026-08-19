@@ -63,7 +63,7 @@ class SearchPlan(StrictModel):
     def to_preferences(self) -> Preferences:
         return Preferences(
             name=self.name,
-            target_roles=self.target_roles,
+            target_role=self.target_roles[0],
             locations=self.locations,
             salary_min_k=self.salary_min_k,
             salary_max_k=self.salary_max_k,
@@ -80,11 +80,12 @@ class Preferences(StrictModel):
     """The user's search conditions — one profile + one set of preferences.
 
     Public contract replaces the internal Workspace/SearchPlan concepts.
-    `target_roles` is the single primary role used for discovery.
+    `target_role` is the single role used for discovery — one product
+    decision at a time, instead of a role × city × platform cartesian product.
     """
 
     name: str = Field(default="Default Search", min_length=1, max_length=120)
-    target_roles: tuple[str, ...] = Field(min_length=1)
+    target_role: str = Field(min_length=1, max_length=120)
     locations: tuple[str, ...] = ()
     salary_min_k: int | None = Field(default=None, ge=0, le=1000)
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)

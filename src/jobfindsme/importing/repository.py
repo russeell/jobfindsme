@@ -12,6 +12,48 @@ from jobfindsme.contracts import (
 )
 from jobfindsme.storage import Database
 
+_SOURCE_RANK = {
+    "BOSS直聘": 0,
+    "猎聘": 1,
+    "智联招聘": 2,
+    "前程无忧": 3,
+}
+
+
+def _liveness_rank(liveness: JobLiveness) -> int:
+    return {
+        JobLiveness.ACTIVE: 3,
+        JobLiveness.UNKNOWN: 2,
+        JobLiveness.STALE: 1,
+        JobLiveness.CLOSED: 0,
+    }.get(liveness, 1)
+
+
+def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
+    """Deterministic canonical pick for the same fingerprint from two sources.
+
+    Same source: the newest observation wins (content refresh must propagate).
+    Different sources: richer detail wins, ties broken by a stable source
+    priority, never by thread completion order.
+    """
+    if left.source.source_name == right.source.source_name:
+        return right
+
+    def quality(job: JobPosting) -> tuple[int, int, int, int]:
+        return (
+            _liveness_rank(job.source.liveness),
+            len(job.description),
+            int(job.salary is not None),
+            int(bool(job.apply_url)),
+        )
+
+    left_quality, right_quality = quality(left), quality(right)
+    if left_quality != right_quality:
+        return left if left_quality > right_quality else right
+    left_rank = _SOURCE_RANK.get(left.source.source_name, 99)
+    right_rank = _SOURCE_RANK.get(right.source.source_name, 99)
+    return left if left_rank <= right_rank else right
+
 
 class JobRepository:
     def __init__(self, database: Database) -> None:
@@ -21,37 +63,65 @@ class JobRepository:
         """Store current job and append a version only when content changed."""
         payload = job.model_dump_json()
         with self.database.connect() as connection:
-            existing = connection.execute(
-                "SELECT content_hash FROM jobs WHERE workspace_id = ? AND job_id = ?",
+            existing_row = connection.execute(
+                "SELECT payload_json, content_hash FROM jobs "
+                "WHERE workspace_id = ? AND job_id = ?",
                 (workspace_id, job.job_id),
             ).fetchone()
-            changed = existing is None or existing["content_hash"] != job.content_hash
-            connection.execute(
-                """
-                INSERT INTO jobs (
-                    workspace_id, job_id, fingerprint, content_hash, payload_json,
-                    source_name, external_id, liveness, fetched_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(workspace_id, job_id) DO UPDATE SET
-                    content_hash = excluded.content_hash,
-                    payload_json = excluded.payload_json,
-                    source_name = excluded.source_name,
-                    external_id = excluded.external_id,
-                    liveness = excluded.liveness,
-                    fetched_at = excluded.fetched_at
-                """,
-                (
-                    workspace_id,
-                    job.job_id,
-                    job.fingerprint,
-                    job.content_hash,
-                    payload,
-                    job.source.source_name,
-                    job.external_id,
-                    job.source.liveness,
-                    job.source.fetched_at.isoformat(),
-                ),
+            existing = (
+                _repair_legacy_boss_classification(
+                    JobPosting.model_validate_json(existing_row["payload_json"])
+                )
+                if existing_row
+                else None
             )
+            winner = _canonical_winner(existing, job) if existing else job
+            winner_payload = winner.model_dump_json()
+            if existing is None:
+                changed = True
+                connection.execute(
+                    """
+                    INSERT INTO jobs (
+                        workspace_id, job_id, fingerprint, content_hash, payload_json,
+                        source_name, external_id, liveness, fetched_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        workspace_id,
+                        job.job_id,
+                        job.fingerprint,
+                        job.content_hash,
+                        winner_payload,
+                        winner.source.source_name,
+                        winner.external_id,
+                        winner.source.liveness,
+                        winner.source.fetched_at.isoformat(),
+                    ),
+                )
+            elif winner is job:
+                changed = existing_row["content_hash"] != job.content_hash
+                connection.execute(
+                    """
+                    UPDATE jobs SET
+                        content_hash = ?, payload_json = ?, source_name = ?,
+                        external_id = ?, liveness = ?, fetched_at = ?
+                    WHERE workspace_id = ? AND job_id = ?
+                    """,
+                    (
+                        job.content_hash,
+                        winner_payload,
+                        job.source.source_name,
+                        job.external_id,
+                        job.source.liveness,
+                        job.source.fetched_at.isoformat(),
+                        workspace_id,
+                        job.job_id,
+                    ),
+                )
+            else:
+                # Lower-quality source: keep the canonical row untouched; only
+                # the source record below records this observation.
+                changed = False
             version_created = False
             if changed:
                 cursor = connection.execute(
@@ -122,7 +192,7 @@ class JobRepository:
         with self.database.connect() as connection:
             row = connection.execute(
                 """
-                SELECT 1 FROM jobs
+                SELECT 1 FROM job_source_records
                 WHERE workspace_id = ? AND source_name = ?
                   AND liveness != 'closed'
                 LIMIT 1
@@ -143,9 +213,12 @@ class JobRepository:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT job_id, payload_json FROM jobs
-                WHERE workspace_id = ? AND source_name = ?
-                  AND liveness != 'closed'
+                SELECT j.job_id AS job_id, j.payload_json AS payload_json
+                FROM job_source_records r
+                JOIN jobs j
+                  ON j.workspace_id = r.workspace_id AND j.job_id = r.job_id
+                WHERE r.workspace_id = ? AND r.source_name = ?
+                  AND r.liveness != 'closed'
                 """,
                 (workspace_id, source_name),
             ).fetchall()

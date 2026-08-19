@@ -64,7 +64,7 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
     call(
         registry,
         "setup",
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海"],
         sources=[
             {
@@ -157,7 +157,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     call(
         registry,
         "setup",
-        target_roles=["AI应用工程师"],
+        target_role="AI应用工程师",
         locations=["上海"],
         salary_min_k=20,
         recruitment_track="social",

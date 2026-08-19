@@ -65,7 +65,7 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
     configured = registry.call(
         "setup",
         {
-            "target_roles": ["AI应用工程师"],
+            "target_role": "AI应用工程师",
             "locations": ["上海"],
         },
     )
@@ -73,9 +73,10 @@ def test_first_use_does_not_require_workspace_or_plan_ids(tmp_path) -> None:
 
     assert imported["isError"] is False
     assert configured["isError"] is False
-    assert configured["structuredContent"]["plan"]["preferences"]["target_roles"] == [
-        "AI应用工程师"
-    ]
+    assert (
+        configured["structuredContent"]["plan"]["preferences"]["target_role"]
+        == "AI应用工程师"
+    )
     assert searched["isError"] is False
     # Search may return live results or be empty — both are valid
     assert isinstance(searched["structuredContent"]["summary"], str)
@@ -92,7 +93,7 @@ def test_setup_persists_recruitment_and_employment_filters(tmp_path) -> None:
     result = registry.call(
         "setup",
         {
-            "target_roles": ["AI应用工程师"],
+            "target_role": "AI应用工程师",
             "locations": ["上海", "杭州"],
             "recruitment_track": "social",
             "employment_type": "full_time",
@@ -125,7 +126,7 @@ def test_output_schema_failure_is_a_tool_error_not_a_protocol_crash(tmp_path) ->
 
     result = registry.call(
         "setup",
-        {"target_roles": ["AI应用工程师"]},
+        {"target_role": "AI应用工程师"},
     )
 
     assert result["isError"] is True
@@ -518,7 +519,7 @@ def test_search_distinguishes_source_failure_from_no_delta(tmp_path) -> None:
     registry = ToolRegistry(core)
     registry.call(
         "setup",
-        {"target_roles": ["AI应用工程师"]},
+        {"target_role": "AI应用工程师"},
     )
 
     # The broken source is passed on the search call itself — explicit
@@ -1253,7 +1254,7 @@ def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None
     registry = ToolRegistry(core)
     registry.call(
         "setup",
-        {"target_roles": ["AI应用工程师"]},
+        {"target_role": "AI应用工程师"},
     )
 
     result = registry.call(

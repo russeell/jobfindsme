@@ -100,7 +100,7 @@ TOOL_DEFINITIONS = (
         (
             "Initialize the local profile and search conditions in one call.  "
             "Pass resume_path to import and store a local resume snapshot.  "
-            "Pass target_roles (plus optional locations, salary, "
+            "Pass target_role (plus optional locations, salary, "
             "recruitment_track, employment_type, exclusions) to create or "
             "update the local preferences.  "
             "Either part may be omitted — call setup again later to extend.  "
