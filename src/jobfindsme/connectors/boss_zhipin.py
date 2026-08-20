@@ -456,6 +456,17 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
         "/usr/bin/google-chrome",
         "/usr/bin/chromium-browser",
         "/usr/bin/chromium",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        str(
+            Path(os.environ.get("LOCALAPPDATA", ""))
+            / "Google"
+            / "Chrome"
+            / "Application"
+            / "chrome.exe"
+        ),
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     ]
 
     chrome = next((p for p in chrome_paths if Path(p).exists()), None)
