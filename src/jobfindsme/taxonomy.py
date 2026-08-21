@@ -177,7 +177,9 @@ def is_target_role_candidate(
     """Reject location-only matches before ranking.
 
     A candidate either names the requested role family in its title, or has a
-    technical title plus multiple AI signals across its title and description.
+    technical title plus an explicit AI marker in the title ("AI全栈工程师",
+    "AI应用研发工程师"), or has a technical title plus multiple AI signals
+    across its title and description.
     """
 
     normalized_title = title.casefold()
@@ -196,6 +198,8 @@ def is_target_role_candidate(
         return True
     if not any(marker in normalized_title for marker in TECHNICAL_ROLE_MARKERS):
         return False
+    if "ai" in normalized_title or "人工智能" in normalized_title:
+        return True
     searchable = f"{title} {description}".casefold()
     signals = {signal for signal in AI_ROLE_SIGNALS if signal in searchable}
     return len(signals) >= 2
