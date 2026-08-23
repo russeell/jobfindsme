@@ -34,8 +34,9 @@ the installed wheel; it is a development-time tool, never a runtime import.
 
 - Public quality claims must come from a **manually labeled** real
   snapshot (EVAL-001), never from synthetic data.
-- Metrics produced: P@10, NDCG@10, valid-link rate, source success
-  rate, latency, hard-filter false-negative rate.
+- Metrics produced: worth-opening Precision@10, Recall@20, NDCG@10,
+  valid-link rate, source success rate, latency, and hard-filter
+  false-negative rate.
 - Live-loop reports contain only a profile hash and compact signals —
   never resume content.
 
@@ -72,7 +73,8 @@ for a week of dogfooding:
    the real pipeline and verifies new / changed / closed / suppressed /
    applied-suppression transitions in minutes.
 2. **Golden matching dataset** — `evaluation/data/golden/golden_v1.json`
-   (40 labeled jobs, built by `scripts/build_golden_dataset.py`) plus
+   (40 synthetic labeled regression jobs, not public quality evidence, built
+   by `scripts/build_golden_dataset.py`) plus
    `evaluation/metrics/golden_runner.py`. Headline metrics are Recall@20 and
    hard-filter False-Negative rate; the gate runs in CI. Rebuild with
    `python -m evaluation.cli --dataset evaluation/data/golden/golden_v1.json
@@ -88,11 +90,12 @@ Real dogfooding still matters, but only for things lab tests cannot see
 (platform outages, dirty state over time, UX friction, systematic miss
 patterns) — it is no longer the gate.
 
-See `evaluation/agent_behavior/data/README.md` for commands and the normalized event
-schema.
-3. Run `python -m scripts.validate_taxonomy` and
-   `python -m pytest tests/test_taxonomy.py`.
-4. Include one realistic resume or job-description example in the PR.
+See `evaluation/agent_behavior/data/README.md` for commands and the normalized
+event schema.
+
+Taxonomy changes must run `python scripts/validate_taxonomy.py` and
+`python -m pytest tests/test_taxonomy.py`, and include one realistic resume or
+job-description example in the PR.
 
 The default matcher remains deterministic and requires no model API.
 Semantic matching can be added later as an optional, separately

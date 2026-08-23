@@ -405,7 +405,7 @@ def test_import_deduplicates_and_versions_only_content_changes(tmp_path) -> None
     assert version_count == 2
 
 
-def test_repository_repairs_legacy_boss_job_classification(tmp_path) -> None:
+def test_repository_does_not_guess_legacy_boss_job_classification(tmp_path) -> None:
     database = Database(tmp_path / "jobs.db")
     database.migrate()
     workspace = WorkspaceService(database).create("Legacy BOSS")
@@ -423,10 +423,10 @@ def test_repository_repairs_legacy_boss_job_classification(tmp_path) -> None:
     assert legacy.employment_type == "unknown"
 
     repository.upsert(workspace.workspace_id, legacy)
-    repaired = repository.list(workspace.workspace_id)[0]
+    loaded = repository.list(workspace.workspace_id)[0]
 
-    assert repaired.recruitment_track == "social"
-    assert repaired.employment_type == "full_time"
+    assert loaded.recruitment_track == "unknown"
+    assert loaded.employment_type == "unknown"
 
 
 def test_reappearing_content_does_not_crash_or_create_duplicate_version(

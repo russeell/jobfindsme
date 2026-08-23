@@ -89,8 +89,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    rebuild the initial result.
    When the user says "不使用简历" or "不要用简历" or "skip resume",
    pass `use_profile: false` to `search_jobs`; the Server will skip
-   profile loading entirely, Section 1 will show "本次未使用简历", and
-   no match percentages will appear. The local profile is NOT deleted.
+   profile loading entirely, the search summary will show "本次未使用简历",
+   and no evidence score will appear. The local profile is NOT deleted.
    `include_seen` defaults to false: results are incremental (new, changed,
    reopened, or re-qualified jobs). For an ordinary interactive request such
    as "找岗位", "搜索岗位", or "显示符合条件的岗位", pass `include_seen: true`
@@ -115,8 +115,9 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    need adjusting (see above and the Daily Push section).
    Reuse the stored preferences on later requests. Do not recreate the profile
    or preferences merely because the user asks for an update.
-   The Server's summary is the complete five-section baseline. Use it as the
-   skeleton of your answer; never rebuild results as a table. A zero-result
+   The Server's summary is a compact three-layer factual baseline. Use the
+   returned facts as the skeleton of your answer; never rebuild results as a
+   table. A zero-result
    incremental run with
    `repeated_suppressed` is successful: those are previously shown unchanged
    jobs, not duplicates or a failed crawl. Never automatically retry it with
@@ -171,54 +172,25 @@ Do NOT set `use_profile=false` unless the user explicitly says not to use
 their resume. If the user provides a resume path, call `setup` with
 `resume_path` to import it first.
 
-The Server's summary uses these five sections, in this order. You may adapt
-wording, but when the user simply asks for results, returning the summary
-(possibly lightly edited) is the fastest correct answer. In no-resume mode,
-section 1 explicitly says no resume was used.
+The summary has three dynamic layers. The headings are a readable default,
+not a verbatim protocol. You may shorten or reorder prose, but must preserve
+all job facts, links, risks, source degradation, and change counts.
 
-### 第 1 段 · 简历解析（始终保留）
+### 搜索摘要
 
-```text
-简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士
-```
+Contains profile counts (or states no resume was used), source status, remote
+discovery count, applied filters, and result count. Never expose resume text,
+institutions, local IDs, raw source errors, or internal paths.
 
-- Numbers only + the highest degree name. NEVER list the actual skills,
-  experience details, or education institutions — just counts and degree.
-- Without a resume, preserve the Server line stating that only explicit user
-  conditions were used. Never scan folders to guess a resume path.
+### 推荐岗位
 
-### 第 2 段 · 检索概览
-
-```text
-检索：猎聘·上海 ✓(42) · 猎聘·深圳 ✓(42) · BOSS直聘·上海 ✗(Chrome未连接)
-本轮来源返回 84 条记录。
-```
-
-- One line per attempted source from `diagnostics.source_runs`:
-  `来源名 ✓(discovered数)` or `✗(原因)`; report the source total
-  as `本轮来源返回 N 条记录`. Cache mode instead states that no
-  external source was refreshed.
-
-### 第 3 段 · 过滤说明
-
-```text
-过滤：角色匹配 + 城市(上海/深圳) + 薪资20K+ + 社招 + 正式 + 经验≤3年 → 给出 15 个
-```
-
-- List the plan constraints actually applied, then `→ 给出 N 个`
-  (N = result count from diagnostics.result_count).
-
-### 第 4 段 · 岗位列表
-
-Each job as a deterministic block (see block rules below), in this order.
-**Separate the three visual groups with BLANK LINES** — fact+match line,
-apply link, recommendation — otherwise Markdown merges them into one
-paragraph and the link gets buried:
+Each job is a deterministic fact block. Keep blank lines around the apply link
+so terminal clients make the bare URL clickable:
 
 ```text
 1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
-   匹配度：68%（信号匹配，非录用概率）      ← with profile: score_signals (60%–100%)
-   匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）
+   硬条件：已通过所有可判定条件；未知项见风险提示
+   证据匹配：68/100（中）；证据覆盖：70%（均非录用概率）
    技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
 
    投递链接：https://www.liepin.com/job/xxx
@@ -226,22 +198,25 @@ paragraph and the link gets buried:
    推荐理由：...
 ```
 
-- **匹配度 rule**: preserve the Server text. With a confirmed profile it
-  shows a 60%–100% score — 60% is the hard-condition floor (the job already
-  passed role/location/salary/track/type), plus up to 40% evidence bonus.
-  Without a profile it states that the job passed the decidable hard
-  constraints; it must not fabricate a percentage.
+- **Evidence score rule**: hard constraints are pass/fail and are not points.
+  With a confirmed profile, the score is the sum of observable role, skill,
+  experience, education, and liveness evidence. `evidence_coverage` tells how
+  much comparable JD evidence existed. Sparse JDs stay low-coverage instead
+  of receiving an artificial floor. Without a profile, never show a score.
+- `unknown` recruitment track, employment type, experience, or salary is not
+  proof of a match. Preserve the Server's warning instead of guessing.
 
-### 第 5 段 · 说明
+### 状态与下一步
 
-Always preserve the Server's bounded operating summary, in this order:
+Preserve this bounded operating information when present:
 
 ```text
-结果：历史共匹配 100 个合适岗位；本次展示 11 个（全部新增）；累计展示 83 次；另有 12 个岗位已关闭（不再推荐）。重复抑制（此前展示且未变化）147 条。
-建议：优先投 #2（基金，40-60K，技能：Agent、RAG） → #3（字节，30-60K，薪资明确）。
-下一步建议（和 AI 聊天就能用）：
-- 📬 定时推送：对我说「每天早上 9 点推送新岗位给我」（可改任意时间频率）
-- 📋 查看历史：对我说「我投过哪些岗位？」或「我之前看过的岗位有哪些？」
+结果：本次展示 11 个（全部新增）；历史已展示 100 个不同岗位（累计 183 次）；已关闭 12 个。重复抑制 147 条。
+建议：优先查看 #2（证据分高且命中 Agent、RAG），确认完整 JD 后再投递。
+下一步（直接和 AI 说）：
+- 增量搜索：「继续帮我找新岗位，只看以前没看过的」
+- 查看历史：「我投过哪些岗位？」或「我之前看过哪些岗位？」
+- 定时检查：仅在当前 Agent 支持定时任务时提供
 [来源说明：仅当有来源降级/失败时出现，恢复方案一律写成对我说「...」]
 投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。
 ```
@@ -249,7 +224,7 @@ Always preserve the Server's bounded operating summary, in this order:
 - 结果 covers new, changed, reopened, closed, and previously shown
   unchanged counts. Never rename the last count as duplicates and never
   invent totals absent from structured content.
-- 建议 names only jobs present in section 4, with evidence-backed reason
+- 建议 names only jobs present in the returned job list, with evidence-backed reason
   tags (skills, salary). Never add subjective evaluations.
 - Recovery instructions are always chat actions ("对我说 ...") — do not
   print raw commands, ports, or local paths.
@@ -286,8 +261,9 @@ Always preserve the Server's bounded operating summary, in this order:
 6. When presenting several jobs, keep this block order; your reasoning lines
    go under each block. Do not merge blocks or re-word the fact line.
 
-This contract guarantees the user sees the same five sections, job facts,
-links, and grounded recommendation reason on every Agent host.
+This contract guarantees that every Agent host preserves the same job facts,
+links, evidence boundaries, and grounded recommendation reasons. The host may
+adapt the wording and layout to the conversation.
 
 If MCP becomes unavailable, run `jobfindsme doctor` only and report its single
 recovery action. Never invent CLI search syntax, expose Workspace/Plan IDs, or

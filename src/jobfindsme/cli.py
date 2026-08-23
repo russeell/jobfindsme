@@ -264,7 +264,12 @@ def _emit(value: Any, output: str, *, job_list: bool = False) -> None:
     serializable = _serializable(value)
     if output == "markdown":
         if job_list:
-            print(format_job_list(value))
+            profile_used = any(
+                getattr(getattr(item, "evidence", None), "relevance_level", "unknown")
+                != "unknown"
+                for item in value
+            )
+            print(format_job_list(value, profile_used=profile_used))
         else:
             print(_markdown(serializable))
     else:

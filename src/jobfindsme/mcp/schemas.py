@@ -158,7 +158,7 @@ class SearchJobsInput(_LegacyAwareInput):
         default=True,
         description=(
             "If false, skip the local profile entirely for this search — "
-            "Section 1 will show '本次未使用简历，按用户明确条件匹配。' "
+            "the search summary will show '本次未使用简历，按用户明确条件匹配。' "
             "and no match percentages will appear.  "
             "The local profile is NOT deleted; it remains available for "
             "later searches.  Set to false when the user explicitly says "
@@ -264,7 +264,7 @@ class SearchJobsOutput(StrictModel):
 
     summary: str = Field(
         description=(
-            "Compact factual baseline rendered by the Server (five sections). "
+            "Compact three-layer factual baseline rendered by the Server. "
             "The host may reorganize wording but must keep every fact and "
             "apply URL from `jobs`."
         ),

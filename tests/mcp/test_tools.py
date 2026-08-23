@@ -104,6 +104,40 @@ def test_setup_persists_recruitment_and_employment_filters(tmp_path) -> None:
     assert preferences["employment_type"] == "full_time"
 
 
+def test_unknown_job_classification_is_visible_not_guessed_or_dropped(tmp_path) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    registry = ToolRegistry(core)
+    registry.call(
+        "setup",
+        {
+            "target_role": "AI应用工程师",
+            "recruitment_track": "social",
+            "employment_type": "full_time",
+        },
+    )
+    workspace_id = core.context.resolve_workspace().workspace_id
+    from jobfindsme.importing.parsers import parse_json
+
+    core.job_imports.import_records(
+        workspace_id,
+        parse_json(
+            '[{"id":"unknown-type","title":"AI应用工程师",'
+            '"company":"示例科技","description":"Python RAG 25-40K",'
+            '"url":"https://example.com/jobs/unknown-type"}]',
+            source_name="猎聘",
+        ),
+    )
+
+    result = registry.call("search_jobs", {"refresh_mode": "cache"})
+
+    assert result["structuredContent"]["count"] == 1
+    fact = result["structuredContent"]["jobs"][0]
+    assert fact["job"]["recruitment_track"] == "unknown"
+    assert fact["job"]["employment_type"] == "unknown"
+    assert "招聘类型未注明" in result["content"][0]["text"]
+    assert "岗位性质未注明" in result["content"][0]["text"]
+
+
 def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
     _, workspace, _, registry = make_registry(tmp_path)
 
@@ -314,11 +348,12 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert [f"【{index}·" in text for index in range(1, 6)] == [True] * 5
+    headings = ("【搜索摘要】", "【推荐岗位】", "【状态与下一步】")
+    assert all(header in text for header in headings)
     assert "简历解析：本次未使用简历" in text
     assert "过滤：角色(AI应用工程师) → 给出 1 个" in text
     assert "[新增] AI应用工程师" in text
-    assert "匹配度：已通过角色、地点、薪资等可判定硬条件" in text
+    assert "硬条件：已通过所有可判定条件" in text
     assert "投递链接：https://example.com/jobs/match-1" in text
     assert "推荐理由：" in text
     assert "workspace" not in text.casefold()
@@ -355,7 +390,8 @@ def test_search_explains_when_only_previously_shown_jobs_remain(tmp_path) -> Non
     assert second["structuredContent"]["count"] == 0
     assert second["structuredContent"]["changes"]["repeated_suppressed"] == 1
     text = second["content"][0]["text"]
-    assert all(f"【{index}·" in text for index in range(1, 6))
+    headings = ("【搜索摘要】", "【推荐岗位】", "【状态与下一步】")
+    assert all(header in text for header in headings)
     assert "此前展示过" in text
     assert "重复岗位" not in text
     assert "之前没有做过有效抓取" not in text
@@ -376,17 +412,17 @@ def test_search_profile_section_returns_counts_without_resume_content(tmp_path) 
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "【1·简历解析】" in text
+    assert "【搜索摘要】" in text
     assert "技能 1 项" in text
     assert "项目 0 项" in text
     assert "Python" not in text
     assert "内部项目ABC" not in text
-    # v0.7.2: profile_used is now only in summary section 1, not structuredContent
+    # Profile details stay in the search summary, not structuredContent.
     assert "简历解析：技能" in text
 
 
-def test_search_sparse_jd_with_profile_keeps_score_in_60_to_100(tmp_path) -> None:
-    """Even a sparse JD keeps a 60%+ score (hard-condition floor)."""
+def test_search_sparse_jd_with_profile_reports_low_score_and_coverage(tmp_path) -> None:
+    """Sparse evidence stays visibly sparse instead of receiving a 60% floor."""
     core, workspace, _, registry = make_registry(tmp_path)
     resume = tmp_path / "resume.txt"
     resume.write_text("技能：Python", encoding="utf-8")
@@ -422,7 +458,12 @@ def test_search_sparse_jd_with_profile_keeps_score_in_60_to_100(tmp_path) -> Non
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert re.search(r"匹配度：6\d%|匹配度：100%", text)
+    fact = result["structuredContent"]["jobs"][0]
+    assert fact["score"] < 0.60
+    assert fact["evidence"]["evidence_coverage"] <= 0.35
+    assert "证据匹配：" in text
+    assert "（低）" in text
+    assert "匹配度" not in text
 
 
 def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
@@ -462,7 +503,8 @@ def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    assert "匹配度：78%（信号匹配，非录用概率）" in text
+    assert re.search(r"证据匹配：\d+/100（(高|中|低)）", text)
+    assert "证据覆盖：" in text
     assert "简历技能命中：Python、RAG" in text
     assert "岗位要求但简历未体现：Kubernetes" in text
 
@@ -470,7 +512,7 @@ def test_search_reason_lists_matched_and_missing_skills(tmp_path) -> None:
 def test_search_operating_summary_lists_results_suggestions_and_next_steps(
     tmp_path,
 ) -> None:
-    """⑤ 说明 must render results, suggestions, next steps, and apply tip."""
+    """Status layer renders results, suggestions, next steps, and apply tip."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -486,13 +528,13 @@ def test_search_operating_summary_lists_results_suggestions_and_next_steps(
 
     first = registry.call("search_jobs", {"refresh_mode": "cache"})
     first_text = first["content"][0]["text"]
-    assert "结果：历史共匹配 1 个合适岗位" in first_text
-    assert "本次展示 1 个（全部新增）" in first_text
-    assert "累计展示 1 次" in first_text
-    assert "建议：优先投 #1（示例科技" in first_text
-    assert "下一步建议（和 AI 聊天就能用）：" in first_text
-    assert "📬 定时推送" in first_text
-    assert "📋 查看历史" in first_text
+    assert "结果：本次展示 1 个（全部新增）" in first_text
+    assert "历史已展示 1 个不同岗位（累计 1 次）" in first_text
+    assert "证据覆盖不足" in first_text
+    assert "下一步（直接和 AI 说）：" in first_text
+    assert "增量搜索" in first_text
+    assert "查看历史" in first_text
+    assert "如果当前 Agent 支持定时任务" in first_text
     assert "投递后对我说「把第 1 个标记为已投递」" in first_text
     assert "重复抑制" not in first_text
 
@@ -588,9 +630,8 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
     result = registry.call("search_jobs", {"refresh_mode": "cache", "limit": 21})
     text = result["content"][0]["text"]
 
-    # Five sections present
-    for section_idx in range(1, 6):
-        assert f"【{section_idx}·" in text, f"Missing section {section_idx}"
+    for header in ("【搜索摘要】", "【推荐岗位】", "【状态与下一步】"):
+        assert header in text, f"Missing section {header}"
 
     assert result["structuredContent"]["count"] == 21
     # v0.7.2: structuredContent exposes NO jobs array — all 21 blocks are ONLY
@@ -600,10 +641,10 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
     assert "summary" in result["structuredContent"]
 
     # ── Split into 21 blocks by adjacent numbering ──
-    # Find the start of section 4 (岗位列表) and end at section 5 (说明)
-    sec4_start = text.index("【4·岗位列表】")
-    sec5_start = text.index("【5·说明】")
-    job_section = text[sec4_start:sec5_start]
+    # Find the recommendation layer and stop before status/actions.
+    jobs_start = text.index("【推荐岗位】")
+    status_start = text.index("【状态与下一步】")
+    job_section = text[jobs_start:status_start]
 
     # Extract block boundaries: each block starts with "N. " where N is 1..21
     block_starts: list[int] = []
@@ -640,7 +681,7 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
         assert "｜" in block, f"Block {i} missing pipe separators in fact line"
 
         # Match description line must be present
-        assert "匹配度" in block, f"Block {i} missing match degree"
+        assert "硬条件" in block, f"Block {i} missing hard-condition status"
 
         # Independent 投递链接 with correct URL
         source_index = company.removeprefix("示例科技")
@@ -723,11 +764,11 @@ def test_no_resume_recommendation_contains_no_marketing_words(tmp_path) -> None:
     # In no-profile mode, must not fabricate resume-based match percentage
     assert "本次未使用简历" in text
     # The match-degree line should use the no-profile form
-    assert "已通过角色" in text or "非录用概率" in text
+    assert "硬条件：已通过所有可判定条件" in text
 
 
-def test_search_output_section_headers_are_locked_and_immutable(tmp_path) -> None:
-    """The five-section header structure is part of the output contract."""
+def test_search_output_uses_compact_three_layer_summary(tmp_path) -> None:
+    """The text summary stays compact while structured facts remain primary."""
     core, workspace, _, registry = make_registry(tmp_path)
     from jobfindsme.importing.parsers import parse_json
 
@@ -754,13 +795,7 @@ def test_search_output_section_headers_are_locked_and_immutable(tmp_path) -> Non
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    required_headers = [
-        "【1·简历解析】",
-        "【2·检索概览】",
-        "【3·过滤说明】",
-        "【4·岗位列表】",
-        "【5·说明】",
-    ]
+    required_headers = ["【搜索摘要】", "【推荐岗位】", "【状态与下一步】"]
     for header in required_headers:
         assert header in text, f"Missing locked header: {header}"
 
@@ -823,10 +858,10 @@ def test_search_jobs_structured_content_exposes_bounded_facts(tmp_path) -> None:
     assert '"apply_url"' in serialized
     assert '"description"' not in serialized
 
-    # summary is non-empty and contains the five-section baseline
+    # summary is non-empty and contains the compact three-layer baseline
     assert len(sc["summary"]) > 0
-    assert "【1·简历解析】" in sc["summary"]
-    assert "【4·岗位列表】" in sc["summary"]
+    assert "【搜索摘要】" in sc["summary"]
+    assert "【推荐岗位】" in sc["summary"]
 
     fact = sc["jobs"][0]
     assert fact["job"]["title"] == "AI应用工程师"
@@ -947,10 +982,10 @@ def test_get_jobs_still_works_normally(tmp_path) -> None:
 # ── v0.7.2: use_profile regression ────────────────────────────────────────
 
 
-def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
+def test_use_profile_false_with_existing_profile_shows_no_resume_in_summary(
     tmp_path,
 ) -> None:
-    """use_profile=false must skip profile entirely — Section 1 shows
+    """use_profile=false must skip profile entirely — the search summary shows
     '本次未使用简历', no match percentages appear, and the local profile
     is NOT deleted (remains queryable)."""
     core, workspace, _, registry = make_registry(tmp_path)
@@ -998,10 +1033,9 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
         {"refresh_mode": "cache", "use_profile": False},
     )
     text = result["content"][0]["text"]
-    profile_section = text.split("【2·检索概览】", maxsplit=1)[0]
+    profile_section = text.split("【推荐岗位】", maxsplit=1)[0]
 
-    # Section 1 must show no-resume
-    assert "【1·简历解析】" in text
+    assert "【搜索摘要】" in text
     assert "本次未使用简历" in text
     # Must NOT show profile counts
     assert "技能 2 项" not in profile_section
@@ -1012,9 +1046,8 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
     assert "内部项目ABC" not in profile_section
 
     # No match percentage (no-resume mode)
-    assert "匹配度：已通过角色、地点、薪资等可判定硬条件" in text
-    # Must NOT have a percentage match line
-    assert not re.search(r"匹配度：\d+%", text)
+    assert "硬条件：已通过所有可判定条件" in text
+    assert "证据匹配：" not in text
 
     # Recommendation reason must be no-resume based
     assert "推荐理由：" in text
@@ -1038,7 +1071,7 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_section_1(
 
 def test_use_profile_true_default_preserves_existing_behavior(tmp_path) -> None:
     """Default use_profile=true must behave exactly as before — profile counts
-    in Section 1 and match percentages when profile exists."""
+    in the search summary and match evidence when a profile exists."""
     core, workspace, _, registry = make_registry(tmp_path)
 
     resume = tmp_path / "resume.txt"
@@ -1077,22 +1110,22 @@ def test_use_profile_true_default_preserves_existing_behavior(tmp_path) -> None:
     result = registry.call("search_jobs", {"refresh_mode": "cache"})
     text = result["content"][0]["text"]
 
-    # Section 1 must show profile counts
-    assert "【1·简历解析】" in text
+    assert "【搜索摘要】" in text
     assert "技能 2 项" in text
     # Must NOT be the no-resume line
     assert "本次未使用简历" not in text
-    assert re.search(r"匹配度：\d+%", text)
+    assert re.search(r"证据匹配：\d+/100", text)
 
     # Explicit use_profile=true gives same result
     result2 = registry.call(
-        "search_jobs", {"refresh_mode": "cache", "use_profile": True}
+        "search_jobs",
+        {"refresh_mode": "cache", "use_profile": True, "include_seen": True},
     )
-    profile_section = text.split("【2·检索概览】", maxsplit=1)[0]
     second_profile_section = result2["content"][0]["text"].split(
-        "【2·检索概览】", maxsplit=1
+        "【推荐岗位】", maxsplit=1
     )[0]
-    assert second_profile_section == profile_section
+    assert "技能 2 项" in second_profile_section
+    assert "本次未使用简历" not in second_profile_section
 
 
 def test_use_profile_false_without_profile_still_shows_no_resume(tmp_path) -> None:
@@ -1106,7 +1139,7 @@ def test_use_profile_false_without_profile_still_shows_no_resume(tmp_path) -> No
     text = result["content"][0]["text"]
 
     assert result["isError"] is False
-    assert "【1·简历解析】" in text
+    assert "【搜索摘要】" in text
     assert "本次未使用简历" in text
 
 
@@ -1264,11 +1297,17 @@ def test_search_result_rendered_output_sanitizes_chrome_errors(tmp_path) -> None
     text = result["content"][0]["text"]
 
     # Error appears but is safe
-    assert "【2·检索概览】" in text
+    assert "【搜索摘要】" in text
     # Raw error details NOT exposed
     assert "remote-debugging-port" not in text
     assert "9222" not in text
     assert "Traceback" not in text
+    source = result["structuredContent"]["diagnostic_summary"]["sources"][0]
+    assert source["source_name"] == "损坏来源"
+    assert source["status"] == "failed"
+    assert source["discovered"] == 0
+    assert source["top_results"] == 0
+    assert "error" not in source
 
 
 # ── Step 2: bounded facts contract ─────────────────────────────────────────

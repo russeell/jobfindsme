@@ -1,8 +1,7 @@
-"""The five-section factual baseline (①-⑤) and source diagnostics.
+"""Compact three-layer search summary and source diagnostics.
 
-This text is the Server's compact factual summary. The host Agent organizes
-the final user-facing expression from the returned facts; it must not
-contradict this baseline or invent facts.
+The Server owns facts, links, evidence, source status, and change counts. The
+host Agent may adapt wording and layout without changing those facts.
 """
 
 from __future__ import annotations
@@ -170,7 +169,7 @@ def _run_count_line(
     *,
     source_line: str,
 ) -> str:
-    """Compose the section-② lines (source line + refresh summary)."""
+    """Compose source coverage and refresh facts for the search summary."""
     platform_count, target_count = _coverage_counts(diagnostics.source_runs)
     coverage = (
         f"覆盖 {platform_count} 个平台、{target_count} 个城市来源；"
@@ -222,13 +221,13 @@ def format_search_results(
     )
     if not items:
         job_text = format_search_empty(diagnostics)
+    search_summary = "\n".join((profile_line, source_line, filter_line))
     return "\n\n".join(
         (
-            "【1·简历解析】\n" + profile_line,
-            "【2·检索概览】\n" + source_line,
-            "【3·过滤说明】\n" + filter_line,
-            "【4·岗位列表】\n" + job_text,
-            "【5·说明】\n" + _operating_summary(items, changes, diagnostics, context),
+            "【搜索摘要】\n" + search_summary,
+            "【推荐岗位】\n" + job_text,
+            "【状态与下一步】\n"
+            + _operating_summary(items, changes, diagnostics, context),
         )
     )
 
@@ -239,13 +238,14 @@ def _operating_summary(
     diagnostics: SearchRunDiagnostics,
     context: SearchPresentationContext,
 ) -> str:
-    """Render ⑤: results, apply suggestions, next steps, source notes."""
+    """Render result state, evidence-backed suggestions, and next actions."""
     lines = [
         _result_summary(changes, diagnostics, context),
         _priority_suggestions(items),
-        "下一步建议（和 AI 聊天就能用）：",
-        "- 📬 定时推送：对我说「每天早上 9 点推送新岗位给我」（可改任意时间频率）",
-        "- 📋 查看历史：对我说「我投过哪些岗位？」或「我之前看过的岗位有哪些？」",
+        "下一步（直接和 AI 说）：",
+        "- 增量搜索：「继续帮我找新岗位，只看以前没看过的」",
+        "- 查看历史：「我投过哪些岗位？」或「我之前看过哪些岗位？」",
+        "- 定时检查：如果当前 Agent 支持定时任务，可说「每天早上 9 点检查新增岗位」",
     ]
     note = _source_note(diagnostics, changes)
     if note:
@@ -259,7 +259,7 @@ def _result_summary(
     diagnostics: SearchRunDiagnostics,
     context: SearchPresentationContext,
 ) -> str:
-    """结果 line: shown this round, cumulative shows, closed jobs."""
+    """Summarize this run, distinct historical jobs, and closed jobs."""
     count = diagnostics.result_count
     if count > 0 and changes.new == count:
         desc = "全部新增"
@@ -271,9 +271,10 @@ def _result_summary(
     else:
         desc = "无新增"
     line = (
-        f"结果：历史共匹配 {context.total_matched_count} 个合适岗位；"
-        f"本次展示 {count} 个（{desc}）；累计展示 {context.cumulative_shown_count} 次；"
-        f"另有 {context.closed_count} 个岗位已关闭（不再推荐）。"
+        f"结果：本次展示 {count} 个（{desc}）；"
+        f"历史已展示 {context.total_matched_count} 个不同岗位"
+        f"（累计 {context.cumulative_shown_count} 次）；"
+        f"已关闭 {context.closed_count} 个（不再推荐）。"
     )
     if changes.repeated_suppressed:
         line += f"重复抑制（此前展示且未变化）{changes.repeated_suppressed} 条。"
@@ -284,9 +285,20 @@ def _priority_suggestions(items: Sequence[Any]) -> str:
     """建议 line: top three jobs with an evidence-backed reason tag."""
     if not items:
         return "建议：当前没有可投递的新岗位；可放宽城市、薪资或经验条件后重试。"
+    candidates = []
+    for index, item in enumerate(items, start=1):
+        job, score, evidence, _ = _job_score_and_evidence(item)
+        relevance = getattr(evidence, "relevance_level", "unknown")
+        if relevance in {"high", "medium"}:
+            candidates.append((index, job, score, evidence))
+        if len(candidates) == 3:
+            break
+    if not candidates:
+        return (
+            "建议：当前岗位的 JD 证据覆盖不足，建议先查看详情，不要仅凭排序分决定投递。"
+        )
     picks = []
-    for index, item in enumerate(items[:3], start=1):
-        job, _, evidence, _ = _job_score_and_evidence(item)
+    for index, job, score, evidence in candidates:
         company = job.company or "某公司"
         salary = (
             job.salary.raw_text if job.salary and job.salary.raw_text else "薪资面议"
@@ -300,8 +312,9 @@ def _priority_suggestions(items: Sequence[Any]) -> str:
             tag = "薪资明确"
         else:
             tag = "薪资未注明"
-        picks.append(f"#{index}（{company}，{salary}，{tag}）")
-    return "建议：优先投 " + " → ".join(picks) + "。"
+        score_text = f"证据分 {round(score * 100)}" if score is not None else tag
+        picks.append(f"#{index}（{company}，{salary}，{score_text}，{tag}）")
+    return "建议：优先查看 " + " → ".join(picks) + "，确认完整 JD 后再投递。"
 
 
 def _source_note(

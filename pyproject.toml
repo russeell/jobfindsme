@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jobfindsme"
-version = "0.12.0"
+version = "0.12.1"
 description = "Local-first AI job search radar for MCP agents — search, filter, and track jobs across BOSS直聘, 猎聘, 智联招聘 and 前程无忧"
 readme = "README.md"
 license = "MIT"
@@ -34,7 +34,6 @@ browser = [
   "curl_cffi>=0.7,<1",
 ]
 dev = [
-  "Pillow>=10,<13",
   "pytest>=8,<10",
   "ruff>=0.12,<1",
 ]

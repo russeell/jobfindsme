@@ -14,7 +14,6 @@ from evaluation.agent_behavior.models import (
     BehaviorTranscriptSuite,
 )
 
-_SECTIONS = tuple(f"【{index}·" for index in range(1, 6))
 _APPLY_URL = re.compile(r"投递链接：https?://\S+")
 _BARE_URL = re.compile(r"https?://\S+")
 
@@ -89,7 +88,7 @@ def _find_jobs_with_resume(transcript: BehaviorTranscript) -> list[str]:
     return failures
 
 
-def _preserve_five_sections_and_links(transcript: BehaviorTranscript) -> list[str]:
+def _preserve_facts_and_links(transcript: BehaviorTranscript) -> list[str]:
     failures = _require_factual_search_output(transcript)
     output = _last_assistant(transcript)
     if _APPLY_URL.search(output) is None:
@@ -184,7 +183,7 @@ def _explain_recommendation(transcript: BehaviorTranscript) -> list[str]:
 
 _CHECKS: dict[str, Callable[[BehaviorTranscript], list[str]]] = {
     "find_jobs_with_resume": _find_jobs_with_resume,
-    "preserve_five_sections_and_links": _preserve_five_sections_and_links,
+    "preserve_facts_and_links": _preserve_facts_and_links,
     "explain_source_degradation": _explain_source_degradation,
     "mark_job_applied": _mark_job_applied,
     "incremental_search": _incremental_search,

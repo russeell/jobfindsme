@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from jobfindsme.app import jobfindsmecore
 from jobfindsme.cli import default_database_path
 from jobfindsme.contracts import (
     EmploymentType,
@@ -14,13 +14,12 @@ from jobfindsme.contracts import (
     SearchRefreshMode,
     SourceRunStatus,
 )
-from jobfindsme.core import jobfindsmecore
 from jobfindsme.doctor import Doctor
 from jobfindsme.mcp import ToolRegistry
 from jobfindsme.presentation import format_search_results
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT_DIR = ROOT / "reports" / "real-world"
+REPORT_DIR = ROOT / "evaluation" / "evidence"
 
 
 def _source_family(source_name: str) -> str:
@@ -45,7 +44,6 @@ def _top_counts(matches: tuple[Any, ...]) -> dict[str, int]:
 
 def _source_rows(
     source_runs: tuple[Any, ...],
-    top_counts: dict[str, int],
 ) -> list[dict]:
     rows = []
     for run in source_runs:
@@ -61,7 +59,7 @@ def _source_rows(
                 "unique": run.unique,
                 "versions_created": run.versions_created,
                 "cache_used": run.cache_used,
-                "top_count": top_counts.get(family, 0),
+                "top_count": run.top_results,
                 "error": run.error,
             }
         )
@@ -114,7 +112,7 @@ def _markdown_report(payload: dict) -> str:
         "",
         f"- Generated at: `{payload['generated_at']}`",
         f"- Database: `{payload['database']}`",
-        f"- Query: roles={payload['query']['target_roles']}, "
+        f"- Query: role={payload['query']['target_role']}, "
         f"locations={payload['query']['locations']}, "
         f"salary_min_k={payload['query']['salary_min_k']}",
         f"- End-to-end elapsed: `{payload['search']['elapsed_seconds']}s`",
@@ -143,7 +141,7 @@ def _markdown_report(payload: dict) -> str:
             f"- Doctor OK: `{payload['smoke']['doctor_ok']}`",
             f"- Configure OK: `{payload['smoke']['configure_ok']}`",
             f"- Search OK: `{payload['smoke']['search_ok']}`",
-            f"- Sections present: `{payload['smoke']['sections_present']}`",
+            f"- Factual layers present: `{payload['smoke']['layers_present']}`",
             f"- Link present: `{payload['smoke']['link_present']}`",
             "",
         ]
@@ -151,179 +149,42 @@ def _markdown_report(payload: dict) -> str:
     return "\n".join(lines)
 
 
-def _compact_terminal_text(final_text: str, *, max_jobs: int = 4) -> str:
-    """Keep a README screenshot short while preserving the real contract."""
-    lines = []
-    current_job = 0
-    in_jobs = False
-    skipped = 0
-    for line in final_text.splitlines():
-        if line.startswith("【4·岗位列表】"):
-            in_jobs = True
-            lines.append(line)
-            continue
-        if line.startswith("【5·说明】"):
-            in_jobs = False
-            if skipped:
-                lines.extend(
-                    [
-                        "",
-                        f"... 其余 {skipped} 个岗位已省略，实际输出包含完整链接。",
-                    ]
-                )
-            lines.append(line)
-            continue
-        if in_jobs:
-            if re.match(r"^\d+\.\s", line):
-                current_job += 1
-            if current_job > max_jobs:
-                if line.strip():
-                    skipped += 1 if re.match(r"^\d+\.\s", line) else 0
-                continue
-        lines.append(line)
-    return _display_safe_text("\n".join(lines))
-
-
-def _display_safe_text(text: str) -> str:
-    """Avoid glyphs that common GitHub/OS screenshot fonts render poorly."""
-    return (
-        text.replace("✓", "OK")
-        .replace("△", "CACHE")
-        .replace("✗", "FAILED")
-        .replace("📬", "定时")
-        .replace("📋", "历史")
-    )
-
-
-def _write_terminal_asset(path: Path, prompt: str, final_text: str) -> None:
-    """Render a terminal-style PNG without exposing local paths or IDs."""
-    from PIL import Image, ImageDraw
-
-    width = 1280
-    padding_x = 44
-    max_text_width = width - padding_x * 2
-    font = _load_font(20)
-    font_bold = _load_font(22)
-    title_font = _load_font(16)
-    compact = _compact_terminal_text(final_text)
-    raw_lines = [f"$ {prompt}", ""] + compact.splitlines()
-    wrapped: list[tuple[str, str]] = []
-    for line in raw_lines:
-        style = "prompt" if line.startswith("$ ") else "line"
-        wrapped.extend((style, item) for item in _wrap_line(line, font, max_text_width))
-    line_height = 30
-    header_height = 58
-    height = min(2000, header_height + 34 + line_height * len(wrapped))
-    image = Image.new("RGB", (width, height), "#0b0f14")
-    draw = ImageDraw.Draw(image)
-    draw.rectangle((0, 0, width, header_height), fill="#111827")
-    draw.ellipse((24, 21, 40, 37), fill="#ff5f57")
-    draw.ellipse((50, 21, 66, 37), fill="#febc2e")
-    draw.ellipse((76, 21, 92, 37), fill="#28c840")
-    draw.text(
-        (112, 20),
-        "jobfindsme real MCP output",
-        fill="#94a3b8",
-        font=title_font,
-    )
-    y = header_height + 28
-    for style, line in wrapped:
-        if y > height - 36:
-            draw.text(
-                (padding_x, y),
-                "... 输出已截断，真实结果保留完整岗位和链接",
-                fill="#94a3b8",
-                font=font,
-            )
-            break
-        fill = "#f9fafb" if style == "prompt" else "#d1d5db"
-        active_font = font_bold if style == "prompt" else font
-        draw.text((padding_x, y), line, fill=fill, font=active_font)
-        y += line_height
-    path.parent.mkdir(parents=True, exist_ok=True)
-    image.save(path)
-
-
-def _load_font(size: int):
-    from PIL import ImageFont
-
-    candidates = (
-        "/System/Library/Fonts/Hiragino Sans GB.ttc",
-        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-        "/Library/Fonts/Arial Unicode.ttf",
-    )
-    for candidate in candidates:
-        if Path(candidate).exists():
-            return ImageFont.truetype(candidate, size)
-    return ImageFont.load_default()
-
-
-def _wrap_line(line: str, font: Any, max_width: int) -> list[str]:
-    if not line:
-        return [""]
-    draw = ImageDrawForMeasure.instance()
-    chunks: list[str] = []
-    current = ""
-    for char in line:
-        trial = current + char
-        if draw.text_width(trial, font) <= max_width:
-            current = trial
-            continue
-        if current:
-            chunks.append(current)
-        current = char
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-class ImageDrawForMeasure:
-    _instance: ImageDrawForMeasure | None = None
-
-    def __init__(self) -> None:
-        from PIL import Image, ImageDraw
-
-        self._draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-
-    @classmethod
-    def instance(cls) -> ImageDrawForMeasure:
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
-
-    def text_width(self, text: str, font: Any) -> int:
-        left, _, right, _ = self._draw.textbbox((0, 0), text, font=font)
-        return right - left
-
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=default_database_path())
-    parser.add_argument("--role", action="append", default=["AI应用工程师"])
-    parser.add_argument("--city", action="append", default=["上海", "深圳"])
+    parser.add_argument("--role", default="AI应用工程师")
+    parser.add_argument("--city", action="append")
     parser.add_argument("--salary-min-k", type=int, default=20)
     parser.add_argument("--experience-max-years", type=int, default=3)
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument(
         "--refresh-mode",
-        choices=("fast", "full", "cache"),
-        default="full",
+        choices=("live", "cache"),
+        default="live",
     )
-    parser.add_argument("--allow-browser-sources", action="store_true", default=True)
-    parser.add_argument("--include-seen", action="store_true", default=True)
-    parser.add_argument("--use-profile", action="store_true", default=True)
-    parser.add_argument("--reports-dir", type=Path, default=REPORT_DIR)
     parser.add_argument(
-        "--asset",
-        type=Path,
-        default=REPORT_DIR / "latest_search.png",
+        "--allow-browser-sources",
+        action=argparse.BooleanOptionalAction,
+        default=True,
     )
+    parser.add_argument(
+        "--include-seen",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument(
+        "--use-profile",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument("--reports-dir", type=Path, default=REPORT_DIR)
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
     generated_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    cities = tuple(args.city or ("上海", "深圳"))
     core = jobfindsmecore(args.db)
     registry = ToolRegistry(core)
 
@@ -331,9 +192,8 @@ def main() -> int:
     config_response = registry.call(
         "setup",
         {
-            "name": "Real World Smoke",
-            "target_roles": tuple(args.role),
-            "locations": tuple(args.city),
+            "target_role": args.role,
+            "locations": cities,
             "salary_min_k": args.salary_min_k,
             "experience_max_years": args.experience_max_years,
             "recruitment_track": RecruitmentTrack.SOCIAL.value,
@@ -341,6 +201,11 @@ def main() -> int:
         },
     )
     configure_ok = config_response.get("isError") is False
+    if not configure_ok:
+        message = config_response.get("content", [{}])[0].get(
+            "text", "setup failed without an error message"
+        )
+        raise RuntimeError(f"real-world smoke setup failed: {message}")
     result = core.search_jobs_with_diagnostics(
         limit=args.limit,
         allow_browser_sources=args.allow_browser_sources,
@@ -389,8 +254,8 @@ def main() -> int:
         "generated_at": generated_at,
         "database": _public_database_path(args.db),
         "query": {
-            "target_roles": args.role,
-            "locations": args.city,
+            "target_role": args.role,
+            "locations": cities,
             "salary_min_k": args.salary_min_k,
             "experience_max_years": args.experience_max_years,
             "recruitment_track": "social",
@@ -409,13 +274,16 @@ def main() -> int:
             "reopened_count": result.diagnostics.reopened_count,
             "closed_count": result.diagnostics.closed_count,
         },
-        "sources": _source_rows(result.diagnostics.source_runs, top_counts),
+        "sources": _source_rows(result.diagnostics.source_runs),
         "top_counts": top_counts,
         "smoke": {
             "doctor_ok": doctor.ok,
             "configure_ok": configure_ok,
             "search_ok": mcp_search.get("isError") is False,
-            "sections_present": all(f"【{index}·" in mcp_text for index in range(1, 6)),
+            "layers_present": all(
+                heading in mcp_text
+                for heading in ("【搜索摘要】", "【推荐岗位】", "【状态与下一步】")
+            ),
             "link_present": "投递链接：http" in mcp_text,
         },
         "final_text": final_text,
@@ -430,20 +298,11 @@ def main() -> int:
     markdown = _markdown_report(payload)
     md_path.write_text(markdown, encoding="utf-8")
     latest_md.write_text(markdown, encoding="utf-8")
-    _write_terminal_asset(
-        args.asset,
-        (
-            "用 jobfindsme，根据本地简历，找上海和深圳的 "
-            "AI 应用工程师，20K以上，社招，正式。"
-        ),
-        final_text,
-    )
     print(
         json.dumps(
             {
                 "json": str(json_path),
                 "markdown": str(md_path),
-                "asset": str(args.asset),
                 "ok": True,
             },
             ensure_ascii=False,

@@ -93,8 +93,19 @@ AI_ROLE_SIGNALS = (
 NON_ENGINEERING_ROLE_MARKERS = (
     "产品经理",
     "产品运营",
+    "运营经理",
+    "销售",
+    "售前",
+    "商务",
+    "市场经理",
+    "客户成功",
+    "招聘",
     "product manager",
     "product owner",
+    "sales",
+    "presales",
+    "customer success",
+    "recruiter",
 )
 
 LOCATION_ALIASES: dict[str, tuple[str, ...]] = {

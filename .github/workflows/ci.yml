@@ -55,6 +55,33 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
 
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Windows runtime and browser path regressions
+        run: >-
+          python -m pytest
+          tests/connectors/test_boss_zhipin.py
+          tests/installer
+          tests/mcp/test_stdio_server.py
+          tests/integrations/test_cli_workflow.py
+      - name: Build and install the Windows wheel
+        shell: pwsh
+        run: |
+          python -m pip install build
+          python -m build --wheel
+          $wheel = Get-ChildItem dist -Filter *.whl | Select-Object -First 1
+          python -m pip install --force-reinstall --no-deps $wheel.FullName
+          python -m jobfindsme --version
+      - run: ruff check .
+      - run: ruff format --check .
+
   clean-install:
     runs-on: ubuntu-latest
     steps:

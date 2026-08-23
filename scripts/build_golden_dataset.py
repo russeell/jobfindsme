@@ -71,9 +71,33 @@ def build() -> dict:
             "m05", "AI应用工程师（Agent方向）", "深蓝智能科技", "上海", "30-55K", "high"
         ),
         match("m06", "AI应用开发工程师", "灵犀智能科技", "深圳", "22-40K·13薪", "high"),
-        match("m07", "大模型应用工程师", "极目数字科技", "上海", "25-40K", "medium"),
-        match("m08", "AI应用工程师", "华信数智科技", "深圳", "20-35K", "medium"),
-        match("m09", "AI应用工程师", "蓝湖数据科技", "上海", "20-30K", "medium"),
+        match(
+            "m07",
+            "大模型应用工程师",
+            "极目数字科技",
+            "上海",
+            "25-40K",
+            "medium",
+            skills="RAG Java Kubernetes",
+        ),
+        match(
+            "m08",
+            "AI应用工程师",
+            "华信数智科技",
+            "深圳",
+            "20-35K",
+            "medium",
+            skills="Python Go Kubernetes",
+        ),
+        match(
+            "m09",
+            "AI应用工程师",
+            "蓝湖数据科技",
+            "上海",
+            "20-30K",
+            "medium",
+            skills="FastAPI Go Kubernetes",
+        ),
         match(
             "m10",
             "大模型应用开发工程师",
@@ -81,14 +105,61 @@ def build() -> dict:
             "深圳",
             "26-42K·14薪",
             "medium",
+            skills="LLM Java Kubernetes",
         ),
-        match("m11", "AI应用工程师", "星图软件科技", "上海", "30-45K", "medium"),
-        match("m12", "AI应用工程师", "微纳智能科技", "深圳", "25-35K", "medium"),
-        match("m13", "AI应用工程师", "恒远信息技术", "上海", "20-40K", "low"),
-        match("m14", "大模型应用工程师", "锐驰智能科技", "深圳", "22-38K", "low"),
-        match("m15", "AI应用工程师", "万象互联科技", "上海", "21-36K", "low"),
         match(
-            "m16", "AI Agent开发工程师", "北辰软件科技", "深圳", "24-44K·15薪", "low"
+            "m11",
+            "AI应用工程师",
+            "星图软件科技",
+            "上海",
+            "30-45K",
+            "medium",
+            skills="Dify Java Kubernetes",
+        ),
+        match(
+            "m12",
+            "AI应用工程师",
+            "微纳智能科技",
+            "深圳",
+            "25-35K",
+            "medium",
+            skills="MCP Go Kubernetes",
+        ),
+        match(
+            "m13",
+            "AI应用工程师",
+            "恒远信息技术",
+            "上海",
+            "20-40K",
+            "low",
+            skills="Excel 数据整理",
+        ),
+        match(
+            "m14",
+            "大模型应用工程师",
+            "锐驰智能科技",
+            "深圳",
+            "22-38K",
+            "low",
+            skills="需求沟通 文档编写",
+        ),
+        match(
+            "m15",
+            "AI应用工程师",
+            "万象互联科技",
+            "上海",
+            "21-36K",
+            "low",
+            skills="低代码配置",
+        ),
+        match(
+            "m16",
+            "AI应用开发工程师",
+            "北辰软件科技",
+            "深圳",
+            "24-44K·15薪",
+            "low",
+            skills="现场实施 客户培训",
         ),
         match(
             "m17",
@@ -115,7 +186,7 @@ def build() -> dict:
             "上海",
             "25-45K",
             "medium",
-            skills="Dify 工作流",
+            skills="Dify Java Kubernetes",
         ),
         match(
             "m20",
@@ -124,7 +195,7 @@ def build() -> dict:
             "深圳",
             "28-48K",
             "medium",
-            skills="MCP 工具调用",
+            skills="MCP Go Kubernetes",
         ),
         match(
             "m21",
@@ -151,7 +222,7 @@ def build() -> dict:
             "上海",
             "20-32K",
             "low",
-            skills="Python Flask",
+            skills="Go Java Kubernetes",
         ),
         match(
             "m24",
@@ -160,7 +231,7 @@ def build() -> dict:
             "深圳",
             "23-40K",
             "medium",
-            skills="RAG Agent",
+            skills="RAG Agent Java Kubernetes",
         ),
         # ── Must be rejected ──────────────────────────────────────────
         reject(
@@ -278,6 +349,11 @@ def build() -> dict:
         "dataset_version": "golden_v1",
         "dataset_type": "golden_synthetic_regression",
         "plan": PLAN,
+        "profile_text": (
+            "技能：Python、RAG、Agent、MCP、LangChain、FastAPI、Dify、LLM\n"
+            "工作经历\nAI应用工程师 3年\n"
+            "教育背景\n计算机科学 硕士"
+        ),
         "provenance": {
             "evidence_kind": "synthetic",
             "collection_method": "generated_fixture",

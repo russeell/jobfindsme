@@ -25,6 +25,7 @@ from jobfindsme.importing.normalizer import parse_monthly_salary_min_k
 from jobfindsme.profiles.models import FactType, ProfileSummary
 from jobfindsme.taxonomy import (
     expand_location_terms,
+    expand_role_terms,
     extract_skills,
     is_target_role_candidate,
 )
@@ -65,8 +66,11 @@ def filter_jobs(
         return eligible[:limit]
 
     # Coarse ranking: deterministic signal-match score
-    scored = [(job, _score_signals(job, profile)) for job in eligible]
-    scored.sort(key=lambda item: item[1], reverse=True)
+    scored = [
+        (job, score_signals(job, profile, target_roles=plan.target_roles))
+        for job in eligible
+    ]
+    scored.sort(key=lambda item: _ranking_key(item[0], item[1]), reverse=True)
     return [job for job, _ in scored[:limit]]
 
 
@@ -148,26 +152,12 @@ def extract_job_signals(job: JobPosting) -> dict:
             required_degree = val
             break
 
-    # Employment type
-    if "实习" in text or "intern" in text:
-        employment_type = "internship"
-    elif "兼职" in text:
-        employment_type = "part_time"
-    else:
-        employment_type = "full_time"
-
-    # Recruitment track
-    if any(t in text for t in ("校招", "校园", "应届", "2027届", "2026届")):
-        recruitment_track = "campus"
-    else:
-        recruitment_track = "social"
-
     return {
         "required_skills": required_skills,
         "required_experience": required_experience,
         "required_degree": required_degree,
-        "employment_type": employment_type,
-        "recruitment_track": recruitment_track,
+        "employment_type": job.employment_type.value,
+        "recruitment_track": job.recruitment_track.value,
         "liveness": job.source.liveness.value if job.source.liveness else "unknown",
         "salary_range": (
             f"{job.salary_min_k}K-{job.salary_max_k}K" if job.salary_min_k else ""
@@ -181,30 +171,37 @@ def extract_job_signals(job: JobPosting) -> dict:
 def score_signals(
     job: JobPosting,
     profile: ProfileSummary | None,
+    *,
+    target_roles: tuple[str, ...] = (),
 ) -> float:
-    """Deterministic match score, 0.0 or 0.60–1.0.
+    """Return an evidence score from 0.0 to 1.0, never an admission probability.
 
-    A job that reaches this function has already passed every decidable
-    hard constraint (role, location, salary, track, type, experience), so
-    the score starts at 0.60 and adds up to 0.40 from evidence signals
-    (skill overlap dominates, then experience, degree, liveness, salary).
-    This keeps every recommendable job in the 60%–100% band instead of
-    punishing candidates whose JD text is sparse. The server owns this
-    reproducible ordering; a host Agent may explain it but must not
-    silently replace it.
-
-    Returns 0.0 when *profile* is None (no scoring without a profile).
+    Hard constraints are pass/fail and deliberately excluded from the score.
+    The score measures observable role, skill, experience, education, and
+    liveness evidence. Sparse job descriptions therefore produce lower
+    coverage instead of receiving an artificial 60% floor.
     """
     if profile is None:
         return 0.0
-    return _score_signals(job, profile)
+    return _score_breakdown(job, profile, target_roles=target_roles)[0]
 
 
-def _score_signals(
+def score_breakdown(
     job: JobPosting,
     profile: ProfileSummary,
-) -> float:
-    """Deterministic signal score: 0.60 hard-condition floor + 0.40 bonus."""
+    *,
+    target_roles: tuple[str, ...] = (),
+) -> tuple[float, dict[str, float], float, str]:
+    """Return score, component scores, evidence coverage, and relevance level."""
+    return _score_breakdown(job, profile, target_roles=target_roles)
+
+
+def _score_breakdown(
+    job: JobPosting,
+    profile: ProfileSummary,
+    *,
+    target_roles: tuple[str, ...],
+) -> tuple[float, dict[str, float], float, str]:
     signals = extract_job_signals(job)
 
     profile_skills = {
@@ -215,58 +212,74 @@ def _score_signals(
     profile_degree = _profile_highest_degree(profile)
     profile_exp_years = _profile_experience_years(profile)
 
-    score = 0.0
-    details: list[str] = []
+    components = {
+        "role": 0.0,
+        "skills": 0.0,
+        "experience": 0.0,
+        "education": 0.0,
+        "liveness": 0.0,
+    }
+    observable_weight = 0.25  # title is always observable
 
-    # ── Skill overlap (up to 0.50) ──
+    role_terms = expand_role_terms(target_roles or (job.title,))
+    title = job.title.casefold()
+    if any(term.casefold() in title for term in role_terms):
+        components["role"] = 0.25
+    elif is_target_role_candidate(
+        job.title,
+        job.description,
+        target_roles or (job.title,),
+    ):
+        components["role"] = 0.15
+
+    # ── Skill overlap (up to 0.35) ──
     if signals["required_skills"] and profile_skills:
         jd_set = {s.casefold() for s in signals["required_skills"]}
         overlap = jd_set & profile_skills
         if jd_set:
             skill_ratio = len(overlap) / len(jd_set)
-            skill_score = min(0.50, skill_ratio * 0.50)
-            score += skill_score
-            if overlap:
-                details.append(f"技能命中{len(overlap)}/{len(jd_set)}")
+            components["skills"] = min(0.35, skill_ratio * 0.35)
+            observable_weight += 0.35
 
-    # ── Experience alignment (up to 0.25) ──
+    # ── Experience alignment (up to 0.20) ──
     if profile_exp_years is not None and job.experience_min_years is not None:
+        observable_weight += 0.20
         if profile_exp_years >= job.experience_min_years:
-            score += 0.25
-            details.append("经验满足")
+            components["experience"] = 0.20
         elif profile_exp_years >= job.experience_min_years - 2:
-            score += 0.10
-            details.append(
-                f"经验略低(要求{job.experience_min_years}年,简历{profile_exp_years}年)"
-            )
-    elif profile_exp_years is not None:
-        score += 0.12  # unknown requirement → partial credit
-        details.append("经验要求未标注")
+            components["experience"] = 0.08
 
     # ── Degree match (up to 0.10) ──
     jd_degree = signals["required_degree"]
     if jd_degree and profile_degree:
+        observable_weight += 0.10
         jd_level = _DEGREE_ORDER.get(jd_degree, 0)
         pf_level = _DEGREE_ORDER.get(profile_degree, 0)
         if pf_level >= jd_level and jd_level > 0:
-            score += 0.10
-            details.append(f"学历匹配({profile_degree}≥{jd_degree})")
+            components["education"] = 0.10
         elif pf_level > 0:
-            score += 0.03
-            details.append(f"学历略低(要求{jd_degree},简历{profile_degree})")
+            components["education"] = 0.03
 
-    # ── Liveness bonus (up to 0.05) ──
+    # ── Liveness evidence (up to 0.10) ──
     if job.source.liveness is JobLiveness.ACTIVE:
-        score += 0.05
+        components["liveness"] = 0.10
+        observable_weight += 0.10
     elif job.source.liveness is JobLiveness.UNKNOWN:
-        score += 0.01
+        components["liveness"] = 0.02
+        observable_weight += 0.10
 
-    # ── Salary presence (up to 0.05) ──
-    if job.salary_min_k or (job.salary and job.salary.raw_text):
-        score += 0.05
+    score = round(sum(components.values()), 4)
+    coverage = round(min(1.0, observable_weight), 4)
+    relevance = "high" if score >= 0.70 else "medium" if score >= 0.45 else "low"
+    return score, components, coverage, relevance
 
-    normalized = score / 0.95  # signal part never exceeds 0.95
-    return round(min(1.0, 0.60 + 0.40 * normalized), 4)
+
+def _ranking_key(job: JobPosting, score: float) -> tuple[float, int, float, str]:
+    """Stable ranking: evidence score, liveness, recency, then job id."""
+    liveness = 1 if job.source.liveness is JobLiveness.ACTIVE else 0
+    fetched_at = job.source.fetched_at
+    timestamp = fetched_at.timestamp() if fetched_at is not None else 0.0
+    return score, liveness, timestamp, job.job_id
 
 
 def _profile_highest_degree(profile: ProfileSummary) -> str | None:
@@ -303,12 +316,14 @@ def _hard_filter(
     if (
         plan.recruitment_track is not None
         and plan.recruitment_track is not RecruitmentTrack.UNKNOWN
+        and job.recruitment_track is not RecruitmentTrack.UNKNOWN
         and job.recruitment_track is not plan.recruitment_track
     ):
         return False
     if (
         plan.employment_type is not None
         and plan.employment_type is not EmploymentType.UNKNOWN
+        and job.employment_type is not EmploymentType.UNKNOWN
         and job.employment_type is not plan.employment_type
     ):
         return False

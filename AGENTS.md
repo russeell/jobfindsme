@@ -131,23 +131,13 @@ wording but must not contradict the facts. Only call `get_jobs` (with
 When the user says they do not want to use a resume, pass
 `use_profile: false` to `search_jobs`.
 
-The Server's summary uses the five-section structure (SKILL.md Output
-Contract), in order. You may adapt wording, but returning the summary (possibly
-lightly edited) is the fastest correct answer:
-
-1. **第 1 段 · 简历解析** — always present. With a resume, show counts only:
-   `简历解析：技能 12 项 ｜ 经验 2 项 ｜ 学历：硕士` — never list actual
-   skills/experience content or institutions. Without a resume, state that
-   the explicit search conditions were used.
-2. **第 2 段 · 检索概览** — per source from `diagnostics.source_runs`:
-   `猎聘·上海 ✓(42) · BOSS直聘·上海 ✗(原因)` + 本轮来源返回 N 条记录.
-3. **第 3 段 · 过滤说明** — the plan constraints applied →
-   `→ 给出 N 个` (N = `diagnostics.result_count`).
-4. **第 4 段 · 岗位列表** — each job as a block grounded in structured facts:
-   fact line (+ 匹配度 X% when score > 0), signal line, bare-URL
-   投递链接, and the Server's evidence-grounded 推荐理由.
-5. **第 5 段 · 说明** — preserve new/changed/reopened/closed and
-   previously-shown counts without renaming them.
+The Server summary has three dynamic layers: search summary, recommended jobs,
+and status/next actions. The headings are not a verbatim protocol. Preserve
+the underlying profile counts, filters, source states, job facts, bare apply
+URLs, evidence score/coverage, risks, and new/changed/reopened/closed counts.
+Hard constraints are pass/fail; the evidence score has no artificial floor and
+is never an admission probability. Unknown recruitment type, employment type,
+experience, or salary must stay unknown rather than being guessed.
 
 Block rules: base fact/signal lines on the returned facts; apply link is a BARE URL on
 its own line (no Markdown/HTML wrapping — terminal clients auto-link bare

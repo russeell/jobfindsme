@@ -19,7 +19,7 @@ def test_acceptance_prompts_cover_user_critical_behaviors() -> None:
 
     assert {case["case_id"] for case in suite["cases"]} == {
         "find_jobs_with_resume",
-        "preserve_five_sections_and_links",
+        "preserve_facts_and_links",
         "explain_source_degradation",
         "mark_job_applied",
         "incremental_search",
@@ -37,7 +37,7 @@ def test_baseline_demonstrates_failure_before_the_skill() -> None:
     assert report.gate_passed is False
     assert set(report.failed_case_ids) == {
         "find_jobs_with_resume",
-        "preserve_five_sections_and_links",
+        "preserve_facts_and_links",
         "explain_source_degradation",
         "mark_job_applied",
         "incremental_search",

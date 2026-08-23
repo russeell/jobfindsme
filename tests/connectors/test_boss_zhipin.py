@@ -13,6 +13,8 @@ from jobfindsme.connectors.boss_zhipin import (
     BossAuthenticationRequired,
     BossConnectorError,
     BossZhipinConnector,
+    _browser_bridge_error,
+    _browser_candidates,
     _CDPSession,
     _chrome_command,
     setup_chrome,
@@ -132,8 +134,30 @@ def test_boss_payload_maps_salary_location_skills_and_job_link() -> None:
     assert job.locations == ("上海 · 浦东新区",)
     assert "Python" in job.description
     assert job.apply_url.endswith("encrypted-1.html")
-    assert job.recruitment_track == "social"
-    assert job.employment_type == "full_time"
+    assert job.recruitment_track == "unknown"
+    assert job.employment_type == "unknown"
+
+
+def test_boss_does_not_guess_social_full_time_without_visible_labels() -> None:
+    fake = FakeCdp(
+        {
+            "jobs": [
+                {
+                    "job_id": "unknown-type",
+                    "title": "AI应用工程师",
+                    "company": "示例科技",
+                    "location": "上海",
+                    "salary": "20-30K",
+                    "job_link": "https://www.zhipin.com/job_detail/unknown-type.html",
+                }
+            ]
+        }
+    )
+
+    job = normalize_job(connector(fake).fetch()[0])
+
+    assert job.recruitment_track.value == "unknown"
+    assert job.employment_type.value == "unknown"
 
 
 def test_boss_classifies_campus_internship_from_visible_labels() -> None:
@@ -231,6 +255,26 @@ def test_chrome_command_keeps_the_browser_sandbox_enabled() -> None:
     assert "--disable-gpu-sandbox" not in command
     assert "--disable-gpu" not in command
     assert "--remote-debugging-port=9222" in command
+
+
+def test_windows_browser_candidates_cover_user_local_chrome_and_edge() -> None:
+    candidates = _browser_candidates({"LOCALAPPDATA": r"C:\Users\me\AppData\Local"})
+
+    assert any(
+        path.endswith(r"Google\Chrome\Application\chrome.exe") for path in candidates
+    )
+    assert any(
+        path.endswith(r"Microsoft\Edge\Application\msedge.exe") for path in candidates
+    )
+
+
+def test_browser_bridge_error_exposes_only_product_recovery_actions() -> None:
+    message = _browser_bridge_error(9222)
+
+    assert "jobfindsme setup" in message
+    assert "jobfindsme doctor" in message
+    assert "remote-debugging-port" not in message
+    assert "zhipin.com" not in message
 
 
 def test_setup_chrome_skips_launch_when_cdp_already_reachable(

@@ -15,6 +15,7 @@
       "驻场"
     ]
   },
+  "profile_text": "技能：Python、RAG、Agent、MCP、LangChain、FastAPI、Dify、LLM\n工作经历\nAI应用工程师 3年\n教育背景\n计算机科学 硕士",
   "provenance": {
     "evidence_kind": "synthetic",
     "collection_method": "generated_fixture",
@@ -106,7 +107,7 @@
       "title": "大模型应用工程师",
       "company": "极目数字科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-40K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 RAG Java Kubernetes 25-40K 上海 ",
       "url": "https://example.com/golden/m07",
       "label": {
         "should_match": true,
@@ -119,7 +120,7 @@
       "title": "AI应用工程师",
       "company": "华信数智科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-35K 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 Python Go Kubernetes 20-35K 深圳 ",
       "url": "https://example.com/golden/m08",
       "label": {
         "should_match": true,
@@ -132,7 +133,7 @@
       "title": "AI应用工程师",
       "company": "蓝湖数据科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-30K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 FastAPI Go Kubernetes 20-30K 上海 ",
       "url": "https://example.com/golden/m09",
       "label": {
         "should_match": true,
@@ -145,7 +146,7 @@
       "title": "大模型应用开发工程师",
       "company": "青云智能科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 26-42K·14薪 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 LLM Java Kubernetes 26-42K·14薪 深圳 ",
       "url": "https://example.com/golden/m10",
       "label": {
         "should_match": true,
@@ -158,7 +159,7 @@
       "title": "AI应用工程师",
       "company": "星图软件科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 30-45K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 Dify Java Kubernetes 30-45K 上海 ",
       "url": "https://example.com/golden/m11",
       "label": {
         "should_match": true,
@@ -171,7 +172,7 @@
       "title": "AI应用工程师",
       "company": "微纳智能科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 25-35K 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 MCP Go Kubernetes 25-35K 深圳 ",
       "url": "https://example.com/golden/m12",
       "label": {
         "should_match": true,
@@ -184,7 +185,7 @@
       "title": "AI应用工程师",
       "company": "恒远信息技术",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 20-40K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 Excel 数据整理 20-40K 上海 ",
       "url": "https://example.com/golden/m13",
       "label": {
         "should_match": true,
@@ -197,7 +198,7 @@
       "title": "大模型应用工程师",
       "company": "锐驰智能科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 22-38K 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 需求沟通 文档编写 22-38K 深圳 ",
       "url": "https://example.com/golden/m14",
       "label": {
         "should_match": true,
@@ -210,7 +211,7 @@
       "title": "AI应用工程师",
       "company": "万象互联科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 21-36K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 低代码配置 21-36K 上海 ",
       "url": "https://example.com/golden/m15",
       "label": {
         "should_match": true,
@@ -220,10 +221,10 @@
     },
     {
       "id": "m16",
-      "title": "AI Agent开发工程师",
+      "title": "AI应用开发工程师",
       "company": "北辰软件科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 Python RAG Agent MCP 24-44K·15薪 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 现场实施 客户培训 24-44K·15薪 深圳 ",
       "url": "https://example.com/golden/m16",
       "label": {
         "should_match": true,
@@ -262,7 +263,7 @@
       "title": "AI应用工程师",
       "company": "启明数据科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Dify 工作流 25-45K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 Dify Java Kubernetes 25-45K 上海 ",
       "url": "https://example.com/golden/m19",
       "label": {
         "should_match": true,
@@ -275,7 +276,7 @@
       "title": "AI应用工程师",
       "company": "芯联智能科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 MCP 工具调用 28-48K 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 MCP Go Kubernetes 28-48K 深圳 ",
       "url": "https://example.com/golden/m20",
       "label": {
         "should_match": true,
@@ -314,7 +315,7 @@
       "title": "AI应用工程师",
       "company": "光点软件科技",
       "location": "上海",
-      "description": "社招 全职 正式岗位 3-5年 Python Flask 20-32K 上海 ",
+      "description": "社招 全职 正式岗位 3-5年 Go Java Kubernetes 20-32K 上海 ",
       "url": "https://example.com/golden/m23",
       "label": {
         "should_match": true,
@@ -327,7 +328,7 @@
       "title": "大模型应用开发工程师",
       "company": "瀚海数据科技",
       "location": "深圳",
-      "description": "社招 全职 正式岗位 3-5年 RAG Agent 23-40K 深圳 ",
+      "description": "社招 全职 正式岗位 3-5年 RAG Agent Java Kubernetes 23-40K 深圳 ",
       "url": "https://example.com/golden/m24",
       "label": {
         "should_match": true,

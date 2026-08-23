@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from evaluation.regression.legacy_matcher import LegacyBM25Matcher
 from jobfindsme.connectors.base import RawJobRecord
 from jobfindsme.contracts import (
@@ -13,7 +15,9 @@ from jobfindsme.contracts import (
 )
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.matching import (
+    extract_job_signals,
     filter_jobs,
+    score_breakdown,
     score_signals,
     tokenize,
     undisclosed_salary_counts,
@@ -133,6 +137,25 @@ def test_ai_keywords_do_not_make_product_manager_an_engineering_candidate() -> N
     assert [match.job.external_id for match in matches] == ["engineer"]
 
 
+@pytest.mark.parametrize(
+    "title",
+    [
+        "AI售前工程师",
+        "AI解决方案销售",
+        "AI产品运营经理",
+        "人工智能客户成功经理",
+        "AI招聘顾问",
+    ],
+)
+def test_non_engineering_ai_titles_do_not_enter_engineering_candidates(title) -> None:
+    matches = DeterministicMatcher().match(
+        plan(locations=("上海",), salary_min_k=None),
+        [job("non-engineering", title=title, location="上海")],
+    )
+
+    assert matches == []
+
+
 def test_product_manager_remains_valid_when_explicitly_requested() -> None:
     matches = DeterministicMatcher().match(
         plan(
@@ -235,7 +258,7 @@ def test_maximum_salary_uses_the_posted_upper_bound() -> None:
     assert [match.job.external_id for match in matches] == ["within"]
 
 
-def test_strict_track_and_type_do_not_accept_unknown_classification() -> None:
+def test_strict_track_and_type_keep_unknown_but_reject_known_conflicts() -> None:
     strict_plan = plan(
         recruitment_track=RecruitmentTrack.SOCIAL,
         employment_type=EmploymentType.FULL_TIME,
@@ -251,7 +274,10 @@ def test_strict_track_and_type_do_not_accept_unknown_classification() -> None:
         ],
     )
 
-    assert [match.job.external_id for match in matches] == ["social-full-time"]
+    assert [match.job.external_id for match in matches] == [
+        "unknown",
+        "social-full-time",
+    ]
 
 
 def test_confirmed_profile_skills_change_ranking_and_keep_evidence() -> None:
@@ -439,6 +465,43 @@ def test_experience_range_must_overlap_plan_range() -> None:
     assert [item.external_id for item in passed] == ["matching", "unknown"]
 
 
+def test_unknown_track_and_employment_are_kept_but_not_guessed() -> None:
+    unknown = job("unknown-classification", description="Python RAG，25-40K")
+    signals = extract_job_signals(unknown)
+
+    passed = filter_jobs(
+        plan(
+            recruitment_track=RecruitmentTrack.SOCIAL,
+            employment_type=EmploymentType.FULL_TIME,
+        ),
+        [unknown],
+    )
+
+    assert passed == [unknown]
+    assert signals["recruitment_track"] == "unknown"
+    assert signals["employment_type"] == "unknown"
+
+
+def test_explicit_conflicting_track_and_employment_are_rejected() -> None:
+    internship = job(
+        "campus-intern",
+        title="AI应用工程师实习生",
+        description="2027届校园招聘 实习岗位 Python RAG，300元/天",
+    )
+
+    assert (
+        filter_jobs(
+            plan(
+                salary_min_k=None,
+                recruitment_track=RecruitmentTrack.SOCIAL,
+                employment_type=EmploymentType.FULL_TIME,
+            ),
+            [internship],
+        )
+        == []
+    )
+
+
 def test_score_signals_skill_overlap_dominates() -> None:
     python_job = job("python", description="Python RAG Agent，1-3年，25-40K")
     java_job = job("java", description="Java Spring 云原生平台，1-3年，25-40K")
@@ -474,6 +537,29 @@ def test_score_signals_degree_match() -> None:
 
 def test_score_signals_returns_zero_without_profile() -> None:
     assert score_signals(job("plain"), None) == 0.0
+
+
+def test_score_is_evidence_weighted_without_artificial_floor() -> None:
+    sparse = job("sparse", description="AI应用工程师，25-40K")
+    rich = job(
+        "rich",
+        description="AI应用工程师，Python RAG Agent，1-3年，本科，25-40K",
+    )
+    profile = _profile("Python", "RAG", "Agent", experience="3年", degree="硕士")
+
+    sparse_score, _, sparse_coverage, sparse_level = score_breakdown(
+        sparse, profile, target_roles=("AI应用工程师",)
+    )
+    rich_score, components, rich_coverage, rich_level = score_breakdown(
+        rich, profile, target_roles=("AI应用工程师",)
+    )
+
+    assert sparse_score < 0.60
+    assert rich_score > sparse_score
+    assert rich_coverage > sparse_coverage
+    assert components["skills"] > 0
+    assert sparse_level == "low"
+    assert rich_level in {"medium", "high"}
 
 
 # ── Regression: salary conflict — raw vs structured ────────────────────

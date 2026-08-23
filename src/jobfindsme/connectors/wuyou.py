@@ -146,11 +146,11 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
     elif link.startswith("/"):
         link = "https://www.51job.com" + link
     classification = " ".join((title, str(item.get("jobtype_text") or ""))).casefold()
-    recruitment_track = (
-        "campus"
-        if any(t in classification for t in ("校招", "校园", "应届"))
-        else "social"
-    )
+    recruitment_track = "unknown"
+    if any(t in classification for t in ("校招", "校园", "应届")):
+        recruitment_track = "campus"
+    elif any(t in classification for t in ("社招", "社会招聘")):
+        recruitment_track = "social"
     job_type = str(item.get("jobtype_text") or "").casefold()
     employment_type = (
         "internship"
@@ -160,6 +160,8 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
         else "contract"
         if "合同" in job_type
         else "full_time"
+        if any(t in job_type for t in ("正式", "全职", "full-time"))
+        else "unknown"
     )
     description = " ".join(
         part

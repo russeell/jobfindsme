@@ -7,9 +7,9 @@
       "purpose": "The Agent delegates the resume path and follows the profile-plan-search tool sequence."
     },
     {
-      "case_id": "preserve_five_sections_and_links",
+      "case_id": "preserve_facts_and_links",
       "prompt": "找上海 AI 应用工程师，并把结果直接给我。",
-      "purpose": "The Agent composes the answer from structured facts and preserves every bare apply link."
+      "purpose": "The Agent may adapt wording but preserves every returned fact and bare apply link."
     },
     {
       "case_id": "explain_source_degradation",

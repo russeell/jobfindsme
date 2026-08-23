@@ -1,4 +1,4 @@
-"""Per-job blocks: facts, match result, signals, apply link, reason.
+"""Per-job blocks: facts, hard constraints, evidence, link, and risks.
 
 Every block is generated ONLY from structured evidence (job fields +
 extracted signals). Never add subjective evaluations.
@@ -84,14 +84,15 @@ def format_job_list(
         # Structured signals support deterministic reasons and optional host UI.
         signals = _extracted_signals(evidence)
 
-        # Match degree = 0.60 hard-condition floor + signal bonus; shown
-        # only when a confirmed profile exists (score_signals returns 0
-        # without one).
-        if score and score > 0:
-            lines.append(f"   匹配度：{round(score * 100)}%（信号匹配，非录用概率）")
-        elif include_recommendation:
+        if include_recommendation:
+            lines.append("   硬条件：已通过所有可判定条件；未知项见风险提示")
+        if profile_used and score is not None:
+            relevance = getattr(evidence, "relevance_level", "unknown")
+            coverage = float(getattr(evidence, "evidence_coverage", 0) or 0)
+            labels = {"high": "高", "medium": "中", "low": "低", "unknown": "未知"}
             lines.append(
-                "   匹配度：已通过角色、地点、薪资等可判定硬条件（非录用概率）"
+                f"   证据匹配：{round(score * 100)}/100（{labels[relevance]}）；"
+                f"证据覆盖：{round(coverage * 100)}%（均非录用概率）"
             )
 
         signal_parts = []
@@ -191,7 +192,11 @@ def _recommendation_reason(
     if missing:
         parts.append("岗位要求但简历未体现：" + "、".join(missing[:6]))
     if profile_used and score is not None:
-        parts.append(f"简历事实与岗位信号综合匹配度为 {round(score * 100)}%")
+        coverage = float(getattr(evidence, "evidence_coverage", 0) or 0)
+        parts.append(
+            f"可验证证据得分 {round(score * 100)}/100，"
+            f"证据覆盖 {round(coverage * 100)}%"
+        )
     else:
         parts.append("岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）")
     skills = signals.get("required_skills") or []

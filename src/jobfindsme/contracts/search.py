@@ -173,11 +173,22 @@ class SearchConfiguration(StrictModel):
     source_links: tuple[SourceLink, ...] = ()
 
 
+class SourceDiagnosticItem(StrictModel):
+    """Bounded source evidence exposed to the host Agent."""
+
+    source_name: str
+    status: str
+    discovered: int = Field(default=0, ge=0)
+    top_results: int = Field(default=0, ge=0)
+    cache_used: bool = False
+    elapsed_seconds: float = Field(default=0, ge=0)
+
+
 class SearchDiagnosticSummary(StrictModel):
     """Compact per-source status for structuredContent.
 
-    Deliberately omits raw errors, timestamps, per-source discovered counts,
-    and full SourceRunStats; job-level facts travel in `jobs` instead.
+    Raw errors and timestamps stay internal. Per-source counts expose whether
+    a connector was live, cached, and represented in the returned Top results.
     """
 
     refresh_mode: SearchRefreshMode
@@ -190,6 +201,7 @@ class SearchDiagnosticSummary(StrictModel):
     )
     total_discovered: int = Field(default=0, ge=0)
     result_count: int = Field(default=0, ge=0)
+    sources: tuple[SourceDiagnosticItem, ...] = ()
 
 
 class ExportReceipt(StrictModel):

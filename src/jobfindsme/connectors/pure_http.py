@@ -219,8 +219,8 @@ class LiepinPureHttpConnector:
                         "salary": str(job.get("salary", "")),
                         "url": link,
                         "apply_url": link,
-                        "recruitment_track": "social",
-                        "employment_type": "full_time",
+                        "recruitment_track": "unknown",
+                        "employment_type": "unknown",
                     },
                 )
             )

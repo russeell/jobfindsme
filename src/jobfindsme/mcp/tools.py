@@ -2,7 +2,7 @@
 five tools share this file.
 
 Each handler returns ``(text | None, structured)``: the optional human
-text (search_jobs renders the five-section baseline here) and the
+text (search_jobs renders a compact three-layer summary here) and the
 structured value that the registry validates against the tool schema.
 """
 

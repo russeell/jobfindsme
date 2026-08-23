@@ -196,7 +196,8 @@ def test_cli_markdown_show_match_degree_when_profile_exists(tmp_path, capsys) ->
     )
 
     output = capsys.readouterr().out
-    assert "匹配度：" in output  # profile exists → signal score shown
+    assert "证据匹配：" in output
+    assert "证据覆盖：" in output
     assert "投递链接：https://example.com/jobs/1" in output
 
 

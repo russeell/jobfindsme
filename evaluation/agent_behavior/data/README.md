@@ -9,7 +9,7 @@ workflow.
 `cases.json` covers eight release-critical behaviors:
 
 1. one sentence triggers `setup -> search_jobs`;
-2. the five-section Server output and bare apply links stay intact;
+2. returned facts and bare apply links stay intact across Agent wording;
 3. cache use and source failure stay visible with a chat-based recovery action;
 4. “mark job 2 as applied” calls `update_job_state` correctly;
 5. incremental search suppresses jobs already shown;

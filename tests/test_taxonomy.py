@@ -6,6 +6,7 @@ from jobfindsme.taxonomy import (
     SKILL_ALIASES,
     SKILL_TAXONOMY_VERSION,
     extract_skills,
+    is_target_role_candidate,
     validate_skill_taxonomy,
 )
 
@@ -29,3 +30,11 @@ def test_taxonomy_rejects_cross_skill_alias_collisions() -> None:
                 "skills": {"First": ["shared"], "Second": ["SHARED"]},
             }
         )
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["AI售前工程师", "AI销售经理", "人工智能产品运营", "AI客户成功经理"],
+)
+def test_ai_signal_does_not_override_non_engineering_role(title: str) -> None:
+    assert not is_target_role_candidate(title, "RAG Agent", ("AI应用工程师",))

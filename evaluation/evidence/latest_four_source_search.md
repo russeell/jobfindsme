@@ -1,30 +1,30 @@
 # jobfindsme Real-World Source Report
 
-- Generated at: `2026-08-09T10:04:30+00:00`
-- Database: `~/.jobfindsme/data/jobfindsme.db`
-- Query: roles=['AI应用工程师'], locations=['上海', '深圳'], salary_min_k=20
-- End-to-end elapsed: `6.653s`
+- Generated at: `2026-08-23T22:20:20+00:00`
+- Database: `<custom local database>`
+- Query: role=AI应用工程师, locations=('上海', '深圳'), salary_min_k=20
+- End-to-end elapsed: `6.387s`
 - Remote discovered: `84`
 - Unique imported: `79`
-- Top results: `20`
+- Top results: `10`
 
 ## Sources
 
 | Source | Status | Time | Found | Unique | Top | Cache | Error |
 |---|---:|---:|---:|---:|---:|---:|---|
-| 猎聘·深圳 | SUCCESS | 0.938s | 42 | 39 | 10 | no |  |
-| 智联招聘·深圳 | DEGRADED | 4.463s | 0 | 0 | 0 | yes | 智联接口返回空结果（可能被风控拦截，请稍后重试或用浏览器查看） |
-| 猎聘·上海 | SUCCESS | 0.908s | 42 | 40 | 10 | no |  |
-| 前程无忧·上海 | DEGRADED | 3.48s | 0 | 0 | 0 | yes | 前程无忧页面内请求失败：waf_blocked |
-| BOSS直聘·上海 | DEGRADED | 0.474s | 0 | 0 | 10 | yes | CDP Runtime.evaluate failed: {'code': -32000, 'message': 'Inspected target navigated or closed'} |
-| 智联招聘·上海 | DEGRADED | 4.055s | 0 | 0 | 0 | yes | 智联接口返回空结果（可能被风控拦截，请稍后重试或用浏览器查看） |
-| 前程无忧·深圳 | DEGRADED | 3.328s | 0 | 0 | 0 | yes | 前程无忧页面内请求失败：waf_blocked |
-| BOSS直聘·深圳 | DEGRADED | 0.347s | 0 | 0 | 10 | yes | browser refresh returned no jobs; using cached records |
+| 智联招聘·上海 | FAILED | 3.443s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
+| BOSS直聘·深圳 | FAILED | 3.01s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
+| 猎聘·上海 | SUCCESS | 0.767s | 42 | 40 | 0 | no |  |
+| 猎聘·深圳 | SUCCESS | 0.844s | 42 | 39 | 10 | no |  |
+| 前程无忧·深圳 | FAILED | 2.716s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
+| 前程无忧·上海 | FAILED | 2.947s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
+| 智联招聘·深圳 | FAILED | 3.859s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
+| BOSS直聘·上海 | FAILED | 1.765s | 0 | 0 | 0 | no | jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。 |
 
 ## MCP Smoke
 
 - Doctor OK: `True`
 - Configure OK: `True`
 - Search OK: `True`
-- Sections present: `True`
+- Factual layers present: `True`
 - Link present: `True`

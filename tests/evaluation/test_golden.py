@@ -16,6 +16,8 @@ def test_golden_regression_gate_passes() -> None:
     assert report.total_jobs == 40
     assert report.relevant_count == 24
     assert report.precision_at_k >= 0.80
+    assert report.worth_opening_precision_at_10 >= 0.80
+    assert report.ndcg_at_10 >= 0.85
     assert report.recall_at_k >= 0.80
     assert report.filter_false_negative_rate <= 0.05
     assert report.false_positive_count == 0
@@ -27,4 +29,6 @@ def test_golden_dataset_is_deterministic() -> None:
 
     assert first.recall_at_k == second.recall_at_k
     assert first.precision_at_k == second.precision_at_k
+    assert first.worth_opening_precision_at_10 == second.worth_opening_precision_at_10
+    assert first.ndcg_at_10 == second.ndcg_at_10
     assert first.dataset_sha256 == second.dataset_sha256

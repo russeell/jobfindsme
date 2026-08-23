@@ -61,6 +61,14 @@ class CdpSession(Protocol):
     def close(self) -> None: ...
 
 
+def _browser_bridge_error(_port: int) -> str:
+    """Return one host-neutral recovery action for every CDP-backed source."""
+    return (
+        "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；"
+        "若仍失败，运行 jobfindsme doctor 查看诊断。"
+    )
+
+
 class _CDPSession:
     """Chrome DevTools Protocol session with read/write separation.
 
@@ -100,7 +108,8 @@ class _CDPSession:
             from websocket import create_connection
         except ImportError as exc:
             raise BossConnectorError(
-                'BOSS requires the "jobfindsme[browser]" optional dependencies.'
+                'Browser-backed sources require the "jobfindsme[browser]" '
+                "optional dependencies."
             ) from exc
 
         try:
@@ -116,13 +125,7 @@ class _CDPSession:
                 origin=f"http://127.0.0.1:{port}",
             )
         except (OSError, ValueError, TimeoutError) as exc:
-            raise BossConnectorError(
-                f"无法连接 Chrome 调试端口 127.0.0.1:{port}。\n"
-                "请先开启 Chrome 远程调试：\n"
-                "  macOS: open -a 'Google Chrome' --args --remote-debugging-port=9222\n"
-                "  Linux: google-chrome --remote-debugging-port=9222\n"
-                f"然后在 Chrome 中打开 {BOSS_ORIGIN} 登录。"
-            ) from exc
+            raise BossConnectorError(_browser_bridge_error(port)) from exc
         self._message_id = 0
         self._lock = __import__("threading").Lock()
         self._futures: dict[int, __import__("threading").Event] = {}
@@ -340,19 +343,21 @@ class BossZhipinConnector:
         classification_text = " ".join(
             str(item.get(key, "")) for key in ("title", "job_labels")
         ).casefold()
-        recruitment_track = (
-            "campus"
-            if any(term in classification_text for term in ("校招", "校园", "应届"))
-            else "social"
-        )
+        recruitment_track = "unknown"
+        if any(term in classification_text for term in ("校招", "校园", "应届")):
+            recruitment_track = "campus"
+        elif any(term in classification_text for term in ("社招", "社会招聘")):
+            recruitment_track = "social"
         if any(term in classification_text for term in ("实习", "intern")):
             employment_type = "internship"
         elif "兼职" in classification_text:
             employment_type = "part_time"
         elif "合同" in classification_text:
             employment_type = "contract"
-        else:
+        elif any(term in classification_text for term in ("正式", "全职")):
             employment_type = "full_time"
+        else:
+            employment_type = "unknown"
         return RawJobRecord(
             source_kind=SourceKind.CAREER_SITE,
             source_name=self.source_name,
@@ -410,6 +415,26 @@ def _chrome_command(chrome: str, profile: str, urls: list[str]) -> list[str]:
     ]
 
 
+def _browser_candidates(env: dict[str, str] | None = None) -> tuple[str, ...]:
+    """Return supported Chrome/Edge executable locations across OSes."""
+    from pathlib import Path
+
+    values = os.environ if env is None else env
+    local_app_data = Path(values.get("LOCALAPPDATA", ""))
+    return (
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        str(local_app_data / "Google" / "Chrome" / "Application" / "chrome.exe"),
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        str(local_app_data / "Microsoft" / "Edge" / "Application" / "msedge.exe"),
+    )
+
+
 def _cdp_reachable(
     port: int = DEFAULT_CDP_PORT,
     timeout: float = 1.0,
@@ -451,25 +476,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             ),
         }
 
-    chrome_paths = [
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/usr/bin/google-chrome",
-        "/usr/bin/chromium-browser",
-        "/usr/bin/chromium",
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        str(
-            Path(os.environ.get("LOCALAPPDATA", ""))
-            / "Google"
-            / "Chrome"
-            / "Application"
-            / "chrome.exe"
-        ),
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-    ]
-
-    chrome = next((p for p in chrome_paths if Path(p).exists()), None)
+    chrome = next((p for p in _browser_candidates() if Path(p).exists()), None)
     if not chrome:
         return {
             "ok": False,

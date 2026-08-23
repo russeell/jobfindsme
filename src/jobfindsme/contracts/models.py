@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -142,6 +142,7 @@ class SourceRunStats(StrictModel):
     discovered: int = Field(default=0, ge=0)
     unique: int = Field(default=0, ge=0)
     versions_created: int = Field(default=0, ge=0)
+    top_results: int = Field(default=0, ge=0)
     cache_used: bool = False
     error: str | None = Field(default=None, max_length=1000)
 
@@ -307,6 +308,9 @@ class MatchEvidence(StrictModel):
     missing_job_skills: tuple[str, ...] = ()
     missing_required_skills: tuple[str, ...] = ()
     extracted_signals: dict = Field(default_factory=dict)
+    score_components: dict[str, float] = Field(default_factory=dict)
+    evidence_coverage: float = Field(default=0, ge=0, le=1)
+    relevance_level: Literal["high", "medium", "low", "unknown"] = "unknown"
 
 
 class EvidencePair(StrictModel):

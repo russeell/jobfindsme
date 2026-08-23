@@ -463,18 +463,17 @@ def _aggregate_liveness(values: list[JobLiveness]) -> JobLiveness:
 
 
 def _repair_legacy_boss_classification(job: JobPosting) -> JobPosting:
-    """Interpret cached BOSS rows written before explicit type fields existed."""
+    """Repair only classifications supported by visible legacy BOSS evidence."""
 
     if not job.source.source_name.startswith("BOSS直聘"):
         return job
     text = f"{job.title} {job.description}".casefold()
     recruitment_track = job.recruitment_track
     if recruitment_track is RecruitmentTrack.UNKNOWN:
-        recruitment_track = (
-            RecruitmentTrack.CAMPUS
-            if any(term in text for term in ("校招", "校园", "应届"))
-            else RecruitmentTrack.SOCIAL
-        )
+        if any(term in text for term in ("校招", "校园", "应届")):
+            recruitment_track = RecruitmentTrack.CAMPUS
+        elif any(term in text for term in ("社招", "社会招聘")):
+            recruitment_track = RecruitmentTrack.SOCIAL
     employment_type = job.employment_type
     if employment_type is EmploymentType.UNKNOWN:
         if any(term in text for term in ("实习", "intern")):
@@ -483,7 +482,7 @@ def _repair_legacy_boss_classification(job: JobPosting) -> JobPosting:
             employment_type = EmploymentType.PART_TIME
         elif "合同" in text:
             employment_type = EmploymentType.CONTRACT
-        else:
+        elif any(term in text for term in ("正式岗位", "全职岗位", "全职")):
             employment_type = EmploymentType.FULL_TIME
     return job.model_copy(
         update={

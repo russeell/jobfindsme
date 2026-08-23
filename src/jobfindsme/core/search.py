@@ -30,7 +30,7 @@ from jobfindsme.matching import (
     extract_job_signals,
     filter_jobs,
     has_undisclosed_salary,
-    score_signals,
+    score_breakdown,
     undisclosed_salary_counts,
 )
 from jobfindsme.profiles.models import FactType
@@ -329,24 +329,50 @@ class SearchOrchestrator:
                 for skill in required_skills
                 if skill.casefold() not in profile_skills
             ]
+            score, score_components, evidence_coverage, relevance_level = (
+                score_breakdown(
+                    job,
+                    profile,
+                    target_roles=context.plan.target_roles,
+                )
+                if profile is not None
+                else (0.0, {}, 0.0, "unknown")
+            )
+            warnings = []
+            if has_undisclosed_salary(job) and (
+                context.plan.salary_min_k is not None
+                or context.plan.salary_max_k is not None
+            ):
+                warnings.append("薪资未公开，尚未验证是否满足薪资条件")
+            if (
+                context.plan.recruitment_track is not None
+                and job.recruitment_track is RecruitmentTrack.UNKNOWN
+            ):
+                warnings.append("招聘类型未注明，无法确认是否符合要求")
+            if (
+                context.plan.employment_type is not None
+                and job.employment_type is EmploymentType.UNKNOWN
+            ):
+                warnings.append("岗位性质未注明，无法确认是否符合要求")
+            if (
+                context.plan.experience_max_years is not None
+                and job.experience_min_years is None
+                and job.experience_max_years is None
+            ):
+                warnings.append("经验要求未注明，无法确认是否符合要求")
             matches.append(
                 JobMatch(
                     job=job,
-                    score=score_signals(job, profile),
+                    score=score,
                     evidence=MatchEvidence(
                         hard_filter_passed=True,
                         matched_profile_skills=tuple(matched),
                         missing_required_skills=tuple(missing),
-                        warnings=(
-                            ("薪资未公开，尚未验证是否满足薪资条件",)
-                            if has_undisclosed_salary(job)
-                            and (
-                                context.plan.salary_min_k is not None
-                                or context.plan.salary_max_k is not None
-                            )
-                            else ()
-                        ),
+                        warnings=tuple(warnings),
                         extracted_signals=signals,
+                        score_components=score_components,
+                        evidence_coverage=evidence_coverage,
+                        relevance_level=relevance_level,
                     ),
                 )
             )
@@ -501,6 +527,16 @@ class SearchOrchestrator:
             all_jobs=all_jobs,
             limit=limit,
             include_seen=include_seen,
+        )
+        top_by_source: dict[str, int] = {}
+        for match in radar.matches:
+            source_name = match.job.source.source_name
+            top_by_source[source_name] = top_by_source.get(source_name, 0) + 1
+        source_runs = tuple(
+            run.model_copy(
+                update={"top_results": top_by_source.get(run.source_name, 0)}
+            )
+            for run in source_runs
         )
         matching_seconds = perf_counter() - matching_started
         finished_at = datetime.now(UTC)

@@ -141,7 +141,7 @@ TOOL_DEFINITIONS = (
             "request, but never auto-call it to rebuild the initial result.  "
             "Set use_profile=false when the user says they do not want to "
             "use a resume for this search; the Server skips profile loading "
-            "entirely, Section 1 shows '本次未使用简历', and no match "
+            "entirely, the search summary says '本次未使用简历', and no match "
             "percentages appear.  The local profile is NOT deleted."
         ),
         SearchJobsInput,

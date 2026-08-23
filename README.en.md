@@ -134,7 +134,7 @@ config + one Skill serves them all.
 | One-sentence search | Agent calls the local MCP server; search config and results come back automatically |
 | Four sources | BOSS直聘, 猎聘, 智联招聘, 前程无忧; failures are labeled, never hidden |
 | Resume matching | Local PDF/MD/TXT parsing; ranks by skills, experience, education signals |
-| Fact-grounded output | Server returns bounded structured facts + a five-section factual summary; the agent organizes the final wording |
+| Fact-grounded output | Server returns bounded structured facts + a compact three-layer summary; the agent organizes the final wording |
 | Incremental radar | Detects new, changed, reopened, closed jobs — no repeat recommendations |
 | State memory | Save, applied, ignored; applied jobs are never re-suggested |
 | Local-first | No model API key; resume and state stay in local SQLite |
@@ -186,13 +186,15 @@ Mark job #2 as applied; ignore all staffing-agency companies.
 
 The Server decides job facts, filtering, ranking, evidence, and apply links; the
 agent builds the final answer from those facts. Each result returns bounded
-structured facts (`structuredContent.jobs`) plus a five-section factual
-baseline (resume summary / search overview / filter note / job list / operating
-summary) that the agent may adapt in wording and layout but must not contradict:
+structured facts (`structuredContent.jobs`) plus a compact three-layer summary
+(search summary / recommended jobs / status and next actions). Headings are not
+a verbatim protocol; the Agent may adapt wording and layout but must not change
+facts, evidence, risks, source status, or links:
 
 ```text
 AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
-匹配度：92%（信号匹配，非录用概率）
+硬条件：已通过所有可判定条件；未知项见风险提示
+证据匹配：86/100（高）；证据覆盖：90%（均非录用概率）
 技能：RAG、Agent、MCP ｜ 经验：1-3年 ｜ 学历：本科
 
 投递链接：https://example.com/jobs/123
@@ -204,10 +206,11 @@ AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜2
 Each recommendation should preserve the **fact line, direct apply link, and
 reason**. With a resume, the Server also returns a deterministic score and
 evidence; without one, it only applies explicit constraints and does not invent
-a match score. Scores use a 60% hard-condition floor plus up to 40% evidence
-bonus, and are ordered from high to low. Agents may change wording and layout,
-but may not invent or alter jobs, salaries, links, scores, or reasons. Missing
-fields are labeled, not guessed.
+an evidence score and evidence coverage. Hard constraints are pass/conflict/
+unknown and are not points. The 0–100 score uses observable role, skill,
+experience, education, and liveness evidence; sparse JDs remain low-coverage.
+Without a resume, no score is fabricated. Missing track, employment type,
+experience, or salary remains unknown rather than being guessed.
 
 ---
 
@@ -247,7 +250,7 @@ Agent (Claude / GPT / Qwen / WorkBuddy — interaction and follow-up talk)
   → normalize → cross-source dedup → hard filter (city/salary/track/type)
   → signal extraction + weighted coarse rank (skills/experience/education/liveness/salary)
   → incremental radar (new / changed / reopened / closed)
-  → Server returns bounded facts + a five-section summary; the agent composes
+  → Server returns bounded facts + a compact three-layer summary; the agent composes
     the answer from the facts (never inventing or dropping apply URLs)
 ```
 

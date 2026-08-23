@@ -189,7 +189,8 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     rendered = first["content"][0]["text"]
     structured = first["structuredContent"]
 
-    section_positions = [rendered.index(f"【{index}·") for index in range(1, 6)]
+    headings = ("【搜索摘要】", "【推荐岗位】", "【状态与下一步】")
+    section_positions = [rendered.index(heading) for heading in headings]
     assert section_positions == sorted(section_positions)
     assert structured["count"] == 1
     assert structured["summary"] == rendered
@@ -199,7 +200,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     }
     assert history_companies == {"甲公司", "乙公司"}
     assert "乙公司" not in rendered
-    assert "匹配度：" in rendered
+    assert "证据匹配：" not in rendered
     assert "推荐理由：" in rendered
     assert "投递链接：https://example.com/jobs/qualified" in rendered
     assert "本轮远程发现 2 条，本地岗位库匹配到 1 条" in rendered
@@ -212,7 +213,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     )
     assert second["isError"] is False
     second_text = second["content"][0]["text"]
-    assert all(f"【{index}·" in second_text for index in range(1, 6))
+    assert all(heading in second_text for heading in headings)
     assert "本轮未刷新外部来源，从本地缓存匹配到 0 条" in second_text
     assert "此前展示且未变化" in second_text
     assert "重复岗位" not in second_text

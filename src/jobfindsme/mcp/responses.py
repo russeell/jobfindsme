@@ -77,6 +77,17 @@ def build_search_output(
             "source_summary": build_source_summary(diag_dict),
             "total_discovered": diag_dict.get("total_discovered", 0),
             "result_count": diag_dict.get("result_count", count),
+            "sources": [
+                {
+                    "source_name": item.get("source_name", "未知来源"),
+                    "status": item.get("status", "skipped"),
+                    "discovered": item.get("discovered", 0),
+                    "top_results": item.get("top_results", 0),
+                    "cache_used": item.get("cache_used", False),
+                    "elapsed_seconds": item.get("elapsed_seconds", 0),
+                }
+                for item in diag_dict.get("source_runs", [])
+            ],
         },
     }
 
@@ -84,8 +95,8 @@ def build_search_output(
 def build_source_summary(diagnostics: dict[str, Any]) -> str:
     """Build a compact source-status line from diagnostics.source_runs.
 
-    Mirror of the section-2 source line in format_search_results, kept
-    deliberately compact — no raw errors, no timestamps, no per-source
+    Mirror of the search-summary source line, kept deliberately compact —
+    no raw errors, no timestamps, no per-source
     discovered counts beyond the pre-formatted string.
 
     Chrome/CDP errors are sanitised to the single recovery message so the

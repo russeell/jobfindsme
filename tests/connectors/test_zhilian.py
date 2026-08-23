@@ -93,7 +93,7 @@ def test_zhilian_parses_job_payload() -> None:
     assert record.payload["title"] == "AI应用工程师（Agent方向）"
     assert record.payload["company"] == "示例科技"
     assert record.payload["salary"] == "20-40K·14薪"
-    assert record.payload["recruitment_track"] == "social"
+    assert record.payload["recruitment_track"] == "unknown"
     assert record.payload["employment_type"] == "full_time"
     assert (
         record.payload["apply_url"] == "https://www.zhaopin.com/job_detail/example.html"

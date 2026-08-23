@@ -39,7 +39,9 @@ Where each decision happens:
 - **过滤** — `matching.py::_hard_filter` (location, salary, track,
   type, exclusions, seniority, stale liveness)
 - **排序** — `matching.py::_score_signals` (deterministic
-  signal-match score: 60% hard-condition floor + up to 40% evidence
+  evidence score: hard constraints stay pass/fail/unknown; role, skill,
+  experience, education, and liveness evidence produce a separate 0–100 score
+  plus evidence coverage
   bonus from skill overlap, experience, degree, liveness, and salary
   visibility)
 - **记录变化** — `tracking.py` (select_and_record: new, changed,

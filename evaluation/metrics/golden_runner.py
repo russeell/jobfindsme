@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -26,6 +27,8 @@ class GoldenReport(StrictModel):
     relevant_count: int = 0
     predicted_count: int = 0
     precision_at_k: float = 0
+    worth_opening_precision_at_10: float = 0
+    ndcg_at_10: float = 0
     recall_at_k: float = 0
     filter_false_negative_rate: float = 0
     false_positive_count: int = 0
@@ -38,6 +41,8 @@ class GoldenReport(StrictModel):
             f"Golden {self.dataset_version}\n"
             f"  Jobs: {self.total_jobs} (relevant {self.relevant_count})\n"
             f"  Precision@{20}: {self.precision_at_k:.3f}\n"
+            f"  Worth-open P@10: {self.worth_opening_precision_at_10:.3f}\n"
+            f"  NDCG@10:       {self.ndcg_at_10:.3f}\n"
             f"  Recall@{20}:    {self.recall_at_k:.3f}\n"
             f"  Filter FNR:    {self.filter_false_negative_rate:.3f}\n"
             f"  FP:            {self.false_positive_count}\n"
@@ -75,9 +80,9 @@ def evaluate_golden_dataset(
     dataset = json.loads(raw)
     plan = dataset["plan"]
 
+    temp_dir = Path(tempfile.mkdtemp())
     if core is None:
-        tmp = Path(tempfile.mkdtemp()) / "golden.db"
-        core = jobfindsmecore(tmp)
+        core = jobfindsmecore(temp_dir / "golden.db")
     core.configure_search(
         target_role=plan["target_role"],
         locations=plan["locations"],
@@ -87,6 +92,15 @@ def evaluate_golden_dataset(
         exclusions=plan.get("exclusions", []),
     )
     workspace_id = core.context.resolve_workspace().workspace_id
+    profile_text = dataset.get("profile_text")
+    if profile_text:
+        resume_path = temp_dir / "golden-resume.txt"
+        resume_path.write_text(profile_text, encoding="utf-8")
+        profile = core.import_resume(source_path=str(resume_path))
+        core.confirm_profile(
+            profile_id=profile.profile_id,
+            accepted_fact_ids=[fact.fact_id for fact in profile.facts],
+        )
     core.job_imports.import_records(
         workspace_id,
         parse_json(
@@ -95,7 +109,10 @@ def evaluate_golden_dataset(
         ),
     )
 
-    matches = core.match_jobs(limit=len(dataset["jobs"]), use_profile=False)
+    matches = core.match_jobs(
+        limit=len(dataset["jobs"]),
+        use_profile=bool(profile_text),
+    )
     predicted = [match.job.external_id for match in matches[:k]]
     predicted_set = set(predicted)
     relevant = {job["id"] for job in dataset["jobs"] if job["label"]["should_match"]}
@@ -115,6 +132,26 @@ def evaluate_golden_dataset(
     for job_id in predicted:
         top_counts[relevance_by_id.get(job_id, "low")] += 1
 
+    top_10 = predicted[:10]
+    worth_opening = {"high", "medium"}
+    worth_hits = sum(relevance_by_id.get(job_id) in worth_opening for job_id in top_10)
+    worth_precision = worth_hits / len(top_10) if top_10 else 0.0
+    gains = {"high": 3, "medium": 2, "low": 0}
+    actual_gains = [
+        gains.get(relevance_by_id.get(job_id, "low"), 0) for job_id in top_10
+    ]
+    ideal_gains = sorted(
+        (gains.get(value, 0) for value in relevance_by_id.values()), reverse=True
+    )[:10]
+
+    def dcg(values: list[int]) -> float:
+        return sum(
+            (2**gain - 1) / math.log2(index + 2) for index, gain in enumerate(values)
+        )
+
+    ideal_dcg = dcg(ideal_gains)
+    ndcg = dcg(actual_gains) / ideal_dcg if ideal_dcg else 0.0
+
     reasons: dict[str, int] = {}
     by_id = {job["id"]: job for job in dataset["jobs"]}
     for job_id in sorted(filter_misses):
@@ -125,6 +162,8 @@ def evaluate_golden_dataset(
         recall >= 0.80
         and filter_fnr <= 0.05
         and precision >= 0.80
+        and worth_precision >= 0.80
+        and ndcg >= 0.85
         and len(false_positives) == 0
     )
     return GoldenReport(
@@ -135,6 +174,8 @@ def evaluate_golden_dataset(
         relevant_count=len(relevant_set),
         predicted_count=len(predicted_set),
         precision_at_k=round(precision, 4),
+        worth_opening_precision_at_10=round(worth_precision, 4),
+        ndcg_at_10=round(ndcg, 4),
         recall_at_k=round(recall, 4),
         filter_false_negative_rate=round(filter_fnr, 4),
         false_positive_count=len(false_positives),

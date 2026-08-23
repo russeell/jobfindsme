@@ -1,7 +1,7 @@
 """Presentation — deterministic, evidence-grounded output rendering.
 
-    search_result.py  — the five-section search contract (①-⑤) + source lines
-    job_block.py      — per-job blocks: facts, match, signals, link, reason
+    search_result.py  — compact search/status summary + source lines
+    job_block.py      — per-job facts, evidence, risks, link, and reason
 
 Every claim MUST be backed by structured signals or job fields.
 """
