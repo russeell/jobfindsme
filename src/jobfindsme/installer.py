@@ -150,7 +150,9 @@ class HostInstaller:
                 raise ValueError("--path is required for generic host")
             backup = self._backup(config_path) if config_path.exists() else None
             document = (
-                json.loads(config_path.read_text()) if config_path.exists() else {}
+                json.loads(config_path.read_text(encoding="utf-8"))
+                if config_path.exists()
+                else {}
             )  # noqa: E501
             document.get("mcpServers", {}).pop("jobfindsme", None)
             config_path.write_text(
@@ -170,10 +172,10 @@ class HostInstaller:
             raise FileNotFoundError(f"{host} config does not exist")
         backup = self._backup(config_path)
         if host == "codex":
-            content = _remove_codex_config(config_path.read_text())
+            content = _remove_codex_config(config_path.read_text(encoding="utf-8"))
             config_path.write_text(content, encoding="utf-8")
         elif host in _STANDARD_JSON_HOSTS:
-            document = json.loads(config_path.read_text())
+            document = json.loads(config_path.read_text(encoding="utf-8"))
             document.get("mcpServers", {}).pop("jobfindsme", None)
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
@@ -198,7 +200,9 @@ class HostInstaller:
             config_path.parent.mkdir(parents=True, exist_ok=True)
             backup = self._backup(config_path) if config_path.exists() else None
             document = (
-                json.loads(config_path.read_text()) if config_path.exists() else {}
+                json.loads(config_path.read_text(encoding="utf-8"))
+                if config_path.exists()
+                else {}
             )  # noqa: E501
             servers = document.setdefault("mcpServers", {})
             if "jobfindsme" in servers and not replace:
@@ -224,7 +228,9 @@ class HostInstaller:
         backup = self._backup(config_path) if config_path.exists() else None
 
         if host == "codex":
-            existing = config_path.read_text() if config_path.exists() else ""
+            existing = (
+                config_path.read_text(encoding="utf-8") if config_path.exists() else ""
+            )
             marker = "[mcp_servers.jobfindsme]"
             if marker in existing and not replace:
                 if backup:
@@ -238,7 +244,9 @@ class HostInstaller:
             )
         elif host in _STANDARD_JSON_HOSTS:
             document = (
-                json.loads(config_path.read_text()) if config_path.exists() else {}
+                json.loads(config_path.read_text(encoding="utf-8"))
+                if config_path.exists()
+                else {}
             )
             servers = document.setdefault("mcpServers", {})
             if "jobfindsme" in servers and not replace:

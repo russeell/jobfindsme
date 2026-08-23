@@ -1,6 +1,6 @@
 {
   "name": "jobfindsme",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "description": "Find, rank, and track jobs through the local jobfindsme MCP server.",
   "author": {
     "name": "russeell"
