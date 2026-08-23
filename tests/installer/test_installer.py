@@ -21,6 +21,13 @@ def installer(home):
     )
 
 
+def configured_python(config: Path, host: str) -> str:
+    content = config.read_text(encoding="utf-8")
+    if host == "codex":
+        return tomllib.loads(content)["mcp_servers"]["jobfindsme"]["command"]
+    return json.loads(content)["mcpServers"]["jobfindsme"]["command"]
+
+
 @pytest.mark.parametrize(
     ("host", "config_relative", "skill_relative"),
     [
@@ -53,7 +60,7 @@ def test_one_command_install_writes_config_and_full_skill(
     assert skill.exists()
     assert "Never read" in skill.read_text(encoding="utf-8")
     assert "complete resume" in skill.read_text(encoding="utf-8")
-    assert str(sys.executable) in config.read_text(encoding="utf-8")
+    assert configured_python(config, host) == str(sys.executable)
 
 
 def test_json_install_preserves_existing_config_and_creates_backup(tmp_path) -> None:
@@ -146,7 +153,7 @@ def test_upgrade_backs_up_and_uninstall_preserves_local_data(
         now=datetime(2026, 7, 29, tzinfo=UTC),
     ).upgrade(host)
     assert upgraded.action == "upgrade"
-    assert str(new_python) in Path(upgraded.config_path).read_text(encoding="utf-8")
+    assert configured_python(Path(upgraded.config_path), host) == str(new_python)
     assert upgraded.backups
 
     removed = HostInstaller(
