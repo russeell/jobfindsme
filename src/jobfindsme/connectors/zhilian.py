@@ -1,11 +1,10 @@
-"""智联招聘 connector via the public web search JSON API (pure HTTP).
+"""智联招聘 connectors.
 
-The SPA at sou.zhaopin.com talks to fe-api.zhaopin.com/c/i/sou without
-login.  We seed the session cookies by visiting the search page once, then
-query the JSON API with the same headers the SPA sends.  When the endpoint
-returns an empty envelope (``numTotal == 0``) the remote is almost certainly
-behind risk control instead of genuinely having no jobs, so we surface that
-as a typed blocked error instead of a silent empty result.
+The legacy pure-HTTP adapter remains as a browser-free best effort.  The
+maintained path navigates the current public search page in the user's local
+Chrome and reads the rendered job cards.  This avoids depending on the old
+``fe-api /c/i/sou`` response, which now commonly returns a risk-controlled
+empty envelope even while the public page contains jobs.
 """
 
 from __future__ import annotations
@@ -158,6 +157,8 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
     url = str(item.get("positionURL") or "")
     if url.startswith("//"):
         url = "https:" + url
+    elif url.startswith("http://www.zhaopin.com"):
+        url = "https://www.zhaopin.com" + url.removeprefix("http://www.zhaopin.com")
     elif url.startswith("/"):
         url = "https://www.zhaopin.com" + url
     title = pick("jobName", "jobTitle")
@@ -182,13 +183,19 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
         else "unknown"
     )
     welfare = item.get("welfare") or []
+    skills = item.get("skills") or []
+    company_tags = item.get("companyTags") or []
+    skill_text = "、".join(str(value) for value in skills) if skills else ""
     description = " ".join(
         part
         for part in (
+            title,
             pick("jobType", "jobTypeText"),
             pick("workingExp"),
             pick("eduLevel"),
             pick("companyType"),
+            skill_text,
+            "、".join(str(value) for value in company_tags),
             "、".join(welfare) if isinstance(welfare, list) else str(welfare),
         )
         if part
@@ -206,7 +213,7 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
             "salary": pick("salary"),
             "experience": pick("workingExp"),
             "degree": pick("eduLevel"),
-            "skills": "",
+            "skills": skill_text,
             "url": url,
             "apply_url": url,
             "recruitment_track": recruitment_track,
@@ -217,30 +224,43 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
     )
 
 
-_FETCH_JS = """(async () => {
-  const url = __API_URL__;
-  try {
-    const response = await fetch(url, {
-      credentials: "include",
-      headers: { Accept: "application/json" },
-    });
-    const text = await response.text();
-    if (text.trimStart().startsWith("<") || text.includes("aliyun_waf")) {
-      return JSON.stringify({ error: "waf_blocked", status: response.status });
-    }
-    return JSON.stringify({ ok: true, text });
-  } catch (error) {
-    return JSON.stringify({ error: "network_error", message: String(error) });
-  }
+_DOM_EXTRACT_JS = r"""(() => {
+  const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
+  const text = (root, selector) => clean(root.querySelector(selector)?.textContent);
+  const texts = (root, selector) => Array.from(root.querySelectorAll(selector))
+    .map((node) => clean(node.textContent)).filter(Boolean);
+  const cards = Array.from(document.querySelectorAll('.joblist-box__item'));
+  const items = cards.map((card) => {
+    const titleLink = card.querySelector('.jobinfo__name');
+    const href = titleLink?.href || '';
+    const info = texts(card, '.jobinfo__other-info-item');
+    const jobId = (href.match(/jobdetail\/([^/?#]+)/i) || [])[1] || href;
+    return {
+      jobId,
+      jobName: clean(titleLink?.textContent),
+      companyName: text(card, '.companyinfo__name'),
+      city: info[0] || '',
+      salary: text(card, '.jobinfo__salary'),
+      workingExp: info[1] || '',
+      eduLevel: info[2] || '',
+      positionURL: href,
+      skills: texts(card, '.jobinfo__tag .joblist-box__item-tag'),
+      companyTags: texts(card, '.companyinfo__tag .joblist-box__item-tag'),
+      jobType: /实习|intern/i.test(clean(titleLink?.textContent)) ? '实习' : '',
+    };
+  }).filter((item) => item.jobName && item.positionURL);
+  const body = clean(document.body?.innerText);
+  return JSON.stringify({
+    items,
+    noResults: /很抱歉.*职位.*找不到|暂无相关职位/.test(body),
+    blocked: /Security Verification|安全验证|访问过于频繁/.test(body),
+    loginLimited: items.length === 0 && /登录之后再搜索/.test(body),
+  });
 })()"""
 
 
 class ZhilianCdpConnector:
-    """智联 CDP fallback: the real page solves WAF, then we call the API.
-
-    Used only when pure HTTP is challenged.  Requires the user's local
-    Chrome bridge (``jobfindsme setup``), same as BOSS直聘.
-    """
+    """Read the current public 智联 search cards in local Chrome."""
 
     def __init__(
         self,
@@ -268,13 +288,6 @@ class ZhilianCdpConnector:
     def _search_url(self) -> str:
         return f"{_SEED_URL}?jl={self._city_id()}&kw={quote(self.keyword)}"
 
-    def _api_url(self) -> str:
-        return (
-            f"{_API_URL}?pageSize=30&cityId={self._city_id()}&kw={quote(self.keyword)}"
-            "&workExperience=-1&education=-1&companyType=-1"
-            "&employmentType=-1&jobWelfareTag=-1&kw2=&kt=3"
-        )
-
     def fetch(self) -> list[RawJobRecord]:
         cdp = self.session_factory(self.cdp_port)
         target_id: str | None = None
@@ -291,17 +304,22 @@ class ZhilianCdpConnector:
             cdp.send("Runtime.enable", sid=sid)
             cdp.send("Page.navigate", {"url": self._search_url()}, sid)
             self._wait_ready(cdp, sid)
-            time.sleep(self.settle_seconds)  # WAF challenge JS + SPA bootstrap
-            raw = cdp.eval_js(
-                _FETCH_JS.replace("__API_URL__", json.dumps(self._api_url())),
-                sid,
-            )
+            time.sleep(self.settle_seconds)
+            self._wait_results(cdp, sid)
+            raw = cdp.eval_js(_DOM_EXTRACT_JS, sid)
             result = json.loads(raw) if isinstance(raw, str) else raw
-            if not isinstance(result, dict) or result.get("error"):
-                raise ZhilianBlockedError(
-                    f"智联页面内请求失败：{result.get('error') or result}"
-                )
-            return _parse_payload(json.loads(result["text"]), self.source_name)
+            if not isinstance(result, dict):
+                raise ZhilianBlockedError(f"智联页面提取失败：返回格式异常 {result!r}")
+            if result.get("blocked") or result.get("loginLimited"):
+                raise ZhilianBlockedError("智联公开搜索页要求完成浏览器安全校验")
+            items = result.get("items") or []
+            if not items and not result.get("noResults"):
+                raise ZhilianBlockedError("智联公开搜索页未返回可解析岗位卡")
+            return [
+                _to_record(item, self.source_name)
+                for item in items
+                if isinstance(item, dict)
+            ]
         finally:
             if target_id is not None:
                 with suppress(Exception):
@@ -316,3 +334,17 @@ class ZhilianCdpConnector:
                 return
             time.sleep(0.2)
         raise ZhilianError("智联页面加载超时")
+
+    @staticmethod
+    def _wait_results(cdp: Any, sid: str, timeout_seconds: float = 10) -> None:
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            ready = cdp.eval_js(
+                "document.querySelectorAll('.joblist-box__item').length > 0 || "
+                "/很抱歉.*职位.*找不到|暂无相关职位|登录之后再搜索|安全验证/"
+                ".test(document.body?.innerText || '')",
+                sid,
+            )
+            if ready:
+                return
+            time.sleep(0.25)

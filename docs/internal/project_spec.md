@@ -28,7 +28,8 @@ count and raw records are not product outcomes.
   search plans or active-workspace product concepts);
 - BOSS直聘 discovery through a user-authorized local Chrome session;
 - 猎聘 discovery through HTTP, with bounded browser detail enrichment;
-- 智联招聘 and 前程无忧 discovery through HTTP, with bounded browser fallback;
+- 智联招聘 discovery from its rendered public page in authorized local Chrome;
+- 前程无忧 discovery from public Web JSON in its local-browser page context;
 - normalization, cross-source deduplication, hard filtering, and coarse ranking;
 - incremental states: new, changed, reopened, closed, seen, saved, applied,
   and rejected;
@@ -87,8 +88,8 @@ Four source paths are maintained:
 |---|---|---|---|
 | BOSS直聘 | authorized local Chrome CDP | recent labeled cache | primary live source |
 | 猎聘 | HTTP JSON | bounded CDP detail enrichment, then cache | independent second source |
-| 智联招聘 | HTTP JSON | bounded CDP request, then cache | additional coverage |
-| 前程无忧 | HTTP JSON | bounded CDP request, then cache | additional coverage |
+| 智联招聘 | rendered public search page in local Chrome | recent labeled cache | additional coverage |
+| 前程无忧 | public-page browser-context JSON | recent labeled cache | additional coverage |
 
 Historical enum values and migrations may remain for old SQLite databases, but
 retired sources must not be selected, diagnosed, documented as supported, or

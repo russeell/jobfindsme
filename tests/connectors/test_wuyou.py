@@ -83,7 +83,60 @@ def test_wuyou_parses_job_payload() -> None:
         record.payload["apply_url"] == "https://www.51job.com/job_search/example.html"
     )
     assert record.payload["employment_type"] == "full_time"
-    assert "we.51job.com/api/job/search-pc" in session.get_urls[0]
+    assert "we.51job.com/pc/search" in session.get_urls[0]
+    assert "we.51job.com/api/job/search-pc" in session.get_urls[1]
+    assert "api_key=51job" in session.get_urls[1]
+    assert "source=1" in session.get_urls[1]
+    assert "scene=7" in session.get_urls[1]
+
+
+def test_wuyou_parses_current_camel_case_payload() -> None:
+    payload = {
+        "status": "1",
+        "resultbody": {
+            "job": {
+                "items": [
+                    {
+                        "jobId": "170401161",
+                        "jobName": "AI应用工程师",
+                        "jobTags": ["Python", "Agent", "RAG"],
+                        "jobAreaString": "上海·徐汇区",
+                        "provideSalaryString": "1.7-3万·13薪",
+                        "workYearString": "3-5年",
+                        "degreeString": "本科",
+                        "fullCompanyName": "浙江长江汽车电子有限公司",
+                        "companyTypeString": "合资",
+                        "jobHref": "https://jobs.51job.com/shanghai/170401161.html",
+                        "jobDescribe": "负责 Agent 与 RAG 应用开发。",
+                        "issueDateString": "2026-06-30 09:27:04",
+                        "isIntern": False,
+                    }
+                ]
+            }
+        },
+    }
+    session = FakeSession(
+        FakeResponse(
+            json_data=payload,
+            text='{"status":"1"}',
+            headers={"Content-Type": "application/json"},
+        )
+    )
+    connector = WuyouHttpConnector(
+        "AI应用工程师",
+        city="上海",
+        policy=_policy(),
+        session_factory=lambda: session,
+    )
+
+    record = connector.fetch()[0]
+
+    assert record.external_id == "170401161"
+    assert record.payload["company"] == "浙江长江汽车电子有限公司"
+    assert record.payload["experience"] == "3-5年"
+    assert record.payload["degree"] == "本科"
+    assert record.payload["skills"] == "Python、Agent、RAG"
+    assert "Agent 与 RAG" in record.payload["description"]
 
 
 def test_wuyou_waf_challenge_raises_blocked() -> None:

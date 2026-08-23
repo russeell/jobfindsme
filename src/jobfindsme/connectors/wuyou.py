@@ -63,6 +63,43 @@ class _Session(Protocol):
 SessionFactory = Callable[[], _Session]
 
 
+def _search_params(keyword: str, city: str, *, page_size: int = 30) -> dict[str, str]:
+    """Parameters sent by the current 51job web search page."""
+    return {
+        "api_key": "51job",
+        "timestamp": str(int(time.time())),
+        "keyword": keyword,
+        "searchType": "2",
+        "function": "",
+        "industry": "",
+        "jobArea": WUYOU_CITY_CODES.get(city, "000000"),
+        "jobArea2": "",
+        "landmark": "",
+        "metro": "",
+        "salary": "",
+        "workYear": "",
+        "degree": "",
+        "companyType": "",
+        "companySize": "",
+        "jobType": "",
+        "issueDate": "",
+        "sortType": "0",
+        "pageNum": "1",
+        "pageSize": str(page_size),
+        "source": "1",
+        "scene": "7",
+    }
+
+
+def _search_page_url(keyword: str, city: str) -> str:
+    params = {
+        "keyword": keyword,
+        "searchType": "2",
+        "jobArea": WUYOU_CITY_CODES.get(city, "000000"),
+    }
+    return f"https://we.51job.com/pc/search?{urlencode(params)}"
+
+
 class WuyouHttpConnector:
     """前程无忧 search via the SPA JSON API (no login, no browser)."""
 
@@ -83,24 +120,19 @@ class WuyouHttpConnector:
         self._session_factory = session_factory or _default_session_factory
 
     def fetch(self) -> list[RawJobRecord]:
-        params = {
-            "keyword": self.keyword,
-            "searchType": "2",
-            "sortType": "0",
-            "jobArea": WUYOU_CITY_CODES.get(self.city, ""),
-            "pageNum": "1",
-            "pageSize": "30",
-        }
+        params = _search_params(self.keyword, self.city)
         url = f"{_API_URL}?{urlencode(params)}"
         session = self._session_factory()
         try:
+            search_page = _search_page_url(self.keyword, self.city)
+            session.get(search_page, headers={"User-Agent": _UA}, timeout=_TIMEOUT)
             response = session.get(
                 url,
                 headers={
                     "User-Agent": _UA,
                     "Accept": "application/json, text/plain, */*",
                     "Accept-Language": "zh-CN,zh;q=0.9",
-                    "Referer": "https://we.51job.com/",
+                    "Referer": search_page,
                     "Origin": "https://we.51job.com",
                     "Sec-Fetch-Dest": "empty",
                     "Sec-Fetch-Mode": "cors",
@@ -130,28 +162,47 @@ class WuyouHttpConnector:
 
 
 def _parse_payload(payload: dict[str, Any], source_name: str) -> list[RawJobRecord]:
+    if payload.get("status") not in ("1", 1, None):
+        raise WuyouBlockedError(
+            f"前程无忧接口拒绝：status={payload.get('status')} "
+            f"message={payload.get('message')}"
+        )
     items = ((payload.get("resultbody") or {}).get("job") or {}).get("items") or []
     return [
         _to_record(item, source_name)
         for item in items
-        if isinstance(item, dict) and item.get("jobid")
+        if isinstance(item, dict) and (item.get("jobId") or item.get("jobid"))
     ]
 
 
 def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
-    title = str(item.get("job_name") or "")
-    link = str(item.get("job_href") or "")
+    def pick(*keys: str) -> Any:
+        for key in keys:
+            value = item.get(key)
+            if value not in (None, "", []):
+                return value
+        return ""
+
+    title = str(pick("jobName", "job_name"))
+    link = str(pick("jobHref", "job_href"))
     if link.startswith("//"):
         link = "https:" + link
     elif link.startswith("/"):
         link = "https://www.51job.com" + link
-    classification = " ".join((title, str(item.get("jobtype_text") or ""))).casefold()
+    job_type_text = str(pick("jobTypeString", "jobtype_text"))
+    tags = pick("jobTags", "job_tags") or []
+    tag_text = (
+        "、".join(str(value) for value in tags) if isinstance(tags, list) else str(tags)
+    )
+    classification = " ".join((title, job_type_text, tag_text)).casefold()
     recruitment_track = "unknown"
     if any(t in classification for t in ("校招", "校园", "应届")):
         recruitment_track = "campus"
     elif any(t in classification for t in ("社招", "社会招聘")):
         recruitment_track = "social"
-    job_type = str(item.get("jobtype_text") or "").casefold()
+    job_type = job_type_text.casefold()
+    if item.get("isIntern") is True:
+        job_type = "实习"
     employment_type = (
         "internship"
         if "实习" in job_type or "intern" in job_type
@@ -166,9 +217,11 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
     description = " ".join(
         part
         for part in (
-            str(item.get("jobtype_text") or ""),
-            str(item.get("jobwelf") or ""),
-            str(item.get("companytype_text") or ""),
+            str(pick("jobDescribe", "job_describe")),
+            job_type_text,
+            tag_text,
+            str(pick("jobwelf", "jobWelf")),
+            str(pick("companyTypeString", "companytype_text")),
         )
         if part
     )
@@ -176,22 +229,22 @@ def _to_record(item: dict[str, Any], source_name: str) -> RawJobRecord:
         source_kind=SourceKind.CAREER_SITE,
         source_name=source_name,
         source_url=link or _API_URL,
-        external_id=str(item.get("jobid") or ""),
+        external_id=str(pick("jobId", "jobid")),
         payload={
             "title": title,
-            "company": str(item.get("company_name") or ""),
+            "company": str(pick("fullCompanyName", "companyName", "company_name")),
             "description": description,
-            "location": str(item.get("workarea_text") or ""),
-            "salary": str(item.get("providesalary_text") or ""),
-            "experience": "",
-            "degree": "",
-            "skills": "",
+            "location": str(pick("jobAreaString", "workarea_text")),
+            "salary": str(pick("provideSalaryString", "providesalary_text")),
+            "experience": str(pick("workYearString", "workyear_text")),
+            "degree": str(pick("degreeString", "degree_text")),
+            "skills": tag_text,
             "url": link,
             "apply_url": link,
             "recruitment_track": recruitment_track,
             "employment_type": employment_type,
-            "welfare": str(item.get("jobwelf") or ""),
-            "published_at": str(item.get("issue_date") or item.get("updatedate") or ""),
+            "welfare": str(pick("jobwelf", "jobWelf")),
+            "published_at": str(pick("issueDateString", "issue_date", "updatedate")),
         },
     )
 
@@ -242,15 +295,10 @@ class WuyouCdpConnector:
         self.settle_seconds = settle_seconds
 
     def _api_url(self) -> str:
-        params = {
-            "keyword": self.keyword,
-            "searchType": "2",
-            "sortType": "0",
-            "jobArea": WUYOU_CITY_CODES.get(self.city, ""),
-            "pageNum": "1",
-            "pageSize": "30",
-        }
-        return f"{_API_URL}?{urlencode(params)}"
+        return f"{_API_URL}?{urlencode(_search_params(self.keyword, self.city))}"
+
+    def _search_url(self) -> str:
+        return _search_page_url(self.keyword, self.city)
 
     def fetch(self) -> list[RawJobRecord]:
         cdp = self.session_factory(self.cdp_port)
@@ -266,7 +314,7 @@ class WuyouCdpConnector:
             )["result"]["sessionId"]
             cdp.send("Page.enable", sid=sid)
             cdp.send("Runtime.enable", sid=sid)
-            cdp.send("Page.navigate", {"url": "https://we.51job.com/"}, sid)
+            cdp.send("Page.navigate", {"url": self._search_url()}, sid)
             self._wait_ready(cdp, sid)
             time.sleep(self.settle_seconds)  # WAF challenge JS + SPA bootstrap
             raw = cdp.eval_js(

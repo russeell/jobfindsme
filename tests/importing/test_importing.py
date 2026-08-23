@@ -157,6 +157,39 @@ def test_liepin_http_allows_cdp_fallback_when_browser_permitted() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("zhilian_http", "ZhilianCdpConnector"),
+        ("wuyou_http", "WuyouCdpConnector"),
+    ],
+)
+def test_risk_controlled_sources_use_verified_browser_path(
+    kind: str,
+    expected: str,
+) -> None:
+    attempted: list[str] = []
+
+    class RecordingImports:
+        def import_connector(self, workspace_id, connector, **kwargs):
+            attempted.append(type(connector).__name__)
+            return ImportSummary(0, 0, 0, ())
+
+    service = JobDiscoveryService(RecordingImports())
+    service._discover_one(
+        workspace_id="workspace",
+        source=DiscoverySource(
+            kind=kind,
+            source_name="平台",
+            query="AI应用工程师",
+            location="上海",
+        ),
+        allow_browser=True,
+    )
+
+    assert attempted == [expected]
+
+
 def test_import_connector_uses_optional_enricher_without_platform_dependency(
     tmp_path,
 ) -> None:

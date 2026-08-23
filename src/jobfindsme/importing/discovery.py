@@ -32,9 +32,12 @@ def _connector_chain(
 ) -> list[tuple[object, int]]:
     """Ordered ``(connector, enrich_limit)`` fallbacks for *source*.
 
-    Strategy per platform — fastest first, most robust last:
-    1. pure HTTP (curl_cffi, sub-second, no Chrome)   [pure_http.py]
-    2. CDP DOM extraction (slowest, needs Chrome)      [china_platforms.py]
+    Strategy per platform:
+    - Liepin keeps the fast public HTTP API with a bounded CDP fallback.
+    - Zhilian and 51job use their current public search pages in local Chrome
+      when browser access is allowed. Their legacy direct APIs are commonly
+      risk-controlled before the browser page succeeds, so trying HTTP first
+      only adds latency and misleading diagnostics.
 
     When *allow_browser* is False the CDP fallback tier is dropped, so
     browser-free hosts still get Liepin results over pure HTTP.
@@ -73,7 +76,16 @@ def _connector_chain(
             ZhilianHttpConnector,
         )
 
-        chain = [
+        if allow_browser:
+            return [
+                (
+                    ZhilianCdpConnector(
+                        query, city=city, policy=policy, source_name=source.source_name
+                    ),
+                    0,
+                )
+            ]
+        return [
             (
                 ZhilianHttpConnector(
                     query, city=city, policy=policy, source_name=source.source_name
@@ -81,23 +93,22 @@ def _connector_chain(
                 0,
             )
         ]
-        if allow_browser:
-            chain.append(
-                (
-                    ZhilianCdpConnector(
-                        query, city=city, policy=policy, source_name=source.source_name
-                    ),
-                    3,
-                )
-            )
-        return chain
     if source.kind is DiscoverySourceKind.WUYOU_HTTP:
         from jobfindsme.connectors.wuyou import (
             WuyouCdpConnector,
             WuyouHttpConnector,
         )
 
-        chain = [
+        if allow_browser:
+            return [
+                (
+                    WuyouCdpConnector(
+                        query, city=city, policy=policy, source_name=source.source_name
+                    ),
+                    0,
+                )
+            ]
+        return [
             (
                 WuyouHttpConnector(
                     query, city=city, policy=policy, source_name=source.source_name
@@ -105,16 +116,6 @@ def _connector_chain(
                 0,
             )
         ]
-        if allow_browser:
-            chain.append(
-                (
-                    WuyouCdpConnector(
-                        query, city=city, policy=policy, source_name=source.source_name
-                    ),
-                    3,
-                )
-            )
-        return chain
     return []
 
 

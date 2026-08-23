@@ -7,8 +7,8 @@ page, not an authoritative full snapshot:
 |---|---|---|---|
 | BOSS直聘 | authorized local Chrome CDP | recent labeled cache | primary live source |
 | 猎聘 | HTTP JSON (curl_cffi) | bounded CDP detail enrichment, then cache | independent second source |
-| 智联招聘 | public HTTP JSON | bounded CDP request, then cache | additional coverage |
-| 前程无忧 | public HTTP JSON | bounded CDP request, then cache | additional coverage |
+| 智联招聘 | rendered public search page in local Chrome | recent labeled cache | additional coverage |
+| 前程无忧 | public-page browser-context JSON | recent labeled cache | additional coverage |
 
 ## BOSS直聘 (Chrome CDP)
 
@@ -33,12 +33,19 @@ page, not an authoritative full snapshot:
   explicitly complete, authoritative snapshot may use absence as closure
   evidence; platform pagination is partial by definition.
 
-## 智联招聘 and 前程无忧 (HTTP with browser fallback)
+## 智联招聘 and 前程无忧 (authorized local browser)
 
-- Both sources first request their public web JSON endpoints without login.
-- A typed WAF or schema failure triggers a bounded CDP fallback when the
-  authorized browser bridge is available; otherwise the source degrades to
-  a clearly labeled recent cache.
+- 智联's old `fe-api /c/i/sou` response is no longer a reliable source of
+  truth: it can return an empty risk-control envelope while the current public
+  page renders jobs. The maintained connector navigates the public search page
+  and parses its typed job-card fields.
+- 51job's JSON endpoint is protected by an Aliyun WAF that validates the
+  browser execution environment. The connector first navigates to the real
+  public search page, then performs the same-origin JSON request with the
+  current public parameters (`api_key`, timestamp, source, and scene).
+- Both use the isolated, user-authorized Chrome started by `jobfindsme setup`.
+  They do not require login in the normal public flow, bypass CAPTCHAs, or read
+  the user's personal Chrome profile.
 - Empty or challenged responses are failures, never silently interpreted as
   "no jobs".
 
@@ -50,10 +57,11 @@ page, not an authoritative full snapshot:
   duration, discovered/unique counts, cache usage, and a bounded error.
 - A failed browser refresh with cached records degrades gracefully;
   with no cache it fails and is shown as such (never as "no new jobs").
-- Retired source kinds (`lagou_cdp`) remain readable in old databases but are
-  never selected, executed, or documented as supported. `zhilian_cdp`,
-  `wuyou_cdp`, and `liepin_cdp` remain as browser fallback tiers in the
-  HTTP→CDP chain for their platforms.
+- Retired source kinds (`lagou_cdp`, `zhilian_cdp`, `wuyou_cdp`) remain
+  readable in old databases but are never selected or executed. The current
+  catalog keeps the historical `zhilian_http` / `wuyou_http` persisted values
+  for database compatibility while routing their live execution through the
+  verified browser connectors.
 
 ## Caching
 

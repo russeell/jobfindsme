@@ -40,8 +40,8 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
 |---|---|---|---|
 | BOSS直聘 | CDP（本地 Chrome） | `jobfindsme setup` + 扫码登录 | CDP 失败 → 提示「帮我重新登录 BOSS直聘」或运行 setup → 仍失败按缓存/降级标注 |
 | 猎聘 | 纯 HTTP | 无 | HTTP 失败 → 有 Chrome 时自动 CDP 兜底 → 仍失败按缓存标注 |
-| 智联招聘 | 纯 HTTP（实验性） | 无；HTTP 可能被阿里云 WAF 拦截 | HTTP 被拦 → 自动 CDP 兜底 → 仍失败标注「被安全校验拦截」，不得当作"无岗位" |
-| 前程无忧 | 纯 HTTP（实验性） | 同上 | 同上 |
+| 智联招聘 | 隔离 Chrome 公开搜索页岗位卡 | 通常无需登录；需浏览器桥 | 浏览器不可用或安全校验未完成时标注失败，不得当作"无岗位" |
+| 前程无忧 | 隔离 Chrome 公开页同源 JSON | 通常无需登录；需浏览器桥 | 浏览器不可用或 WAF 校验未完成时标注失败，不得当作"无岗位" |
 
 临时输出放 `/tmp`，持久数据在 `~/.jobfindsme/`。
 
@@ -64,7 +64,7 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
      come from what the user says, not from resume-derived guessing.
    - **Without a resume** (user has none, or prefers not to share one): skip
      the profile part of `setup` entirely. Call `setup` with the user's
-     stated search conditions (`target_roles` plus optional constraints),
+     stated search conditions (`target_role` plus optional constraints),
      then `search_jobs`. Matching then relies on
      the user's stated role/location/salary/track requirements plus JD
      signals; recommendation reasons must be based on the job's own

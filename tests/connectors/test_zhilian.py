@@ -174,13 +174,32 @@ class FakeCdp:
 
 
 def test_zhilian_cdp_parses_job_payload() -> None:
-    payload = {
-        "code": 200,
-        "apiCode": 200,
-        "data": {"results": [_job()], "numTotal": 1},
-    }
     cdp = FakeCdp(
-        json.dumps({"ok": True, "text": json.dumps(payload, ensure_ascii=False)})
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "jobId": "CCL123J456.htm",
+                        "jobName": "AI应用工程师（Agent方向）",
+                        "companyName": "示例科技",
+                        "city": "上海·浦东",
+                        "salary": "20-40K·14薪",
+                        "workingExp": "1-3年",
+                        "eduLevel": "本科",
+                        "positionURL": (
+                            "http://www.zhaopin.com/jobdetail/CCL123J456.htm"
+                        ),
+                        "skills": ["Agent", "RAG"],
+                        "companyTags": ["民营", "100-299人"],
+                        "jobType": "",
+                    }
+                ],
+                "noResults": False,
+                "blocked": False,
+                "loginLimited": False,
+            },
+            ensure_ascii=False,
+        )
     )
     connector = ZhilianCdpConnector(
         "AI应用工程师",
@@ -196,13 +215,23 @@ def test_zhilian_cdp_parses_job_payload() -> None:
     assert records[0].payload["company"] == "示例科技"
     assert (
         records[0].payload["apply_url"]
-        == "https://www.zhaopin.com/job_detail/example.html"
+        == "https://www.zhaopin.com/jobdetail/CCL123J456.htm"
     )
+    assert records[0].payload["skills"] == "Agent、RAG"
     assert cdp.closed
 
 
 def test_zhilian_cdp_waf_blocked_raises() -> None:
-    cdp = FakeCdp(json.dumps({"error": "waf_blocked", "status": 200}))
+    cdp = FakeCdp(
+        json.dumps(
+            {
+                "items": [],
+                "noResults": False,
+                "blocked": True,
+                "loginLimited": False,
+            }
+        )
+    )
     connector = ZhilianCdpConnector(
         "AI应用工程师",
         policy=_policy(),
@@ -210,5 +239,26 @@ def test_zhilian_cdp_waf_blocked_raises() -> None:
         settle_seconds=0,
     )
 
-    with pytest.raises(ZhilianBlockedError, match="页面内请求失败"):
+    with pytest.raises(ZhilianBlockedError, match="安全校验"):
         connector.fetch()
+
+
+def test_zhilian_cdp_legitimate_empty_page_returns_empty() -> None:
+    cdp = FakeCdp(
+        json.dumps(
+            {
+                "items": [],
+                "noResults": True,
+                "blocked": False,
+                "loginLimited": False,
+            }
+        )
+    )
+    connector = ZhilianCdpConnector(
+        "不存在的岗位",
+        policy=_policy(),
+        session_factory=lambda _port: cdp,
+        settle_seconds=0,
+    )
+
+    assert connector.fetch() == []

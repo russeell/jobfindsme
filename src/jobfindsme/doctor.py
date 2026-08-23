@@ -123,15 +123,15 @@ class Doctor:
     def _connectors() -> Diagnostic:
         try:
             from jobfindsme.connectors.boss_zhipin import BossZhipinConnector
-            from jobfindsme.connectors.china_platforms import LiepinConnector
-            from jobfindsme.connectors.wuyou import WuyouHttpConnector
-            from jobfindsme.connectors.zhilian import ZhilianHttpConnector
+            from jobfindsme.connectors.pure_http import LiepinPureHttpConnector
+            from jobfindsme.connectors.wuyou import WuyouCdpConnector
+            from jobfindsme.connectors.zhilian import ZhilianCdpConnector
 
             names = (
                 BossZhipinConnector.__name__,
-                LiepinConnector.__name__,
-                ZhilianHttpConnector.__name__,
-                WuyouHttpConnector.__name__,
+                LiepinPureHttpConnector.__name__,
+                ZhilianCdpConnector.__name__,
+                WuyouCdpConnector.__name__,
             )
         except ImportError as error:
             return Diagnostic(name="connectors", ok=False, message=str(error))
@@ -170,8 +170,8 @@ class Doctor:
                 ok=False,
                 required=False,
                 message=(
-                    "browser bridge is not running; BOSS and browser fallback "
-                    "are unavailable until setup is started"
+                    "browser bridge is not running; BOSS, 智联招聘, and "
+                    "前程无忧 live search are unavailable until setup is started"
                 ),
             )
         return Diagnostic(
@@ -195,13 +195,13 @@ class Doctor:
         cdp = _cdp_port_reachable()
         chrome_state = "Chrome 已连接" if cdp else "Chrome 未连接"
         browser_state = (
-            "浏览器兜底可尝试（未做实时探测）" if cdp else "浏览器兜底不可用"
+            "浏览器实时链路已就绪（未做平台探测）" if cdp else "浏览器实时链路不可用"
         )
         rows = [
             f"BOSS直聘 → cdp ｜ {chrome_state}；登录与检索由 boss_login 单独探测",
             "猎聘 → http ｜ 路由已配置（未做实时探测）",
-            f"智联招聘 → http→cdp ｜ 路由已配置；{browser_state}",
-            f"前程无忧 → http→cdp ｜ 路由已配置；{browser_state}",
+            f"智联招聘 → browser-dom ｜ {browser_state}",
+            f"前程无忧 → browser-api ｜ {browser_state}",
         ]
         return Diagnostic(
             name="sources",

@@ -86,10 +86,13 @@ class DiscoverySourceKind(StrEnum):
 
     @property
     def uses_browser(self) -> bool:
-        # Liepin is pure HTTP (curl_cffi, no Chrome); CDP is only a fallback.
+        # Liepin is pure HTTP. BOSS, Zhilian, and 51job rely on the user's
+        # authorized local browser for their maintained live paths.
         return self in {
             self.BOSS_CDP,
             self.LIEPIN_CDP,
+            self.ZHILIAN_HTTP,
+            self.WUYOU_HTTP,
         }
 
 

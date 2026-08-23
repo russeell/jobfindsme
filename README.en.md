@@ -230,14 +230,15 @@ results over an inflated connector count and never claims complete coverage.
 |---|---|---|---|
 | **BOSS直聘** | authorized local Chrome session, time-labeled cache fallback | login-dependent | yes |
 | **猎聘** | public Web JSON listing, bounded detail enrichment | usually sub-second | no for listings |
-| **智联招聘** | HTTP first, local-browser fallback after security checks | experimental | fallback only |
-| **前程无忧** | HTTP first, local-browser fallback after WAF checks | experimental | fallback only |
+| **智联招聘** | rendered cards from the public search page in local Chrome | usually 2-4s | yes, no login required |
+| **前程无忧** | public Web JSON requested from its local-Chrome page context | usually 2-5s | yes, no login required |
 
-> 智联招聘 / 前程无忧 are experimental: pure HTTP can be challenged by
-> security checks in some networks. The system falls back to the authorized
-> local browser; if still blocked, the source is explicitly marked failed
-> while other sources keep returning results. Source count is not coverage —
-> trust the per-search overview.
+智联's legacy JSON endpoint can return a risk-controlled empty envelope while
+the public page still contains jobs. 51job validates the browser execution
+environment around its JSON endpoint. The maintained paths therefore reuse
+the isolated Chrome started by `jobfindsme setup`: rendered public cards for
+智联 and a same-origin page request for 51job. No CAPTCHA is bypassed and the
+personal Chrome profile is not read. Failures remain explicit and isolated.
 
 Connectors are pluggable; US/EU sources (Indeed, LinkedIn Jobs, …) are the
 next frontier on the [roadmap](#-roadmap).
@@ -250,8 +251,8 @@ next frontier on the [roadmap](#-roadmap).
 Agent (Claude / GPT / Qwen / WorkBuddy — interaction and follow-up talk)
   → MCP Server (local stdio)
   → Local Core
-      → pure HTTP (猎聘 / 智联 / 前程无忧)
-      → local Chrome CDP (BOSS直聘 inside its logged-in session)
+      → pure HTTP (猎聘)
+      → local Chrome CDP (BOSS login; 智联 public page; 51job public-page API)
       → live mode: bounded concurrent refresh; one failing source never blocks others
   → normalize → cross-source dedup → hard filter (city/salary/track/type)
   → signal extraction + weighted coarse rank (skills/experience/education/liveness/salary)
