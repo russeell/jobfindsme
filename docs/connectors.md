@@ -59,6 +59,10 @@ page, not an authoritative full snapshot:
 
 The job repository keeps recent labeled cache per source. Cache-mode
 search (`refresh_mode: cache`) performs no remote access at all.
+Interactive search defaults to labeled cache fallback when an individual
+source fails. An explicit live-only request sets
+`allow_cache_fallback=false`; Core excludes failed, degraded, and skipped
+sources before matching, so cached rows cannot leak into the returned Top-K.
 
 Full engineering constraints: see `docs/internal/project_spec.md`
 (Source strategy section).

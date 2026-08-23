@@ -108,11 +108,16 @@ Workspace IDs, cron syntax, connector names, or internal concepts unless asked.
    start or restart it without the user's knowledge.
    Keep the default `live` refresh for interactive requests and scheduled
    pushes — the server auto-degrades to a labeled cache when a source fails.
+   If the user explicitly says "不要缓存", "只要最新", or "live only",
+   pass `allow_cache_fallback: false`; Core then excludes every failed,
+   degraded, or skipped source from matching, so cached jobs cannot leak into
+   the result. Do not simulate this by deleting jobs from the Agent answer.
    `cache` is a special case; do not pass it unless the situation is explicit.
    All other search parameters (`allow_browser_sources`,
    `refresh_mode`, `use_profile`, `sources`) have server defaults that are
    correct for every ordinary request; only `include_seen` and `limit` ever
-   need adjusting (see above and the Daily Push section).
+   need routine adjustment. `allow_cache_fallback` is adjusted only for the
+   explicit live-only request above.
    Reuse the stored preferences on later requests. Do not recreate the profile
    or preferences merely because the user asks for an update.
    The Server's summary is a compact three-layer factual baseline. Use the
@@ -189,7 +194,7 @@ so terminal clients make the bare URL clickable:
 
 ```text
 1. AI应用工程师（Agent开发）｜某知名公司｜上海｜社招｜正式｜40-60k·15薪
-   硬条件：已通过所有可判定条件；未知项见风险提示
+   条件状态：已确认项通过；未确认项见下方
    证据匹配：68/100（中）；证据覆盖：70%（均非录用概率）
    技能：Agent ｜ 经验：3-5年 ｜ 学历：本科
 
@@ -204,7 +209,11 @@ so terminal clients make the bare URL clickable:
   much comparable JD evidence existed. Sparse JDs stay low-coverage instead
   of receiving an artificial floor. Without a profile, never show a score.
 - `unknown` recruitment track, employment type, experience, or salary is not
-  proof of a match. Preserve the Server's warning instead of guessing.
+  proof of a match. Preserve the Server's warning instead of guessing or
+  describing the candidate as fully compliant. Do not repeat an unknown
+  field label when the detailed warning already states it.
+- Keep every `投递链接：https://...` on its own line with a blank line before
+  and after it. Never attach a warning or recommendation to the URL line.
 
 ### 状态与下一步
 
@@ -226,8 +235,8 @@ Preserve this bounded operating information when present:
   invent totals absent from structured content.
 - 建议 names only jobs present in the returned job list, with evidence-backed reason
   tags (skills, salary). Never add subjective evaluations.
-- Recovery instructions are always chat actions ("对我说 ...") — do not
-  print raw commands, ports, or local paths.
+- Recovery instructions in search results are always chat actions
+  ("对我说 ...") — do not print raw commands, ports, or local paths.
 
 ### Block rules (岗位块规则)
 

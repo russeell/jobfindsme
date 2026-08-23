@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-PINNED_VERSION="0.12.2"
+PINNED_VERSION="0.12.3"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 RUNTIME="$HOME/.jobfindsme/runtime"
 LAUNCHER_DIR="$HOME/.local/bin"

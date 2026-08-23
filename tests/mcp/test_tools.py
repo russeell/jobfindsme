@@ -136,6 +136,30 @@ def test_unknown_job_classification_is_visible_not_guessed_or_dropped(tmp_path) 
     assert fact["job"]["employment_type"] == "unknown"
     assert "招聘类型未注明" in result["content"][0]["text"]
     assert "岗位性质未注明" in result["content"][0]["text"]
+    assert (
+        result["content"][0]["text"].count("招聘类型未注明，无法确认是否符合要求") == 1
+    )
+    assert (
+        result["content"][0]["text"].count("岗位性质未注明，无法确认是否符合要求") == 1
+    )
+    assert "其中 0 个全部条件已确认，1 个存在待确认项" in result["content"][0]["text"]
+
+
+def test_live_only_search_parameter_is_exposed_and_cache_mode_conflict_rejected(
+    tmp_path,
+) -> None:
+    _, _, _, registry = make_registry(tmp_path)
+    search_tool = next(
+        tool for tool in registry.list_tools() if tool["name"] == "search_jobs"
+    )
+
+    assert "allow_cache_fallback" in search_tool["inputSchema"]["properties"]
+    rejected = registry.call(
+        "search_jobs",
+        {"refresh_mode": "cache", "allow_cache_fallback": False},
+    )
+    assert rejected["isError"] is True
+    assert "allow_cache_fallback" in rejected["content"][0]["text"]
 
 
 def test_tool_validation_returns_actionable_execution_error(tmp_path) -> None:
@@ -353,7 +377,7 @@ def test_search_text_includes_score_reasons_and_warnings(tmp_path) -> None:
     assert "简历解析：本次未使用简历" in text
     assert "过滤：角色(AI应用工程师) → 给出 1 个" in text
     assert "[新增] AI应用工程师" in text
-    assert "硬条件：已通过所有可判定条件" in text
+    assert "条件状态：已确认符合" in text
     assert "投递链接：https://example.com/jobs/match-1" in text
     assert "推荐理由：" in text
     assert "workspace" not in text.casefold()
@@ -681,7 +705,7 @@ def test_21_job_blocks_all_complete_with_consecutive_numbering(tmp_path) -> None
         assert "｜" in block, f"Block {i} missing pipe separators in fact line"
 
         # Match description line must be present
-        assert "硬条件" in block, f"Block {i} missing hard-condition status"
+        assert "条件状态" in block, f"Block {i} missing hard-condition status"
 
         # Independent 投递链接 with correct URL
         source_index = company.removeprefix("示例科技")
@@ -764,7 +788,7 @@ def test_no_resume_recommendation_contains_no_marketing_words(tmp_path) -> None:
     # In no-profile mode, must not fabricate resume-based match percentage
     assert "本次未使用简历" in text
     # The match-degree line should use the no-profile form
-    assert "硬条件：已通过所有可判定条件" in text
+    assert "条件状态：已确认符合" in text
 
 
 def test_search_output_uses_compact_three_layer_summary(tmp_path) -> None:
@@ -1046,7 +1070,7 @@ def test_use_profile_false_with_existing_profile_shows_no_resume_in_summary(
     assert "内部项目ABC" not in profile_section
 
     # No match percentage (no-resume mode)
-    assert "硬条件：已通过所有可判定条件" in text
+    assert "条件状态：已确认符合" in text
     assert "证据匹配：" not in text
 
     # Recommendation reason must be no-resume based
@@ -1161,7 +1185,7 @@ def test_chrome_cdp_errors_normalized_to_recovery_message(tmp_path) -> None:
         "open -a Google Chrome --remote-debugging-port=9222 failed",
         "connection to 127.0.0.1:9222 timed out",
     ]
-    normalized = "Chrome 未连接，请运行 jobfindsme setup"
+    normalized = "浏览器桥未连接"
     for err in chrome_errors:
         assert _short_error(err) == normalized, f"Failed for: {err}"
 
@@ -1170,6 +1194,15 @@ def test_chrome_cdp_errors_normalized_to_recovery_message(tmp_path) -> None:
     assert _short_error("Connection refused") == "来源无法连接"
     assert _short_error("authentication required, please login") == "来源需要登录"
     assert _short_error("JSON parse error at line 1") == "来源返回数据无法解析"
+    assert (
+        _short_error(
+            "browser refresh returned no jobs; "
+            "live source status could not be confirmed"
+        )
+        == "浏览器未返回岗位"
+    )
+    assert _short_error("request blocked by WAF") == "来源触发访问限制"
+    assert _short_error("接口返回空结果，可能被风控拦截") == "来源触发访问限制"
 
     # Generic fallback is truncated
     generic = "Some unknown internal processing failure"
@@ -1206,7 +1239,7 @@ def test_source_summary_never_leaks_raw_chrome_command(tmp_path) -> None:
     summary = build_source_summary(diagnostics)
 
     # Chrome error normalized
-    assert "Chrome 未连接，请运行 jobfindsme setup" in summary
+    assert "浏览器桥未连接" in summary
     # Raw command NOT leaked
     assert "remote-debugging-port" not in summary
     assert "9222" not in summary

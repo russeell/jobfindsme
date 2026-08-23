@@ -217,7 +217,9 @@ def test_partial_browser_snapshot_never_closes_absent_jobs(
         sources=(source,),
     )
 
-    assert result[0].status is SourceRunStatus.SUCCESS
+    assert result[0].status is SourceRunStatus.FAILED
+    assert result[0].cache_used is False
+    assert "could not be confirmed" in (result[0].error or "")
 
 
 def test_partial_http_snapshot_never_closes_absent_jobs(
@@ -435,6 +437,99 @@ def test_empty_browser_refresh_uses_existing_cache_as_degraded(
     assert run.status is SourceRunStatus.DEGRADED
     assert run.cache_used is True
     assert "using cached records" in (run.error or "")
+
+
+def test_empty_browser_refresh_without_cache_is_failed(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_role="AI应用工程师",
+        sources=(
+            DiscoverySource(
+                kind="boss_cdp",
+                source_name="BOSS直聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    source = configured.sources[0].source
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(0, 0, 0, ()),),
+    )
+
+    run = core.search._discover_sources(
+        sources=(source,),
+    )[0]
+
+    assert run.status is SourceRunStatus.FAILED
+    assert run.cache_used is False
+    assert "could not be confirmed" in (run.error or "")
+
+
+def test_live_only_search_excludes_degraded_cached_source(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    core = jobfindsmecore(tmp_path / "jobfindsme.db")
+    configured = core.configure_search(
+        target_role="AI应用工程师",
+        sources=(
+            DiscoverySource(
+                kind="boss_cdp",
+                source_name="BOSS直聘",
+                query="AI应用工程师",
+            ),
+        ),
+    )
+    workspace_id = core.context.resolve_workspace().workspace_id
+    core.job_imports.import_records(
+        workspace_id,
+        parse_json(
+            """
+            [{
+              "id": "cached",
+              "title": "AI应用工程师",
+              "company": "示例科技",
+              "description": "Python RAG Agent",
+              "url": "https://example.com/jobs/cached"
+            }]
+            """,
+            source_name=configured.sources[0].source.source_name,
+        ),
+    )
+    monkeypatch.setattr(
+        "jobfindsme.connectors.boss_zhipin._CDPSession.minimize_windows",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        core.discovery,
+        "discover",
+        lambda **_: (ImportSummary(0, 0, 0, ()),),
+    )
+
+    cached = core.search_jobs_with_diagnostics(
+        allow_browser_sources=True,
+        allow_cache_fallback=True,
+        include_seen=True,
+    )
+    live_only = core.search_jobs_with_diagnostics(
+        allow_browser_sources=True,
+        allow_cache_fallback=False,
+        include_seen=True,
+    )
+
+    assert [match.job.job_id for match in cached.matches]
+    assert live_only.matches == ()
+    assert live_only.diagnostics.cache_fallback_allowed is False
+    assert live_only.diagnostics.source_runs[0].cache_used is True
 
 
 def _setup_profile(core, resume_path):

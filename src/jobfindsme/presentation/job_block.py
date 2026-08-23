@@ -84,8 +84,31 @@ def format_job_list(
         # Structured signals support deterministic reasons and optional host UI.
         signals = _extracted_signals(evidence)
 
+        warning_candidates = list(getattr(evidence, "warnings", ())) if evidence else []
+        if (
+            include_recommendation
+            and evidence is None
+            and not _has_disclosed_salary(job)
+        ):
+            warning_candidates.append("薪资未注明")
+        if (
+            include_recommendation
+            and evidence is None
+            and job.recruitment_track is RecruitmentTrack.UNKNOWN
+        ):
+            warning_candidates.append("招聘类型未注明")
+        if (
+            include_recommendation
+            and evidence is None
+            and job.employment_type is EmploymentType.UNKNOWN
+        ):
+            warning_candidates.append("岗位性质未注明")
+        warnings = _dedupe_warnings(warning_candidates)
         if include_recommendation:
-            lines.append("   硬条件：已通过所有可判定条件；未知项见风险提示")
+            condition_status = (
+                "已确认项通过；未确认项见下方" if warnings else "已确认符合"
+            )
+            lines.append(f"   条件状态：{condition_status}")
         if profile_used and score is not None:
             relevance = getattr(evidence, "relevance_level", "unknown")
             coverage = float(getattr(evidence, "evidence_coverage", 0) or 0)
@@ -106,15 +129,8 @@ def format_job_list(
         if signal_parts:
             lines.append("   " + " ｜ ".join(signal_parts))
 
-        warnings = list(getattr(evidence, "warnings", ())) if evidence else []
-        if include_recommendation and not _has_disclosed_salary(job):
-            warnings.append("薪资未注明")
-        if include_recommendation and job.recruitment_track is RecruitmentTrack.UNKNOWN:
-            warnings.append("招聘类型未注明")
-        if include_recommendation and job.employment_type is EmploymentType.UNKNOWN:
-            warnings.append("岗位性质未注明")
         if include_recommendation and warnings:
-            lines.append("   需要注意：" + "；".join(dict.fromkeys(warnings[:3])))
+            lines.append("   需要注意：" + "；".join(warnings[:3]))
         lines.extend(["", f"   投递链接：{job.apply_url}"])
         if include_recommendation:
             lines.extend(
@@ -132,6 +148,28 @@ def format_job_list(
             )
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
+
+
+def _dedupe_warnings(warnings: list[str]) -> list[str]:
+    """Keep one detailed warning per hard-constraint category.
+
+    Core emits explanatory warnings such as ``招聘类型未注明，无法确认...``.
+    Presentation used to append a second short label for the same category,
+    producing visibly repeated text in Agent output. Prefer the first,
+    usually more specific, warning and preserve stable order.
+    """
+    categories = ("薪资", "招聘类型", "岗位性质", "经验要求")
+    seen: set[str] = set()
+    result: list[str] = []
+    for warning in warnings:
+        category = next(
+            (name for name in categories if warning.startswith(name)), warning
+        )
+        if category in seen:
+            continue
+        seen.add(category)
+        result.append(warning)
+    return result
 
 
 def _extracted_signals(evidence: Any | None) -> dict:

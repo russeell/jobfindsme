@@ -6,7 +6,7 @@ workflow.
 
 ## Fixed acceptance prompts
 
-`cases.json` covers eight release-critical behaviors:
+`cases.json` covers nine release-critical behaviors:
 
 1. one sentence triggers `setup -> search_jobs`;
 2. returned facts and bare apply links stay intact across Agent wording;
@@ -16,19 +16,20 @@ workflow.
 6. the Agent passes a resume path to Core instead of reading the full resume.
 7. a changed city updates preferences before searching again.
 8. a recommendation explanation is grounded in a requested job's evidence.
+9. “do not use cache” sets `allow_cache_fallback=false` in Core.
 
 ## RED then GREEN
 
 The deterministic fixtures keep the Skill contract under CI:
 
 ```bash
-python -m evaluation.agent_behavior.cli \
+uv run python -m evaluation.agent_behavior.cli \
   --cases evaluation/agent_behavior/data/cases.json \
   --transcripts evaluation/agent_behavior/data/fixtures/baseline.json \
   --report /tmp/jobfindsme-agent-red.json \
   --expect fail
 
-python -m evaluation.agent_behavior.cli \
+uv run python -m evaluation.agent_behavior.cli \
   --cases evaluation/agent_behavior/data/cases.json \
   --transcripts evaluation/agent_behavior/data/fixtures/with_skill.json \
   --report /tmp/jobfindsme-agent-green.json \
@@ -45,7 +46,7 @@ Before claiming cross-Agent compatibility, record normalized transcripts from
 Codex, Claude, and Cursor with `evidence_kind: live_agent`, then run:
 
 ```bash
-python -m evaluation.agent_behavior.cli \
+uv run python -m evaluation.agent_behavior.cli \
   --cases evaluation/agent_behavior/data/cases.json \
   --transcripts reports/agent-behavior/live-vX.Y.Z.json \
   --report reports/agent-behavior/live-vX.Y.Z-report.json \

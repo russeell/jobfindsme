@@ -264,8 +264,15 @@ def refresh_sources(
                 sources=(source,),
                 allow_browser=allow_browser,
             )[0]
-            if source.kind.uses_browser and cached and summary.discovered == 0:
-                error = "browser refresh returned no jobs; using cached records"
+            if source.kind.uses_browser and summary.discovered == 0:
+                error = (
+                    "browser refresh returned no jobs; using cached records"
+                    if cached
+                    else (
+                        "browser refresh returned no jobs; "
+                        "live source status could not be confirmed"
+                    )
+                )
                 if subscription:
                     subscriptions.record_result(
                         subscription, error=error, degraded=True
@@ -273,9 +280,11 @@ def refresh_sources(
                 return SourceRunStats(
                     source_name=source.source_name,
                     source_kind=source.kind,
-                    status=SourceRunStatus.DEGRADED,
+                    status=(
+                        SourceRunStatus.DEGRADED if cached else SourceRunStatus.FAILED
+                    ),
                     elapsed_seconds=perf_counter() - source_started,
-                    cache_used=True,
+                    cache_used=cached,
                     error=error,
                 )
             if summary.snapshot_complete:

@@ -139,6 +139,14 @@ class SearchJobsInput(_LegacyAwareInput):
             "cache: no remote access."
         ),
     )
+    allow_cache_fallback: bool = Field(
+        default=True,
+        description=(
+            "Usually leave true so a failed source can return clearly labeled "
+            "cached jobs. Set false only when the user explicitly requests "
+            "live/latest results without cache."
+        ),
+    )
     include_seen: bool = Field(
         default=False,
         description=(
@@ -165,6 +173,15 @@ class SearchJobsInput(_LegacyAwareInput):
             "they do not want to use a resume."
         ),
     )
+
+    @model_validator(mode="after")
+    def validate_cache_policy(self) -> Self:
+        if (
+            self.refresh_mode is SearchRefreshMode.CACHE
+            and not self.allow_cache_fallback
+        ):
+            raise ValueError("allow_cache_fallback=false requires refresh_mode=live")
+        return self
 
 
 class GetJobsInput(_LegacyAwareInput):

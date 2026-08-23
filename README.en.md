@@ -143,9 +143,9 @@ config + one Skill serves them all.
 
 | Release gate | Current result |
 |---|---:|
-| Python tests | 313 passing |
+| Python tests | 334 passing |
 | Clean install + Cursor setup | 12 seconds |
-| Agent behavior contract | 0/8 without the Skill, 8/8 with it |
+| Agent behavior contract | 0/9 without the Skill, 9/9 with it |
 | Wheel smoke test | CLI, SQLite migrations, and all 5 MCP tools pass end to end |
 
 Live availability changes with platform controls and local login state.
@@ -173,6 +173,9 @@ Which jobs have I seen? Which have I applied to?
 # New only
 Keep finding jobs — only ones I haven't seen.
 
+# Live only
+Search again using live results only; do not use cache.
+
 # Change conditions
 Switch city to Shenzhen, salary floor to 25K, and search again.
 
@@ -193,7 +196,7 @@ facts, evidence, risks, source status, or links:
 
 ```text
 AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
-硬条件：已通过所有可判定条件；未知项见风险提示
+条件状态：已确认项通过；未确认项见下方
 证据匹配：86/100（高）；证据覆盖：90%（均非录用概率）
 技能：RAG、Agent、MCP ｜ 经验：1-3年 ｜ 学历：本科
 
@@ -211,6 +214,9 @@ unknown and are not points. The 0–100 score uses observable role, skill,
 experience, education, and liveness evidence; sparse JDs remain low-coverage.
 Without a resume, no score is fabricated. Missing track, employment type,
 experience, or salary remains unknown rather than being guessed.
+The summary separates fully verified jobs from candidates with unknown hard
+constraints. An explicit no-cache request is enforced inside Core before
+matching; the Agent does not remove cached jobs after the fact.
 
 ---
 

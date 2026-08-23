@@ -138,7 +138,10 @@ class Doctor:
         return Diagnostic(
             name="connectors",
             ok=True,
-            message=f"ready: {', '.join(names)}",
+            message=(
+                f"installed: {', '.join(names)}; "
+                "this checks local code only, not live platform availability"
+            ),
         )
 
     @staticmethod
@@ -167,15 +170,18 @@ class Doctor:
                 ok=False,
                 required=False,
                 message=(
-                    "Chrome CDP (port 9222) not reachable — run "
-                    "'jobfindsme setup' to launch Chrome for platform search"
+                    "browser bridge is not running; BOSS and browser fallback "
+                    "are unavailable until setup is started"
                 ),
             )
         return Diagnostic(
             name="browser_connectors",
             ok=True,
             required=False,
-            message="Chrome CDP available on port 9222; platform search is ready",
+            message=(
+                "browser bridge is reachable; this does not prove login or "
+                "platform search availability"
+            ),
         )
 
     @staticmethod
@@ -188,15 +194,14 @@ class Doctor:
         """
         cdp = _cdp_port_reachable()
         chrome_state = "Chrome 已连接" if cdp else "Chrome 未连接"
-        setup_hint = "运行 jobfindsme setup" if not cdp else ""
+        browser_state = (
+            "浏览器兜底可尝试（未做实时探测）" if cdp else "浏览器兜底不可用"
+        )
         rows = [
-            f"BOSS直聘 → cdp ｜ {chrome_state}"
-            + (f"；{setup_hint}" if setup_hint else ""),
-            "猎聘 → http ｜ 就绪（无需浏览器）",
-            f"智联招聘 → http→cdp ｜ HTTP 可能被 WAF 拦截；{chrome_state}"
-            + (f"；{setup_hint} 可启用 CDP 兜底" if setup_hint else "；CDP 兜底可用"),
-            f"前程无忧 → http→cdp ｜ HTTP 可能被 WAF 拦截；{chrome_state}"
-            + (f"；{setup_hint} 可启用 CDP 兜底" if setup_hint else "；CDP 兜底可用"),
+            f"BOSS直聘 → cdp ｜ {chrome_state}；登录与检索由 boss_login 单独探测",
+            "猎聘 → http ｜ 路由已配置（未做实时探测）",
+            f"智联招聘 → http→cdp ｜ 路由已配置；{browser_state}",
+            f"前程无忧 → http→cdp ｜ 路由已配置；{browser_state}",
         ]
         return Diagnostic(
             name="sources",
@@ -230,12 +235,9 @@ class Doctor:
             if not records:
                 return Diagnostic(
                     name="boss_login",
-                    ok=True,
+                    ok=False,
                     required=False,
-                    message=(
-                        "BOSS直聘会话可访问，但本次探测返回 0 条；"
-                        "可能是短时限流或查询无结果"
-                    ),
+                    message="BOSS直聘探测返回 0 条，登录或实时检索状态无法确认",
                 )
             return Diagnostic(
                 name="boss_login",

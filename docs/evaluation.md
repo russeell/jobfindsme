@@ -53,10 +53,10 @@ Core and MCP unit tests do not prove that a host Agent selects the right tools
 or grounds its answer in the Server facts. `evaluation/agent_behavior/data/`
 therefore treats the canonical Agent Skill as executable behavior:
 
-- eight fixed prompts cover first search, factual output (every apply URL
+- nine fixed prompts cover first search, factual output (every apply URL
   preserved, nothing invented), apply links, source degradation, applied
-  state, incremental search, resume privacy, city changes, and recommendation
-  explanations;
+  state, incremental search, resume privacy, city changes, recommendation
+  explanations, and live-only searches that disable cache inside Core;
 - the no-Skill fixture must fail and the Skill fixture must pass in CI;
 - fixture reports are marked `contract_fixture` and cannot satisfy a
   `live_agent` evidence gate;
@@ -82,9 +82,10 @@ for a week of dogfooding:
 3. **Real-platform comparison** — `scripts/platform_compare.py` runs a real
    search and dumps CSV; manually sample the same query on BOSS直聘/猎聘 and
    classify coverage / filter / ranking gaps.
-4. **Agent behavior** — fixed prompts (now 8 cases, including city change and
-   recommendation explanation) prove the Skill maps user language to correct
-   MCP calls; the no-Skill baseline must fail and the Skill fixture must pass.
+4. **Agent behavior** — fixed prompts (now 9 cases, including city change,
+   recommendation explanation, and no-cache search) prove the Skill maps user
+   language to correct MCP calls; the no-Skill baseline must fail and the Skill
+   fixture must pass.
 
 Real dogfooding still matters, but only for things lab tests cannot see
 (platform outages, dirty state over time, UX friction, systematic miss

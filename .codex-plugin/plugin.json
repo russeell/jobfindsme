@@ -1,6 +1,6 @@
 {
   "name": "jobfindsme",
-  "version": "0.12.2",
+  "version": "0.12.3",
   "description": "Local-first job search MCP server with resume-aware filtering and job tracking.",
   "author": {
     "name": "russeell",

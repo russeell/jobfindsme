@@ -135,6 +135,7 @@ class SearchRunDiagnostics(StrictModel):
     elapsed_seconds: float = Field(ge=0)
     matching_seconds: float = Field(ge=0)
     refresh_mode: SearchRefreshMode = SearchRefreshMode.FAST
+    cache_fallback_allowed: bool = True
     source_runs: tuple[SourceRunStats, ...] = ()
     total_discovered: int = Field(default=0, ge=0)
     total_unique: int = Field(default=0, ge=0)

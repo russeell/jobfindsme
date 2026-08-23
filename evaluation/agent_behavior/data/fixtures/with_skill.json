@@ -193,6 +193,29 @@
           "content": "已由本地 Core 解析简历，未把完整正文读入对话。"
         }
       ]
+    },
+    {
+      "case_id": "live_only_search",
+      "host": "skill-contract",
+      "events": [
+        {
+          "type": "tool_call",
+          "name": "search_jobs",
+          "arguments": {
+            "allow_cache_fallback": false,
+            "include_seen": true
+          }
+        },
+        {
+          "type": "tool_result",
+          "name": "search_jobs",
+          "content": "【搜索摘要】\n本次已按要求排除所有缓存岗位。\n【推荐岗位】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n\n投递链接：https://example.com/job-live\n\n推荐理由：角色和薪资条件符合。"
+        },
+        {
+          "type": "assistant",
+          "content": "【搜索摘要】\n本次已按要求排除所有缓存岗位。\n【推荐岗位】\n1. AI应用工程师｜示例公司｜上海｜社招｜正式｜25-40K\n\n投递链接：https://example.com/job-live\n\n推荐理由：角色和薪资条件符合。"
+        }
+      ]
     }
   ]
 }

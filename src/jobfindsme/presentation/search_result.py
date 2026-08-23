@@ -142,6 +142,11 @@ def _short_error(error: str | None) -> str:
     if not error:
         return "无结果"
     lowered = error.lower()
+    if "browser refresh returned no jobs" in lowered:
+        return "浏览器未返回岗位"
+    access_markers = ("waf", "风控", "安全校验", "blocked", "访问限制")
+    if any(marker in lowered for marker in access_markers):
+        return "来源触发访问限制"
     chrome_markers = (
         "chrome",
         "cdp",
@@ -152,7 +157,7 @@ def _short_error(error: str | None) -> str:
         "websocket",
     )
     if any(marker in lowered for marker in chrome_markers):
-        return "Chrome 未连接，请运行 jobfindsme setup"
+        return "浏览器桥未连接"
     if "timeout" in lowered or "timed out" in lowered:
         return "来源响应超时"
     if "connection" in lowered or "refused" in lowered or "unreachable" in lowered:
@@ -181,10 +186,13 @@ def _run_count_line(
             f"\n{coverage}本轮未刷新外部来源，从本地缓存匹配到 "
             f"{diagnostics.result_count} 条。"
         )
-    return source_line + (
+    line = source_line + (
         f"\n{coverage}本轮远程发现 {diagnostics.total_discovered} 条，"
         f"本地岗位库匹配到 {diagnostics.result_count} 条。"
     )
+    if not diagnostics.cache_fallback_allowed:
+        line += " 本次已按要求排除所有缓存岗位。"
+    return line
 
 
 def format_search_results(
@@ -203,7 +211,19 @@ def format_search_results(
     )
     source_line = _run_count_line(diagnostics, source_line=_source_line(diagnostics))
     filters = " + ".join(context.applied_filters) or "未设置额外条件"
-    filter_line = f"过滤：{filters} → 给出 {diagnostics.result_count} 个"
+    unverified_count = _unverified_count(items)
+    if diagnostics.result_count and unverified_count:
+        verified_count = diagnostics.result_count - unverified_count
+        result_label = (
+            f"给出 {diagnostics.result_count} 个候选；"
+            f"其中 {verified_count} 个全部条件已确认，"
+            f"{unverified_count} 个存在待确认项"
+        )
+    elif diagnostics.result_count:
+        result_label = f"给出 {diagnostics.result_count} 个已确认符合岗位"
+    else:
+        result_label = "没有符合条件的岗位"
+    filter_line = f"过滤：{filters} → {result_label}"
     if diagnostics.undisclosed_salary_filtered_count:
         filter_line += (
             f"；另有 {diagnostics.undisclosed_salary_filtered_count} 个"
@@ -230,6 +250,16 @@ def format_search_results(
             + _operating_summary(items, changes, diagnostics, context),
         )
     )
+
+
+def _unverified_count(items: Sequence[Any]) -> int:
+    """Count candidates whose requested hard constraints remain unknown."""
+    count = 0
+    for item in items:
+        _, _, evidence, _ = _job_score_and_evidence(item)
+        if evidence and getattr(evidence, "warnings", ()):
+            count += 1
+    return count
 
 
 def _operating_summary(
@@ -335,15 +365,20 @@ def _source_note(
         lines.append(
             "BOSS直聘说明：本次 BOSS 刷新未返回新数据"
             "（浏览器桥可能不在线或需重新登录）。"
-            "解决方案：对我说「帮我重新登录 BOSS直聘」，或让我运行 jobfindsme setup "
-            "确认窗口在线。"
+            "解决方案：对我说「帮我重新登录 BOSS直聘」。"
         )
     other = [run.source_name for run in issues if "BOSS" not in run.source_name]
     if other:
         names = "、".join(dict.fromkeys(other))
+        outcome = (
+            "已使用缓存或跳过"
+            if diagnostics.cache_fallback_allowed
+            else "已按要求排除缓存并跳过"
+        )
         lines.append(
-            f"{names} 本次刷新未成功，已使用缓存或跳过；"
-            "对我说「重新搜索一次」即可重试。"
+            f"{names} 本次刷新未成功，{outcome}；"
+            "对我说「重新实时搜索一次，不使用缓存」即可重试；"
+            "若仍失败，我会明确说明平台访问限制。"
         )
     return "\n".join(lines)
 

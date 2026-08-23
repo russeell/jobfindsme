@@ -1,11 +1,10 @@
 {
-  "generated_at": "2026-08-23T22:20:20+00:00",
+  "generated_at": "2026-08-23T23:18:06+00:00",
   "database": "<custom local database>",
   "query": {
     "target_role": "AI应用工程师",
     "locations": [
-      "上海",
-      "深圳"
+      "上海"
     ],
     "salary_min_k": 20,
     "experience_max_years": 3,
@@ -18,25 +17,25 @@
       {
         "name": "version",
         "ok": true,
-        "message": "jobfindsme 0.7.2  |  更新: jobfindsme self-update",
+        "message": "jobfindsme 0.12.0  |  更新: jobfindsme self-update",
         "required": true
       },
       {
         "name": "python",
         "ok": true,
-        "message": "Python 3.13",
+        "message": "Python 3.14",
         "required": true
       },
       {
         "name": "database",
         "ok": true,
-        "message": "/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-real.DULi8H/jobfindsme.db",
+        "message": "/tmp/jobfindsme-release.h0Q3z2/jobfindsme.db",
         "required": true
       },
       {
         "name": "permissions",
         "ok": true,
-        "message": "/var/folders/bq/0wr00jt12fv7ny6ld17fnlsm0000gn/T/jobfindsme-real.DULi8H mode=700",
+        "message": "/tmp/jobfindsme-release.h0Q3z2 mode=700",
         "required": true
       },
       {
@@ -48,25 +47,25 @@
       {
         "name": "connectors",
         "ok": true,
-        "message": "ready: BossZhipinConnector, LiepinConnector, ZhilianHttpConnector, WuyouHttpConnector",
+        "message": "installed: BossZhipinConnector, LiepinConnector, ZhilianHttpConnector, WuyouHttpConnector; this checks local code only, not live platform availability",
         "required": true
       },
       {
         "name": "sources",
         "ok": true,
-        "message": "BOSS直聘 → cdp ｜ Chrome 未连接；运行 jobfindsme setup\n猎聘 → http ｜ 就绪（无需浏览器）\n智联招聘 → http→cdp ｜ HTTP 可能被 WAF 拦截；Chrome 未连接；运行 jobfindsme setup 可启用 CDP 兜底\n前程无忧 → http→cdp ｜ HTTP 可能被 WAF 拦截；Chrome 未连接；运行 jobfindsme setup 可启用 CDP 兜底",
+        "message": "BOSS直聘 → cdp ｜ Chrome 已连接；登录与检索由 boss_login 单独探测\n猎聘 → http ｜ 路由已配置（未做实时探测）\n智联招聘 → http→cdp ｜ 路由已配置；浏览器兜底可尝试（未做实时探测）\n前程无忧 → http→cdp ｜ 路由已配置；浏览器兜底可尝试（未做实时探测）",
         "required": true
       },
       {
         "name": "browser_connectors",
-        "ok": false,
-        "message": "Chrome CDP (port 9222) not reachable — run 'jobfindsme setup' to launch Chrome for platform search",
+        "ok": true,
+        "message": "browser bridge is reachable; this does not prove login or platform search availability",
         "required": false
       },
       {
         "name": "boss_login",
         "ok": false,
-        "message": "Chrome CDP not reachable — run 'jobfindsme setup' first",
+        "message": "BOSS直聘探测返回 0 条，登录或实时检索状态无法确认",
         "required": false
       },
       {
@@ -78,125 +77,73 @@
     ]
   },
   "search": {
-    "elapsed_seconds": 6.387,
-    "matching_seconds": 0.017,
-    "total_discovered": 84,
-    "total_unique": 79,
-    "duplicates_removed": 5,
-    "result_count": 10,
-    "new_count": 10,
+    "elapsed_seconds": 5.842,
+    "matching_seconds": 0.026,
+    "total_discovered": 42,
+    "total_unique": 40,
+    "duplicates_removed": 2,
+    "result_count": 15,
+    "new_count": 15,
     "changed_count": 0,
     "reopened_count": 0,
     "closed_count": 0
   },
   "sources": [
     {
-      "source": "智联招聘·上海",
+      "source": "智联招聘",
       "family": "智联招聘",
       "kind": "zhilian_http",
       "status": "failed",
-      "elapsed_seconds": 3.443,
+      "elapsed_seconds": 3.793,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
       "cache_used": false,
       "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
+      "error": "智联接口返回空结果（可能被风控拦截，请稍后重试或用浏览器查看）"
     },
     {
-      "source": "BOSS直聘·深圳",
+      "source": "前程无忧",
+      "family": "前程无忧",
+      "kind": "wuyou_http",
+      "status": "failed",
+      "elapsed_seconds": 3.122,
+      "discovered": 0,
+      "unique": 0,
+      "versions_created": 0,
+      "cache_used": false,
+      "top_count": 0,
+      "error": "前程无忧页面内请求失败：waf_blocked"
+    },
+    {
+      "source": "BOSS直聘",
       "family": "BOSS直聘",
       "kind": "boss_cdp",
       "status": "failed",
-      "elapsed_seconds": 3.01,
+      "elapsed_seconds": 0.503,
       "discovered": 0,
       "unique": 0,
       "versions_created": 0,
       "cache_used": false,
       "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
+      "error": "browser refresh returned no jobs; live source status could not be confirmed"
     },
     {
-      "source": "猎聘·上海",
+      "source": "猎聘",
       "family": "猎聘",
       "kind": "liepin_http",
       "status": "success",
-      "elapsed_seconds": 0.767,
+      "elapsed_seconds": 2.047,
       "discovered": 42,
       "unique": 40,
       "versions_created": 42,
       "cache_used": false,
-      "top_count": 0,
+      "top_count": 15,
       "error": null
-    },
-    {
-      "source": "猎聘·深圳",
-      "family": "猎聘",
-      "kind": "liepin_http",
-      "status": "success",
-      "elapsed_seconds": 0.844,
-      "discovered": 42,
-      "unique": 39,
-      "versions_created": 41,
-      "cache_used": false,
-      "top_count": 10,
-      "error": null
-    },
-    {
-      "source": "前程无忧·深圳",
-      "family": "前程无忧",
-      "kind": "wuyou_http",
-      "status": "failed",
-      "elapsed_seconds": 2.716,
-      "discovered": 0,
-      "unique": 0,
-      "versions_created": 0,
-      "cache_used": false,
-      "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
-    },
-    {
-      "source": "前程无忧·上海",
-      "family": "前程无忧",
-      "kind": "wuyou_http",
-      "status": "failed",
-      "elapsed_seconds": 2.947,
-      "discovered": 0,
-      "unique": 0,
-      "versions_created": 0,
-      "cache_used": false,
-      "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
-    },
-    {
-      "source": "智联招聘·深圳",
-      "family": "智联招聘",
-      "kind": "zhilian_http",
-      "status": "failed",
-      "elapsed_seconds": 3.859,
-      "discovered": 0,
-      "unique": 0,
-      "versions_created": 0,
-      "cache_used": false,
-      "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
-    },
-    {
-      "source": "BOSS直聘·上海",
-      "family": "BOSS直聘",
-      "kind": "boss_cdp",
-      "status": "failed",
-      "elapsed_seconds": 1.765,
-      "discovered": 0,
-      "unique": 0,
-      "versions_created": 0,
-      "cache_used": false,
-      "top_count": 0,
-      "error": "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme doctor 查看诊断。"
     }
   ],
   "top_counts": {
-    "猎聘": 10
+    "猎聘": 15
   },
   "smoke": {
     "doctor_ok": true,
@@ -205,5 +152,5 @@
     "layers_present": true,
     "link_present": true
   },
-  "final_text": "【搜索摘要】\n简历解析：本次未使用简历，按用户明确条件匹配。\n检索：BOSS直聘 ✗ jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme d · 猎聘 ✓ 84（上海42、深圳42） · 智联招聘 ✗ jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme d · 前程无忧 ✗ jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；若仍失败，运行 jobfindsme d\n覆盖 4 个平台、8 个城市来源；本轮远程发现 84 条，本地岗位库匹配到 10 条。\n过滤：角色(AI应用工程师) + 城市(上海/深圳) + 薪资20K+ + 经验≤3年 + 社招 + 正式 → 给出 10 个\n\n【推荐岗位】\n1. [新增] AI应用工程师｜深圳铂玺科技有限公司｜深圳-南山区｜招聘类型未注明｜岗位性质未注明｜20-40k\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/job/1979930251.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n2. [新增] AI应用工程师｜某深圳机械/设备公司｜深圳｜招聘类型未注明｜岗位性质未注明｜25-40k·14薪\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：不限\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；经验要求未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78249781.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n3. [新增] AI应用工程师｜安克创新｜深圳-宝安区｜招聘类型未注明｜岗位性质未注明｜20-35k·16薪\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；经验要求未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1982493855.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n4. [新增] AI应用工程师｜某深圳互联网上市公司｜深圳｜招聘类型未注明｜岗位性质未注明｜30-45k\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   经验：1-3年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/a/76935343.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n5. [新增] AI应用工程师｜国民技术股份有限公司｜深圳-南山区｜招聘类型未注明｜岗位性质未注明｜20-30k·15薪\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/job/1983118125.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n6. [新增] AI应用工程师｜深圳市万邑通信息科技有限公司｜深圳-宝安区｜招聘类型未注明｜岗位性质未注明｜30-40k\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/job/1983562195.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n7. [新增] AI应用工程师(VLA方向)｜某杭州大型计算机软件公司｜深圳｜招聘类型未注明｜岗位性质未注明｜25-45k·14薪\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/a/76405787.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n8. [新增] AI应用工程师｜某知名互联网科技公司｜深圳｜招聘类型未注明｜岗位性质未注明｜25-35k\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/a/76891841.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n9. [新增] AI应用工程师｜奥维领芯｜深圳-龙岗区｜招聘类型未注明｜岗位性质未注明｜20-45k·15薪\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   经验：1-3年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/job/1984230717.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n10. [新增] AI应用工程师｜成都星汉致远科技有限公司｜深圳-宝安区｜招聘类型未注明｜岗位性质未注明｜20-35k\n   硬条件：已通过所有可判定条件；未知项见风险提示\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；招聘类型未注明\n\n   投递链接：https://www.liepin.com/job/1984486543.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n【状态与下一步】\n结果：本次展示 10 个（全部新增）；历史已展示 10 个不同岗位（累计 10 次）；已关闭 0 个（不再推荐）。\n建议：当前岗位的 JD 证据覆盖不足，建议先查看详情，不要仅凭排序分决定投递。\n下一步（直接和 AI 说）：\n- 增量搜索：「继续帮我找新岗位，只看以前没看过的」\n- 查看历史：「我投过哪些岗位？」或「我之前看过哪些岗位？」\n- 定时检查：如果当前 Agent 支持定时任务，可说「每天早上 9 点检查新增岗位」\nBOSS直聘说明：本次 BOSS 刷新未返回新数据（浏览器桥可能不在线或需重新登录）。解决方案：对我说「帮我重新登录 BOSS直聘」，或让我运行 jobfindsme setup 确认窗口在线。\n智联招聘·上海、前程无忧·深圳、前程无忧·上海、智联招聘·深圳 本次刷新未成功，已使用缓存或跳过；对我说「重新搜索一次」即可重试。\n投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。"
+  "final_text": "【搜索摘要】\n简历解析：本次未使用简历，按用户明确条件匹配。\n检索：BOSS直聘 ✗ 浏览器未返回岗位 · 猎聘 ✓ 42 · 智联招聘 ✗ 来源触发访问限制 · 前程无忧 ✗ 来源触发访问限制\n覆盖 4 个平台、4 个城市来源；本轮远程发现 42 条，本地岗位库匹配到 15 条。 本次已按要求排除所有缓存岗位。\n过滤：角色(AI应用工程师) + 城市(上海) + 薪资20K+ + 经验≤3年 + 社招 + 正式 → 给出 15 个候选；其中 0 个全部条件已确认，15 个存在待确认项\n\n【推荐岗位】\n1. [新增] 物理AI应用工程师（偏智能机械臂方向）｜云道智能｜上海-杨浦区｜招聘类型未注明｜岗位性质未注明｜25-50k·15薪\n   条件状态：已确认项通过；未确认项见下方\n   经验：1-3年 ｜ 学历：硕士\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1984365017.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n2. [新增] AI应用工程师｜商霖华通｜上海-黄浦区｜招聘类型未注明｜岗位性质未注明｜20-40k\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1984800835.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n3. [新增] AI应用工程师｜某上海电子/半导体/集成电路公司｜上海｜招聘类型未注明｜岗位性质未注明｜25-50k·14薪\n   条件状态：已确认项通过；未确认项见下方\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78685327.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n4. [新增] AI应用工程师（上海、苏州）｜某上海其他行业公司｜上海｜招聘类型未注明｜岗位性质未注明｜25-40k·14薪\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/76613449.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n5. [新增] AI应用工程师/模型知识库工程师｜某上海基金/证券/期货公司｜上海｜招聘类型未注明｜岗位性质未注明｜40-70k·15薪\n   条件状态：已确认项通过；未确认项见下方\n   学历：硕士\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；经验要求未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78845893.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n6. [新增] AI应用工程师｜某上海基金/证券/期货上市公司｜上海｜招聘类型未注明｜岗位性质未注明｜20-35k\n   条件状态：已确认项通过；未确认项见下方\n   学历：不限\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；经验要求未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/76644265.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n7. [新增] AI应用工程师｜易福门电子(上海)有限公司｜上海-浦东新区｜招聘类型未注明｜岗位性质未注明｜20-40k\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-10年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1984532119.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n8. [新增] AI应用工程师｜上海白鹿生商科技有限公司｜上海-青浦区｜招聘类型未注明｜岗位性质未注明｜20-40k\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1984088297.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n9. [新增] AI应用工程师｜某上海IT服务公司｜上海｜招聘类型未注明｜岗位性质未注明｜70-100k\n   条件状态：已确认项通过；未确认项见下方\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/79072743.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n10. [新增] AI应用工程师｜某上海基金/证券/期货公司｜上海-浦东新区｜招聘类型未注明｜岗位性质未注明｜30-35k\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/77340671.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n11. [新增] AI应用工程师｜某上海银行公司｜上海｜招聘类型未注明｜岗位性质未注明｜20-28k·14薪\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/77060257.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n12. [新增] AI应用工程师｜某杭州大型计算机软件公司｜上海｜招聘类型未注明｜岗位性质未注明｜30-40k·16薪\n   条件状态：已确认项通过；未确认项见下方\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78682055.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n13. [新增] AI应用工程师｜某大型知名计算机软件公司｜上海｜招聘类型未注明｜岗位性质未注明｜35-65k·15薪\n   条件状态：已确认项通过；未确认项见下方\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求；经验要求未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78928339.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n14. [新增] AI 应用工程师｜中科飞测｜上海-浦东新区｜招聘类型未注明｜岗位性质未注明｜20-40k\n   条件状态：已确认项通过；未确认项见下方\n   学历：本科\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/job/1983829677.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n15. [新增] 教育行业AI 应用工程师(1 年 LLM 经验）｜某上海互联网公司｜上海-杨浦区｜招聘类型未注明｜岗位性质未注明｜20-30k\n   条件状态：已确认项通过；未确认项见下方\n   经验：3-5年 ｜ 学历：不限\n   需要注意：招聘类型未注明，无法确认是否符合要求；岗位性质未注明，无法确认是否符合要求\n\n   投递链接：https://www.liepin.com/a/78851421.shtml\n\n   推荐理由：岗位名称已通过目标角色筛选（本次未使用简历，按明确条件匹配）；薪资信息明确。\n\n【状态与下一步】\n结果：本次展示 15 个（全部新增）；历史已展示 15 个不同岗位（累计 15 次）；已关闭 0 个（不再推荐）。\n建议：当前岗位的 JD 证据覆盖不足，建议先查看详情，不要仅凭排序分决定投递。\n下一步（直接和 AI 说）：\n- 增量搜索：「继续帮我找新岗位，只看以前没看过的」\n- 查看历史：「我投过哪些岗位？」或「我之前看过哪些岗位？」\n- 定时检查：如果当前 Agent 支持定时任务，可说「每天早上 9 点检查新增岗位」\nBOSS直聘说明：本次 BOSS 刷新未返回新数据（浏览器桥可能不在线或需重新登录）。解决方案：对我说「帮我重新登录 BOSS直聘」。\n智联招聘、前程无忧 本次刷新未成功，已按要求排除缓存并跳过；对我说「重新实时搜索一次，不使用缓存」即可重试；若仍失败，我会明确说明平台访问限制。\n投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。"
 }

@@ -387,6 +387,7 @@ class SearchOrchestrator:
         limit: int = 20,
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.LIVE,
+        allow_cache_fallback: bool = True,
         include_seen: bool = False,
         use_profile: bool = True,
     ) -> list[JobMatch]:
@@ -398,6 +399,7 @@ class SearchOrchestrator:
                 limit=limit,
                 allow_browser_sources=allow_browser_sources,
                 refresh_mode=refresh_mode,
+                allow_cache_fallback=allow_cache_fallback,
                 include_seen=include_seen,
                 use_profile=use_profile,
             ).matches
@@ -412,6 +414,7 @@ class SearchOrchestrator:
         limit: int = 20,
         allow_browser_sources: bool = False,
         refresh_mode: SearchRefreshMode = SearchRefreshMode.LIVE,
+        allow_cache_fallback: bool = True,
         include_seen: bool = False,
         use_profile: bool = True,
     ) -> SearchRunResult:
@@ -505,18 +508,25 @@ class SearchOrchestrator:
             source_jobs = [
                 job for job in source_jobs if job.source.source_name in included
             ]
-        if browser_source_names:
+        excluded_source_names = set(browser_source_names)
+        if not allow_cache_fallback:
+            excluded_source_names.update(
+                run.source_name
+                for run in source_runs
+                if run.status is not SourceRunStatus.SUCCESS or run.cache_used
+            )
+        if excluded_source_names:
             source_jobs = [
                 job
                 for job in source_jobs
-                if job.source.source_name not in browser_source_names
+                if job.source.source_name not in excluded_source_names
             ]
         candidate_limit = max(100, limit * 5, len(source_jobs))
         candidates = self.match_jobs(
             workspace_id=context.workspace.workspace_id,
             plan_id=context.plan.plan_id,
             limit=candidate_limit,
-            excluded_source_names=tuple(browser_source_names),
+            excluded_source_names=tuple(excluded_source_names),
             included_source_names=active_source_names,
             use_profile=use_profile,
         )
@@ -553,6 +563,7 @@ class SearchOrchestrator:
                 elapsed_seconds=perf_counter() - started,
                 matching_seconds=matching_seconds,
                 refresh_mode=refresh_mode,
+                cache_fallback_allowed=allow_cache_fallback,
                 source_runs=source_runs,
                 total_discovered=total_discovered,
                 total_unique=total_unique,

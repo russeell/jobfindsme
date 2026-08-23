@@ -173,6 +173,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
     )
     parser.add_argument(
+        "--allow-cache-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    parser.add_argument(
         "--use-profile",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -210,6 +215,7 @@ def main() -> int:
         limit=args.limit,
         allow_browser_sources=args.allow_browser_sources,
         refresh_mode=SearchRefreshMode(args.refresh_mode),
+        allow_cache_fallback=args.allow_cache_fallback,
         include_seen=args.include_seen,
         use_profile=args.use_profile,
     )

@@ -71,6 +71,14 @@ def _require_factual_search_output(transcript: BehaviorTranscript) -> list[str]:
     missing = [url for url in server_urls if url not in last]
     if missing:
         return [f"apply URLs were dropped or rewritten: {missing[:2]}"]
+    link_lines = {
+        line.strip().removeprefix("投递链接：")
+        for line in last.splitlines()
+        if line.strip().startswith("投递链接：")
+    }
+    detached = [url for url in server_urls if url not in link_lines]
+    if detached:
+        return [f"apply URLs were not kept on standalone link lines: {detached[:2]}"]
     return []
 
 
@@ -107,6 +115,21 @@ def _explain_source_degradation(transcript: BehaviorTranscript) -> list[str]:
         failures.append("recovery was not expressed as a chat action")
     if "Chrome未连接" not in output and "缓存" not in output:
         failures.append("degraded source state was hidden")
+    if any(token in output for token in ("jobfindsme setup", "9222", "--remote-")):
+        failures.append("raw recovery commands or ports leaked to the user")
+    return failures
+
+
+def _live_only_search(transcript: BehaviorTranscript) -> list[str]:
+    searches = [
+        event for event in _tool_calls(transcript) if event.name == "search_jobs"
+    ]
+    if len(searches) != 1:
+        return ["live-only request must make exactly one search_jobs call"]
+    failures = []
+    if searches[0].arguments.get("allow_cache_fallback") is not False:
+        failures.append("live-only request did not disable cache fallback in Core")
+    failures.extend(_require_factual_search_output(transcript))
     return failures
 
 
@@ -190,6 +213,7 @@ _CHECKS: dict[str, Callable[[BehaviorTranscript], list[str]]] = {
     "protect_resume_context": _protect_resume_context,
     "change_city": _change_city,
     "explain_recommendation": _explain_recommendation,
+    "live_only_search": _live_only_search,
 }
 
 

@@ -26,6 +26,7 @@ def test_acceptance_prompts_cover_user_critical_behaviors() -> None:
         "protect_resume_context",
         "change_city",
         "explain_recommendation",
+        "live_only_search",
     }
     assert all(case["prompt"].strip() for case in suite["cases"])
 
@@ -44,6 +45,7 @@ def test_baseline_demonstrates_failure_before_the_skill() -> None:
         "protect_resume_context",
         "change_city",
         "explain_recommendation",
+        "live_only_search",
     }
 
 
@@ -53,7 +55,7 @@ def test_skill_fixture_passes_every_behavior_gate() -> None:
     assert report.skill_enabled is True
     assert report.gate_passed is True
     assert report.failed_case_ids == ()
-    assert report.passed == report.total == 8
+    assert report.passed == report.total == 9
 
 
 def test_contract_fixture_cannot_be_claimed_as_live_agent_evidence(

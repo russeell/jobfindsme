@@ -24,6 +24,11 @@ def test_doctor_checks_every_operational_layer(tmp_path) -> None:
     assert all(item.message for item in report.diagnostics)
     mcp = next(item for item in report.diagnostics if item.name == "mcp")
     assert mcp.message == "5 tools"
+    connectors = next(item for item in report.diagnostics if item.name == "connectors")
+    assert "local code only" in connectors.message
+    assert "not live platform availability" in connectors.message
+    sources = next(item for item in report.diagnostics if item.name == "sources")
+    assert "未做实时探测" in sources.message
 
 
 def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
@@ -62,7 +67,7 @@ def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -
 
     assert report.ok is True
     assert browser.ok is False
-    assert "jobfindsme setup" in browser.message
+    assert "browser bridge is not running" in browser.message
 
 
 def test_doctor_reports_insecure_data_directory_permissions(tmp_path) -> None:
@@ -135,6 +140,6 @@ def test_empty_boss_probe_is_not_misreported_as_logged_out(monkeypatch) -> None:
 
     diagnostic = Doctor._boss_login()
 
-    assert diagnostic.ok is True
-    assert "限流" in diagnostic.message
+    assert diagnostic.ok is False
+    assert "无法确认" in diagnostic.message
     assert "需要登录" not in diagnostic.message

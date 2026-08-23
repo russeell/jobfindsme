@@ -72,6 +72,7 @@ def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
         limit=request.limit,
         allow_browser_sources=request.allow_browser_sources,
         refresh_mode=request.refresh_mode,
+        allow_cache_fallback=request.allow_cache_fallback,
         include_seen=request.include_seen,
         use_profile=request.use_profile,
     )

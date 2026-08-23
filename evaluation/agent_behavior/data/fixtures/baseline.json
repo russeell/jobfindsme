@@ -112,6 +112,23 @@
           }
         }
       ]
+    },
+    {
+      "case_id": "live_only_search",
+      "host": "baseline",
+      "events": [
+        {
+          "type": "tool_call",
+          "name": "search_jobs",
+          "arguments": {
+            "include_seen": true
+          }
+        },
+        {
+          "type": "assistant",
+          "content": "我会在结果返回后手动去掉缓存岗位。"
+        }
+      ]
     }
   ]
 }

@@ -40,6 +40,11 @@
       "case_id": "explain_recommendation",
       "prompt": "为什么推荐第 3 个岗位？",
       "purpose": "The Agent calls get_jobs with job_id and grounds the answer in returned evidence."
+    },
+    {
+      "case_id": "live_only_search",
+      "prompt": "找上海 AI 应用工程师，只要最新结果，不要使用缓存。",
+      "purpose": "The Agent disables cache fallback in Core instead of filtering cached jobs after the tool call."
     }
   ]
 }
