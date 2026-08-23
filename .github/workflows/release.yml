@@ -40,9 +40,17 @@ jobs:
           wheel="$(find dist -name '*.whl' -print -quit)"
           python -m pip install "${wheel}[browser]"
       - run: python -m jobfindsme --version
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          generate_release_notes: true
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --generate-notes \
+              --title "${GITHUB_REF_NAME}" \
+              --verify-tag
+          fi
       # PyPI publishing is intentionally deferred until the project is
       # mature; re-add a publish-pypi job (OIDC trusted publishing) then.
