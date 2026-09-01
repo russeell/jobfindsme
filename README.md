@@ -1,137 +1,149 @@
 <div align="center">
 
-# jobfindsme · AI 求职雷达
+# Agent Job Search
 
-**AI 替你刷岗位，你只看值得投的。**
+**给 Agent 的中文岗位查询层 —— 一次接入，四个招聘平台。**
 
 <p>
-  <a href="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml"><img src="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml"><img src="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/MCP-stdio-111111" alt="MCP stdio">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
   <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
 </p>
 
-[快速开始](#-快速开始) · [怎么用](#-怎么用) · [返回结果](#-返回结果) · [岗位来源](#-岗位来源) · [FAQ](#-faq) · [English](./README.en.md)
+[快速开始](#-快速开始) · [MCP 工具](#-mcp-工具) · [查询 vs 搜索](#-查询-vs-搜索) · [岗位来源](#-岗位来源) · [FAQ](#-faq) · [English](./README.en.md)
 
 </div>
 
 ---
 
-> 给 Claude Code、Codex、Cursor 等 Agent 装一个本地求职 MCP Server。
-> jobfindsme 负责 **刷、筛、记**：多来源发现、确定性过滤排序、跨天状态记忆；Agent 负责理解需求和与你对话。
+> Agent Job Search 是一个本地 MCP Server。它把 BOSS直聘、猎聘、智联招聘、前程无忧
+> 变成你的 Agent 可以直接调用的结构化查询接口 —— 归一化、跨源去重、硬过滤、
+> 确定性排序、逐来源状态，全部在服务端完成，返回一个有界的结构化结果。
+>
+> **它不替你做判断，也不生成结论。** 岗位事实、来源状态和匹配证据由 Server 给，
+> 怎么用这些事实由你的 Agent 决定。
 
 ---
 
 ## 解决什么问题
 
-每天找工作最烦的不是“不会搜索”，而是这些重复劳动：
+给 Agent 接招聘数据，通常卡在四件事上：
 
-| 问题 | jobfindsme 的做法 |
+| 问题 | Agent Job Search 的做法 |
 |---|---|
-| 多个平台来回切 | 统一检索四个来源；单源失败会明确提示并返回其他来源 |
-| 推荐一堆不相关岗位 | 先硬过滤角色、城市、薪资、社招/校招、正式/实习，再排序 |
-| 反复看到同一个岗位 | 本地记录已看、已投、已忽略，只汇报变化 |
-| 不知道为什么推荐 | 使用简历时给出匹配度、证据、差距和投递链接；没有简历时不虚构匹配度 |
-| 不想配置模型 API | 核心功能不依赖 API Key，数据存在本地 SQLite |
+| 平台没有公开 API，页面结构一变就全崩 | 四个来源各有主链路和降级链路；被拦截会明确标注，不会静默返回空结果 |
+| 拿回来的字段各家都不一样 | 统一归一化成一种岗位模型：薪资、经验、学历、招聘类型、岗位性质、投递链接 |
+| 同一岗位在多个平台重复出现 | 按公司+标题+城市做指纹，跨源去重并保留来源归属记录 |
+| Agent 拿到一堆原始岗位，不知道哪些符合条件 | 城市、薪资、社招/校招、正式/实习等硬条件在服务端过滤，未知字段保持未知而非猜成满足 |
 
-一句话开始：
-
-```text
-用 jobfindsme，根据本地简历（路径：~/Documents/resume.pdf），
-找上海的 AI 应用工程师，20K以上，社招，正式。
-```
+一点说明：匹配是**确定性的**——词表 + 正则 + 加权打分，不调用任何模型，
+不需要 API Key。分数是可解释的排序信号，不是录用概率。
 
 ---
 
 ## 🚀 快速开始
 
-### 方式一：直接和 Agent 说（推荐）
-
-在 Claude Code、Codex、Cursor 里直接说（复制整段）：
-
-```text
-按 https://github.com/russeell/jobfindsme 的 README 安装 jobfindsme
-```
-
-Agent 会读取仓库 README 完成：安装本地运行时（
-`curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash`）
-→ 写入 MCP 配置（`jobfindsme connect <当前Agent>`）→ 提示重启。
-首次安装需要几分钟；如果 Agent 无法访问网络，改用下面的手动方式。
-`install.sh` 随 Release 发布，此固定链接始终指向最新脚本（无 CDN 缓存滞后）。
-国内备选：`https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh`
-（jsdelivr 缓存可能在 push 后滞后最多 12 小时）。
-
-装好后，直接说需求即可：
-
-```text
-用 jobfindsme，根据本地简历（路径：~/Documents/resume.pdf），找上海的 AI 应用工程师岗位，20K 以上，社招，正式。
-```
-
-### 方式二：手动安装（1 分钟）
-
 需要 Python 3.11+。安装一次本地运行时：
 
 ```bash
-curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/russeell/agent-job-search/releases/latest/download/install.sh | bash
 ```
+
+从 `jobfindsme` 升级时直接运行同一命令即可：旧数据库和 BOSS 登录态会继续使用，
+旧命令暂时保留为兼容别名。
+
+`install.sh` 随 Release 发布，此固定链接始终指向最新脚本（无 CDN 缓存滞后）。
+国内备选：`https://cdn.jsdelivr.net/gh/russeell/agent-job-search@main/scripts/install.sh`
+（jsdelivr 缓存可能在 push 后滞后最多 12 小时）。
 
 Codex / Claude Code 支持原生插件，一条命令装好 Skill + MCP 配置（安装脚本结束时会打印对应命令）；
 其他 MCP 客户端用 `connect` 把配置交给当前 Agent，然后重启 Agent：
 
 ```bash
-jobfindsme connect             # 自动探测当前 Agent（推荐）
-jobfindsme connect claude      # Claude Code
-jobfindsme connect codex       # Codex
-jobfindsme connect cursor      # Cursor
+agent-job-search connect             # 自动探测当前 Agent（推荐）
+agent-job-search connect claude      # Claude Code
+agent-job-search connect codex       # Codex
+agent-job-search connect cursor      # Cursor
 ```
 
-其他 MCP 客户端：`jobfindsme config` 打印标准 JSON 手动粘贴，或
-`jobfindsme connect --path <配置文件>` 直接写入。仓库根目录的 `.mcp.json`
-就是同一份标准配置。
-
-自检并开始：
+其他 MCP 客户端：`agent-job-search config` 打印标准 JSON 手动粘贴，或
+`agent-job-search connect --path <配置文件>` 直接写入。仓库根目录的 `.mcp.json`
+就是同一份标准配置。自检：
 
 ```bash
-jobfindsme doctor
+agent-job-search doctor
 ```
 
-```text
-用 jobfindsme，根据 ~/Documents/resume.pdf 找上海的 AI 应用工程师，20K以上，社招。
-```
-
-完整简历由本地 Core 解析。Agent 只应把路径传给 `setup`，不得先读取全文。
-
-BOSS直聘需要登录态时，对 Agent 说：
-
-```text
-帮我登录 BOSS直聘
-```
-
-它会打开专用 Chrome 窗口。扫码登录后保持窗口运行即可。跳过此步仍可使用无需登录的来源。
+BOSS直聘需要登录态时，运行 `agent-job-search setup`，它会打开专用 Chrome 窗口，
+扫码登录后保持窗口运行即可。跳过此步仍可使用其余三个来源。
 
 ---
 
-## ✨ 能力
+## 🔧 MCP 工具
 
-| 能力 | 说明 |
-|---|---|
-| 一句话找岗位 | Agent 调用本地 MCP Server，自动配置搜索并返回结果 |
-| 四平台来源 | BOSS直聘、猎聘、智联招聘、前程无忧；失败会明确标注 |
-| 简历匹配 | 本地解析 PDF/MD/TXT，按技能、经验、学历等信号排序 |
-| 事实驱动输出 | Server 返回有界结构化事实 + 三层简明摘要，Agent 组织最终表达 |
-| 增量追踪 | 识别新增、变更、重开、关闭，避免重复推荐 |
-| 状态记忆 | 支持保存、已投递、忽略；下次自动跳过 |
-| 本地优先 | 不需要模型 API Key；简历和状态保存在本地 SQLite |
+五个工具，每个都有严格的输入输出 schema、annotations 和 `structuredContent`。
 
-### 可验证，不靠口号
+| 工具 | 作用 | 说明 |
+|---|---|---|
+| `setup` | 配置检索条件 | `target_role` 必填，locations / salary / track / type / exclusions 选填；传 `resume_path` 时才做简历解析 |
+| `search_jobs` | 从平台刷新并检索 | 并发刷新维护中的来源，单源失败不阻断其他来源 |
+| `get_jobs` | 查询本地岗位库 | 按 keyword / location / salary / source / states 过滤并分页；传 `job_id` 取单个岗位完整详情 |
+| `update_job_state` | 标记 saved / applied / rejected | 可选的上层能力 |
+| `delete_local_data` | 删除本地数据 | preview → confirm 两阶段令牌，不可跳过 |
 
-| 发布门禁 | 当前结果 |
-|---|---:|
-| Python 测试 | 334 项通过 |
-| 干净环境安装 + Cursor 接入 | 12 秒 |
-| Agent 行为契约 | 无 Skill 0/9，安装 Skill 后 9/9 |
-| Wheel 冒烟 | CLI、SQLite migration、5 个 MCP tools 全链路通过 |
+**`response_mode`**：`search_jobs` 默认返回一份紧凑的三层中文摘要，适合对话场景；
+设 `response_mode: "facts"` 则只返回结构化事实（标题、公司、城市、薪资、证据、
+变更状态、投递链接），不含推荐理由和"下一步"引导 —— 适合自己渲染输出的程序化调用者。
+
+```text
+# 默认（summary）：结构化事实 + 三层摘要
+{"target_role": "AI应用工程师", "locations": ["上海"], "salary_min_k": 20}
+
+# facts：只要结构化事实
+{"response_mode": "facts", "limit": 30}
+```
+
+---
+
+## 🔍 查询 vs 搜索
+
+两者分工不同，别混用：
+
+| | `search_jobs` | `get_jobs` |
+|---|---|---|
+| 做什么 | 访问平台、刷新数据、按检索条件过滤排序 | 查询**已经收进本地库**的岗位 |
+| 网络 | 有（`refresh_mode: "cache"` 可关闭） | 无 |
+| 过滤依据 | `setup` 配置的检索条件（硬过滤 + 打分） | 调用时传入的 keyword / location / salary / source / states |
+| 增量雷达 | 有（默认抑制"看过且未变化"的岗位） | 无（就是查库） |
+
+`get_jobs` 的过滤是**纯谓词**：不传就不生效，未知字段不做策略判断。
+需要"按条件从平台拉新数据"用 `search_jobs`；需要"在我已有的数据里查"用 `get_jobs`。
+
+---
+
+## 🌐 岗位来源
+
+当前维护四个来源。项目优先保证每个来源能稳定返回有效岗位，不用名义上的
+平台数量冒充覆盖率；被平台安全校验拦截的来源会在结果里明确标注，不会静默
+当作"没有岗位"。
+
+| 来源 | 主链路 | 降级 | 需要浏览器？ |
+|---|---|---|---|
+| **BOSS直聘** | 用户授权的本地 Chrome 会话 | 有时效标记的缓存 | ✅ 需要，且要登录 |
+| **猎聘** | 公开 Web JSON 直连（curl_cffi） | 浏览器补详情，然后缓存 | ❌ 列表不需要 |
+| **智联招聘** | 本地 Chrome 打开公开搜索页读岗位卡 | 有时效标记的缓存 | ✅ 需要，不要求登录 |
+| **前程无忧** | 本地 Chrome 搜索页内发起同源 JSON 请求 | 有时效标记的缓存 | ✅ 需要，不要求登录 |
+
+猎聘优先纯 HTTP 直连（亚秒级、无需浏览器）；本机已运行 Chrome 时，
+再自动用浏览器补充岗位详情页的 JD 文本，进一步丰富匹配信号。
+
+智联旧 JSON 接口会在页面仍有岗位时返回风控空结果；前程无忧的 JSON 接口
+会校验浏览器执行环境。当前维护链路因此复用 `agent-job-search setup` 启动的隔离
+Chrome：智联读取真实搜索页，前程无忧由真实搜索页发起同源请求。系统不绕过
+验证码、不读取个人 Chrome 配置；来源仍不可用时会明确标记失败，并继续返回
+其他平台结果。
 
 四来源的实时可用性会随平台安全策略和本机登录状态变化。项目不会把缓存或
 被拦截响应伪装成实时结果；每次搜索都返回逐来源状态。最新实盘报告见
@@ -139,173 +151,146 @@ BOSS直聘需要登录态时，对 Agent 说：
 
 ---
 
-## 💬 怎么用
-
-直接复制改参数：
-
-```text
-# 找岗位
-用 jobfindsme 根据 ~/Documents/resume.pdf 找北京的 大模型应用工程师，30K以上，社招。
-
-# 定时推送
-配合支持定时任务的 Agent，每天早上 9 点只推送新增岗位给我。
-
-# 查历史
-我之前看过的岗位有哪些？
-我投过哪些岗位？
-
-# 只看新增
-继续帮我找新岗位，只要今天新增的。
-
-# 只要实时结果
-重新实时搜索，不要使用缓存。
-
-# 换条件
-把城市换成深圳，薪资下限改成 25K，重新搜。
-
-# 管理状态
-把刚才第 2 个岗位标记为已投递；把外包公司全部忽略。
-```
-
----
-
 ## 📦 返回结果
 
-Server 决定岗位事实、过滤、排序、匹配证据和投递链接；Agent 基于这些事实组织最终回答。
-每次结果包含有界结构化事实（`structuredContent.jobs`）和三层简明摘要
-（搜索摘要 / 推荐岗位 / 状态与下一步）。标题不是逐字协议，Agent 可以调整措辞和排版，但不得修改事实、证据、风险、来源状态和链接：
+`structuredContent.jobs` 是每个岗位的有界事实：**不含完整 JD 正文**。
 
-```text
-AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
-条件状态：已确认项通过；未确认项见下方
-证据匹配：86/100（高）；证据覆盖：90%（均非录用概率）
-技能：RAG、Agent、MCP ｜ 经验：1-3年 ｜ 学历：本科
-
-投递链接：https://example.com/jobs/123
-
-推荐理由：简历技能命中：RAG、Agent、MCP；可验证证据得分 86/100，证据覆盖 90%；薪资信息明确。
-需要注意：JD 要求 Kubernetes，简历中未找到直接证据
+```jsonc
+{
+  "job": {
+    "title": "AI应用工程师（Agent开发）",
+    "company": "示例科技",
+    "locations": ["上海"],
+    "salary": { "raw_text": "25-40K", "period": "month", "min_amount": 25000, "max_amount": 40000 },
+    "recruitment_track": "social",
+    "employment_type": "full_time",
+    "apply_url": "https://example.com/jobs/123",
+    "source_name": "猎聘",
+    "liveness": "active",
+    "description_excerpt": "RAG、Agent、MCP …",   // 400 字上限
+    "untrusted_external_content": true
+  },
+  "score": 0.86,
+  "evidence": {
+    "relevance_level": "high",
+    "evidence_coverage": 0.9,
+    "score_components": { "role": 0.25, "skills": 0.31, "experience": 0.2, "education": 0.1, "liveness": 0.1 },
+    "matched_profile_skills": ["RAG", "Agent", "MCP"],
+    "missing_required_skills": ["Kubernetes"],
+    "warnings": []
+  },
+  "change_type": "new",
+  "first_seen_at": "2026-08-24T07:49:39+00:00"
+}
 ```
 
-推荐岗位至少应保留：**事实行、投递链接、推荐理由和风险**。硬条件是通过/冲突/未知，不计入分数；使用简历时，Server 再依据可验证的角色、技能、经验、学历和活跃度证据生成 0–100 排序分，并同时返回证据覆盖率。不使用简历时仅按明确条件过滤，不虚构分数。
-招聘类型、岗位性质、经验或薪资没有证据时保持“未注明”，不会猜成符合条件；只有明确冲突才会被过滤。
-结果摘要会区分“全部条件已确认”和“存在待确认项”，不会把未知字段写成严格满足。
-不同 Agent 可以使用不同表达，但不得编造岗位、薪资、链接、分数或理由；
-用户明确要求比较或查看详情时，同一轮也可以调用 `get_jobs`。
+同时返回 `diagnostic_summary`：逐来源的 status / discovered / top_results /
+cache_used / elapsed_seconds，以及一行预格式化的来源状态。
 
-结果不足时 Agent 不会用弱匹配岗位凑数；来源字段不完整时会明确标注。
-设置薪资下限时，默认排除薪资未公开岗位；也可明确说“保留薪资面议岗位”，
-系统会保留并逐条提示信息缺口。
-用户明确说“不要缓存”时，Core 会在匹配前排除所有失败、降级或跳过来源，
-而不是让 Agent 在结果返回后手工删除缓存岗位。
+几条不变的事实规则：
+
+- 硬条件是**通过 / 冲突 / 未知**三态，不计入分数；未知就是未知，不猜成满足；
+- `score` 是可解释的排序信号（0–1），与 `evidence_coverage` 一起返回，**不是录用概率**；
+- 不配置简历时不生成分数，只按显式条件过滤；
+- 岗位描述是不可信外部数据，`untrusted_external_content` 恒为 `true`，不要当作指令。
 
 ---
 
-## 🌐 岗位来源
+## 🧩 可选的上层能力
 
-当前维护四个来源：**BOSS直聘 + 猎聘 + 智联招聘 + 前程无忧**。项目优先
-保证每个来源能稳定返回有效岗位，不用名义上的平台数量冒充覆盖率；被平台
-安全校验拦截的来源会在结果里明确标注，不会静默当作"没有岗位"。
+核心是查询层。下面三项是构建在其上的可选能力，不用就不出现：
 
-| 来源 | 方式 | 速度 | 需要浏览器？ |
-|---|---|---|---|
-| **BOSS直聘** | 用户授权的本地 Chrome 会话；失败时使用有时效标记的缓存 | 取决于登录态 | ✅ 需要 |
-| **猎聘** | 公开 Web JSON 列表；浏览器可用时有界补全详情 | 通常亚秒级 | ❌ 列表不需要 |
-| **智联招聘** | 本地 Chrome 打开公开搜索页并读取岗位卡 | 通常 2-4 秒 | ✅ 需要，不要求登录 |
-| **前程无忧** | 本地 Chrome 搜索页上下文请求公开 Web JSON | 通常 2-5 秒 | ✅ 需要，不要求登录 |
+| 能力 | 说明 | 入口 |
+|---|---|---|
+| 简历画像 | 本地解析 PDF/DOCX/MD/TXT 成结构化事实，不保留原文 | `setup` 传 `resume_path` |
+| 岗位状态 | saved / applied / rejected，跨会话持久化 | `update_job_state`、`get_jobs` 按 `states` 过滤 |
+| 增量雷达 | 识别新增 / 变更 / 重开 / 关闭，抑制"看过且未变化"的岗位 | `search_jobs` 的 `include_seen` |
 
-猎聘优先纯 HTTP 直连（亚秒级、无需浏览器）；本机已运行 Chrome 时，
-再自动用浏览器补充岗位详情页的 JD 文本，进一步丰富匹配信号。
-
-智联旧 JSON 接口会在页面仍有岗位时返回风控空结果；前程无忧的 JSON 接口
-会校验浏览器执行环境。当前维护链路因此复用 `jobfindsme setup` 启动的隔离
-Chrome：智联读取真实搜索页，前程无忧由真实搜索页发起同源请求。系统不绕过
-验证码、不读取个人 Chrome 配置；来源仍不可用时会明确标记失败，并继续返回
-其他平台结果。
-
----
-
-## ⚙️ 工作原理
-
-```text
-Agent (Claude/GPT/Qwen/WorkBuddy — 负责交互与后续解释)
-  → MCP Server (本地 stdio)
-  → 本地 Core
-      → 纯 HTTP 直连（猎聘）
-      → 本地 Chrome CDP（BOSS 登录会话；智联公开页；前程无忧公开页 API）
-      → live 模式：有界并行刷新全部来源，单源失败不阻断其他来源
-  → 标准化 → 跨来源去重 → 硬过滤（城市/薪资/校招社招/实习正式）
-  → 信号提取 + 加权粗筛（技能/经验/学历/活跃度/薪资）
-  → 增量雷达（新增/变化/重开/关闭识别）
-  → Server 返回有界事实 + 三层简明摘要；Agent 基于事实组织回答
-    （不得编造事实或丢失投递链接）
-```
-
-MCP Server 负责硬过滤、结构化信号提取、确定性排序和事实基线。
-Agent 负责自然语言表达；用户追问岗位对比时，才基于返回证据补充分析，
-不编造事实、不丢失或改写投递链接。
-
-简历画像、求职偏好、岗位和追踪状态保存在本地 SQLite。Core 不需要模型 API。
+不需要这些能力时，把 `setup` 当成一个"配置检索条件"的接口用就行。
 
 ---
 
 ## 🔒 隐私与安全
 
-- jobfindsme 不需要把完整简历发送给 Agent；按内置 Skill 工作时，Agent 只把本地路径交给 Core 解析；
-- 岗位描述按不可信外部数据处理，不作为 Agent 指令；
+- 简历在本地解析，Agent 只需传路径，不需要把完整简历读进上下文；
+- 岗位描述按不可信外部数据处理，不作为指令；
 - 导出写入本地文件；删除走「预览 + 确认令牌」两阶段协议；
-- 不自动投递、不绕过验证码、不承诺覆盖全部岗位。
+- 不自动投递、不绕过验证码、不承诺覆盖全部岗位；
+- BOSS直聘使用独立 Chrome profile，不碰你的个人浏览器配置。
 
 ---
 
-## 🔧 安装与维护
+## ✅ 可验证，不靠口号
+
+| 发布门禁 | 当前结果 |
+|---|---:|
+| Python 测试 | 359 项通过（3.11 / 3.12 / 3.13 × Ubuntu / macOS / Windows） |
+| 干净环境安装 + Cursor 接入 | 12 秒 |
+| Agent 行为契约 | 无 Skill 0/9，安装 Skill 后 9/9 |
+| Wheel 冒烟 | CLI、SQLite migration、5 个 MCP tools 全链路通过 |
+
+---
+
+## ⚙️ 安装与维护
 
 **更新**：重新运行安装脚本，数据库自动迁移，历史岗位和状态保留：
 
 ```bash
-curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/russeell/agent-job-search/releases/latest/download/install.sh | bash
 ```
 
 **手动安装**（脚本不可用时）：
 
 ```bash
-python3 -m venv ~/.jobfindsme/runtime
-~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
-  "jobfindsme[browser] @ <最新版 wheel 链接>"
+python3 -m venv ~/.agent-job-search/runtime
+~/.agent-job-search/runtime/bin/python -m pip install --upgrade \
+  "agent-job-search[browser] @ <最新版 wheel 链接>"
 ```
 
-wheel 链接从 [Releases](https://github.com/russeell/jobfindsme/releases/latest)
-复制，形如 `jobfindsme-X.Y.Z-py3-none-any.whl`（安装脚本自动取最新版本，无需关心）。
+wheel 链接从 [Releases](https://github.com/russeell/agent-job-search/releases/latest)
+复制，形如 `agent_job_search-X.Y.Z-py3-none-any.whl`（安装脚本自动取最新版本，无需关心）。
 网络受限时可加 `--index-url https://pypi.tuna.tsinghua.edu.cn/simple`。
 
-**卸载**：`jobfindsme uninstall <host>` 只移除 Agent 配置，不删数据。彻底删除前先导出：
+> `[browser]` extra 包含 `curl_cffi`（猎聘直连的 Chrome TLS 指纹）、
+> `requests` 和 `websocket-client`（Chrome CDP 桥）。只装核心包的话猎聘不可用。
+
+**卸载**：`agent-job-search uninstall <host>` 只移除 Agent 配置，不删数据。彻底删除前先导出：
 
 ```bash
-rm -rf ~/.jobfindsme
+rm -rf ~/.agent-job-search
 ```
 
 ---
 
 ## ❓ FAQ
 
+**Q：它和 JobSpy 有什么区别？**
+JobSpy 覆盖 LinkedIn / Indeed / Glassdoor 等海外平台，是 Python 库。
+Agent Job Search 覆盖国内四平台，是 **MCP Server** —— 面向的是"让 Agent 自己调用"，
+并且额外做了跨源去重、增量雷达和逐来源状态。
+
+**Q：和 agent-reach 是一类东西吗？**
+是同一类思路（给 Agent 补上它自己够不到的访问能力），但范围不同：
+agent-reach 是跨领域通用访问，Agent Job Search 是**招聘这一个领域做深**。
+
+**Q：需要 API Key 吗？**
+不需要。核心功能不依赖任何模型或付费接口，数据存在本地 SQLite。
+
 **Q：平台都要登录吗？**
-只有 BOSS 需要（扫码一次，后续复用本地登录态）。猎聘纯 HTTP 直连，不需要浏览器。
+只有 BOSS 需要（扫码一次，后续复用本地登录态）。猎聘纯 HTTP 直连，不需要浏览器；
+智联和前程无忧需要本地 Chrome 打开公开页，但不需要登录。
 
 **Q：会不会封号？**
 它做的是低频、拟人节奏的读取，不批量抓取、不自动操作。但自动化访问在平台条款里
-都属于灰色地带，存在账号被限制的可能 — 请个人低频使用，风险自负。
+都属于灰色地带，存在账号被限制的可能 —— 请个人低频使用，风险自负。
 
 **Q：搜索结果为什么是 0 / 某个平台经常没有结果？**
-先跑 `jobfindsme doctor` 自检。BOSS 检查本地 Chrome 和登录态；猎聘检查 HTTP
-来源状态。来源失败时系统会明确标注降级或缓存，不会静默伪装成实时结果。
+先跑 `agent-job-search doctor` 自检。来源失败时系统会明确标注降级或缓存，不会静默伪装成
+实时结果。另外注意：目前来源目录只覆盖 12 个主要城市，其他城市不会自动选源。
 
-**Q：简历会被上传吗？**
-jobfindsme 默认在本地解析简历并保存结构化事实，不需要把完整简历发送给 Agent。按内置 Skill 工作时，Agent 只传本地路径；
-`jobfindsme export` / `delete_local_data` 可随时导出和清除。
-
-**Q：和直接把简历发给 AI 让它搜，有什么区别？**
-通用 Agent 没有平台接入、没有跨天去重和状态记忆、也不能稳定解析 PDF 简历成结构化
-事实。jobfindsme 把这三件事做成了确定性的本地服务，Agent 只负责对话。
+**Q：分数 86/100 是什么意思？**
+它是可解释的排序信号（角色、技能、经验、学历、活跃度五项的加权和），
+配合 `evidence_coverage` 一起看。**不是录用概率**，不要当成预测用。
 
 **Q：安装超过 5 分钟？**
 停止当前命令，保留最后输出并提交 Issue。不要让 Agent 克隆仓库、安装测试依赖或下载
@@ -325,7 +310,7 @@ ruff check . && ruff format --check .
 [connectors](docs/connectors.md)、[evaluation](docs/evaluation.md)；
 完整工程规范在 `docs/internal/project_spec.md`。
 发现错排、漏排、重复或失效链接，请提交脱敏
-[Issue](https://github.com/russeell/jobfindsme/issues)。
+[Issue](https://github.com/russeell/agent-job-search/issues)。
 
 ---
 

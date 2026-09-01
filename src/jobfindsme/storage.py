@@ -224,7 +224,7 @@ class Database:
                             f"Migration {path.stem} is in an inconsistent state: "
                             f"tables {sorted(existing)} already exist, but "
                             f"tables {sorted(missing)} are missing. "
-                            f"Restore from a backup or run 'jobfindsme delete' "
+                            "Restore from a backup or run 'agent-job-search delete' "
                             f"to reset the local database."
                         )
 

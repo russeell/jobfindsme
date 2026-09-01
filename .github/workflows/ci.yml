@@ -78,7 +78,7 @@ jobs:
           python -m build --wheel
           $wheel = Get-ChildItem dist -Filter *.whl | Select-Object -First 1
           python -m pip install --force-reinstall --no-deps $wheel.FullName
-          python -m jobfindsme --version
+          agent-job-search --version
       - run: ruff check .
       - run: ruff format --check .
 

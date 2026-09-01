@@ -389,6 +389,36 @@ def _apply_tip(items: Sequence[Any]) -> str:
     return "投递后对我说「把第 1 个标记为已投递」，明天推送自动跳过它。"
 
 
+def format_facts_status_line(
+    diagnostics: SearchRunDiagnostics,
+    changes: SearchChanges,
+) -> str:
+    """One factual status line for ``response_mode=facts``.
+
+    Deliberately contains no recommendation, no next-step advice, and no
+    host-directed phrasing — a programmatic caller renders its own output
+    from ``structuredContent.jobs`` and uses this line only for a glance at
+    source health and change counts.
+    """
+    parts = [_source_line(diagnostics)]
+    if diagnostics.refresh_mode is SearchRefreshMode.CACHE:
+        parts.append(
+            f"；本轮未刷新外部来源，从本地缓存匹配到 {diagnostics.result_count} 条"
+        )
+    else:
+        parts.append(
+            "；本轮远程发现 "
+            f"{diagnostics.total_discovered} 条，"
+            f"匹配 {diagnostics.result_count} 条"
+        )
+    parts.append(
+        "；新增 "
+        f"{changes.new} ／ 变更 {changes.changed} ／ 重开 {changes.reopened} "
+        f"／ 关闭 {changes.closed} ／ 重复抑制 {changes.repeated_suppressed}。"
+    )
+    return "".join(parts)
+
+
 def format_search_empty(diagnostics: SearchRunDiagnostics) -> str:
     """Explain why an incremental search returned no visible jobs."""
     attempted = [

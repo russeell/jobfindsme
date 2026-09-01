@@ -102,7 +102,7 @@ class PrivacyService:
         directory = self.database.path.parent / "exports"
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         destination = directory / (
-            f"jobfindsme-{workspace_id}-{exported_at:%Y%m%dT%H%M%S%fZ}.json"
+            f"agent-job-search-{workspace_id}-{exported_at:%Y%m%dT%H%M%S%fZ}.json"
         )
         content = (
             json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n"

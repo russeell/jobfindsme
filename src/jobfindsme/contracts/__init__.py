@@ -41,6 +41,7 @@ from jobfindsme.contracts.models import (
 from jobfindsme.contracts.search import (
     ExportReceipt,
     Preferences,
+    ResponseMode,
     SalaryPolicy,
     SearchChanges,
     SearchConfiguration,
@@ -77,6 +78,7 @@ __all__ = [
     "JobSummary",
     "MatchEvidence",
     "RecruitmentTrack",
+    "ResponseMode",
     "SalaryDetails",
     "Salary",
     "SalaryPeriod",

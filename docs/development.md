@@ -33,7 +33,7 @@ behavior RED/GREEN contract in `evaluation/agent_behavior/data/`.
 
 ## Changing Agent behavior
 
-Edit only `skills/jobfindsme/SKILL.md`, then generate the packaged wheel copy:
+Edit only `skills/agent-job-search/SKILL.md`, then generate the packaged wheel copy:
 
 ```bash
 python scripts/sync_skill.py

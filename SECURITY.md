@@ -1,6 +1,6 @@
 # Security
 
-jobfindsme is local-first by design: resumes, job data, search plans,
+Agent Job Search is local-first by design: resumes, job data, search plans,
 and tracking state live in a local SQLite database on your machine.
 
 ## Privacy guarantees
@@ -19,14 +19,14 @@ and tracking state live in a local SQLite database on your machine.
 ## Browser bridge isolation
 
 - BOSS直聘 access runs through a dedicated Chrome profile started by
-  `jobfindsme setup` — the connector never opens, kills, or touches
+  `agent-job-search setup` — the connector never opens, kills, or touches
   your personal Chrome profile.
 - The connector manages only its own process (recorded PID), and a
   reachability probe avoids relaunching an already-running bridge.
 
 ## Data control
 
-- **Export** (CLI `jobfindsme export`) writes a local file and returns
+- **Export** (CLI `agent-job-search export`) writes a local file and returns
   only its path, SHA-256 hash, and record counts. The file stays on
   your machine.
 - **Deletion** (`delete_local_data`) is a two-phase protocol: preview

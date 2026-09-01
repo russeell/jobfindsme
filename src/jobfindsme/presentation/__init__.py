@@ -12,6 +12,7 @@ from jobfindsme.presentation.job_block import format_job_list
 from jobfindsme.presentation.search_result import (
     _short_error,
     _source_line_from_runs,
+    format_facts_status_line,
     format_search_empty,
     format_search_results,
 )
@@ -19,6 +20,7 @@ from jobfindsme.presentation.search_result import (
 __all__ = [
     "_short_error",
     "_source_line_from_runs",
+    "format_facts_status_line",
     "format_job_list",
     "format_search_empty",
     "format_search_results",

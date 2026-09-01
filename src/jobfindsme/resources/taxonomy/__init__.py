@@ -1,1 +1,1 @@
-"""Versioned deterministic taxonomies shipped with jobfindsme."""
+"""Versioned deterministic taxonomies shipped with Agent Job Search."""

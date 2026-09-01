@@ -1,6 +1,6 @@
 """Multi-day Radar replay: compress a week of usage into deterministic days.
 
-Each day is a JSON job-snapshot file (same format as `jobfindsme jobs import`).
+Each day is a JSON job snapshot (same format as `agent-job-search jobs import`).
 The harness imports the day, refreshes the json_file source (so missing jobs
 are marked closed), runs an incremental radar search, and records the change
 outcome.  A fixture set lives in ``evaluation/data/radar_replay/``.

@@ -84,7 +84,7 @@ class UrllibTransport:
         request = Request(
             url,
             headers={
-                "User-Agent": "jobfindsme/0.2",
+                "User-Agent": "agent-job-search/0.13",
                 "Accept-Encoding": "gzip",
             },
         )

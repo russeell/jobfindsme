@@ -3,9 +3,9 @@ requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jobfindsme"
-version = "0.12.4"
-description = "Local-first AI job search radar for MCP agents — search, filter, and track jobs across BOSS直聘, 猎聘, 智联招聘 and 前程无忧"
+name = "agent-job-search"
+version = "0.13.0"
+description = "Local-first job search middleware for AI agents — query, filter, rank, and track jobs across Chinese hiring platforms"
 readme = "README.md"
 license = "MIT"
 keywords = ["ai", "job-search", "recruitment", "mcp", "career", "resume", "china-jobs",
@@ -39,12 +39,14 @@ dev = [
 ]
 
 [project.scripts]
+agent-job-search = "jobfindsme.cli:main"
+# Compatibility alias for installations made before the 0.13 rename.
 jobfindsme = "jobfindsme.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/russeell/jobfindsme"
-Repository = "https://github.com/russeell/jobfindsme"
-Issues = "https://github.com/russeell/jobfindsme/issues"
+Homepage = "https://github.com/russeell/agent-job-search"
+Repository = "https://github.com/russeell/agent-job-search"
+Issues = "https://github.com/russeell/agent-job-search/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

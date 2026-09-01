@@ -12,9 +12,13 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from jobfindsme.contracts import ResponseMode
 from jobfindsme.mcp.responses import build_search_output, jobs_list_text
 from jobfindsme.mcp.schemas import SearchJobsInput
-from jobfindsme.presentation import format_search_results
+from jobfindsme.presentation import (
+    format_facts_status_line,
+    format_search_results,
+)
 from jobfindsme.profiles.models import FactType
 
 HandlerResult = tuple[str | None, dict[str, Any]]
@@ -95,15 +99,20 @@ def search_jobs(core: Any, request: BaseModel) -> HandlerResult:
         }
         for match in matches
     ]
-    presentation = core.search_presentation_context(
-        use_profile=request.use_profile,
-    )
-    text = format_search_results(
-        jobs,
-        result.changes,
-        result.diagnostics,
-        presentation,
-    )
+    if request.response_mode is ResponseMode.FACTS:
+        # No server-rendered prose, recommendations, or next-step advice —
+        # the caller renders its own output from structuredContent.jobs.
+        text = format_facts_status_line(result.diagnostics, result.changes)
+    else:
+        presentation = core.search_presentation_context(
+            use_profile=request.use_profile,
+        )
+        text = format_search_results(
+            jobs,
+            result.changes,
+            result.diagnostics,
+            presentation,
+        )
     structured = build_search_output(
         text=text,
         jobs=jobs,

@@ -1,6 +1,6 @@
 # Architecture
 
-jobfindsme is a **local-first job search and incremental tracking engine
+Agent Job Search is a **local-first job search and incremental tracking engine
 for AI Agents** — a four-source (BOSS直聘 + 猎聘 + 智联招聘 + 前程无忧) MCP Server with local
 SQLite persistence.
 
@@ -67,11 +67,32 @@ Dependency direction is one way. Core must not import MCP, an Agent SDK,
 a hosted model provider, or a notification SDK. Adapters must not
 duplicate matching rules.
 
+### Product layering
+
+The product is a **query layer** with an optional upper layer on top:
+
+| Layer | What it is | Entry points |
+|---|---|---|
+| Core — query layer | discovery, normalization, cross-source dedup, hard filtering, deterministic ranking, source status, change detection | `search_jobs`, `get_jobs`, and `setup` as query configuration |
+| Optional upper layer | resume profile, job state (saved / applied / rejected), incremental radar suppression | `setup` with `resume_path`, `update_job_state`, `search_jobs.include_seen` |
+
+A caller that ignores the entire upper layer still has a complete query
+surface. Positioning, README, and SKILL all describe the project in terms of
+the core layer; the upper layer is documented as optional capability, never
+as the product.
+
+`search_jobs` also has two response modes. `response_mode: "summary"`
+(default) adds a compact three-layer Chinese summary for conversational
+hosts; `response_mode: "facts"` returns the same `structuredContent.jobs`
+with no server-authored recommendations or next-step advice, so a
+programmatic caller renders its own output. Both modes return byte-identical
+structured facts.
+
 ## Agent distribution
 
 ```text
-skills/jobfindsme/SKILL.md                 canonical behavior source
-  └─ src/jobfindsme/resources/jobfindsme/  generated wheel mirror
+skills/agent-job-search/SKILL.md                 canonical behavior source
+  └─ src/jobfindsme/resources/agent_job_search/  generated wheel mirror
 
 .mcp.json                                 shared stdio MCP definition
 .codex-plugin/plugin.json                 Codex plugin marketplace manifest
@@ -83,7 +104,7 @@ skills/jobfindsme/SKILL.md                 canonical behavior source
 
 One standard MCP config plus one Skill serves every MCP-compatible host.
 Native plugin marketplaces (Codex / Claude Code) install the Skill and the
-MCP config in a single command; `jobfindsme connect` covers every other host.
+MCP config in a single command; `agent-job-search connect` covers every other host.
 `scripts/sync_skill.py --check` and distribution tests enforce the boundary.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and

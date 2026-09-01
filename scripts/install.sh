@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# jobfindsme 一键安装
+# Agent Job Search 一键安装
 # 本地求职雷达 · 聚合四大招聘平台 · 确定性匹配 · 增量岗位追踪
 #
 # 用法（推荐，只安装本地运行时）:
-#   curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh \
+#   curl -fsSL https://github.com/russeell/agent-job-search/releases/latest/download/install.sh \
 #     | bash
 #
 # 国内备选（jsdelivr CDN，push 后缓存可能滞后 12h）:
-#   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh \
+#   curl -fsSL https://cdn.jsdelivr.net/gh/russeell/agent-job-search@main/scripts/install.sh \
 #     | bash
 #
 # 设计原则:
@@ -21,11 +21,12 @@
 
 set -euo pipefail
 
-PINNED_VERSION="0.12.4"
+PINNED_VERSION="0.13.0"
 MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
-RUNTIME="$HOME/.jobfindsme/runtime"
+RUNTIME="$HOME/.agent-job-search/runtime"
 LAUNCHER_DIR="$HOME/.local/bin"
-LAUNCHER="$LAUNCHER_DIR/jobfindsme"
+LAUNCHER="$LAUNCHER_DIR/agent-job-search"
+LEGACY_LAUNCHER="$LAUNCHER_DIR/jobfindsme"
 DOWNLOAD_DIR="$(mktemp -d)"
 trap 'rm -rf "$DOWNLOAD_DIR"' EXIT
 
@@ -38,7 +39,7 @@ dim()    { printf '\033[2m%s\033[0m\n' "$*"; }
 # ── 0. 解析最新版本号（GitHub API，失败回退 PINNED_VERSION）───────────────────
 VERSION="$PINNED_VERSION"
 LATEST_TAG="$(curl -fsSL --connect-timeout 8 --max-time 15 \
-    https://api.github.com/repos/russeell/jobfindsme/releases/latest \
+    https://api.github.com/repos/russeell/agent-job-search/releases/latest \
     2>/dev/null | python3 -c '
 import json, sys
 try:
@@ -52,13 +53,13 @@ if printf '%s' "$LATEST_TAG" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
   VERSION="$LATEST_TAG"
 fi
 
-WHEEL_GH="https://github.com/russeell/jobfindsme/releases/download/v${VERSION}/jobfindsme-${VERSION}-py3-none-any.whl"
+WHEEL_GH="https://github.com/russeell/agent-job-search/releases/download/v${VERSION}/agent_job_search-${VERSION}-py3-none-any.whl"
 CHECKSUM_GH="${WHEEL_GH}.sha256"
-WHEEL_FILE="$DOWNLOAD_DIR/jobfindsme-${VERSION}-py3-none-any.whl"
+WHEEL_FILE="$DOWNLOAD_DIR/agent_job_search-${VERSION}-py3-none-any.whl"
 CHECKSUM_FILE="${WHEEL_FILE}.sha256"
 
 echo
-bold "🤖 jobfindsme v${VERSION} · AI 求职雷达"
+bold "🤖 Agent Job Search v${VERSION}"
 dim  "   一个 MCP Server，同时搜 BOSS直聘/猎聘/智联/前程无忧，本地筛选排序"
 echo
 
@@ -76,7 +77,7 @@ fi
 green "✓ Python $(python3 --version 2>&1)"
 
 # ── 2. 下载并校验官方 Release wheel ─────────────────────────────────────────
-yellow "· 下载 jobfindsme v${VERSION} 官方 Release…"
+yellow "· 下载 Agent Job Search v${VERSION} 官方 Release…"
 curl -fL --retry 3 --retry-all-errors \
   --connect-timeout 10 --max-time 120 \
   -o "$WHEEL_FILE" "$WHEEL_GH"
@@ -101,7 +102,7 @@ fi
 green "✓ Release wheel 校验通过"
 
 # ── 3. 建运行时 + 装包（uv 加速 if available）─────────────────────────────────
-mkdir -p "$HOME/.jobfindsme"
+mkdir -p "$HOME/.agent-job-search"
 python3 -m venv "$RUNTIME" >/dev/null 2>&1 || python3 -m venv "$RUNTIME"
 
 PIP=( "$RUNTIME/bin/python" -m pip install )
@@ -114,7 +115,7 @@ fi
 INDEX_URL="${PIP_INDEX_URL:-https://pypi.org/simple}"
 # 注意：macOS 自带 bash 3.2 会把变量名后紧跟的全角字符并入变量名，
 # 因此所有后面跟非 ASCII 字符的变量一律使用 ${VAR} 花括号形式。
-yellow "· 安装 jobfindsme[browser]（index: ${INDEX_URL}）…"
+yellow "· 安装 agent-job-search[browser]（index: ${INDEX_URL}）…"
 if ! "${PIP[@]}" --quiet \
     --index-url "$INDEX_URL" --upgrade \
     "$WHEEL_FILE[browser]"; then
@@ -130,15 +131,17 @@ if ! "${PIP[@]}" --quiet \
   fi
 fi
 
-green "✓ 安装完成: $("$RUNTIME/bin/python" -m jobfindsme --version 2>&1)"
+green "✓ 安装完成: $("$RUNTIME/bin/agent-job-search" --version 2>&1)"
 
-# ── 4. 注入 PATH（~/.local/bin/jobfindsme）───────────────────────────────────
+# ── 4. 注入 PATH ─────────────────────────────────────────────────────────────
 mkdir -p "$LAUNCHER_DIR"
-ln -sf "$RUNTIME/bin/jobfindsme" "$LAUNCHER"
-if [ "$(command -v jobfindsme 2>/dev/null || true)" = "$LAUNCHER" ]; then
-  green "✓ jobfindsme 已加入 PATH（${LAUNCHER}）"
+ln -sf "$RUNTIME/bin/agent-job-search" "$LAUNCHER"
+# Keep the old command as a compatibility alias during the rename window.
+ln -sf "$RUNTIME/bin/agent-job-search" "$LEGACY_LAUNCHER"
+if [ "$(command -v agent-job-search 2>/dev/null || true)" = "$LAUNCHER" ]; then
+  green "✓ agent-job-search 已加入 PATH（${LAUNCHER}）"
 else
-  yellow "· 提示: 命令 jobfindsme 当前不可用或指向其他版本（PATH 里已有同名程序？）"
+  yellow "· 提示: 命令 agent-job-search 当前不可用或指向其他版本"
   yellow "  可用全路径执行:"
   yellow "    $LAUNCHER"
   yellow "  或临时加入: export PATH=\"\$HOME/.local/bin:\$PATH\""
@@ -149,19 +152,19 @@ echo
 bold "📎 接入你的 Agent:"
 echo
 echo "  一条命令写入 MCP 配置，然后重启 Agent:"
-echo "    jobfindsme connect claude      # Claude Code"
-echo "    jobfindsme connect codex       # Codex"
-echo "    jobfindsme connect cursor      # Cursor"
-echo "    jobfindsme connect             # 自动探测当前 Agent"
+echo "    agent-job-search connect claude      # Claude Code"
+echo "    agent-job-search connect codex       # Codex"
+echo "    agent-job-search connect cursor      # Cursor"
+echo "    agent-job-search connect             # 自动探测当前 Agent"
 echo
 echo "  其他 MCP 客户端:"
-echo "    jobfindsme config             # 打印标准 MCP JSON 手动粘贴"
-echo "    jobfindsme connect --path <配置文件>   # 写入任意配置文件"
+echo "    agent-job-search config             # 打印标准 MCP JSON 手动粘贴"
+echo "    agent-job-search connect --path <配置文件>   # 写入任意配置文件"
 echo
 bold "🚀 两步启动:"
 echo
-echo "  ① jobfindsme setup   # 登录 BOSS直聘（猎聘不需要，可跳过）"
-echo "  ② 重启 Agent 后说：用 jobfindsme 根据简历找上海 AI 应用工程师，20K以上"
+echo "  ① agent-job-search setup   # 登录 BOSS直聘（猎聘不需要，可跳过）"
+echo "  ② 重启 Agent 后说：用 Agent Job Search 根据简历找上海 AI 应用工程师，20K以上"
 echo
-dim  "故障排查: 搜索无结果？运行 jobfindsme doctor 自检"
-dim  "完整文档: https://github.com/russeell/jobfindsme"
+dim  "故障排查: 搜索无结果？运行 agent-job-search doctor 自检"
+dim  "完整文档: https://github.com/russeell/agent-job-search"

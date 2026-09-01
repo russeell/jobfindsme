@@ -6,12 +6,12 @@ from pathlib import Path
 
 def test_packaged_and_source_skills_are_identical() -> None:
     packaged = (
-        files("jobfindsme.resources.jobfindsme")
+        files("jobfindsme.resources.agent_job_search")
         .joinpath("SKILL.md")
         .read_text(encoding="utf-8")
     )
     root = Path(__file__).parents[2]
-    source = (root / "skills" / "jobfindsme" / "SKILL.md").read_text()
+    source = (root / "skills" / "agent-job-search" / "SKILL.md").read_text()
 
     assert packaged == source
 
@@ -24,7 +24,7 @@ def test_skill_contract_keeps_apply_links_as_bare_urls() -> None:
     rendering Markdown. Any future change must not reintroduce wrapping.
     """
     root = Path(__file__).parents[2]
-    skill = (root / "skills" / "jobfindsme" / "SKILL.md").read_text()
+    skill = (root / "skills" / "agent-job-search" / "SKILL.md").read_text()
 
     assert "bare URL" in skill
     assert "投递链接：https://" in skill  # the canonical bare-URL form
@@ -35,7 +35,7 @@ def test_skill_contract_keeps_apply_links_as_bare_urls() -> None:
 
 def test_skill_grounds_answer_in_facts_and_keeps_incremental_semantics() -> None:
     root = Path(__file__).parents[2]
-    skill = (root / "skills" / "jobfindsme" / "SKILL.md").read_text()
+    skill = (root / "skills" / "agent-job-search" / "SKILL.md").read_text()
 
     assert "three-layer factual baseline" in skill
     assert "structuredContent.jobs" in skill

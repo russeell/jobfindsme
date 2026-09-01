@@ -39,7 +39,7 @@ jobs:
         run: |
           wheel="$(find dist -name '*.whl' -print -quit)"
           python -m pip install "${wheel}[browser]"
-      - run: python -m jobfindsme --version
+      - run: agent-job-search --version
       - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

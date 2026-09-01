@@ -3,7 +3,7 @@
   "cases": [
     {
       "case_id": "find_jobs_with_resume",
-      "prompt": "用 jobfindsme，根据 /tmp/resume.pdf 找上海 AI 应用工程师，20K以上，社招，正式。",
+      "prompt": "用 Agent Job Search，根据 /tmp/resume.pdf 找上海 AI 应用工程师，20K以上，社招，正式。",
       "purpose": "The Agent delegates the resume path and follows the profile-plan-search tool sequence."
     },
     {

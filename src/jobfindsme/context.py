@@ -42,7 +42,9 @@ class ActiveContextService:
                 pass
 
         existing = self.workspaces.list()
-        workspace = existing[0] if existing else self.workspaces.create("jobfindsme")
+        workspace = (
+            existing[0] if existing else self.workspaces.create("Agent Job Search")
+        )
         self.activate(workspace_id=workspace.workspace_id)
         return workspace
 

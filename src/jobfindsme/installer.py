@@ -10,6 +10,13 @@ from pathlib import Path
 
 from pydantic import Field
 
+from jobfindsme.branding import (
+    DB_ENV,
+    LEGACY_SLUG,
+    SLUG,
+    data_root,
+    runtime_python,
+)
 from jobfindsme.contracts import StrictModel
 
 
@@ -23,25 +30,25 @@ class InstallResult(StrictModel):
 
 
 def _resolve_runtime_python() -> str:
-    """Prefer the jobfindsme runtime interpreter over sys.executable.
+    """Prefer the dedicated runtime interpreter over ``sys.executable``.
 
-    ``jobfindsme connect`` is often invoked from a dev checkout or a
+    ``agent-job-search connect`` is often invoked from a dev checkout or a
     foreign interpreter (system python.org, miniconda) that does not
-    contain the installed jobfindsme module. Baking sys.executable into
+    contain the installed package. Baking sys.executable into
     the host MCP config makes the server crash at startup —
     "connection closed: initialize response" — because the command cannot
     import jobfindsme. The dedicated runtime (created by install.sh) is
     the only interpreter guaranteed to have the module.
     """
-    runtime = Path.home() / ".jobfindsme" / "runtime" / "bin" / "python"
+    runtime = runtime_python()
     if runtime.is_file():
         return str(runtime)
     return sys.executable
 
 
 # Core hosts with code-level adapters (config formats differ).
-# Everything else: use `jobfindsme config` (standard mcpServers JSON) or
-# `jobfindsme connect --path <file>` for any client. Aligned with the
+# Everything else: use `agent-job-search config` (standard mcpServers JSON) or
+# `agent-job-search connect --path <file>` for any client. Aligned with the
 # mainstream 2-4 client approach of popular MCP projects.
 # Claude covers both Claude Desktop and Claude Code (~/.claude.json).
 _STANDARD_JSON_HOSTS: dict[str, tuple[str, str]] = {
@@ -116,13 +123,11 @@ class HostInstaller:
             else _resolve_runtime_python()
         )
         self.data_dir = (
-            Path(data_dir).expanduser()
-            if data_dir
-            else self.home / ".jobfindsme" / "data"
+            Path(data_dir).expanduser() if data_dir else data_root(self.home) / "data"
         )
         self.now = now or datetime.now(UTC)
         self.skill_content = (
-            files("jobfindsme.resources.jobfindsme")
+            files("jobfindsme.resources.agent_job_search")
             .joinpath("SKILL.md")
             .read_text(encoding="utf-8")
         )
@@ -138,7 +143,7 @@ class HostInstaller:
         )  # noqa: E501
 
     def connect(self, host: str, *, config_path: Path | None = None) -> InstallResult:
-        """Idempotently connect jobfindsme to an Agent host."""
+        """Idempotently connect Agent Job Search to an Agent host."""
 
         return self._write(
             host, replace=True, action="connect", config_path=config_path
@@ -154,7 +159,9 @@ class HostInstaller:
                 if config_path.exists()
                 else {}
             )  # noqa: E501
-            document.get("mcpServers", {}).pop("jobfindsme", None)
+            servers = document.get("mcpServers", {})
+            servers.pop(SLUG, None)
+            servers.pop(LEGACY_SLUG, None)
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
@@ -176,12 +183,15 @@ class HostInstaller:
             config_path.write_text(content, encoding="utf-8")
         elif host in _STANDARD_JSON_HOSTS:
             document = json.loads(config_path.read_text(encoding="utf-8"))
-            document.get("mcpServers", {}).pop("jobfindsme", None)
+            servers = document.get("mcpServers", {})
+            servers.pop(SLUG, None)
+            servers.pop(LEGACY_SLUG, None)
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
         skill_path.unlink(missing_ok=True)
+        self._legacy_skill_path(host).unlink(missing_ok=True)
         return InstallResult(
             host=host,
             action="uninstall",
@@ -205,11 +215,12 @@ class HostInstaller:
                 else {}
             )  # noqa: E501
             servers = document.setdefault("mcpServers", {})
-            if "jobfindsme" in servers and not replace:
+            if any(name in servers for name in (SLUG, LEGACY_SLUG)) and not replace:
                 if backup:
                     backup.unlink()
-                raise FileExistsError("jobfindsme MCP config already exists")
-            servers["jobfindsme"] = self._json_server()
+                raise FileExistsError(f"{SLUG} MCP config already exists")
+            servers.pop(LEGACY_SLUG, None)
+            servers[SLUG] = self._json_server()
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
@@ -231,11 +242,11 @@ class HostInstaller:
             existing = (
                 config_path.read_text(encoding="utf-8") if config_path.exists() else ""
             )
-            marker = "[mcp_servers.jobfindsme]"
-            if marker in existing and not replace:
+            markers = (f"[mcp_servers.{SLUG}]", f"[mcp_servers.{LEGACY_SLUG}]")
+            if any(marker in existing for marker in markers) and not replace:
                 if backup:
                     backup.unlink()
-                raise FileExistsError("Codex jobfindsme MCP config already exists")
+                raise FileExistsError(f"Codex {SLUG} MCP config already exists")
             if replace:
                 existing = _remove_codex_config(existing)
             config_path.write_text(
@@ -249,17 +260,19 @@ class HostInstaller:
                 else {}
             )
             servers = document.setdefault("mcpServers", {})
-            if "jobfindsme" in servers and not replace:
+            if any(name in servers for name in (SLUG, LEGACY_SLUG)) and not replace:
                 if backup:
                     backup.unlink()
-                raise FileExistsError(f"{host} jobfindsme MCP config already exists")
-            servers["jobfindsme"] = self._json_server()
+                raise FileExistsError(f"{host} {SLUG} MCP config already exists")
+            servers.pop(LEGACY_SLUG, None)
+            servers[SLUG] = self._json_server()
             config_path.write_text(
                 json.dumps(document, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8",
             )
 
         self._install_skill(skill_path)
+        self._legacy_skill_path(host).unlink(missing_ok=True)
         return InstallResult(
             host=host,
             action=action,
@@ -271,14 +284,14 @@ class HostInstaller:
 
     def _codex_block(self) -> str:
         return (
-            "\n[mcp_servers.jobfindsme]\n"
+            f"\n[mcp_servers.{SLUG}]\n"
             f"command = {json.dumps(self.python, ensure_ascii=False)}\n"
             'args = ["-m", "jobfindsme.mcp"]\n'
             "required = true\n"
             'default_tools_approval_mode = "prompt"\n'
-            "\n[mcp_servers.jobfindsme.env]\n"
-            f"JOBFINDSME_DB_PATH = "
-            f"{json.dumps(str(self.data_dir / 'jobfindsme.db'), ensure_ascii=False)}\n"
+            f"\n[mcp_servers.{SLUG}.env]\n"
+            f"{DB_ENV} = "
+            f"{json.dumps(str(self._database_file()), ensure_ascii=False)}\n"
         )
 
     def _json_server(self) -> dict[str, object]:
@@ -287,7 +300,7 @@ class HostInstaller:
             "command": self.python,
             "args": ["-m", "jobfindsme.mcp"],
             "env": {
-                "JOBFINDSME_DB_PATH": str(self.data_dir / "jobfindsme.db"),
+                DB_ENV: str(self._database_file()),
             },
         }
 
@@ -295,19 +308,34 @@ class HostInstaller:
         if host == "codex":
             return (
                 self.home / ".codex" / "config.toml",
-                self.home / ".codex" / "skills" / "jobfindsme" / "SKILL.md",
+                self.home / ".codex" / "skills" / SLUG / "SKILL.md",
             )
         if host in _STANDARD_JSON_HOSTS:
             cfg_rel, skill_rel = _STANDARD_JSON_HOSTS[host]
             return (
                 self.home / cfg_rel,
-                self.home / skill_rel / "jobfindsme" / "SKILL.md",
+                self.home / skill_rel / SLUG / "SKILL.md",
             )
         raise ValueError(f"unsupported host: {host}")
 
     def _install_skill(self, target: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(self.skill_content, encoding="utf-8")
+
+    def _database_file(self) -> Path:
+        current = self.data_dir / "agent-job-search.db"
+        legacy = self.data_dir / "jobfindsme.db"
+        if legacy.exists() and not current.exists():
+            return legacy
+        return current
+
+    def _legacy_skill_path(self, host: str) -> Path:
+        if host == "codex":
+            return self.home / ".codex" / "skills" / LEGACY_SLUG / "SKILL.md"
+        if host in _STANDARD_JSON_HOSTS:
+            _, skill_rel = _STANDARD_JSON_HOSTS[host]
+            return self.home / skill_rel / LEGACY_SLUG / "SKILL.md"
+        return self.home / ".unused-legacy-skill"
 
     def _backup(self, path: Path) -> Path:
         timestamp = self.now.strftime("%Y%m%dT%H%M%SZ")
@@ -330,7 +358,7 @@ def _remove_codex_config(content: str) -> str:
     skipping = False
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("[mcp_servers.jobfindsme"):
+        if stripped.startswith((f"[mcp_servers.{SLUG}", f"[mcp_servers.{LEGACY_SLUG}")):
             skipping = True
             continue
         if skipping and stripped.startswith("["):

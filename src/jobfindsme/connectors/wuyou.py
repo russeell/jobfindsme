@@ -271,7 +271,7 @@ class WuyouCdpConnector:
     """前程无忧 CDP fallback: the real page solves WAF, then we call the API.
 
     Used only when pure HTTP is challenged.  Requires the user's local
-    Chrome bridge (``jobfindsme setup``), same as BOSS直聘.
+    Chrome bridge (``agent-job-search setup``), same as BOSS直聘.
     """
 
     def __init__(

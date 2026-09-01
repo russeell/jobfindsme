@@ -1,4 +1,4 @@
-"""jobfindsmecore — a very thin application-core facade.
+"""Agent Job Search — a very thin application-core facade.
 
 The facade wires domain services and exposes stable use-case methods to
 the CLI and MCP adapters.  It contains NO business logic — each method

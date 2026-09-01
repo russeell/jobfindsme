@@ -117,6 +117,57 @@ def undisclosed_salary_counts(
     return 0, eligible_unknown
 
 
+def matches_query(
+    job: JobPosting,
+    *,
+    keyword: str | None = None,
+    location: str | None = None,
+    salary_min_k: int | None = None,
+    salary_max_k: int | None = None,
+    source: str | None = None,
+) -> bool:
+    """Ad-hoc query predicate behind the ``get_jobs`` query surface.
+
+    Deliberately narrower and dumber than the SearchPlan hard filter:
+
+    - no defaults and no policy — a filter that was not supplied never
+      excludes a job;
+    - ``keyword`` is a plain case-insensitive substring match over title,
+      company, and description, not a role-semantics match;
+    - undisclosed salary is excluded by a salary bound instead of being
+      governed by ``SalaryPolicy`` — state the bound, get only jobs whose
+      bound is verifiable.
+
+    The SearchPlan path stays the opinionated, product-level filter; this
+    one exists so a caller can query the local store without first
+    materialising a plan.
+    """
+    if source is not None and job.source.source_name.casefold() != source.casefold():
+        return False
+    if keyword:
+        needle = keyword.strip().casefold()
+        if not needle:
+            return False
+        haystack = f"{job.title} {job.company} {job.description}".casefold()
+        if needle not in haystack:
+            return False
+    if location:
+        searchable = f"{' '.join(job.locations)} {job.title} {job.description}"
+        searchable = searchable.casefold()
+        terms = expand_location_terms((location,))
+        if not any(term.casefold() in searchable for term in terms):
+            return False
+    if salary_min_k is not None:
+        monthly_min = _monthly_salary_min_k(job)
+        if monthly_min is None or monthly_min < salary_min_k:
+            return False
+    if salary_max_k is not None:
+        monthly_max = _monthly_salary_max_k(job)
+        if monthly_max is None or monthly_max > salary_max_k:
+            return False
+    return True
+
+
 def extract_job_signals(job: JobPosting) -> dict:
     """Extract structured signals for deterministic ranking and explanation.
 

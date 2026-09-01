@@ -26,13 +26,13 @@ The deterministic fixtures keep the Skill contract under CI:
 uv run python -m evaluation.agent_behavior.cli \
   --cases evaluation/agent_behavior/data/cases.json \
   --transcripts evaluation/agent_behavior/data/fixtures/baseline.json \
-  --report /tmp/jobfindsme-agent-red.json \
+  --report /tmp/agent-job-search-agent-red.json \
   --expect fail
 
 uv run python -m evaluation.agent_behavior.cli \
   --cases evaluation/agent_behavior/data/cases.json \
   --transcripts evaluation/agent_behavior/data/fixtures/with_skill.json \
-  --report /tmp/jobfindsme-agent-green.json \
+  --report /tmp/agent-job-search-agent-green.json \
   --expect pass
 ```
 

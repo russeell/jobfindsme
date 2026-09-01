@@ -12,6 +12,7 @@ from importlib.resources import files
 from typing import Any, Protocol
 from urllib.parse import urlencode
 
+from jobfindsme.branding import data_root
 from jobfindsme.connectors.base import ConnectorPolicy, RawJobRecord
 from jobfindsme.contracts import SourceKind
 
@@ -64,8 +65,8 @@ class CdpSession(Protocol):
 def _browser_bridge_error(_port: int) -> str:
     """Return one host-neutral recovery action for every CDP-backed source."""
     return (
-        "jobfindsme 浏览器桥未连接。请运行 jobfindsme setup；"
-        "若仍失败，运行 jobfindsme doctor 查看诊断。"
+        "Agent Job Search 浏览器桥未连接。请运行 agent-job-search setup；"
+        "若仍失败，运行 agent-job-search doctor 查看诊断。"
     )
 
 
@@ -108,7 +109,7 @@ class _CDPSession:
             from websocket import create_connection
         except ImportError as exc:
             raise BossConnectorError(
-                'Browser-backed sources require the "jobfindsme[browser]" '
+                'Browser-backed sources require the "agent-job-search[browser]" '
                 "optional dependencies."
             ) from exc
 
@@ -396,7 +397,7 @@ class BossZhipinConnector:
 
 # ── Chrome profile management ────────────────────────────────────────────────
 
-BOSS_PROFILE_DIR = "~/.jobfindsme/chrome-profile"
+BOSS_PROFILE_DIR = str(data_root() / "chrome-profile")
 
 PLATFORM_LOGIN_URLS = {
     "boss": ("https://www.zhipin.com/web/user/", "BOSS直聘"),
@@ -451,7 +452,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
     """Launch an isolated Chrome profile for platform login.
 
     Opens the login page for each selected platform. The user logs in
-    once per platform; sessions persist in ~/.jobfindsme/chrome-profile.
+    once per platform; sessions persist in the Agent Job Search data directory.
 
     If the CDP port is already reachable the bridge is already running —
     never launch a second instance (that would orphan the PID file).
@@ -472,7 +473,8 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             "message": (
                 f"Chrome 已在运行（端口 {DEFAULT_CDP_PORT}）。\n"
                 "直接在弹出的窗口扫码登录 BOSS直聘即可；\n"
-                "如无窗口或需要重新登录，先运行 jobfindsme stop 再执行本命令。"
+                "如无窗口或需要重新登录，请关闭专用 Chrome 后再次运行 "
+                "agent-job-search setup。"
             ),
         }
 

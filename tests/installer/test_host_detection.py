@@ -45,7 +45,7 @@ def test_bare_connect_detects_env_and_writes_config(
     assert result["host"] == "claude"
     assert result["action"] == "connect"
     assert (tmp_path / ".claude.json").exists()
-    assert (tmp_path / ".claude" / "skills" / "jobfindsme" / "SKILL.md").exists()
+    assert (tmp_path / ".claude" / "skills" / "agent-job-search" / "SKILL.md").exists()
 
 
 def test_bare_connect_detects_config_and_writes_it(tmp_path, capsys) -> None:

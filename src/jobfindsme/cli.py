@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import json
-import os
 import ssl
 import sys
 import urllib.request
@@ -14,6 +13,14 @@ from pathlib import Path
 from typing import Any
 
 from jobfindsme.app import jobfindsmecore
+from jobfindsme.branding import (
+    DB_ENV,
+    DISTRIBUTION_NAME,
+    LEGACY_SLUG,
+    REPOSITORY,
+    SLUG,
+    database_path,
+)
 from jobfindsme.contracts import JobStateKind
 from jobfindsme.doctor import Doctor
 from jobfindsme.importing.parsers import parse_csv, parse_json
@@ -23,10 +30,7 @@ from jobfindsme.profiles.models import ResumeImportMode
 
 
 def default_database_path() -> Path:
-    override = os.getenv("JOBFINDSME_DB_PATH")
-    if override:
-        return Path(override).expanduser()
-    return Path.home() / ".jobfindsme" / "data" / "jobfindsme.db"
+    return database_path()
 
 
 def _workspace_argument(parser: argparse.ArgumentParser) -> None:
@@ -34,13 +38,13 @@ def _workspace_argument(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="jobfindsme")
+    parser = argparse.ArgumentParser(prog=SLUG)
     parser.add_argument("--db", type=Path, default=default_database_path())
     parser.add_argument("--output", choices=("json", "markdown"), default="json")
     parser.add_argument(
         "--version",
         action="version",
-        version=f"jobfindsme {_version()}",
+        version=f"{SLUG} {_version()}",
     )
     groups = parser.add_subparsers(dest="group", required=True)
 
@@ -132,7 +136,10 @@ def _version() -> str:
     try:
         from importlib.metadata import version
 
-        return version("jobfindsme")
+        try:
+            return version(DISTRIBUTION_NAME)
+        except Exception:
+            return version(LEGACY_SLUG)
     except Exception:
         return "unknown"
 
@@ -153,7 +160,7 @@ def _self_update() -> dict:
             "pip",
             "install",
             "--upgrade",
-            f"jobfindsme[browser] @ {wheel_url}",
+            f"{DISTRIBUTION_NAME}[browser] @ {wheel_url}",
         ],
         capture_output=True,
         text=True,
@@ -166,10 +173,10 @@ def _self_update() -> dict:
 
 def _release_request() -> urllib.request.Request:
     return urllib.request.Request(
-        "https://api.github.com/repos/russeell/jobfindsme/releases/latest",
+        f"https://api.github.com/repos/{REPOSITORY}/releases/latest",
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "jobfindsme-updater",
+            "User-Agent": f"{SLUG}-updater",
         },
     )
 
@@ -193,31 +200,30 @@ def _fetch_latest_release() -> dict[str, Any]:
 
 
 def _select_release_wheel(release: dict[str, Any]) -> str:
-    for asset in release.get("assets", []):
-        name = str(asset.get("name", ""))
-        url = str(asset.get("browser_download_url", ""))
-        if (
-            name.startswith("jobfindsme-")
-            and name.endswith("-py3-none-any.whl")
-            and url
-        ):
-            return url
+    assets = release.get("assets", [])
+    for prefix in ("agent_job_search-", "jobfindsme-"):
+        for asset in assets:
+            name = str(asset.get("name", ""))
+            url = str(asset.get("browser_download_url", ""))
+            if name.startswith(prefix) and name.endswith("-py3-none-any.whl") and url:
+                return url
     raise ValueError("latest release has no compatible wheel")
 
 
 def _mcp_json_config() -> dict:
     """Standard MCP JSON — paste into any agent's config file.
 
-    Prefers the jobfindsme runtime interpreter so the config works even
+    Prefers the Agent Job Search runtime interpreter so the config works even
     when this CLI was invoked from a dev checkout or foreign Python.
     """
     from jobfindsme.installer import _resolve_runtime_python
 
     return {
         "mcpServers": {
-            "jobfindsme": {
+            SLUG: {
                 "command": _resolve_runtime_python(),
                 "args": ["-m", "jobfindsme.mcp"],
+                "env": {DB_ENV: str(default_database_path())},
             }
         }
     }
@@ -346,7 +352,7 @@ def _execute(core: jobfindsmecore, args: argparse.Namespace) -> Any:
 
 
 def _prompt_host(candidates: list[str]) -> str | None:
-    """Interactive fallback for `jobfindsme connect` when nothing was detected."""
+    """Interactive fallback for a bare ``connect`` when no host was detected."""
     from jobfindsme.installer import HOST_ORDER
 
     print("未检测到明确的 Agent 配置，请选择要接入的 Agent：", file=sys.stderr)
@@ -388,7 +394,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         elif args.host:
             result = getattr(installer, args.group)(args.host)
         elif args.group == "connect":
-            # Bare `jobfindsme connect`: detect the current agent automatically.
+            # Bare `agent-job-search connect`: detect the current Agent.
             host, candidates = detect_host(installer.home)
             if host is None and sys.stdin.isatty():
                 host = _prompt_host(candidates)
@@ -398,7 +404,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                         "ok": False,
                         "error": "未检测到当前 Agent，请显式指定",
                         "detected_candidates": candidates,
-                        "hint": "jobfindsme connect <codex|claude|cursor>",
+                        "hint": f"{SLUG} connect <codex|claude|cursor>",
                     },
                     args.output,
                 )

@@ -25,6 +25,7 @@ from jobfindsme.contracts import (
     SearchChanges,
 )
 from jobfindsme.importing.repository import JobRepository
+from jobfindsme.matching import matches_query
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]
@@ -355,6 +356,11 @@ class JobUseCase:
         workspace_id: str | None = None,
         job_ids: Sequence[str] = (),
         states: Sequence[JobStateKind] = (),
+        keyword: str | None = None,
+        location: str | None = None,
+        salary_min_k: int | None = None,
+        salary_max_k: int | None = None,
+        source: str | None = None,
         offset: int = 0,
         limit: int = 20,
     ) -> list[JobSummary]:
@@ -363,6 +369,18 @@ class JobUseCase:
         if job_ids:
             selected = set(job_ids)
             jobs = [job for job in jobs if job.job_id in selected]
+        jobs = [
+            job
+            for job in jobs
+            if matches_query(
+                job,
+                keyword=keyword,
+                location=location,
+                salary_min_k=salary_min_k,
+                salary_max_k=salary_max_k,
+                source=source,
+            )
+        ]
         if states:
             selected_states = set(states)
             state_by_job = {

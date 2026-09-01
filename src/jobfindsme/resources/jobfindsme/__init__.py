@@ -1,1 +1,0 @@
-"""jobfindsme Agent Skill resource."""

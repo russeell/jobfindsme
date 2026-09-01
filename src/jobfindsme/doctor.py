@@ -7,6 +7,7 @@ from importlib.util import find_spec
 from pathlib import Path
 
 from jobfindsme.app import jobfindsmecore
+from jobfindsme.branding import DISTRIBUTION_NAME, LEGACY_SLUG, SLUG
 from jobfindsme.contracts import StrictModel
 from jobfindsme.mcp.registry import TOOL_DEFINITIONS, ToolRegistry
 from jobfindsme.mcp.server import StdioMcpServer
@@ -61,13 +62,16 @@ class Doctor:
         try:
             from importlib.metadata import version
 
-            v = version("jobfindsme")
+            try:
+                v = version(DISTRIBUTION_NAME)
+            except Exception:
+                v = version(LEGACY_SLUG)
         except Exception:
             v = "unknown"
         return Diagnostic(
             name="version",
             ok=True,
-            message=f"jobfindsme {v}  |  更新: jobfindsme self-update",
+            message=f"{SLUG} {v}  |  更新: {SLUG} self-update",
         )
 
     @staticmethod
@@ -160,7 +164,7 @@ class Doctor:
                 required=False,
                 message=(
                     f"optional unavailable: {', '.join(missing)}; install "
-                    '"jobfindsme[browser]"'
+                    '"agent-job-search[browser]"'
                 ),
             )
         cdp_available = _cdp_port_reachable()
@@ -217,7 +221,9 @@ class Doctor:
                 name="boss_login",
                 ok=False,
                 required=False,
-                message="Chrome CDP not reachable — run 'jobfindsme setup' first",
+                message=(
+                    "Chrome CDP not reachable — run 'agent-job-search setup' first"
+                ),
             )
         try:
             from jobfindsme.connectors.base import ConnectorPolicy
@@ -251,7 +257,7 @@ class Doctor:
                 ok=False,
                 required=False,
                 message=(
-                    "BOSS直聘 requires login — run 'jobfindsme setup'. "
+                    "BOSS直聘 requires login — run 'agent-job-search setup'. "
                     "Other platforms remain available."
                 ),
             )
@@ -260,7 +266,9 @@ class Doctor:
                 name="boss_login",
                 ok=False,
                 required=False,
-                message=f"BOSS直聘 login check failed — run 'jobfindsme setup': {e}",
+                message=(
+                    f"BOSS直聘 login check failed — run 'agent-job-search setup': {e}"
+                ),
             )
 
     @staticmethod

@@ -1,11 +1,11 @@
 {
-  "name": "jobfindsme",
+  "name": "agent-job-search",
   "interface": {
-    "displayName": "jobfindsme"
+    "displayName": "Agent Job Search"
   },
   "plugins": [
     {
-      "name": "jobfindsme",
+      "name": "agent-job-search",
       "source": {
         "source": "url",
         "url": "./"

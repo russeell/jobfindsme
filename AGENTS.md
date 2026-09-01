@@ -1,24 +1,32 @@
-# jobfindsme — Agent Instructions
+# Agent Job Search — Agent Instructions
 
-The canonical Agent Skill is `skills/jobfindsme/SKILL.md`. Codex, Claude, and
+The canonical Agent Skill is `skills/agent-job-search/SKILL.md`. Codex, Claude, and
 Cursor adapters must consume that file without host-specific workflow forks.
 After changing it, run `python scripts/sync_skill.py` and the Agent behavior
 tests in `evaluation/agent_behavior/data/`.
 
-jobfindsme helps users find more qualified jobs across sources with less time,
-fewer irrelevant results, and minimal setup. The Server hard-filters jobs by
-user constraints, extracts structured signals, ranks deterministically, and
-returns bounded facts plus a factual summary; the Agent organizes the final
-expression and never invents facts. It preserves job and application state
-and returns inspectable evidence with direct apply links.
+Agent Job Search is a local MCP Server that turns four Chinese hiring platforms
+(BOSS直聘, 猎聘, 智联招聘, 前程无忧) into a structured query surface for the
+host Agent. It is a **query layer**, not an answer generator.
 
-**The user only cares about three things — keep everything else invisible:**
+**Server 定事实，Agent 定表达。** The Server hard-filters by the configured
+constraints, extracts structured signals, ranks deterministically, and
+returns bounded facts plus per-source status and change counts. The Agent
+organizes the final expression and never invents facts.
 
-1. **① 找岗位** — fastest path from a request to matched jobs + apply links.
-2. **② 定时推送** — pushes at the user's exact time and frequency; applied
-   jobs are never re-suggested.
-3. **③ 查历史** — every job ever matched/shown, queryable with its state
-   (applied/saved/rejected) and first-seen time.
+**Two layers — do not mix them up:**
+
+1. **Core (query layer)** — `search_jobs` and `get_jobs`. Discovery,
+   normalization, cross-source dedup, hard filtering, deterministic ranking,
+   source status. This is what the project is about.
+2. **Optional upper layer** — resume profile (`setup` with `resume_path`),
+   job state (`update_job_state`), and the incremental radar
+   (`include_seen`). Useful for conversational job search, but a caller that
+   ignores all three still has a complete query layer.
+
+Prefer `response_mode: "facts"` when you render your own output; the default
+`"summary"` adds a server-authored three-layer summary for conversational
+answers.
 
 Never surface internal concepts (Workspace IDs, cron syntax, raw signals,
 connector names) to the user unless asked.
@@ -34,7 +42,7 @@ BOSS直聘 requires account login and maintained live sources currently use a
 dedicated local Chrome bridge. Do not begin with a technical questionnaire.
 Proceed with the profile, plan, and search workflow. If diagnostics show that
 the browser is unavailable or BOSS is logged out, give the user one action:
-run `jobfindsme setup`, complete login if requested, keep that process running,
+run `agent-job-search setup`, complete login if requested, keep that process running,
 and then retry once.
 
 > Login state persists, but the local browser bridge must be running during a search.
@@ -111,8 +119,8 @@ their resume or search constraints.
 An empty incremental result is successful when unchanged jobs were suppressed.
 Never call `repeated_suppressed` duplicates, claim the previous crawl was
 invalid, or automatically retry with `full`. If MCP is unavailable, run
-`jobfindsme doctor` only; do not invent CLI search syntax or expose IDs.
-If the browser is unavailable, the ONLY recovery action is `jobfindsme setup`.
+`agent-job-search doctor` only; do not invent CLI search syntax or expose IDs.
+If the browser is unavailable, the ONLY recovery action is `agent-job-search setup`.
 Never tell the user to open a raw Chrome instance or invoke `google-chrome`
 directly.
 
@@ -185,7 +193,7 @@ broadening criteria if appropriate.
 > account login. Connector availability and field completeness vary.
 
 - BOSS直聘 — primary live recommendation source; requires a one-time Chrome
-  login via `jobfindsme setup`. Uses CDP XHR injection (~0.9s per query).
+  login via `agent-job-search setup`. Uses CDP XHR injection (~0.9s per query).
 - 猎聘 — pure HTTP API via `api-c.liepin.com` (~1.2s); no browser needed.
   Provides title, company, salary, experience, education, and skill labels.
 - 智联招聘 — pure HTTP JSON API via `fe-api.zhaopin.com`; experimental.
@@ -195,12 +203,12 @@ broadening criteria if appropriate.
   blocked, never as "no jobs".
 
 **Routing (agent-reach style):** before searching, optionally run
-`jobfindsme doctor --output json` to see which backend serves each source;
+`agent-job-search doctor --output json` to see which backend serves each source;
 never promise a platform whose backend is unavailable. Retry chains: BOSS →
 CDP → prompt setup/login; 猎聘 → HTTP → CDP fallback; 智联/前程无忧 → HTTP →
 CDP fallback → mark blocked (never "no jobs"). Never read, copy, or export
 browser cookies. Temp output goes to `/tmp`; persistent data stays in
-`~/.jobfindsme/`.
+`~/.agent-job-search/`.
 
 **Proactive rule:** If a source is blocked, degraded, cached, or incomplete,
 report that state briefly. Do not describe a zero-result source run as proof

@@ -2,7 +2,7 @@
 
 ## Agent Skill
 
-`skills/jobfindsme/SKILL.md` is the only source of Agent behavior. Do not edit
+`skills/agent-job-search/SKILL.md` is the only source of Agent behavior. Do not edit
 the packaged copy under `src/jobfindsme/resources/` directly and do not create
 host-specific Skill forks.
 

@@ -50,7 +50,7 @@ if leaked:
     raise SystemExit(f"installed wheel contains retired modules: {leaked}")
 required_resources = {
     "jobfindsme/resources/connectors/boss_fetch.js",
-    "jobfindsme/resources/jobfindsme/SKILL.md",
+    "jobfindsme/resources/agent_job_search/SKILL.md",
     "jobfindsme/resources/taxonomy/skills.json",
 }
 missing_resources = required_resources - set(names)
@@ -64,9 +64,11 @@ python -m venv --system-site-packages "$temporary/venv"
 "$temporary/venv/bin/python" -m pip install --no-deps "$wheel"
 "$temporary/venv/bin/python" "$root/scripts/smoke_legacy_database.py"
 
-database="$temporary/jobfindsme.db"
-"$temporary/venv/bin/jobfindsme" connect cursor --home "$temporary/home"
-"$temporary/venv/bin/jobfindsme" --db "$database" doctor
+database="$temporary/agent-job-search.db"
+"$temporary/venv/bin/agent-job-search" connect cursor --home "$temporary/home"
+"$temporary/venv/bin/agent-job-search" --db "$database" doctor
+# The former command remains a compatibility alias for existing users.
+"$temporary/venv/bin/jobfindsme" --version
 
 (
 cd "$temporary"
@@ -109,7 +111,7 @@ completed = subprocess.run(
     text=True,
     capture_output=True,
     check=True,
-    env={**os.environ, "JOBFINDSME_DB_PATH": database},
+    env={**os.environ, "AGENT_JOB_SEARCH_DB_PATH": database},
 )
 response = json.loads(completed.stdout)
 structured = response["result"]["structuredContent"]

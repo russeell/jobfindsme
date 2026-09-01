@@ -14,6 +14,7 @@ from jobfindsme.contracts import (
     MatchEvidence,
     Preferences,
     RecruitmentTrack,
+    ResponseMode,
     SalaryPolicy,
     SearchChanges,
     SearchDiagnosticSummary,
@@ -173,6 +174,18 @@ class SearchJobsInput(_LegacyAwareInput):
             "they do not want to use a resume."
         ),
     )
+    response_mode: ResponseMode = Field(
+        default=ResponseMode.SUMMARY,
+        description=(
+            "summary (default): structuredContent.jobs plus a compact "
+            "three-layer Chinese summary in `summary`. "
+            "facts: the same bounded structured facts with no "
+            "server-rendered prose, recommendations, or next-step advice — "
+            "`summary` collapses to a single factual status line. "
+            "Recommended when the caller is a programmatic Agent that "
+            "renders its own output."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_cache_policy(self) -> Self:
@@ -201,6 +214,42 @@ class GetJobsInput(_LegacyAwareInput):
         description=(
             "Filter by state: discovered, saved, applied, rejected; empty = all states"
         ),
+    )
+    keyword: str | None = Field(
+        default=None,
+        max_length=120,
+        description=(
+            "Case-insensitive substring match over title, company, and "
+            "description. Plain text search — not role semantics."
+        ),
+    )
+    location: str | None = Field(
+        default=None,
+        max_length=120,
+        description="City filter, alias-expanded (e.g. '上海' also matches 上海市)",
+    )
+    salary_min_k: int | None = Field(
+        default=None,
+        ge=0,
+        le=1000,
+        description=(
+            "Keep jobs whose verifiable monthly lower bound in K reaches "
+            "this value; jobs without a comparable salary are excluded"
+        ),
+    )
+    salary_max_k: int | None = Field(
+        default=None,
+        ge=0,
+        le=1000,
+        description=(
+            "Keep jobs whose verifiable monthly upper bound in K does not "
+            "exceed this value; jobs without a comparable salary are excluded"
+        ),
+    )
+    source: str | None = Field(
+        default=None,
+        max_length=120,
+        description="Keep jobs from one source name, e.g. '猎聘' or 'BOSS直聘'",
     )
     offset: int = Field(
         default=0,
@@ -283,7 +332,9 @@ class SearchJobsOutput(StrictModel):
         description=(
             "Compact three-layer factual baseline rendered by the Server. "
             "The host may reorganize wording but must keep every fact and "
-            "apply URL from `jobs`."
+            "apply URL from `jobs`. With response_mode='facts' this collapses "
+            "to a single factual status line (source health and change counts) "
+            "and carries no recommendations or next-step advice."
         ),
     )
     count: int = Field(ge=0, description="Number of visible job results")
@@ -319,8 +370,10 @@ class DeleteLocalDataOutput(StrictModel):
 MCP_OUTPUT_MODELS: dict[str, type[StrictModel]] = {
     "setup": SetupOutput,
     "search_jobs": SearchJobsOutput,
-    # get_jobs returns either a JobSummary list or a JobDetails payload
-    # depending on whether job_id is set — schema validation is skipped.
+    # get_jobs is absent on purpose: it has two response shapes (one job's
+    # details vs. a page of summaries), so no single outputSchema is
+    # advertised. ToolRegistry still validates each call against
+    # GetJobsOutput or JobDetails so the payload stays JSON-safe.
     "update_job_state": JobState,
     "delete_local_data": DeleteLocalDataOutput,
 }

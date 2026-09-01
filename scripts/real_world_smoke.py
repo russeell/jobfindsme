@@ -82,7 +82,7 @@ def _public_database_path(path: Path) -> str:
     expanded = path.expanduser()
     default = default_database_path().expanduser()
     if expanded == default:
-        return "~/.jobfindsme/data/jobfindsme.db"
+        return str(default).replace(str(Path.home()), "~")
     return "<custom local database>"
 
 
@@ -108,7 +108,7 @@ def _status_mark(status: str) -> str:
 
 def _markdown_report(payload: dict) -> str:
     lines = [
-        "# jobfindsme Real-World Source Report",
+        "# Agent Job Search Real-World Source Report",
         "",
         f"- Generated at: `{payload['generated_at']}`",
         f"- Database: `{payload['database']}`",

@@ -17,7 +17,7 @@ mkdir -p "$source_tree"
     -cf - .
 ) | tar -C "$source_tree" -xf -
 
-max_seconds="${JOBFINDSME_INSTALL_MAX_SECONDS:-180}"
+max_seconds="${AGENT_JOB_SEARCH_INSTALL_MAX_SECONDS:-${JOBFINDSME_INSTALL_MAX_SECONDS:-180}}"
 started_at="$(date +%s)"
 
 python -m venv "$temporary/venv"
@@ -34,9 +34,8 @@ from importlib.util import find_spec
 if find_spec("playwright") is not None:
     raise SystemExit("fast install unexpectedly included Playwright")
 PY
-"$temporary/venv/bin/python" -m jobfindsme connect cursor \
-  --home "$temporary/home"
-"$temporary/venv/bin/python" -m jobfindsme --version
+"$temporary/venv/bin/agent-job-search" connect cursor --home "$temporary/home"
+"$temporary/venv/bin/agent-job-search" --version
 
 config="$temporary/home/.cursor/mcp.json"
 test -f "$config"
