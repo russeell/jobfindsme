@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: empty selection is disabled; site alone opens home, not login
+ok 1 - empty selection is disabled; site alone opens home, not login
+  ---
+  duration_ms: 0.643708
+  type: 'test'
+  ...
+# Subtest: explicit URL wins over dropdown and selects its own source partition
+ok 2 - explicit URL wins over dropdown and selects its own source partition
+  ---
+  duration_ms: 1.402167
+  type: 'test'
+  ...
+# Subtest: Bing/Baidu encode full natural language once; selected site limits registered domain
+ok 3 - Bing/Baidu encode full natural language once; selected site limits registered domain
+  ---
+  duration_ms: 0.479125
+  type: 'test'
+  ...
+# Subtest: dangerous and malformed URLs never become searches
+ok 4 - dangerous and malformed URLs never become searches
+  ---
+  duration_ms: 0.612
+  type: 'test'
+  ...
+# Subtest: website mode never searches; search mode never opens a homepage
+ok 5 - website mode never searches; search mode never opens a homepage
+  ---
+  duration_ms: 0.364708
+  type: 'test'
+  ...
+# Subtest: zoom is bounded and restored per tab; fit width reads the document without rewriting it
+ok 6 - zoom is bounded and restored per tab; fit width reads the document without rewriting it
+  ---
+  duration_ms: 243.621458
+  type: 'test'
+  ...
+# Subtest: blocked navigation stays with its tab and removes query secrets from notices
+ok 7 - blocked navigation stays with its tab and removes query secrets from notices
+  ---
+  duration_ms: 0.514834
+  type: 'test'
+  ...
+# Subtest: tabs preserve per-page history, reuse URL, share source partition and isolate background
+ok 8 - tabs preserve per-page history, reuse URL, share source partition and isolate background
+  ---
+  duration_ms: 0.551375
+  type: 'test'
+  ...
+# Subtest: cross-site popups inherit opener partition, deny unsafe schemes and bound resources
+ok 9 - cross-site popups inherit opener partition, deny unsafe schemes and bound resources
+  ---
+  duration_ms: 1.794666
+  type: 'test'
+  ...
+# Subtest: teardown after native window destruction closes contents without reading native layout
+ok 10 - teardown after native window destruction closes contents without reading native layout
+  ---
+  duration_ms: 0.279041
+  type: 'test'
+  ...
+# Subtest: research extraction follows an allowed SPA abort and always releases its temporary view
+ok 11 - research extraction follows an allowed SPA abort and always releases its temporary view
+  ---
+  duration_ms: 0.5515
+  type: 'test'
+  ...
+# Subtest: foreground permits arbitrary HTTP(S) but background remains source-scoped
+ok 12 - foreground permits arbitrary HTTP(S) but background remains source-scoped
+  ---
+  duration_ms: 0.525792
+  type: 'test'
+  ...
+# Subtest: fit width is capped at 100 percent and idempotent from manual zoom levels
+ok 13 - fit width is capped at 100 percent and idempotent from manual zoom levels
+  ---
+  duration_ms: 1578.870959
+  type: 'test'
+  ...
+# Subtest: address navigation reuses its tab and session, supports back/forward, and rejects unsafe URLs
+ok 14 - address navigation reuses its tab and session, supports back/forward, and rejects unsafe URLs
+  ---
+  duration_ms: 1.289791
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1863.398417

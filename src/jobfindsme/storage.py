@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -235,6 +236,60 @@ class Database:
                     "VALUES (?, datetime('now'))",
                     (path.stem,),
                 )
+
+    def migrate_with_backup(self) -> Path | None:
+        """Back up before pending migrations and restore on failure."""
+
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            self.migrate()
+            return None
+        migrations_dir = Path(__file__).with_name("migrations")
+        expected = {path.stem for path in migrations_dir.glob("*.sql")}
+        try:
+            with self.connect() as connection:
+                exists = connection.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' "
+                    "AND name='schema_migrations'"
+                ).fetchone()
+                applied = (
+                    {
+                        row["version"]
+                        for row in connection.execute(
+                            "SELECT version FROM schema_migrations"
+                        ).fetchall()
+                    }
+                    if exists
+                    else set()
+                )
+        except sqlite3.DatabaseError:
+            applied = set()
+        if expected <= applied:
+            self.migrate()
+            return None
+
+        backup_path = self.path.with_name(f"{self.path.name}.pre-migration.bak")
+        temporary_backup = backup_path.with_name(f"{backup_path.name}.tmp")
+        temporary_backup.unlink(missing_ok=True)
+        source = sqlite3.connect(self.path)
+        destination = sqlite3.connect(temporary_backup)
+        try:
+            source.backup(destination)
+        finally:
+            destination.close()
+            source.close()
+        os.chmod(temporary_backup, 0o600)
+        os.replace(temporary_backup, backup_path)
+        try:
+            self.migrate()
+        except Exception:
+            restore = self.path.with_name(f"{self.path.name}.restore.tmp")
+            shutil.copy2(backup_path, restore)
+            for sidecar in (Path(f"{self.path}-wal"), Path(f"{self.path}-shm")):
+                sidecar.unlink(missing_ok=True)
+            os.replace(restore, self.path)
+            self._secure_sqlite_files()
+            raise
+        return backup_path
 
 
 def _split_sql_statements(sql: str) -> list[str]:

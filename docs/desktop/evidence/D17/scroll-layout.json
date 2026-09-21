@@ -1,0 +1,29 @@
+{
+  "list": {
+    "scrollTop": 200,
+    "scrollHeight": 1219,
+    "height": 192
+  },
+  "main": {
+    "x": 219.046875,
+    "y": 0,
+    "width": 360.015625,
+    "height": 788,
+    "top": 0,
+    "right": 579.0625,
+    "bottom": 788,
+    "left": 219.046875
+  },
+  "browser": {
+    "x": 579.0625,
+    "y": 0,
+    "width": 660.9375,
+    "height": 788,
+    "top": 0,
+    "right": 1240,
+    "bottom": 788,
+    "left": 579.0625
+  },
+  "rootHeight": 788,
+  "viewport": 788
+}

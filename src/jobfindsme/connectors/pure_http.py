@@ -92,6 +92,14 @@ class LiepinPureHttpConnector:
         self._session_factory = session_factory or _default_session_factory
 
     def fetch(self) -> list[RawJobRecord]:
+        records, _next_page = self.fetch_page(0)
+        return records
+
+    def fetch_page(
+        self, current_page: int = 0
+    ) -> tuple[list[RawJobRecord], int | None]:
+        if not 0 <= current_page <= 200:
+            raise ValueError("liepin page must be between 0 and 200")
         dq = LIEPIN_CITY_CODES.get(self.city, "")
         search_url = f"https://www.liepin.com/zhaopin/?key={quote(self.keyword)}"
         if dq:
@@ -127,7 +135,7 @@ class LiepinPureHttpConnector:
                             "city": dq,
                             "dq": dq,
                             "pubTime": "",
-                            "currentPage": 0,
+                            "currentPage": current_page,
                             "pageSize": 40,
                             "key": self.keyword,
                             "suggestTag": "",
@@ -224,4 +232,4 @@ class LiepinPureHttpConnector:
                     },
                 )
             )
-        return records
+        return records, current_page + 1 if len(cards) >= 40 else None

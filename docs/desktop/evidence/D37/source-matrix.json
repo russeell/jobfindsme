@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-09-20T00:00:00+08:00",
+  "method": "first-party entry verification plus bounded production Electron/API samples",
+  "limits": "Counts are bounded samples, not total vacancies. Unknown fields remain unknown.",
+  "sources": [
+    {"id":"boss","name":"BOSS直聘","status":"session_verified","list":"15 jobs / 2 desktop batches","detail":"full JD observed","pagination":"partial","next":"reuse the user's existing login; do not seed login state globally"},
+    {"id":"liepin","name":"猎聘","status":"enabled_partial","list":"92 jobs / 5 desktop result pages","detail":"full JD visible on official page; list carries summary","pagination":"partial","next":"retain bounded anonymous adapter"},
+    {"id":"zhilian","name":"智联招聘","status":"blocked_login","list":"not verified","detail":"not verified","pagination":"not verified","next":"verify once after the existing source session is logged in"},
+    {"id":"wuyou","name":"前程无忧","status":"blocked_contract","list":"logged page reused but list parser returned no verifiable structure","detail":"not verified","pagination":"not verified","next":"update selectors from a fresh authenticated result page"},
+    {"id":"company_01","name":"腾讯","status":"enabled_partial","list":"58 jobs / 3 bounded API pages","detail":"official detail supported","pagination":"verified","next":"salary stays unknown when absent"},
+    {"id":"company_02","name":"字节跳动","status":"enabled_partial","list":"2 verified links","detail":"520 chars","pagination":"not verified","next":"expand list coverage only after another bounded observation"},
+    {"id":"company_03","name":"阿里巴巴","status":"blocked_contract","list":"211 visible cards, no stable detail URL extracted","detail":"not verified","pagination":"22 pages visible, continuation not verified","next":"bind click navigation to the official position card without inventing an ID"},
+    {"id":"company_04","name":"美团","status":"enabled_partial","list":"10 jobs / 2 DOM batches","detail":"915 chars","pagination":"partial","next":"retain click-based bounded collector"},
+    {"id":"company_05","name":"百度","status":"enabled_partial","list":"5 verified links","detail":"350 chars","pagination":"not verified","next":"retain click-based bounded collector"},
+    {"id":"company_06","name":"京东","status":"blocked_contract","list":"HTTPS official home verified; list not extracted","detail":"not verified","pagination":"not verified","next":"observe the official HTTPS list route; never follow the HTTP downgrade"},
+    {"id":"company_07","name":"网易","status":"enabled_partial","list":"1 verified click-through","detail":"918 chars","pagination":"not verified","next":"retain honest one-link coverage"},
+    {"id":"company_08","name":"快手","status":"enabled_partial","list":"1 verified click-through","detail":"987 chars","pagination":"not verified","next":"preserve hash job identity"},
+    {"id":"company_09","name":"小米","status":"enabled_partial","list":"9 verified links","detail":"315 chars via observed first-party ATS endpoint","pagination":"not verified","next":"retain tenant-bound endpoint parser"},
+    {"id":"company_10","name":"滴滴","status":"enabled_partial","list":"6 verified links","detail":"557 chars","pagination":"not verified","next":"retain click-based bounded collector"},
+    {"id":"company_11","name":"拼多多","status":"enabled_partial","list":"18 verified links","detail":"400 chars","pagination":"partial","next":"unknown salary/location fields remain unknown"},
+    {"id":"company_12","name":"DeepSeek","status":"enabled_partial","list":"34-job official snapshot; 15 matched engineering keyword","detail":"full JD in snapshot","pagination":"not applicable to snapshot","next":"surface snapshot timestamp and cache failures"},
+    {"id":"company_13","name":"MiniMax","status":"enabled_partial","list":"10 verified links","detail":"598 chars via observed first-party ATS endpoint","pagination":"not verified","next":"retain tenant-bound endpoint parser"},
+    {"id":"company_14","name":"智谱","status":"enabled_partial","list":"42 jobs / 2 DOM pages","detail":"678 chars","pagination":"partial","next":"retain exact Moka tenant scope"},
+    {"id":"company_15","name":"月之暗面","status":"enabled_partial","list":"39 jobs / 2 DOM pages","detail":"824 chars","pagination":"partial","next":"retain hash job identity and exact tenant scope"},
+    {"id":"company_16","name":"阶跃星辰","status":"enabled_partial","list":"60 jobs / 2 DOM pages","detail":"688 chars","pagination":"partial","next":"retain exact Moka tenant scope"}
+  ]
+}

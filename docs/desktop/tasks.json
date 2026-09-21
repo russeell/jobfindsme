@@ -1,0 +1,1186 @@
+{
+  "schema_version": 1,
+  "project": "jobfindsme-desktop",
+  "updated_at": "2026-09-19",
+  "status_values": [
+    "pending",
+    "in_progress",
+    "blocked",
+    "done"
+  ],
+  "current_task": "D38",
+  "tasks": [
+    {
+      "id": "D01",
+      "title": "浏览器与来源可行性验证",
+      "depends_on": [],
+      "status": "blocked",
+      "scope": [
+        "apps/desktop 原型",
+        "connectors 适配接口设计",
+        "来源验证表"
+      ],
+      "acceptance": [
+        "四平台记录登录、检索、详情、分页和投递页兼容性",
+        "三平台未登录实时检索门禁可验证；猎聘匿名路径有实测",
+        "输出支持范围和阻塞，不用页面可打开代替数据验收"
+      ],
+      "verification": "每来源一次有记录的人工验证；不提交真实申请。未获得登录条件的来源保留阻塞。",
+      "evidence": [
+        "docs/desktop/evidence/D01.md"
+      ],
+      "blocker": "猎聘匿名生产路径已在真实 .app 验证 92 条、5 页，第二页稳定且原页显示完整 JD；登录后有界验证入口已实现。尚未由用户完成 BOSS/智联/前程无忧真实登录，因此三平台登录、列表、详情、字段、分页与投递页仍待真实验收。旧 127.0.0.1:9222 公共 CDP 桥不再作为桌面生产前置。"
+    },
+    {
+      "id": "D02",
+      "title": "桌面端与本地服务底座",
+      "depends_on": [],
+      "status": "done",
+      "scope": [
+        "apps/desktop",
+        "src/jobfindsme/desktop_api",
+        "依赖与开发脚本"
+      ],
+      "acceptance": [
+        "桌面启动/退出正确管理 Python 进程",
+        "本地 API 回环鉴权，preload 只暴露受限接口",
+        "界面能读取现有核心提供的数据"
+      ],
+      "verification": "一次启动/退出冒烟；一个未授权调用集成检查；前端类型和构建检查。",
+      "evidence": [
+        "docs/desktop/evidence/D02.md",
+        "docs/desktop/evidence/D02-review.md",
+        "docs/desktop/evidence/D02-review-resolution.md",
+        "docs/desktop/evidence/D02-fix-review-request.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D03",
+      "title": "简历导入、核对、版本与隐私",
+      "depends_on": [
+        "D02"
+      ],
+      "status": "done",
+      "scope": [
+        "profiles",
+        "privacy.py",
+        "migrations",
+        "简历页面"
+      ],
+      "acceptance": [
+        "PDF/DOCX/MD/TXT 解析复用并可核对，旧 DOC/OCR 能力显式识别",
+        "上传未完成处理时不静默使用无简历检索",
+        "当前版本与原文件独立，分析副本可选择脱敏"
+      ],
+      "verification": "复用格式样例，仅增加版本、解析失败和脱敏边界验证。",
+      "evidence": [
+        "docs/desktop/evidence/D03.md",
+        "docs/desktop/evidence/D03-D08-review-request.md",
+        "docs/desktop/evidence/D03-D08-review.md",
+        "docs/desktop/evidence/D03-D08-review-resolution.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D04a",
+      "title": "隔离来源浏览器与能力状态底座",
+      "depends_on": [
+        "D02"
+      ],
+      "status": "done",
+      "scope": [
+        "Electron WebContentsView 来源浏览器",
+        "四平台持久会话分区",
+        "来源能力状态与本地 API",
+        "来源与账号页面"
+      ],
+      "acceptance": [
+        "右侧工作区使用 WebContentsView 打开白名单平台页面，远程页无 Node/preload 权限",
+        "四平台使用各自持久分区，前台人工浏览与后台检索视图分离但复用同平台会话",
+        "不导出 Cookie、不依赖公共 CDP 端口，登录态与列表/详情/字段/分页能力分开记录",
+        "三平台未验证登录时前后端均显示并保持检索禁用；猎聘仅按匿名能力状态开放"
+      ],
+      "verification": "离线会话/导航白名单/门禁契约测试；桌面类型和构建检查；不做真实登录。",
+      "evidence": [
+        "docs/desktop/evidence/D04a.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D04b",
+      "title": "简历检索词与有预算来源执行契约",
+      "depends_on": [
+        "D03",
+        "D04a"
+      ],
+      "status": "done",
+      "scope": [
+        "检索前置用例",
+        "现有连接器适配",
+        "分页预算与继续状态",
+        "11 家官网能力目录"
+      ],
+      "acceptance": [
+        "上传待确认时阻断检索；存在当前已确认简历时强制生成有限关键词且排除基本信息",
+        "后端在调用连接器前强制来源登录/能力门禁，未验证来源不能靠前端参数绕过",
+        "来源结果报告页数/时间预算、覆盖状态和可继续获取状态，现有真实连接器由适配层复用",
+        "11 家招聘官网逐项记录校招/社招、列表、详情、字段、分页和验证状态，未验证保持禁用"
+      ],
+      "verification": "固定简历与假分页适配器验证隐私关键词、待确认阻断、后端门禁、预算和继续状态；现有连接器工厂契约检查。",
+      "evidence": [
+        "docs/desktop/evidence/D04b.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D04",
+      "title": "来源接入与简历驱动检索",
+      "depends_on": [
+        "D01",
+        "D04a",
+        "D04b",
+        "D04c",
+        "D04d"
+      ],
+      "status": "pending",
+      "scope": [
+        "connectors",
+        "core/search.py",
+        "Electron 浏览器桥",
+        "来源与账号页面"
+      ],
+      "acceptance": [
+        "登录门禁由后端强制执行，人工浏览不被后台检索打断",
+        "简历用于检索词生成，用户硬条件优先",
+        "来源分页有预算、可继续获取及明确覆盖状态",
+        "11 家官网逐项给出能力状态，通过的适配器可启用，其余明确受限"
+      ],
+      "verification": "完成 D04a/D04b 后逐来源执行完整接入验收；只复测 D01 之后改变的真实路径。",
+      "evidence": ["docs/desktop/evidence/D38.md"],
+      "blocker": null
+    },
+    {
+      "id": "D05",
+      "title": "硬过滤、评分模板与稳定分页",
+      "depends_on": [
+        "D04b"
+      ],
+      "status": "done",
+      "scope": [
+        "matching.py",
+        "search_runs 与迁移",
+        "岗位列表与详情"
+      ],
+      "acceptance": [
+        "硬条件三态与薪资策略正确",
+        "权重合计校验并保存规则版本，绑定简历版本",
+        "20 条默认分页，翻页不重复不漏项",
+        "短列表保持右侧详情，窄屏切换而非末尾堆叠"
+      ],
+      "verification": "相关排序/过滤单元用例；一个多页快照集成用例；桌面与窄屏人工检查。",
+      "evidence": [
+        "docs/desktop/evidence/D05.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D06",
+      "title": "原页投递与求职记录",
+      "depends_on": [
+        "D05"
+      ],
+      "status": "done",
+      "scope": [
+        "tracking.py",
+        "阅读事件迁移",
+        "右侧浏览器",
+        "求职记录页面"
+      ],
+      "acceptance": [
+        "每条岗位有研究与投递入口",
+        "展示不算阅读，打开原页不算投递成功",
+        "收藏与投递状态可并存、可撤销，旧展示记录不误迁为已读"
+      ],
+      "verification": "一个状态转换集成用例；一次原页跳转人工冒烟，不实际投递。",
+      "evidence": [
+        "docs/desktop/evidence/D06.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D07",
+      "title": "简历编辑、模板与导出",
+      "depends_on": [
+        "D03"
+      ],
+      "status": "done",
+      "scope": [
+        "resume_editor",
+        "简历编辑与预览",
+        "导出"
+      ],
+      "acceptance": [
+        "结构化编辑、版本回退与两款单栏模板",
+        "同一内容导出 PDF/DOCX/MD，分页无明显截断",
+        "DOC 转换与扫描 PDF OCR 支持或明确显示缺失依赖及替代路径"
+      ],
+      "verification": "代表性简历每种导出格式检查一次；复用解析测试，新增必要版本回退用例。",
+      "evidence": [
+        "docs/desktop/evidence/D07.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D08",
+      "title": "模型连接与统一调用",
+      "depends_on": [
+        "D02"
+      ],
+      "status": "done",
+      "scope": [
+        "models",
+        "模型设置",
+        "本地密钥管理"
+      ],
+      "acceptance": [
+        "服务商、协议、端点、模型 ID 可配置",
+        "三类协议分别适配；密钥不进前端持久化或日志",
+        "连接测试、取消、超时与用量状态可见"
+      ],
+      "verification": "每协议最小契约样例；有配置时做一次短请求，否则保持该连接未验证。",
+      "evidence": [
+        "docs/desktop/evidence/D08.md",
+        "docs/desktop/evidence/D03-D08-review-request.md",
+        "docs/desktop/evidence/D03-D08-review.md",
+        "docs/desktop/evidence/D03-D08-review-resolution.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D09",
+      "title": "Prompt 简历修改与逐段采纳",
+      "depends_on": [
+        "D07",
+        "D08"
+      ],
+      "status": "done",
+      "scope": [
+        "resume_editor 会话与补丁",
+        "差异视图",
+        "隐私发送边界"
+      ],
+      "acceptance": [
+        "自由 Prompt 可结合项目事实及可选 JD 多轮修改",
+        "补丁有事实依据，可逐段采纳/拒绝，另存新版本",
+        "版本冲突可识别；未知成果标为待补充；脱敏贯穿调用"
+      ],
+      "verification": "一个采纳/撤销流程和版本冲突用例；少量固定事实样例检查编造与隐私泄漏。",
+      "evidence": [
+        "docs/desktop/evidence/D09.md",
+        "docs/desktop/evidence/D09-review-request.md",
+        "docs/desktop/evidence/D09-review.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D10",
+      "title": "JD 与口碑研究",
+      "depends_on": [
+        "D06",
+        "D08",
+        "D09"
+      ],
+      "status": "done",
+      "scope": [
+        "research",
+        "岗位研究页面",
+        "证据存储"
+      ],
+      "acceptance": [
+        "JD 准备、项目改写和面试建议关联简历版本",
+        "评价有真实引用链接、日期及团队相关性",
+        "无证据和来源受限状态明确，可用用户提供的摘录并注明"
+      ],
+      "verification": "引用映射契约与少量有/无证据样例；一次已授权来源人工检查。",
+      "evidence": [
+        "docs/desktop/evidence/D10.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D11",
+      "title": "本地定时检索与通知",
+      "depends_on": [
+        "D06"
+      ],
+      "status": "done",
+      "scope": [
+        "scheduler",
+        "旧 monitor 数据审查与迁移",
+        "定时检索页面",
+        "桌面通知"
+      ],
+      "acceptance": [
+        "任务绑定筛选、简历和评分快照，支持暂停及补跑策略",
+        "重复触发不重复执行，多次错过最多补跑一次",
+        "新增/变化/登录失败分别记录，后台与完全退出行为明确"
+      ],
+      "verification": "可控时钟验证重入、补跑、时区；一次恢复运行人工冒烟，无需真实等待数小时。",
+      "evidence": [
+        "docs/desktop/evidence/D11.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D04c",
+      "title": "内嵌会话来源动作桥与分页适配",
+      "depends_on": [
+        "D04a",
+        "D04b"
+      ],
+      "status": "done",
+      "scope": [
+        "Electron 后台来源动作桥",
+        "来源同源会话与调用者校验",
+        "猎聘分页适配",
+        "公司官网可用适配器"
+      ],
+      "acceptance": [
+        "BOSS、智联、前程无忧通过各自后台 WebContentsView 的受限固定动作读取列表、详情和分页，复用同源持久会话且不打断前台浏览",
+        "动作桥校验主窗口调用者、来源 ID、HTTPS 主机和结果结构；远程页无 preload/Node 权限，不导出 Cookie、不开放任意脚本或公共 CDP",
+        "登录或能力失效时停止并回写明确门禁状态，不绕过验证码、挑战或风控",
+        "猎聘连接器暴露真实继续游标；11 家官网仅将实际具备列表解析的适配器标为可用，其余保持目录/未验证"
+      ],
+      "verification": "固定动作与调用者边界的 Electron 单测；Python 分页契约与失效门禁集成样例；仅对匿名公开路径做一次必要实测。",
+      "evidence": [
+        "docs/desktop/evidence/D04c.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D04d",
+      "title": "生产来源实测、官网分级与登录验证闭环",
+      "depends_on": [
+        "D04c"
+      ],
+      "status": "done",
+      "scope": [
+        "猎聘匿名生产检索",
+        "腾讯官网生产适配",
+        "十家公司官网能力分级",
+        "登录来源验证动作与浏览器桥安全"
+      ],
+      "acceptance": [
+        "真实 .app 中验证猎聘跨页和完整原页 JD，不进行登录或投递",
+        "腾讯官网进入发现岗位、筛选、稳定分页和完整 JD，并保留官方原始链接",
+        "其余十家公司按公开列表、需凭据、仅目录或未验证分级，不以首页可打开冒充适配器",
+        "登录来源提供人工触发的两页有界验证，未返回岗位或未完成详情/字段/分页时不虚报能力"
+      ],
+      "verification": "真实生产包匿名只读冒烟；固定桥、同源导航、能力汇总契约测试；不登录、不投递、不绕过风控。",
+      "evidence": [
+        "docs/desktop/evidence/D04d.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D10a",
+      "title": "研究证据正文核验与模型事实边界修复",
+      "depends_on": [
+        "D10"
+      ],
+      "status": "done",
+      "scope": [
+        "评价正文核验",
+        "公司/团队/日期相关性",
+        "研究模型发送边界与输出校验"
+      ],
+      "acceptance": [
+        "搜索摘要不得标记为已核验评价；仅成功读取原始正文并核对来源主机与公司时标记正文已核验",
+        "团队和发布日期分别给出已核验、未知或不匹配状态，证据可信度和局限准确可见",
+        "模型只接收必要的脱敏事实和明确不可信材料，输出不能引入未在输入中出现的事实性断言"
+      ],
+      "verification": "离线正文抓取样例覆盖跳转越域、公司不匹配、团队未知和日期缺失；模型载荷/结构边界样例。",
+      "evidence": [
+        "docs/desktop/evidence/D10-D11-safety-review.md",
+        "docs/desktop/evidence/D10a.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D11a",
+      "title": "调度冻结快照、崩溃恢复与并发修复",
+      "depends_on": [
+        "D11"
+      ],
+      "status": "done",
+      "scope": [
+        "冻结版本执行链路",
+        "running 崩溃恢复",
+        "并发互斥与通知投递"
+      ],
+      "acceptance": [
+        "每次任务实际使用创建时冻结的筛选、简历和评分规则版本，缺失或失效时明确失败",
+        "断电遗留 running 可在租约过期后恢复为失败并继续后续计划；并发轮询不能重复执行同一任务",
+        "通知只在系统通知成功后确认投递，不支持时保留待处理；完全退出停止轮询和 Python 子进程"
+      ],
+      "verification": "隔离 SQLite 与可控时钟复现冻结规则差异、陈旧 running 恢复、双调度器竞争、通知失败重试和退出。",
+      "evidence": [
+        "docs/desktop/evidence/D10-D11-safety-review.md",
+        "docs/desktop/evidence/D11a.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D12a",
+      "title": "桌面本地打包与迁移备份恢复前置",
+      "depends_on": [
+        "D10a",
+        "D11a"
+      ],
+      "status": "done",
+      "scope": [
+        "本地打包配置",
+        "Python 运行时布局",
+        "数据库迁移前备份恢复"
+      ],
+      "acceptance": [
+        "定义 macOS 本地安装包与内置 Python 服务布局，但不发布、不删除旧 MCP/skill",
+        "生产启动不依赖源码工作目录或 uv，产物排除数据库、简历、密钥和浏览器会话",
+        "迁移前原子备份、迁移失败自动恢复、可验证恢复旧数据"
+      ],
+      "verification": "打包配置检查与本地产物内容审计；隔离数据库的成功迁移和失败恢复样例。",
+      "evidence": [
+        "docs/desktop/evidence/D12a.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D12b",
+      "title": "本地生产包主流程与打包缺陷修复",
+      "depends_on": [
+        "D12a",
+        "D04d"
+      ],
+      "status": "done",
+      "scope": [
+        "实际 macOS .app 冷启动",
+        "合成简历导入、版本、脱敏与导出",
+        "生产来源检索与原页",
+        "包结构和内置 Python 生命周期"
+      ],
+      "acceptance": [
+        "全新隔离用户数据目录启动真实 .app，不依赖源码 Python 调用方式",
+        "合成简历导入确认、版本编辑、脱敏预览和 Markdown 导出通过",
+        "修复框架符号链接、内置可执行文件参数、冷启动超时和导出严格请求体",
+        "包审计验证 Electron Framework 资源、符号链接边界和敏感文件排除"
+      ],
+      "verification": "真实 .app 人工主流程；Electron 契约测试、生产构建、目录包及审计。",
+      "evidence": [
+        "docs/desktop/evidence/D12b.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D12c",
+      "title": "桌面导航、来源说明与启动状态收尾",
+      "depends_on": [
+        "D05",
+        "D12b"
+      ],
+      "status": "done",
+      "scope": [
+        "desktop-v3 匹配规则导航",
+        "猎聘能力说明迁移",
+        "本地服务启动竞态状态"
+      ],
+      "acceptance": [
+        "侧栏匹配规则进入可用规则编辑页并与发现岗位实际检索权重共享，不再显示待接入",
+        "猎聘说明区分历史列表实测、可视原页 JD 与结构化字段状态，不把桌面快照分页称为来源全量分页",
+        "启动期间显示本地服务启动状态，不闪现 desktop API not ready；服务就绪后自动加载 bootstrap"
+      ],
+      "verification": "受影响 renderer/main 类型检查与最小 Electron 测试；来源目录迁移针对性 Python 用例；不操作或重打包当前登录窗口。",
+      "evidence": [
+        "docs/desktop/evidence/D12c.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D12",
+      "title": "移除 MCP、迁移与桌面发行准备",
+      "depends_on": [
+        "D10a",
+        "D11a",
+        "D12a",
+        "D12b",
+        "D04"
+      ],
+      "status": "pending",
+      "scope": [
+        "MCP/Agent 分发移除",
+        "文档与依赖",
+        "数据库迁移",
+        "桌面打包与 CI"
+      ],
+      "acceptance": [
+        "桌面独立运行，不依赖 MCP、Agent 安装器或求职 skill",
+        "旧数据备份恢复与迁移通过，核心评测保留",
+        "本地 macOS 安装包主流程通过，其他系统按实测声明",
+        "无真实简历、密钥、会话进入产物；线上发布另行执行"
+      ],
+      "verification": "迁移针对性集成检查；一次保留测试集全量回归及打包主流程验收。",
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "D13",
+      "title": "灰白工作台重构、研究入口与独立右侧浏览器",
+      "depends_on": [
+        "D12c"
+      ],
+      "status": "done",
+      "scope": [
+        "React 工作台组件",
+        "Electron 原页面板",
+        "研究链接与粘贴 JD",
+        "发现岗位内定时任务"
+      ],
+      "acceptance": [
+        "可搜索多选城市、紧凑筛选及更多条件，保持硬过滤与分页",
+        "研究四模块接真实业务，链接安全校验、受限时粘贴 JD",
+        "已看过以阅读事件筛选，保留收藏投递状态",
+        "定时任务从当前筛选与权重创建冻结快照，无独立侧栏",
+        "侧栏与右侧浏览器可拖动、键盘调整并持久化，窄屏明确切换",
+        "实际隔离 Electron 宽窄屏验证、原生 bounds/导航/关闭证据"
+      ],
+      "verification": "针对过滤、链接安全与布局边界测试；生产构建；隔离 Electron 实际视觉验证。",
+      "evidence": [
+        "docs/desktop/evidence/D13.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D14",
+      "title": "模型预设、本地协议与岗位来源体验收尾",
+      "depends_on": [
+        "D13"
+      ],
+      "status": "done",
+      "scope": [
+        "模型预设与免密钥本地服务",
+        "岗位来源与官网浏览白名单",
+        "品牌图标",
+        "固定独立滚动与浏览器面板开关"
+      ],
+      "acceptance": [
+        "官方文档核实中国主流/OpenAI/Claude/Gemini/本地服务预设，模型ID由用户填写",
+        "本地免密钥可真实选择协议并测试，保留云端密钥边界",
+        "默认10条与独立列表滚动，不带走JD，分页可达",
+        "方框居中j与打包图标统一",
+        "岗位来源中文精简状态，登录与可检索分开，持久会话不主动清除",
+        "11家公司真实登记官网可人工打开且保持搜索门禁",
+        "右上角原页面板开关、收起/恢复/关闭、宽窄屏原生验证",
+        "浏览器可放大为主工作区并还原宽度，语义侧栏图标与独立展开按钮",
+        "登录保存机制与临时/过期会话边界在界面说明"
+      ],
+      "verification": "协议/无密钥边界与白名单契约；原生UI滚动与面板行为；隔离构建图标审计。",
+      "evidence": [
+        "docs/desktop/evidence/D14.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D15",
+      "title": "启动提速、来源选择与链接研究简化",
+      "depends_on": [
+        "D14"
+      ],
+      "status": "done",
+      "scope": [
+        "启动与Python打包",
+        "本机来源偏好",
+        "自动解析岗位链接及已看过研究入口"
+      ],
+      "acceptance": [
+        "先显示界面并实测启动前后耗时",
+        "来源勾选持久化并控制发现页选项与检索来源",
+        "岗位链接自动解析标题公司和JD，无额外粘贴字段",
+        "发现及已看过跳转后确认并研究，解析受限真实提示"
+      ],
+      "verification": "针对启动、来源边界及解析契约测试，隔离原生UI验证。",
+      "evidence": [
+        "docs/desktop/evidence/D15.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D16",
+      "title": "四维匹配规则与历史版本兼容",
+      "depends_on": [
+        "D15"
+      ],
+      "status": "done",
+      "scope": [
+        "技能/项目经历/学历/工作经验四维评分",
+        "简历映射与模型契约",
+        "规则快照兼容与真实预览"
+      ],
+      "acceptance": [
+        "默认35/30/15/20，权重总和100",
+        "未知学历及年限不当满足，项目证据区别于技能关键词",
+        "旧规则及定时快照保留原解释，新检索使用新版",
+        "定向四维/缺失/版本测试和真实评分明细空态"
+      ],
+      "verification": "定向后端规则测试、类型构建和原生页面验证",
+      "evidence": [
+        "docs/desktop/evidence/D16.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D17",
+      "title": "原生浏览器多标签与独立导航",
+      "depends_on": [
+        "D16"
+      ],
+      "status": "done",
+      "scope": [
+        "优先修复默认腾讯与浏览器布局：默认窗口右侧同高独立列，窄屏明确切换",
+        "标签新增切换关闭",
+        "独立历史与共享平台会话",
+        "安全新窗口路由与视图生命周期",
+        "按userData单实例锁、重复启动聚焦与包内固定隔离测试目录"
+      ],
+      "acceptance": [
+        "默认1240窗口、侧栏宽度历史偏好、实际原生网页均右侧同高；无目标显示来源空态；区分D15运行包与新包，不覆盖真实会话",
+        "不同URL保留多标签，同URL复用",
+        "标题加载状态、关闭相邻回退、上限和资源清理",
+        "仅活动视图可见，收起恢复保持页面和bounds",
+        "后台检索不影响前台，安全window.open进入标签",
+        "实际Electron验证同来源两页、跨来源、独立后退与收起恢复"
+      ],
+      "verification": "安全边界与原生多view行为验证",
+      "evidence": [
+        "docs/desktop/evidence/D17.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D18",
+      "title": "Terra产品、全栈与AI流程有界审查修复",
+      "depends_on": [
+        "D17"
+      ],
+      "status": "done",
+      "scope": [
+        "现有完整本地产品流程",
+        "数据隐私与生命周期",
+        "事实保真和证据边界",
+        "先复現分级，再修复实际问题"
+      ],
+      "acceptance": [
+        "用户指定gpt-5.6-terra medium且唯一写入者",
+        "检查简历确认到发现/筛选/四维/研究/定向简历/原页/记录/调度",
+        "按风险定向验证，必要原生集成截图",
+        "记录缺陷修复映射、最新版包、未验证及用户依赖并停止写入"
+      ],
+      "verification": "复用定向测试，有界审查；不提交发布/真实投递/未授权付费调用",
+      "evidence": [
+        "docs/desktop/evidence/D18.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D19",
+      "title": "隔离桌面 UI 实走查与一致性优化",
+      "depends_on": [
+        "D18"
+      ],
+      "status": "done",
+      "scope": [
+        "默认与窄窗口逐页实际检查",
+        "工作区、来源、研究、简历、规则、模型与定时任务的层级、密度和状态",
+        "灰白视觉系统的一致性修复",
+        "用户最新澄清：岗位研究保留口碑调查和针对JD修改简历，删除应聘准备；清爽灰白配色",
+        "按 evidence/D19-checklist.md 持续修复并验收，执行模型 gpt-6-astra / low"
+      ],
+      "acceptance": [
+        "记录亲自观察的问题及修复理由",
+        "默认1240与窄窗口代表页面截图",
+        "不遮盖原生浏览器视图，不回退当前导航，测试包保持隔离",
+        "定向构建与实际桌面验收"
+      ],
+      "verification": "隔离预览包逐页观察、代表截图与受影响桌面检查",
+      "evidence": [
+        "docs/desktop/evidence/D19.md",
+        "docs/desktop/evidence/D19-checklist.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D20",
+      "title": "本项目开发产物可恢复归档与文件整理",
+      "depends_on": [
+        "D19"
+      ],
+      "status": "done",
+      "scope": [
+        "明确归属JobFindsMe的旧测试包、临时脚本、历史截图及可再生缓存",
+        "有效验收截图目录与文档引用",
+        "保留正式数据、运行包、UI6最新预览、源码配置和依赖"
+      ],
+      "acceptance": [
+        "逐项清单记录原路径、去向、原因与空间占用，不永久删除",
+        "运行进程与路径引用检查后才移动，归属或用途不明项原地保留",
+        "最新UI6包及源码依赖不变，有效证据引用可解析",
+        "HANDOFF和ORCHESTRATION清楚标注当前结论及历史"
+      ],
+      "verification": "显式归档清单、移动前后内容/大小核对、文档链接检查；不运行无关测试。",
+      "evidence": [
+        "docs/desktop/evidence/D20.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D21",
+      "title": "岗位操作层级与横向弹出筛选",
+      "depends_on": [
+        "D20"
+      ],
+      "status": "done",
+      "scope": [
+        "复用岗位操作组件：唯一投递主按钮、星标收藏、阅读/投递状态菜单",
+        "按用户BOSS截图调整紧凑横向筛选及弹层，保持灰白和双栏独立滚动"
+      ],
+      "acceptance": [
+        "发现与已看过动作一致，异步禁用/错误反馈，打开不标投递",
+        "菜单键盘可用且不被原生view遮挡，筛选不挤占结果高度",
+        "仅启用真实后端支持字段，有内容宽窄窗验收"
+      ],
+      "verification": "受影响类型构建与隔离实际交互验收。",
+      "evidence": [
+        "docs/desktop/evidence/D21.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D22",
+      "title": "版本化提示词模板与有界模型重排",
+      "depends_on": [
+        "D21"
+      ],
+      "status": "done",
+      "scope": [
+        "模板编辑、模型显式选择、四维高级约束及试评",
+        "提示词版本进入检索和定时快照、历史兼容",
+        "有界模型评分真实影响排序、进度取消失败与规则兜底"
+      ],
+      "acceptance": [
+        "用户修改prompt实际参与模型评分，规则兜底明确说明自由prompt未生效",
+        "无简历不展示误导的0分；隐私副本、JD不可信、结构化输出校验与证据约束保留",
+        "模板/版本/模型评分排序/旧快照兼容定向测试和UI验收，不调用未授权付费模型"
+      ],
+      "verification": "模拟协议的真实评分链路和快照集成测试、隔离UI验收。",
+      "evidence": [
+        "docs/desktop/evidence/D22.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D23",
+      "title": "前台通用网页浏览与后台来源权限分离",
+      "depends_on": [
+        "D21"
+      ],
+      "status": "done",
+      "scope": [
+        "source-browser",
+        "新标签页面",
+        "来源策略测试"
+      ],
+      "acceptance": [
+        "前台普通HTTP/HTTPS与跨站重定向不按来源白名单拦截",
+        "跨站新标签继承会话，未知网站通用分区",
+        "后台提取与检索保持来源门禁；远程无Node/preload/IPC",
+        "阿里官网跳转和普通网站原生验收，不提交申请"
+      ],
+      "verification": "定向策略/标签测试与隔离原生窗口实测",
+      "evidence": [
+        "docs/desktop/evidence/D23.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D24",
+      "title": "紧凑浏览器工具栏与幂等适应宽度",
+      "depends_on": [
+        "D23"
+      ],
+      "status": "done",
+      "scope": [
+        "Workbench toolbar",
+        "source-browser zoom"
+      ],
+      "acceptance": [
+        "工具栏单行紧凑且bounds不遮挡",
+        "适应宽度以100%重新测量，不超过100%且反复点击幂等",
+        "真实腾讯页从120%/100%/较小缩放验证，跨标签及缩放窗口状态独立"
+      ],
+      "verification": "定向缩放测试及原生页面几何/截图",
+      "evidence": [
+        "docs/desktop/evidence/D24.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D25",
+      "title": "左侧筛选弹层不应使原生网页空白",
+      "depends_on": [
+        "D24"
+      ],
+      "status": "done",
+      "scope": [
+        "PopoverButton",
+        "Workbench原生遮挡判断",
+        "页面焦点通知"
+      ],
+      "acceptance": [
+        "非重叠筛选/状态菜单保持原生网页可见与滚动状态",
+        "全局模态或真实重叠才隐藏，关闭恢复当前标签bounds",
+        "逐项筛选、嵌套、Escape、外部点击、标签切换与菜单卸载验证"
+      ],
+      "verification": "几何边界定向测试和隔离真实招聘页原生view验收，不重跑无关后端测试",
+      "evidence": [
+        "docs/desktop/evidence/D25.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D26",
+      "title": "统一灰白配色与原生控件主题",
+      "depends_on": [
+        "D24"
+      ],
+      "status": "done",
+      "scope": [
+        "renderer/theme.css",
+        "renderer/main.tsx",
+        "窗口底色"
+      ],
+      "acceptance": [
+        "统一工作区、浏览器壳层、弹层和提示背景",
+        "固定浅色原生控件与深灰勾选框",
+        "实际窗口检查发现岗位、研究入口及岗位来源"
+      ],
+      "verification": "类型检查/构建、包审计通过；UI10隔离窗口通过原生界面截图检查三个页面。",
+      "evidence": [
+        "docs/desktop/evidence/D26.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D27",
+      "title": "浏览器新标签支持搜索引擎和站点限定搜索",
+      "depends_on": [
+        "D23"
+      ],
+      "status": "done",
+      "scope": [
+        "shared/browser-search.ts",
+        "Workbench新标签页"
+      ],
+      "acceptance": [
+        "网站首页、输入网址优先、全网搜索、站点限定搜索四种行为明确",
+        "百度/Bing选择持久化，关键词正确编码，危险网址不转搜索",
+        "单次打开一个目标，网址按目标来源分区，搜索页通用分区",
+        "实际UI四态摘要和搜索URL及浏览返回可用"
+      ],
+      "verification": "纯解析函数定向测试、隔离UI和真实搜索页导航",
+      "evidence": [
+        "docs/desktop/evidence/D27.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D28",
+      "title": "网站与搜索分离并接通顶部统一地址栏",
+      "depends_on": [
+        "D27"
+      ],
+      "status": "done",
+      "scope": [
+        "BrowserStartPage",
+        "BrowserAddressBar",
+        "browser-search解析",
+        "当前标签导航IPC"
+      ],
+      "acceptance": [
+        "打开网站与网页搜索两个明确入口，只有搜索显示Bing/百度/Google",
+        "搜索可选范围保留站点限定，短摘要",
+        "顶部关键词固定Bing，网址直达；编辑不被轮询覆写、失焦恢复、Escape取消",
+        "已有标签同页导航及前后退正常，危险地址拒绝",
+        "隔离真实UI验收，不影响用户窗口/主题/后台来源"
+      ],
+      "verification": "相关纯函数、标签导航单元与真实UI边界验收，最终独立包",
+      "evidence": [
+        "docs/desktop/evidence/D28.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D29",
+      "title": "删除新标签重复网址与搜索范围控件",
+      "depends_on": [
+        "D28"
+      ],
+      "status": "done",
+      "scope": [
+        "BrowserStartPage",
+        "browser-search模式解析",
+        "新标签表单排版"
+      ],
+      "acceptance": [
+        "网站仅选择与打开，无网址输入",
+        "搜索仅关键词引擎和按钮，始终不自动限定网站",
+        "切模式保持独立目的地，旧范围不影响搜索，偏好保存",
+        "默认与窄窗截图通过，顶部地址栏与D25行为保持"
+      ],
+      "verification": "受影响解析测试和隔离UI模式切换、目标URL及布局，不重复无变化外网",
+      "evidence": [
+        "docs/desktop/evidence/D29.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D30",
+      "title": "分栏拖动结束清理与原生网页持续可见",
+      "depends_on": [
+        "D29"
+      ],
+      "status": "done",
+      "scope": [
+        "Splitter拖动生命周期",
+        "Workbench原生可见性",
+        "保留D29登录窗口与会话"
+      ],
+      "acceptance": [
+        "窗口内外释放、丢失capture、Escape、失焦和卸载均清理拖动",
+        "拖动期间原生网页保持可见，结束恢复最新bounds，不reload和重建会话",
+        "公开页面隔离原生验证两个分隔条、窄屏、D25遮挡和D24适宽"
+      ],
+      "verification": "旧包有界复现与新包隔离Electron原生可见性/几何/滚动验证",
+      "evidence": [
+        "docs/desktop/evidence/D30.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D31a",
+      "title": "BOSS自动登录识别与有界采集实现",
+      "depends_on": [
+        "D30"
+      ],
+      "status": "done",
+      "scope": [
+        "固定D29用户目录与BOSS partition，前台/后台共享",
+        "自动读取已加载页面判断登录与列表能力",
+        "单来源共享队列、缓存、滚动去重与有限完整JD",
+        "进度、停止、部分结果与风险暂停"
+      ],
+      "acceptance": [
+        "不以cookies或页面可打开认定登录可检索，不反复联网探测",
+        "离线样例验证城市代码、列表/虚拟列表滚动、无增长、取消和风险停源",
+        "先列表后有限详情，保留完整JD的URL/读取时间与真实性边界",
+        "手动和定时共享有界队列，不绕过验证码、不导出会话"
+      ],
+      "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
+      "evidence": [
+        "docs/desktop/evidence/D31a.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D31b",
+      "title": "BOSS已登录会话小批量真实验收",
+      "depends_on": [
+        "D31a"
+      ],
+      "status": "done",
+      "scope": [
+        "UI16同D29目录的已登录BOSS会话",
+        "一次小批量真实结果、完整JD及字段质量验收"
+      ],
+      "acceptance": [
+        "真实关键词检索非空或诚实空结果、滚动新增去重、1–2个完整JD",
+        "验证前后台会话一致、停止/暂停和部分结果，不额外反复联网",
+        "不自动关闭旧登录实例；没有真实结果不将D01/D04标done"
+      ],
+      "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
+      "evidence": [
+        "docs/desktop/evidence/D31a.md",
+        "docs/desktop/evidence/D31b.md",
+        "docs/desktop/evidence/D37.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D32",
+      "title": "检索错误、研究入口、定时弹窗与筛选重置修复",
+      "depends_on": [
+        "D31a"
+      ],
+      "status": "done",
+      "scope": [
+        "结构化中文错误和部分结果",
+        "单一岗位研究动作",
+        "单栏定时检索表单和真实保存",
+        "清空筛选及已有候选本地重筛"
+      ],
+      "acceptance": [
+        "不展示IPC原文或堆栈，单来源失败不清空其他结果",
+        "每日/每周/间隔条件字段、保存校验与启停可用",
+        "重置全部筛选并立即重筛已采集候选，保留关键词和浏览器",
+        "默认/窄窗隔离UI与原生遮挡验证"
+      ],
+      "verification": "后端500/局部失败、筛选状态和保存定向测试及隔离Electron验收",
+      "evidence": [
+        "docs/desktop/evidence/D32.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D33",
+      "title": "口碑调查公开陈述与本地更正",
+      "depends_on": [
+        "D32"
+      ],
+      "status": "done",
+      "scope": [
+        "五类调查方向与来源语境",
+        "无评级的原文并列展示",
+        "免责声明与本地更正记录"
+      ],
+      "acceptance": [
+        "保留口碑调查和针对JD修改简历",
+        "公开用户陈述不事实化，未知和失效明确",
+        "本地更正不外发，跨工作区隔离",
+        "独立新包与定向验证"
+      ],
+      "verification": "来源与更正边界测试、隔离UI验收",
+      "evidence": [
+        "docs/desktop/evidence/D33.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D34",
+      "title": "截图反馈：筛选可访问、规则精简与来源文案",
+      "depends_on": [
+        "D32"
+      ],
+      "status": "done",
+      "scope": [
+        "修复发现页状态提示挤出筛选",
+        "删除规则试算区及闲置状态调用",
+        "猎聘打开登录文案",
+        "研究自动带入完整岗位上下文"
+      ],
+      "acceptance": [
+        "初始/进行中/部分失败/重试后筛选持续可访问",
+        "规则保存与四维保留且无试算UI",
+        "来源登录事实说明不变",
+        "默认和窄窗口有内容验收"
+      ],
+      "verification": "离线真实桌面fixture与类型构建",
+      "evidence": [
+        "docs/desktop/evidence/D34.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D35",
+      "title": "简历对话编辑与按需模板预览",
+      "depends_on": [
+        "D33",
+        "D34"
+      ],
+      "status": "done",
+      "scope": [
+        "持久多轮会话、岗位绑定与事实补丁",
+        "左侧对话右侧差异、采纳拒绝撤销新版本",
+        "按需模板预览与版本明确的导出",
+        "口碑移除薪资入口、简化工作强度标签"
+      ],
+      "acceptance": [
+        "缺简历/模型真实引导，无假执行",
+        "多轮历史与未采纳隔离、版本冲突保护",
+        "预览关闭保留状态、导出指定版本",
+        "默认/窄窗独立滚动与原生遮挡验证"
+      ],
+      "verification": "fixture多轮服务/真实桌面交互、补丁版本及导出检查",
+      "evidence": [
+        "docs/desktop/evidence/D35.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D36",
+      "title": "岗位报告持久入口与来源多选筛选精简",
+      "depends_on": [
+        "D35"
+      ],
+      "status": "done",
+      "scope": [
+        "复用报告存储、岗位归属与历史新版本入口",
+        "持久来源多选跨页同步、严格请求集合",
+        "默认缺失保留与薪资交集、JD去重与按钮视觉"
+      ],
+      "acceptance": [
+        "报告重进重启可查看，重研不覆盖且失败如实标识",
+        "未选和空选不请求，来源可用性明确，任务快照不变",
+        "默认和窄窗口有内容验证"
+      ],
+      "verification": "离线契约和隔离桌面fixture；禁止重复真实平台请求",
+      "evidence": [
+        "docs/desktop/evidence/D36.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D37",
+      "title": "20来源方案核查与新增五家公司接入",
+      "depends_on": [
+        "D36"
+      ],
+      "status": "done",
+      "scope": [
+        "核查4平台与16家公司官方入口和能力矩阵",
+        "新增五家公司同一来源目录及安全适配器",
+        "有界公开实测、缓存预算失败状态及证据"
+      ],
+      "acceptance": [
+        "官方入口有依据，不猜ATS租户",
+        "已选集合和历史任务不变，未验证不启用",
+        "真实与离线能力分级、最终隔离包验证",
+        "逐源首选失败后实际 Electron DOM 兜底；真实列表、续页、JD与阻塞分别记录，不能只打开浏览器或用fixture代替"
+      ],
+      "verification": "第一方入口核查、少量公开样本与离线契约；登录受限明确保留",
+      "evidence": [
+        "docs/desktop/evidence/D37.md",
+        "docs/desktop/evidence/D37/source-matrix.json"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D38",
+      "title": "来源浏览器兜底修复与真实续页筛选补验",
+      "depends_on": ["D37"],
+      "status": "in_progress",
+      "scope": ["前程无忧已登录结果页、阿里实际岗位点击、京东官网路由", "逐源网站续页去重和关键词城市筛选", "更正真实会话与能力证据并交付新独立包"],
+      "acceptance": ["实际页面观察确认入口和链接，不猜岗位ID", "网站下一页或滚动新增独立于桌面分页记录", "本地过滤明确有限候选范围与未知字段", "可自主修复项完成后才能停止，登录验证码限流单独记录", "保留UI19与UI20及用户登录选择，不提交发布投递"],
+      "verification": "按差异有界实测与定向契约验证，避免全量重测",
+      "evidence": [],
+      "blocker": null
+    }
+  ]
+}

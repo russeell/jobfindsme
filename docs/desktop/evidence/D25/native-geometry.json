@@ -1,0 +1,729 @@
+{
+  "samples": [
+    {
+      "name": "选择城市",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "选择城市 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "求职类型",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "求职类型 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "薪资待遇",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "薪资待遇 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "工作经验",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "工作经验 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "用工类型",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "用工类型 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "岗位来源",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "岗位来源 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "更多筛选",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "更多筛选 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "更新岗位状态",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "更新岗位状态 closed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "one click switch menu",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "outside click",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "native focus dismiss",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "nested panels",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "nested Escape child",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "nested outside click",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "nested component unmount",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "hidden trigger cleanup",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "actual overlap",
+      "views": [
+        {
+          "id": 2,
+          "visible": false,
+          "bounds": {
+            "x": 1151,
+            "y": 96,
+            "width": 649,
+            "height": 904
+          },
+          "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+          "loading": false,
+          "scrollY": 300,
+          "scrollX": 0,
+          "length": 3600,
+          "title": "岗位详情 | 腾讯招聘"
+        }
+      ]
+    },
+    {
+      "name": "overlap moved left",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "overlap removed",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "global modal",
+      "views": [
+        {
+          "id": 2,
+          "visible": false,
+          "bounds": {
+            "x": 1151,
+            "y": 96,
+            "width": 649,
+            "height": 904
+          },
+          "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+          "loading": false,
+          "scrollY": 300,
+          "scrollX": 0,
+          "length": 3600,
+          "title": "岗位详情 | 腾讯招聘"
+        }
+      ]
+    },
+    {
+      "name": "global modal closes",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "tab switch while left menu open",
+      "view": {
+        "id": 2,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+        "loading": false,
+        "scrollY": 300,
+        "scrollX": 0,
+        "length": 3600,
+        "title": "岗位详情 | 腾讯招聘"
+      },
+      "tabId": "tab-1"
+    },
+    {
+      "name": "modal restores newly selected tab",
+      "view": {
+        "id": 3,
+        "visible": true,
+        "bounds": {
+          "x": 1151,
+          "y": 96,
+          "width": 649,
+          "height": 904
+        },
+        "url": "https://careers.tencent.com/",
+        "loading": false,
+        "scrollY": 0,
+        "scrollX": 0,
+        "length": 2887,
+        "title": "首页 | 腾讯招聘"
+      },
+      "tabId": "tab-2"
+    },
+    {
+      "name": "1240px 选择城市",
+      "view": {
+        "id": 3,
+        "visible": true,
+        "bounds": {
+          "x": 591,
+          "y": 96,
+          "width": 649,
+          "height": 704
+        },
+        "url": "https://careers.tencent.com/",
+        "loading": false,
+        "scrollY": 0,
+        "scrollX": 0,
+        "length": 2887,
+        "title": "首页 | 腾讯招聘"
+      },
+      "tabId": "tab-2"
+    },
+    {
+      "name": "1240px 岗位来源",
+      "view": {
+        "id": 3,
+        "visible": true,
+        "bounds": {
+          "x": 591,
+          "y": 96,
+          "width": 649,
+          "height": 704
+        },
+        "url": "https://careers.tencent.com/",
+        "loading": false,
+        "scrollY": 0,
+        "scrollX": 0,
+        "length": 2887,
+        "title": "首页 | 腾讯招聘"
+      },
+      "tabId": "tab-2"
+    },
+    {
+      "name": "1240px 更多筛选",
+      "view": {
+        "id": 3,
+        "visible": true,
+        "bounds": {
+          "x": 591,
+          "y": 96,
+          "width": 649,
+          "height": 704
+        },
+        "url": "https://careers.tencent.com/",
+        "loading": false,
+        "scrollY": 0,
+        "scrollX": 0,
+        "length": 2887,
+        "title": "首页 | 腾讯招聘"
+      },
+      "tabId": "tab-2"
+    }
+  ],
+  "layoutCalls": [
+    null,
+    {
+      "x": 1151,
+      "y": 95.75,
+      "width": 649,
+      "height": 904.25
+    },
+    null,
+    {
+      "x": 1151,
+      "y": 95.75,
+      "width": 649,
+      "height": 904.25
+    },
+    null,
+    {
+      "x": 1151,
+      "y": 95.75,
+      "width": 649,
+      "height": 904.25
+    },
+    {
+      "x": 1151,
+      "y": 95.75,
+      "width": 649,
+      "height": 904.25
+    },
+    null,
+    {
+      "x": 1151,
+      "y": 95.75,
+      "width": 649,
+      "height": 904.25
+    },
+    {
+      "x": 591,
+      "y": 95.75,
+      "width": 649,
+      "height": 704.25
+    }
+  ],
+  "result": "passed"
+}

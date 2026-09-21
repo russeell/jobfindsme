@@ -1,0 +1,46 @@
+{
+  "linkRead": {
+    "length": 755,
+    "containsDuties": true,
+    "containsRequirements": true
+  },
+  "open": {
+    "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+    "canGoBack": false,
+    "canGoForward": false,
+    "loading": true,
+    "bounds": {
+      "x": 700,
+      "y": 80,
+      "width": 500,
+      "height": 680
+    }
+  },
+  "hidden": true,
+  "resized": {
+    "x": 620,
+    "y": 80,
+    "width": 580,
+    "height": 680
+  },
+  "history": {
+    "url": "https://careers.tencent.com/",
+    "canGoBack": true,
+    "canGoForward": false,
+    "loading": true
+  },
+  "back": {
+    "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+    "canGoBack": false,
+    "canGoForward": true,
+    "loading": false
+  },
+  "forward": {
+    "url": "https://careers.tencent.com/",
+    "canGoBack": true,
+    "canGoForward": false,
+    "loading": false
+  },
+  "closedCount": 0,
+  "sameContents": true
+}

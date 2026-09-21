@@ -1,0 +1,16 @@
+{
+  "listScroll": 955,
+  "detailScroll": 0,
+  "cards": 10,
+  "pagination": {
+    "x": 96,
+    "y": 682.5,
+    "width": 770.84375,
+    "height": 54,
+    "top": 682.5,
+    "right": 866.84375,
+    "bottom": 736.5,
+    "left": 96
+  },
+  "contentScroll": 0
+}

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "每日岗位更新",
+    "filter_snapshot_json": "{\"cities\": [\"上海\", \"深圳\"], \"employment_type\": null, \"experience_max_years\": null, \"experience_min_years\": null, \"read\": \"any\", \"recruitment_track\": null, \"salary_max_k\": null, \"salary_min_k\": null, \"salary_mode\": \"overlap\", \"source_names\": [], \"unknown_policy\": \"include\"}",
+    "status": "paused",
+    "rule_version_id": "rule_09d652766afd9bcd8fd1",
+    "resume_version_id": "resume_version_8b6a33bc390d4d448b05c228abdddb21"
+  }
+]

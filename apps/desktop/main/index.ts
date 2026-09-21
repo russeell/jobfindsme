@@ -1,0 +1,725 @@
+import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
+import { readFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
+
+import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from "electron";
+
+import type { DesktopApiClient } from "./api-client";
+import { saveModelConnectionWithSecret } from "./model-connection-service";
+import { PythonService, type ServiceStatus } from "./python-service";
+import { SecureSecretStore } from "./secure-secret-store";
+import { SourceBrowserManager } from "./source-browser";
+import {browserSiteNames} from "../shared/browser-search";
+import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "./source-browser-policy";
+import type {
+  ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
+  PromptPatchDecision, PromptSessionInput, PromptTurnInput, SourceSearchInput,
+  BrowserSourcePage, ResearchRunInput, ScheduledTaskInput, SourceSearchPreflight,
+} from "../shared/contracts";
+
+const packageInfo=JSON.parse(readFileSync(path.join(app.getAppPath(),"package.json"),"utf8"));
+const buildLabel=String(packageInfo.build || "development");
+const previewBuild=packageInfo.jobfindsmePreview===true;
+if(previewBuild){
+  const profile = typeof packageInfo.previewUserData === "string" && /^jobfindsme-preview-[a-zA-Z0-9_-]+$/.test(packageInfo.previewUserData) ? packageInfo.previewUserData : `jobfindsme-preview-${buildLabel.split("-")[0]}`;
+  if(!app.commandLine.hasSwitch("user-data-dir"))app.setPath("userData",path.join(app.getPath("appData"),profile));
+  app.setName(`JobFindsMe ${buildLabel.split("-")[0]} 测试版`);
+}
+const isolatedProfile=previewBuild || app.commandLine.hasSwitch("user-data-dir");
+// Electron scopes this lock to userData, before Python, SQLite or scheduler startup.
+const ownsInstance=app.requestSingleInstanceLock();
+if(!ownsInstance)app.exit(0);
+let apiClient: DesktopApiClient | undefined;
+let mainWindow: BrowserWindow | undefined;
+app.on("second-instance",()=>{if(mainWindow){if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();}});
+let serviceStatus: ServiceStatus = {
+  connected: false,
+  message: "本地服务正在启动",
+};
+let shutdownPromise: Promise<void> | undefined;
+const projectRoot = path.resolve(__dirname, "../../../..");
+const pythonService = new PythonService({
+  projectRoot,
+  userDataPath: app.getPath("userData"),
+  packaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
+  onStatus: (status) => {
+    if (status.connected) return; // Publish ready only after apiClient is assigned.
+    serviceStatus = status;
+    if (!status.connected) apiClient = undefined;
+    mainWindow?.webContents.send("desktop:service-status", status);
+  },
+});
+const secretStore = new SecureSecretStore(app.getPath("userData"));
+let modelTestController: AbortController | undefined;
+let modelTestConnectionId: string | undefined;
+let modelTestRunId: string | undefined;
+let promptController: AbortController | undefined;
+let promptSessionId: string | undefined;
+let promptRequestId: string | undefined;
+let sourceBrowserManager: SourceBrowserManager | undefined;
+let researchController: AbortController | undefined;
+let researchRequestId: string | undefined;
+let researchWorkspaceId: string | undefined;
+let schedulerTimer: NodeJS.Timeout | undefined;
+let schedulerPolling = false;
+let isQuitting = false;
+
+function shutdownAndExit(): Promise<void> {
+  if (shutdownPromise) return shutdownPromise;
+  apiClient = undefined;
+  serviceStatus = { connected: false, message: "本地服务正在退出" };
+  isQuitting = true;
+  if (schedulerTimer) clearInterval(schedulerTimer);
+  shutdownPromise = pythonService
+    .stop()
+    .catch((error) => console.error("JobFindsMe failed to stop cleanly", error))
+    .then(() => app.exit(0));
+  return shutdownPromise;
+}
+
+async function createWindow(): Promise<void> {
+  mainWindow = new BrowserWindow({
+    title:`JobFindsMe · ${buildLabel}${isolatedProfile?" · 隔离测试":""}`,
+    width: 1240,
+    height: 820,
+    minWidth: 760,
+    minHeight: 600,
+    backgroundColor: "#ffffff",
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, "../preload/index.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  mainWindow.on("page-title-updated",event=>event.preventDefault());
+  mainWindow.webContents.setWindowOpenHandler(({ url: value }) => {
+    try {
+      const url = new URL(value);
+      if (["http:", "https:"].includes(url.protocol) && !url.username && !url.password) {
+        void shell.openExternal(url.toString());
+      }
+    } catch {
+      // Invalid or non-web destinations remain denied.
+    }
+    return { action: "deny" };
+  });
+  mainWindow.webContents.on("will-navigate", (event) => event.preventDefault());
+  mainWindow.once("ready-to-show", () => mainWindow?.show());
+  mainWindow.on("close", (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    sourceBrowserManager?.layout(null);
+    mainWindow?.hide();
+  });
+  let lastBossState = "";
+  sourceBrowserManager = new SourceBrowserManager(mainWindow, async (page,explicit) => {
+    if(!apiClient)return;
+    let state = page.blocked ? "risk_control" : page.loginRequired ? "login_required" : page.authenticated && page.readable ? "ready" : "";
+    if(!state || (state===lastBossState&&!explicit&&sourceBrowserManager?.boss.paused!=="login_required"))return;
+    if(state==="ready") {
+      if(!explicit && (sourceBrowserManager?.boss.paused==="risk_control" || (await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss")?.session_status==="blocked"))return;
+      sourceBrowserManager?.boss.resume();
+      await apiClient.recordSourceVerification("boss",{session_status:"verified",list_status:"verified",detail_status:"unverified",fields_status:"partial",pagination_status:"unverified",enabled:true,notes:"当前平台页面已登录且列表可读；完整JD及滚动覆盖由每次检索单独报告。"});
+    } else {
+      if(sourceBrowserManager)sourceBrowserManager.boss.pause(state as "risk_control"|"login_required");
+      await apiClient.recordSourceRuntimeFailure("boss",state as "risk_control"|"login_required",state==="risk_control"?"平台要求验证，处理后点击恢复":"请在当前平台页完成登录");
+    }
+    lastBossState=state;mainWindow?.webContents.send("desktop:source-status-changed");
+  });
+  mainWindow.once("closed", () => {
+    sourceBrowserManager?.destroy();
+    sourceBrowserManager = undefined;
+  });
+
+  const devUrl = process.env.JFM_RENDERER_URL;
+  if (devUrl) await mainWindow.loadURL(devUrl);
+  else await mainWindow.loadFile(path.resolve(__dirname, "../../dist/index.html"));
+}
+
+// Matching credentials stay in the main process and are never returned to the renderer.
+let matchingRequest: {workspaceId:string;requestId:string;cancelled:boolean;started:boolean} | undefined;
+function matchingClient(event: Electron.IpcMainInvokeEvent) {
+  if(event.sender !== mainWindow?.webContents || !apiClient) throw new Error("matching unavailable");
+  return apiClient;
+}
+ipcMain.handle("desktop:matching-rules",(event,workspaceId:string)=>matchingClient(event).matchingRules(workspaceId));
+ipcMain.handle("desktop:save-matching-rule",(event,input)=>matchingClient(event).saveMatchingRule(input));
+ipcMain.handle("desktop:matching-trial",(event,input)=>matchingClient(event).matchingTrial(input));
+ipcMain.handle("desktop:matching-input",(event,workspaceId:string,runId:string)=>matchingClient(event).matchingInput(workspaceId,runId));
+ipcMain.handle("desktop:rerank-matching",async(event,workspaceId:string,runId:string)=>{
+  const client=matchingClient(event);
+  if(matchingRequest) throw new Error("已有匹配请求正在执行");
+  const request={workspaceId,requestId:`matching-${randomUUID()}`,cancelled:false,started:false};matchingRequest=request;
+  try {
+    const {rule}=await client.matchingInput(workspaceId,runId);
+    const snapshot=rule.model_snapshot;
+    const apiKey=snapshot?.auth_mode === "none" ? "" : snapshot?.credential_ref ? secretStore.get(snapshot.credential_ref) : "";
+    if(request.cancelled)return {status:"cancelled",message:"已取消，保留本地结果。"};
+    request.started=true;
+    return await client.rerankMatching({workspace_id:workspaceId,run_id:runId,request_id:request.requestId,api_key:apiKey || ""});
+  } finally {if(matchingRequest===request)matchingRequest=undefined;}
+});
+ipcMain.handle("desktop:cancel-matching",async(event)=>{
+  const client=matchingClient(event),request=matchingRequest;if(!request)return;
+  request.cancelled=true;
+  if(request.started){await client.cancelMatching(request.workspaceId,request.requestId);}
+});
+
+ipcMain.handle("desktop:preview-matching", async (_event, input) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.previewMatching(input);
+});
+ipcMain.handle("desktop:get-bootstrap", async () => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.bootstrap();
+});
+ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInput) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) {
+    throw new Error("desktop API is not ready");
+  }
+  if(!Array.isArray(input.source_ids)||!input.source_ids.length)throw new Error("请先选择岗位来源。");
+  input={...input,filters:normalizeDiscoveryFilters(input.filters)};
+  const preflight = await apiClient.searchPreflight(input);
+  const browser = await collectBrowserSourcePages(input, preflight);
+  const {boss_cursor: _cursor,...executionInput}=input;
+  const response=await apiClient.runSourceSearch({
+    ...executionInput,
+    resume_version_id: preflight.resume_version_id || undefined,
+    browser_pages: browser.pages,
+    browser_errors: browser.errors,
+  });
+  mainWindow?.webContents.send("desktop:source-status-changed");return response;
+});
+
+let sourceSearchEpoch=0;
+async function collectBrowserSourcePages(
+  input: SourceSearchInput,
+  preflight: SourceSearchPreflight,
+  reportProgress = true,
+): Promise<{
+  pages: Record<string, BrowserSourcePage[]>;
+  errors: Record<string, string>;
+}> {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  const epoch=sourceSearchEpoch;
+  const browserPages: Record<string, BrowserSourcePage[]> = {};
+  const browserErrors: Record<string, string> = {};
+  for (const sourceId of preflight.allowed_source_ids) {
+    if(epoch!==sourceSearchEpoch){browserErrors[sourceId]="cancelled:已停止后续来源，保留已读取结果";continue;}
+    if(reportProgress)mainWindow?.webContents.send("desktop:source-collection-progress",{stage:"loading",count:0,message:`正在读取 ${isSourceBrowserId(sourceId)?browserSiteNames[sourceId]:"岗位来源"}`});
+    if (!requiresElectronSourceSearch(sourceId)) {
+      if(!isSourceBrowserId(sourceId))continue;
+      try { browserPages[sourceId]=await apiClient.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',max_pages:Math.min(3,preflight.max_pages),seconds:Math.min(60,preflight.time_budget_seconds)}); }
+      catch(primaryError){
+        if(/429|risk_control|访问过于频繁|captcha/i.test(String(primaryError))){browserErrors[sourceId]=String(primaryError);continue;}
+        if(!sourceBrowserManager){browserErrors[sourceId]=String(primaryError);continue;}
+        try {browserPages[sourceId]=[await sourceBrowserManager.collectCareer(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',maxPages:preflight.max_pages,seconds:preflight.time_budget_seconds})];}
+        catch(fallbackError){browserErrors[sourceId]=`首选通道：${String(primaryError).slice(0,300)}；内嵌浏览器：${String(fallbackError).slice(0,400)}`;}
+      }
+      continue;
+    }
+    if (!sourceBrowserManager) {
+      browserErrors[sourceId] = "browser_session_error:来源后台会话不可用";
+      continue;
+    }
+    if(sourceId==="boss"){
+      try {browserPages.boss=[await sourceBrowserManager.boss.collect({keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||"",maxBatches:preflight.max_pages,seconds:preflight.time_budget_seconds,cursor:input.boss_cursor},progress=>{if(reportProgress)mainWindow?.webContents.send("desktop:source-collection-progress",progress);})];}
+      catch(error){const message=error instanceof Error?error.message:String(error),failure=message.startsWith("risk_control:")?"risk_control":message.startsWith("login_required:")?"login_required":null;
+        browserPages.boss=[{records:[],next_cursor:null,collection:{batches:0,elapsed_seconds:0,stop_reason:failure||(message.startsWith("unsupported_city:")?"unsupported_city":"source_contract_error"),cursor:null,complete:false,failure}}];
+      }
+      const collection=browserPages.boss[0]?.collection;
+      if((input.filters?.cities?.length||0)>1 && collection?.complete){collection.complete=false;collection.stop_reason="city_scope";}
+      continue;
+    }
+    const pages: BrowserSourcePage[] = [];
+    let page = 1;
+    try {
+      while (page <= preflight.max_pages) {
+        if(epoch!==sourceSearchEpoch)throw Error('cancelled:已停止后续翻页，保留已读取结果');
+        const result = await sourceBrowserManager.searchPage(
+          sourceId,
+          { keyword: preflight.keywords[0], city: input.city || input.filters?.cities?.[0] || "", page },
+        );
+        pages.push(result);
+        if (!result.next_cursor) break;
+        const nextPage = Number(result.next_cursor);
+        if (!Number.isInteger(nextPage) || nextPage <= page) break;
+        page = nextPage;
+      }
+      browserPages[sourceId] = pages;
+    } catch (error) {
+      if (pages.length) browserPages[sourceId] = pages;
+      const message = error instanceof Error ? error.message : String(error);
+      browserErrors[sourceId] = message.slice(0, 1000);
+      const failure = message.startsWith("login_required:")
+        ? "login_required"
+        : message.startsWith("risk_control:")
+          ? "risk_control"
+          : undefined;
+      if (failure) {
+        await apiClient.recordSourceRuntimeFailure(sourceId, failure, message);
+      }
+    }
+  }
+  return { pages: browserPages, errors: browserErrors };
+}
+ipcMain.handle("desktop:refilter-search",(event,workspaceId:string,runId:string,filters,pageSize:number)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.refilterSearch(workspaceId,runId,normalizeDiscoveryFilters(filters),pageSize);});
+ipcMain.handle("desktop:get-search-page", (event, workspaceId: string, runId: string, page: number, pageSize: number) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.getSearchPage(workspaceId, runId, page, pageSize);
+});
+ipcMain.handle("desktop:set-job-tracking", (event, input) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.setJobTracking(input);
+});
+ipcMain.handle("desktop:list-job-tracking", (event, workspaceId: string) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.listJobTracking(workspaceId);
+});
+ipcMain.handle("desktop:get-service-status", () => serviceStatus);
+ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bounds: SourceBrowserBounds) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager) {
+    throw new Error("source browser is not available");
+  }
+  if (!isSourceBrowserId(sourceId)) throw new Error("unknown source browser");
+  await sourceBrowserManager.show(sourceId, bounds);
+});
+ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager || !apiClient) {
+    throw new Error("source verification is not available");
+  }
+  if(!isSourceBrowserId(sourceId))throw Error('unknown source');
+  if(!requiresElectronSourceSearch(sourceId)){
+    let pages:BrowserSourcePage[];
+    try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
+    catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
+    const first=pages.flatMap(p=>p.records)[0];
+    if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
+    if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
+    const summary=summarizeSourceVerification(pages);
+    summary.session_status='anonymous';summary.pagination_status='partial';
+    summary.notes='有界检索已读取列表；分页/城市覆盖仍需逐项实测。'+summary.notes;
+    return apiClient.recordSourceVerification(sourceId,summary);
+  }
+  if(sourceId==="boss"){
+    const page=await sourceBrowserManager.observeBoss(true);
+    if(!page?.authenticated||!page.readable||page.blocked)throw Error("请从岗位来源打开 BOSS，完成登录或验证并显示岗位列表后恢复。");
+    return (await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss");
+  }
+  const first = await sourceBrowserManager.searchPage(sourceId, { keyword: "Python", city: "", page: 1 });
+  const pages = [first];
+  if (first.next_cursor) {
+    pages.push(await sourceBrowserManager.searchPage(sourceId, { keyword: "Python", city: "", page: Number(first.next_cursor) }));
+  }
+  return apiClient.recordSourceVerification(sourceId, summarizeSourceVerification(pages));
+});
+ipcMain.handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceBrowserManager?.boss.cancel();sourceBrowserManager?.cancelCareerSearch();});
+ipcMain.handle("desktop:read-source-detail",async(event,sourceId:string,url:string,workspaceId?:string,jobId?:string)=>{
+  if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||!isSourceBrowserId(sourceId)||typeof url!=="string")throw Error("unauthorized caller");
+  const detail={...await sourceBrowserManager.readResearchJob(sourceId,url),fetched_at:new Date().toISOString()};
+  return {...detail,job:workspaceId&&jobId?await apiClient.enrichSourceJob(workspaceId,jobId,detail):undefined};
+});
+ipcMain.handle("desktop:read-boss-detail",async(event,url:string,workspaceId?:string,jobId?:string)=>{
+  if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||typeof url!=="string")throw Error("unauthorized caller");
+  try{const detail=await sourceBrowserManager.boss.readDetail(url);return {...detail,job:workspaceId&&jobId?await apiClient.enrichBossJob(workspaceId,jobId,detail):undefined};}catch(error){const failure=sourceBrowserManager.boss.paused;if(failure){await apiClient.recordSourceRuntimeFailure("boss",failure,"BOSS 已暂停，请在平台原页处理");mainWindow?.webContents.send("desktop:source-status-changed");}throw error;}
+});
+ipcMain.handle("desktop:layout-source-browser", (event, bounds: SourceBrowserBounds | null) => {
+  if (event.sender !== mainWindow?.webContents) throw new Error("unauthorized caller");
+  sourceBrowserManager?.layout(bounds);
+});
+ipcMain.handle("desktop:source-browser-command", (event, command: string) => {
+  if (event.sender !== mainWindow?.webContents || !["back", "forward", "reload", "state", "zoom-in", "zoom-out", "zoom-reset", "fit-width"].includes(command)) throw new Error("unauthorized browser command");
+  return sourceBrowserManager?.command(command);
+});
+ipcMain.handle("desktop:select-browser-tab", (event,id:string) => {
+  if(event.sender!==mainWindow?.webContents || !sourceBrowserManager)throw new Error("unauthorized caller");
+  return sourceBrowserManager.selectTab(id);
+});
+ipcMain.handle("desktop:navigate-browser-tab", (event,id:string,url:string) => {
+  if(event.sender!==mainWindow?.webContents || !sourceBrowserManager || typeof id!=="string" || typeof url!=="string")throw new Error("unauthorized browser navigation");
+  return sourceBrowserManager.navigateTab(id,url);
+});
+ipcMain.handle("desktop:close-browser-tab", (event,id:string) => {
+  if(event.sender!==mainWindow?.webContents || !sourceBrowserManager)throw new Error("unauthorized caller");
+  return sourceBrowserManager.closeTab(id);
+});
+ipcMain.handle("desktop:close-source-browser", (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+  sourceBrowserManager?.hide();
+});
+ipcMain.handle("desktop:open-job-original", async (event, sourceId: string, url: string, bounds: SourceBrowserBounds) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager) throw new Error("source browser is not available");
+  if (sourceId !== "web" && !isSourceBrowserId(sourceId)) throw new Error("unknown source browser");
+  await sourceBrowserManager.show(sourceId, bounds, url || undefined);
+});
+ipcMain.handle("desktop:get-resume-state", () => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.resumeState();
+});
+ipcMain.handle("desktop:import-resume", async () => {
+  if (!apiClient || !mainWindow) throw new Error("desktop API is not ready");
+  const selection = await dialog.showOpenDialog(mainWindow, {
+    title: "选择简历",
+    properties: ["openFile"],
+    filters: [{ name: "简历", extensions: ["pdf", "docx", "md", "txt"] }],
+  });
+  if (selection.canceled || !selection.filePaths[0]) return undefined;
+  return apiClient.importResume(selection.filePaths[0]);
+});
+ipcMain.handle("desktop:confirm-resume", (_event, input: ResumeConfirmation) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.confirmResume(input);
+});
+ipcMain.handle("desktop:abandon-resume", (_event, workspaceId: string, profileId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.abandonResume(workspaceId, profileId);
+});
+ipcMain.handle("desktop:analysis-preview", (_event, input) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.previewAnalysisCopy(input);
+});
+ipcMain.handle("desktop:list-resume-versions", (_event, workspaceId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.listResumeVersions(workspaceId);
+});
+ipcMain.handle("desktop:save-resume-version", (_event, input: ResumeEditInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.saveResumeVersion(input);
+});
+ipcMain.handle("desktop:restore-resume-version", (_event, workspaceId: string, versionId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.restoreResumeVersion(workspaceId, versionId);
+});
+ipcMain.handle("desktop:export-resume", async (_event, input: ResumeExportInput) => {
+  if (!apiClient || !mainWindow) throw new Error("desktop API is not ready");
+  const extensions = { pdf: ["pdf"], docx: ["docx"], md: ["md"] } as const;
+  const selection = await dialog.showSaveDialog(mainWindow, {
+    title: "导出简历",
+    defaultPath: `简历-v${input.version_id.slice(-6)}.${input.format}`,
+    filters: [{ name: input.format.toUpperCase(), extensions: [...extensions[input.format]] }],
+  });
+  if (selection.canceled || !selection.filePath) return undefined;
+  const destination = selection.filePath.endsWith(`.${input.format}`)
+    ? selection.filePath : `${selection.filePath}.${input.format}`;
+  return apiClient.exportResume(input, destination);
+});
+ipcMain.handle("desktop:list-prompt-sessions",(event,workspaceId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");return apiClient.listPromptSessions(workspaceId);});
+ipcMain.handle("desktop:create-prompt-session", async (_event, input: PromptSessionInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  const connection = await apiClient.modelConnection(input.connection_id);
+  if (connection.status !== "verified") {
+    throw new Error("请先在模型设置中完成连接测试，再开始 AI 修改。");
+  }
+  if (connection.auth_mode !== "none" && (!connection.credential_ref || !secretStore.has(connection.credential_ref))) {
+    throw new Error("模型连接没有可用的本地 API Key。");
+  }
+  return apiClient.createPromptSession(input);
+});
+ipcMain.handle("desktop:generate-prompt-turn", async (_event, input: PromptTurnInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  const connections = await apiClient.listModelConnections();
+  const session = await apiClient.getPromptSession(input.session_id);
+  const connection = connections.find((item) => item.connection_id === session.connection_id);
+  const apiKey = connection?.credential_ref
+    ? secretStore.get(connection.credential_ref)
+    : undefined;
+  if (!connection || connection.status !== "verified" || (!apiKey && connection.auth_mode !== "none")) {
+    throw new Error("模型连接未验证或本地 API Key 不可用。");
+  }
+  promptController?.abort();
+  const controller = new AbortController();
+  const requestId = `resume-prompt-${randomUUID()}`;
+  promptController = controller;
+  promptSessionId = input.session_id;
+  promptRequestId = requestId;
+  try {
+    return await apiClient.generatePromptTurn(input, requestId, apiKey ?? "", controller.signal);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error("简历修改已取消；若请求已到服务商，仍可能产生用量。");
+    }
+    throw error;
+  } finally {
+    if (promptRequestId === requestId) {
+      promptController = undefined;
+      promptSessionId = undefined;
+      promptRequestId = undefined;
+    }
+  }
+});
+ipcMain.handle("desktop:cancel-prompt-turn", async () => {
+  if (!apiClient || !promptSessionId || !promptRequestId) return undefined;
+  const cancelled = await apiClient.cancelPromptTurn(promptSessionId, promptRequestId);
+  promptController?.abort();
+  return cancelled;
+});
+ipcMain.handle("desktop:decide-prompt-patch", (_event, sessionId: string, patchId: string, decision: PromptPatchDecision) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.decidePromptPatch(sessionId, patchId, decision);
+});
+ipcMain.handle("desktop:save-prompt-session", (_event, sessionId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.savePromptSession(sessionId);
+});
+ipcMain.handle("desktop:list-model-connections", async () => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  const connections = await apiClient.listModelConnections();
+  return connections.map((connection) => ({
+    ...connection,
+    has_api_key: Boolean(
+      connection.credential_ref && secretStore.has(connection.credential_ref),
+    ),
+  }));
+});
+ipcMain.handle("desktop:save-model-connection", async (_event, input: ModelConnectionInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  if (input.api_key && !secretStore.isAvailable()) {
+    throw new Error("系统安全存储不可用，未保存 API Key。");
+  }
+  return saveModelConnectionWithSecret(
+    apiClient,
+    secretStore,
+    input,
+    () => `model-secret-${randomUUID()}`,
+  );
+});
+ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  const connection = await apiClient.modelConnection(connectionId);
+  const apiKey = connection.credential_ref
+    ? secretStore.get(connection.credential_ref)
+    : undefined;
+  if (!apiKey && connection.auth_mode !== "none") throw new Error("请先在系统安全存储中保存 API Key。");
+  modelTestController?.abort();
+  const controller = new AbortController();
+  const testId = `model-test-${randomUUID()}`;
+  modelTestController = controller;
+  modelTestConnectionId = connectionId;
+  modelTestRunId = testId;
+  try {
+    return await apiClient.testModelConnection(
+      connectionId,
+      testId,
+      apiKey ?? "",
+      controller.signal,
+    );
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(
+        "连接测试已取消；如果服务商已收到请求，仍可能产生用量。",
+      );
+    }
+    throw error;
+  } finally {
+    if (modelTestRunId === testId) {
+      modelTestController = undefined;
+      modelTestConnectionId = undefined;
+      modelTestRunId = undefined;
+    }
+  }
+});
+ipcMain.handle("desktop:cancel-model-test", async () => {
+  const connectionId = modelTestConnectionId;
+  const testId = modelTestRunId;
+  if (!apiClient || !connectionId || !testId) return undefined;
+  const cancelled = await apiClient.cancelModelConnectionTest(connectionId, testId);
+  modelTestController?.abort();
+  return cancelled;
+});
+ipcMain.handle("desktop:secure-storage-available", () => secretStore.isAvailable());
+ipcMain.handle("desktop:resolve-research-link", async (event, url: string) => {
+  if (event.sender !== mainWindow?.webContents || typeof url !== "string" || url.length > 2000) throw new Error("invalid research link");
+  const sourceId = Object.keys(sourceBrowserSpecs).find(id => isSourceBrowserId(id) && isAllowedSourceUrl(id, url));
+  if (!sourceId || !isSourceBrowserId(sourceId)) throw new Error("仅支持已接入招聘来源的 HTTPS 链接，不接受内网、账号信息或非标准端口。");
+  return {...await sourceBrowserManager!.readResearchJob(sourceId,url),message:"已自动读取岗位信息，请确认后开始研究。"};
+});
+ipcMain.handle("desktop:prepare-research-job", (event, input) => {
+  if (event.sender !== mainWindow?.webContents || !apiClient) throw new Error("research unavailable");
+  return apiClient.prepareResearchJob(input);
+});
+ipcMain.handle("desktop:correct-research",(event,reportId:string,input:import("../shared/contracts").ResearchCorrectionInput)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  return apiClient.correctResearch(reportId,input);
+});
+ipcMain.handle("desktop:list-research-reports", (_event, workspaceId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.listResearchReports(workspaceId);
+});
+ipcMain.handle("desktop:create-research-report", async (_event, input: ResearchRunInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  let apiKey: string | undefined;
+  let requestId: string | undefined;
+  if (input.connection_id) {
+    const connection = await apiClient.modelConnection(input.connection_id);
+    apiKey = connection.credential_ref
+      ? secretStore.get(connection.credential_ref)
+      : undefined;
+    if (connection.status !== "verified" || (!apiKey && connection.auth_mode !== "none")) {
+      throw new Error("模型连接未验证或本地 API Key 不可用。");
+    }
+    researchController?.abort();
+    researchController = new AbortController();
+    requestId = `research-${randomUUID()}`;
+    researchRequestId = requestId;
+    researchWorkspaceId = input.workspace_id;
+  }
+  try {
+    return await apiClient.createResearchReport(
+      input,
+      requestId,
+      apiKey ?? "",
+      researchController?.signal,
+    );
+  } catch (error) {
+    if (researchController?.signal.aborted) {
+      throw new Error("岗位研究已取消；若服务商已收到请求，仍可能产生用量。");
+    }
+    throw error;
+  } finally {
+    if (researchRequestId === requestId) {
+      researchController = undefined;
+      researchRequestId = undefined;
+      researchWorkspaceId = undefined;
+    }
+  }
+});
+ipcMain.handle("desktop:cancel-research", async () => {
+  if (!apiClient || !researchRequestId || !researchWorkspaceId) return undefined;
+  const cancelled = await apiClient.cancelResearch(
+    researchRequestId,
+    researchWorkspaceId,
+  );
+  researchController?.abort();
+  return cancelled;
+});
+ipcMain.handle("desktop:list-scheduled-tasks", (_event, workspaceId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.listScheduledTasks(workspaceId);
+});
+ipcMain.handle("desktop:create-scheduled-task", (_event, input: ScheduledTaskInput) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.createScheduledTask(input);
+});
+ipcMain.handle("desktop:set-scheduled-task-paused", (_event, taskId: string, paused: boolean) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.setScheduledTaskPaused(taskId, paused);
+});
+ipcMain.handle("desktop:legacy-task-status", (_event, workspaceId: string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.legacyTaskStatus(workspaceId);
+});
+
+async function pollScheduledTasks(): Promise<void> {
+  if (!apiClient || schedulerPolling) return;
+  schedulerPolling = true;
+  try {
+    const dueTasks = await apiClient.listDueTasks();
+    const matchingKeysByTask:Record<string,string> = {};
+    const browserPagesByTask: Record<string, Record<string, BrowserSourcePage[]>> = {};
+    const browserErrorsByTask: Record<string, Record<string, string>> = {};
+    for (const task of dueTasks) {
+      try {
+        const state=await apiClient.matchingRules(task.workspace_id);
+        const rule=state.versions.find(r=>r.rule_version_id===task.rule_version_id);
+        if(rule?.mode === "model" && rule.model_snapshot){
+          const model=rule.model_snapshot;
+          if(model.auth_mode === "none") matchingKeysByTask[task.task_id]="";
+          else if(model.credential_ref){const key=secretStore.get(model.credential_ref);if(key!==undefined)matchingKeysByTask[task.task_id]=key;}
+        }
+      } catch { /* The scheduler reports model failure, preserving local results. */ }
+
+      const input: SourceSearchInput = {
+        workspace_id: task.workspace_id,
+        intent: task.intent,
+        source_ids: task.source_ids,
+        city: task.filters.cities?.[0] || "",
+        filters: task.filters,
+        page_size: 50,
+      };
+      try {
+        const preflight = await apiClient.searchPreflight({
+          ...input,
+          resume_version_id: task.resume_version_id,
+          rule_version_id: task.rule_version_id,
+        });
+        const browser = await collectBrowserSourcePages(input, preflight, false);
+        browserPagesByTask[task.task_id] = browser.pages;
+        browserErrorsByTask[task.task_id] = browser.errors;
+      } catch (error) {
+        console.error(`JobFindsMe task ${task.task_id} preflight failed`, error);
+      }
+    }
+    const result = await apiClient.runDueTasks({
+      matching_keys_by_task:matchingKeysByTask,
+      browser_pages_by_task: browserPagesByTask,
+      browser_errors_by_task: browserErrorsByTask,
+    });
+    for (const item of result.notifications) {
+      if (await showTaskNotification(item.title, item.body)) {
+        await apiClient.markTaskNotificationDelivered(item.notification_id);
+      }
+    }
+  } catch (error) {
+    console.error("JobFindsMe scheduled search poll failed", error);
+  } finally {
+    schedulerPolling = false;
+  }
+}
+
+async function showTaskNotification(title: string, body: string): Promise<boolean> {
+  if (!Notification.isSupported()) return false;
+  return new Promise((resolve) => {
+    const notification = new Notification({ title, body });
+    let settled = false;
+    const finish = (shown: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(shown);
+    };
+    const timer = setTimeout(() => finish(false), 5_000);
+    notification.once("show", () => finish(true));
+    notification.once("failed", () => finish(false));
+    notification.show();
+  });
+}
+
+app.whenReady().then(async () => {
+  if(!ownsInstance)return;
+  try {
+    await createWindow();
+    if (shutdownPromise) return;
+    apiClient = await pythonService.start();
+    if (shutdownPromise) return;
+    serviceStatus = {connected:true};
+    mainWindow?.webContents.send("desktop:service-status", serviceStatus);
+    schedulerTimer = setInterval(() => void pollScheduledTasks(), 60_000);
+    void pollScheduledTasks();
+  } catch (error) {
+    if (!shutdownPromise) {
+      console.error("JobFindsMe failed to start", error);
+      serviceStatus = {connected:false,message:"本地服务启动失败，请重启应用。"};
+      mainWindow?.webContents.send("desktop:service-status", serviceStatus);
+    }
+  }
+});
+
+app.on("before-quit", (event) => {
+  event.preventDefault();
+  void shutdownAndExit();
+});
+
+app.on("activate", () => {
+  if (mainWindow) mainWindow.show();
+  // macOS can emit activate while the packaged Python runtime is still
+  // warming up.  Do not create a renderer that can only race bootstrap.
+  else if (!isQuitting && apiClient) void createWindow();
+});
+
+process.once("SIGINT", () => app.quit());
+process.once("SIGTERM", () => app.quit());

@@ -23,8 +23,12 @@ classifiers = [
 ]
 dependencies = [
   "certifi>=2024.8.30",
+  "fastapi>=0.116,<0.120",
   "pydantic>=2.10,<3",
   "pypdf>=5,<7",
+  "python-docx>=1.1,<2",
+  "reportlab>=4.2,<5",
+  "uvicorn>=0.35,<1",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +38,7 @@ browser = [
   "curl_cffi>=0.7,<1",
 ]
 dev = [
+  "httpx>=0.27,<1",
   "pytest>=8,<10",
   "ruff>=0.12,<1",
 ]
@@ -69,3 +74,8 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.22.3",
+]

@@ -1,0 +1,31 @@
+{
+  "renderer": {
+    "size": [
+      893,
+      719
+    ],
+    "root": "shell  has-browser narrow-shell  browser-mode",
+    "main": "none",
+    "browser": {
+      "x": 219.046875,
+      "y": 42,
+      "width": 673.953125,
+      "height": 677,
+      "top": 42,
+      "right": 893,
+      "bottom": 719,
+      "left": 219.046875
+    }
+  },
+  "native": [
+    {
+      "visible": true,
+      "bounds": {
+        "x": 220,
+        "y": 178,
+        "width": 673,
+        "height": 541
+      }
+    }
+  ]
+}

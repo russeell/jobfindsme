@@ -46,6 +46,7 @@ from jobfindsme.profiles.models import (
     ResumeImportMode,
 )
 from jobfindsme.profiles.service import ProfileUseCase, ResumeProfileService
+from jobfindsme.resume_editor import ResumeEditorService
 from jobfindsme.search_plans import SearchPlanService
 from jobfindsme.source_subscriptions import SourceSubscriptionService
 from jobfindsme.storage import Database
@@ -58,7 +59,7 @@ class jobfindsmecore:
 
     def __init__(self, database_path: str | Path) -> None:
         self.database = Database(database_path)
-        self.database.migrate()
+        self.database.migrate_with_backup()
         workspaces = WorkspaceService(self.database)
         search_plans = SearchPlanService(self.database)
         self.context = ActiveContextService(
@@ -67,6 +68,7 @@ class jobfindsmecore:
             search_plans,
         )
         profiles = ResumeProfileService(self.database)
+        resume_editor = ResumeEditorService(self.database)
         jobs = JobRepository(self.database)
         job_imports = JobImportService(jobs)
         discovery = JobDiscoveryService(job_imports)
@@ -88,6 +90,7 @@ class jobfindsmecore:
         self.workspaces = workspaces
         self.search_plans = search_plans
         self.profiles = profiles
+        self.resume_editor = resume_editor
         self.jobs = jobs
         self.job_imports = job_imports
         self.discovery = discovery

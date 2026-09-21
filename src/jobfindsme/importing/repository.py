@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 
 from jobfindsme.contracts import (
@@ -467,6 +468,13 @@ def _repair_legacy_boss_classification(job: JobPosting) -> JobPosting:
 
     if not job.source.source_name.startswith("BOSS直聘"):
         return job
+    title = re.split(r"[\uE000-\uF8FF]", job.title, maxsplit=1)[0].rstrip(" -–—")
+    job = job.model_copy(
+        update={
+            "title": title or "岗位名称未知",
+            "company": "公司未知" if job.company == "BOSS直聘" else job.company,
+        }
+    )
     text = f"{job.title} {job.description}".casefold()
     recruitment_track = job.recruitment_track
     if recruitment_track is RecruitmentTrack.UNKNOWN:

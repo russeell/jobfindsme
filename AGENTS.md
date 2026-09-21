@@ -1,3 +1,36 @@
+# JobFindsMe — Desktop Refactor Instructions
+
+## Active development direction (2026-09-18)
+
+The user has approved automatic staged implementation of a local desktop
+job-search product and retirement of the MCP product surface. The authoritative
+development documents are:
+
+- `docs/desktop/REFACTOR.md`: product scope and migration boundaries.
+- `docs/desktop/TECHNICAL.md`: proposed architecture and data contracts.
+- `docs/desktop/DEVELOPMENT.md`: task selection, verification and handoff.
+- `docs/desktop/tasks.json`: task dependencies, status and acceptance evidence.
+
+For desktop refactor work, these documents supersede conflicting legacy rules
+below (MCP retention, host-owned scheduling, optional resume use and distribution).
+The legacy section describes the current implementation until it is replaced.
+Do not remove legacy modules before their replacement gate in the task plan.
+Use `.agents/skills/jobfindsme-dev/SKILL.md` for incremental development.
+The approved UI reference is `docs/desktop/ui/jobfindsme-desktop.html`; later
+requirements in the desktop plan take precedence over mock interactions.
+Do not add human-review gates. Use an independent AI review in a new session
+only for material risk or unresolved implementation questions; see the skill.
+Implementation status is recorded only in `docs/desktop/tasks.json`.
+Use targeted risk-based checks; do not repeat full suites for each small edit.
+Git policy (user authorization, 2026-09-21): establish a verified local baseline,
+then commit each independent fix after its relevant checks pass. Work on
+`codex/desktop-refactor`; preserve existing history and user changes. Record
+verification and known limitations in desktop evidence. Never automatically
+push, publish, or create a release. Exclude credentials, login profiles, private
+resumes and generated build artifacts. This policy supersedes legacy Git rules.
+
+## Legacy implementation reference
+
 # Agent Job Search — Agent Instructions
 
 The canonical Agent Skill is `skills/agent-job-search/SKILL.md`. Codex, Claude, and
