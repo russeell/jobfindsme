@@ -175,6 +175,33 @@ class MatchingPromptService:
             )
         return self.get(workspace_id, rule_id)
 
+    def delete_version(self, workspace_id: str, rule_id: str) -> None:
+        """Remove an unused historical rule without changing active or frozen runs."""
+        with self.database.connect() as db:
+            row = db.execute(
+                "SELECT 1 FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
+                (workspace_id, rule_id),
+            ).fetchone()
+            if row is None:
+                raise ValueError("规则版本不存在")
+            active = db.execute(
+                "SELECT 1 FROM active_matching_rules WHERE workspace_id=? AND rule_version_id=?",
+                (workspace_id, rule_id),
+            ).fetchone()
+            if active:
+                raise ValueError("当前启用的规则不能删除")
+            for table in ("desktop_search_runs", "desktop_scheduled_tasks"):
+                reference = db.execute(
+                    f"SELECT 1 FROM {table} WHERE workspace_id=? AND rule_version_id=? LIMIT 1",
+                    (workspace_id, rule_id),
+                ).fetchone()
+                if reference:
+                    raise ValueError("该规则已被历史检索或任务引用，不能删除")
+            db.execute(
+                "DELETE FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
+                (workspace_id, rule_id),
+            )
+
     def input_for_run(self, workspace_id, run_id):
         with self.database.connect() as db:
             row = db.execute(

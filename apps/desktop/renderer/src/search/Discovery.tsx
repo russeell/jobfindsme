@@ -7,9 +7,7 @@ import {useEffect, useMemo,useState,useRef,type FormEvent} from "react";
 import type {BootstrapData,SearchFilters,SourceSearchResponse,SearchResultPage,SearchResultItem,MatchingWeights,SourceCollectionProgress,ResumeState} from "../../../shared/contracts";
 import {useOriginalBrowser} from "../shared/Workbench";
 import {SearchFilters as FilterControls} from "./SearchFilters";
-import {TasksPage} from "./TasksPage";
 import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
-import {createPortal} from "react-dom";
 import {formatSalary} from "./salary";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
@@ -48,15 +46,6 @@ export function Discovery({ active, data, weights, onWeightsChange, onError, onR
   }
   function resetFilters(){setFilterKey(key=>key+1);void updateFilters(defaultDiscoveryFilters());}
   const openBrowser = useOriginalBrowser();
-  const [showTasks, setShowTasks] = useState(false);
-  const scheduleTrigger=useRef<HTMLButtonElement>(null);
-  useEffect(()=>{if(!showTasks)return;
-    const key=(event:KeyboardEvent)=>{
-      if(event.key==="Escape"){event.preventDefault();setShowTasks(false);}
-      if(event.key==="Tab") {const nodes=Array.from(document.querySelectorAll<HTMLElement>('.schedule-dialog button:not(:disabled),.schedule-dialog input:not(:disabled),.schedule-dialog select:not(:disabled)')).filter(n=>n.getClientRects().length);
-        const first=nodes[0],last=nodes.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
-    };window.addEventListener("keydown",key);return()=>{window.removeEventListener("keydown",key);scheduleTrigger.current?.focus();};
-  },[showTasks]);
   const workspaceId = data?.workspaces[0]?.workspace_id;
   useEffect(()=>{if(!active||!workspaceId)return;let cancelled=false;void window.jobfindsme!.getResumeState().then(value=>{if(!cancelled)setResumeState(value);}).catch(()=>{});return()=>{cancelled=true;};},[active,workspaceId]);
   useEffect(()=>{
@@ -123,7 +112,7 @@ export function Discovery({ active, data, weights, onWeightsChange, onError, onR
       setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?{...row,tracking}:row)}));
     }).catch(error=>onError(messageOf(error)));
   }
-  return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>找工作</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?`简历 v${resumeState.current_version_number} 已参与岗位匹配`:resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"当前未使用简历，可先搜索岗位"} {resumeState&&<button type="button" onClick={onResume}>{resumeState.search_profile_state==="ready"?"维护简历":"设置简历"}</button>}</p></div><button ref={scheduleTrigger} className="quiet-button" onClick={() => setShowTasks(!showTasks)}>◷ 定时检索</button></div>
+  return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>找工作</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"当前简历已参与岗位匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"当前未使用简历，可先搜索岗位"} {resumeState&&<button type="button" onClick={onResume}>{resumeState.search_profile_state==="ready"?"维护简历":"设置简历"}</button>}</p></div></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位或方向，例如 AI 应用工程师" value={intent} onChange={(event) => setIntent(event.target.value)} /><button className="primary-button" disabled={!intent.trim() || searching || reranking || !workspaceId || enabled.length === 0}>{searching ? "检索中…" : "找岗位"}</button></form>
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     {!selectedSources.length&&<p className="discovery-next-step" role="status">选择至少一个可检索来源，再输入岗位关键词。<button onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>选择来源</button></p>}
@@ -135,7 +124,6 @@ export function Discovery({ active, data, weights, onWeightsChange, onError, onR
     {filters.cities&&filters.cities.length>1&&selectedSources.includes("boss")&&<p className="note">BOSS 本次检索首个城市「{filters.cities[0]}」；其他城市请分别检索。其他条件在已采集岗位中筛选。</p>}
 
     </div></details>{searching&&collection&&<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止采集</button>}{!searching&&enabled.some(s=>s.source_id==="boss")&&result?.source_runs.find(run=>run.source_id==="boss"&&run.can_continue)?.next_cursor&&<button type="button" onClick={()=>void search(undefined,result.source_runs.find(run=>run.source_id==="boss")!.next_cursor!)}>继续读取 BOSS 下一批</button>}</div>}
-    {showTasks && createPortal(<div className="modal-backdrop" onClick={()=>setShowTasks(false)}><section className="schedule-dialog" role="dialog" aria-modal="true" aria-label="定时检索" onClick={e=>e.stopPropagation()}><button className="dialog-close" autoFocus aria-label="关闭定时检索" onClick={()=>setShowTasks(false)}>×</button><TasksPage data={data} onError={onError} snapshot={{ intent, filters, weights, source_ids: [...selectedSources] }} /></section></div>,document.body)}
 
     </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => setMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => setMobileView("detail")}>详情</button></div>
     <div className={`workspace ${selected?"":"no-selection"}`}><section className={`list-pane ${mobileView === "detail" ? "mobile-hidden" : ""}`}>

@@ -120,3 +120,28 @@ def test_representative_chinese_resume_exports_pdf_docx_and_markdown(tmp_path) -
     assert pdf.path.stat().st_mode & 0o077 == 0
     assert docx.path.stat().st_mode & 0o077 == 0
     assert markdown.path.stat().st_mode & 0o077 == 0
+
+
+def test_edit_preserves_spaces_and_line_breaks_and_history_hide_persists(tmp_path) -> None:
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    editor = ResumeEditorService(database)
+    first = profiles.current_version(workspace_id=workspace.workspace_id)
+    assert first is not None
+    content = {**first.content, "projects": ["  项目 A  ", "", "  项目 B  "]}
+    second = editor.save_edit(workspace_id=workspace.workspace_id, base_version_id=first.version_id, content=content)
+    assert second.content["projects"] == ("  项目 A  ", "", "  项目 B  ")
+    assert ResumeEditorService(database).get_version(workspace_id=workspace.workspace_id, version_id=second.version_id).content["projects"] == second.content["projects"]
+    with pytest.raises(ResumeEditorError, match="current"):
+        editor.hide_version(workspace_id=workspace.workspace_id, version_id=second.version_id)
+    from jobfindsme.importing.repository import JobRepository
+    from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
+    service = DesktopJobService(database, JobRepository(database))
+    service.create_snapshot(workspace_id=workspace.workspace_id, intent="合成检索", job_ids=[], resume_version=first, filters=DesktopJobFilters())
+    with pytest.raises(ResumeEditorError, match="referenced"):
+        editor.hide_version(workspace_id=workspace.workspace_id, version_id=first.version_id)
+    third = editor.save_edit(workspace_id=workspace.workspace_id, base_version_id=second.version_id, content={**second.content, "skills": ["TypeScript"]})
+    editor.hide_version(workspace_id=workspace.workspace_id, version_id=second.version_id)
+    assert [item.version_id for item in ResumeEditorService(database).list_versions(workspace_id=workspace.workspace_id)] == [third.version_id, first.version_id]
+    other = WorkspaceService(database).create()
+    with pytest.raises(ResumeEditorError, match="not found"):
+        editor.hide_version(workspace_id=other.workspace_id, version_id=second.version_id)

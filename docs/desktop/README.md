@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端开发
 
-最新本地交付：[D47 目录整理包](/private/tmp/JobFindsMe-D47-Structure.app)。目录归组、有限清理及保留理由见 [STRUCTURE](STRUCTURE.md)，验证和真实限制见 [D47](evidence/D47.md)。界面沿用 [UI34](ui/UI34-plan.md)。普通包未启动，隔离预览已验收并退出；用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
+最新本地交付：[D48 界面修复包](/private/tmp/JobFindsMe-D48-UIFix.app)。来源、匹配规则、简历与口碑页面已简化；定时检索已停用，旧计划和执行记录保留在本机。详见 [D48 证据](evidence/D48.md)。普通包未启动，隔离预览已验收并退出；用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |

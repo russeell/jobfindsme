@@ -40,6 +40,7 @@ export type BootstrapData = {
 export type DesktopBridge = {
   matchingRules(workspaceId:string):Promise<MatchingRuleState>;
   saveMatchingRule(input:MatchingRuleInput):Promise<MatchingRule>;
+  deleteMatchingRule(workspaceId:string,ruleVersionId:string):Promise<void>;
   matchingTrial(input:{workspace_id:string;job_id:string;rule_version_id:string}):Promise<SearchResultPage>;
   matchingInput(workspaceId:string,runId:string):Promise<MatchingInput>;
   rerankMatching(workspaceId:string,runId:string):Promise<RerankResult>;

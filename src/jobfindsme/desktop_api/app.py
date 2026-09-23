@@ -35,7 +35,7 @@ from jobfindsme.resume_editor import (
     PromptResumeError,
     ResumeEditorError,
 )
-from jobfindsme.scheduler import LocalScheduler, ScheduleError, TaskRunResult
+from jobfindsme.scheduler import LocalScheduler
 from jobfindsme.search.desktop import (
     BudgetedSourceExecutor,
     DesktopSearchService,
@@ -966,6 +966,16 @@ def create_app(
             return matching.save(**request.model_dump())
         except (ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.delete(
+        "/v1/matching-rules/{rule_version_id}", dependencies=[Depends(require_token)]
+    )
+    def delete_matching_rule(rule_version_id: str, workspace_id: str) -> dict:
+        try:
+            matching.delete_version(workspace_id, rule_version_id)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {"deleted": True}
 
     @app.post("/v1/matching-trials", dependencies=[Depends(require_token)])
     def matching_trial(request: MatchingTrialRequest) -> dict:
@@ -1919,44 +1929,7 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def create_scheduled_task(request: ScheduledTaskRequest) -> dict:
-        blocked = {}
-        for source_id in request.source_ids:
-            try:
-                desktop_sources.require_live_search(source_id)
-            except (LookupError, SourceGateError) as error:
-                blocked[source_id] = str(error)
-        if blocked:
-            raise HTTPException(
-                status_code=409,
-                detail=f"selected sources are not ready: {blocked}",
-            )
-        resume = core.profiles.current_version(workspace_id=request.workspace_id)
-        if resume is None:
-            raise HTTPException(
-                status_code=409,
-                detail="confirm a resume version before creating a scheduled search",
-            )
-        try:
-            rule_version_id = desktop_jobs.ensure_rule_version(
-                request.workspace_id, request.weights
-            )
-            return scheduler.create_task(
-                workspace_id=request.workspace_id,
-                name=request.name,
-                intent=request.intent,
-                source_ids=request.source_ids,
-                filters=request.filters.model_dump(),
-                resume_version_id=resume.version_id,
-                rule_version_id=rule_version_id,
-                frequency=request.frequency,
-                timezone=request.timezone,
-                local_time=request.local_time,
-                weekday=request.weekday,
-                interval_minutes=request.interval_minutes,
-                catch_up_policy=request.catch_up_policy,
-            )
-        except (ScheduleError, ValueError) as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
+        raise HTTPException(status_code=410, detail="定时检索已停用；请使用手动岗位检索。")
 
     @app.get(
         "/v1/tasks",
@@ -1972,7 +1945,7 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def list_due_tasks() -> list[dict]:
-        return scheduler.list_due()
+        return []
 
     @app.post(
         "/v1/tasks/{task_id}/pause",
@@ -1991,131 +1964,11 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def resume_scheduled_task(task_id: str) -> dict:
+        raise HTTPException(status_code=410, detail="定时检索已停用；历史计划不能恢复。")
         try:
             return scheduler.set_paused(task_id=task_id, paused=False)
         except LookupError as error:
             raise HTTPException(status_code=404, detail="task not found") from error
-
-    def scheduled_runner(
-        task: dict,
-        browser_pages_by_task: dict[str, dict[str, list[BrowserSourcePage]]],
-        browser_errors_by_task: dict[str, dict[str, str]],
-        matching_keys_by_task: dict[str, str],
-    ) -> TaskRunResult:
-        response = run_source_search(
-            SearchPreflightRequest(
-                workspace_id=task["workspace_id"],
-                intent=task["intent"],
-                source_ids=task["source_ids"],
-                filters=DesktopSearchFilters(**task["filters"]),
-                resume_version_id=task["resume_version_id"],
-                rule_version_id=task["rule_version_id"],
-                browser_pages=browser_pages_by_task.get(task["task_id"], {}),
-                browser_errors=browser_errors_by_task.get(task["task_id"], {}),
-                page_size=50,
-            )
-        )
-        matching_failure = ()
-        rule = matching.get(task["workspace_id"], task["rule_version_id"])
-        if rule["mode"] == "model" and response.result_page["total"]:
-            try:
-                if task["task_id"] not in matching_keys_by_task:
-                    raise ValueError("模型密钥不可用")
-                reranked = matching.rerank(
-                    task["workspace_id"],
-                    response.result_page["run_id"],
-                    api_key=matching_keys_by_task[task["task_id"]],
-                    cancellation=CancellationToken(),
-                )
-                response.result_page = reranked["page"]
-            except (ValueError, LookupError, ModelGatewayError):
-                matching_failure = ("模型重排失败，保留本地规则结果",)
-        failures = matching_failure + tuple(
-            f"{item.source_id}: {item.error or item.status}"
-            for item in response.source_runs
-            if item.status == "failed"
-        )
-        blocked = tuple(
-            f"{source_id}: {reason}"
-            for source_id, reason in response.blocked_sources.items()
-        )
-        with core.database.connect() as connection:
-            row = connection.execute(
-                "SELECT ordered_job_ids_json, scores_json "
-                "FROM desktop_search_runs WHERE run_id = ?",
-                (response.result_page["run_id"],),
-            ).fetchone()
-            previous = connection.execute(
-                """
-                SELECT search_run_id, result_snapshot_json FROM desktop_task_runs
-                WHERE task_id = ? AND search_run_id IS NOT NULL
-                ORDER BY scheduled_for DESC LIMIT 1
-                """,
-                (task["task_id"],),
-            ).fetchone()
-            previous_row = (
-                connection.execute(
-                    "SELECT ordered_job_ids_json, scores_json "
-                    "FROM desktop_search_runs WHERE run_id = ?",
-                    (previous["search_run_id"],),
-                ).fetchone()
-                if previous is not None
-                else None
-            )
-        current_ids = json.loads(row["ordered_job_ids_json"])
-        current_scores = json.loads(row["scores_json"])
-        previous_ids = (
-            set(json.loads(previous_row["ordered_job_ids_json"]))
-            if previous_row
-            else set()
-        )
-        del previous_row, current_scores
-        previous_snapshot = (
-            json.loads(previous["result_snapshot_json"]) if previous else {}
-        )
-        with core.database.connect() as connection:
-            placeholders = ",".join("?" for _ in current_ids)
-            current_snapshot = (
-                {
-                    item["job_id"]: item["content_hash"]
-                    for item in connection.execute(
-                        "SELECT job_id, content_hash FROM jobs "
-                        f"WHERE workspace_id = ? AND job_id IN ({placeholders})",
-                        (task["workspace_id"], *current_ids),
-                    ).fetchall()
-                }
-                if current_ids
-                else {}
-            )
-        changed = sum(
-            1
-            for job_id in set(current_ids) & previous_ids
-            if current_snapshot.get(job_id) != previous_snapshot.get(job_id)
-        )
-        fingerprint = hashlib.sha256(
-            json.dumps(
-                {"ids": current_ids, "content": current_snapshot},
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
-        ).hexdigest()
-        all_failures = failures + blocked
-        if blocked and not response.allowed_source_ids:
-            status_value = "login_required"
-        elif all_failures:
-            status_value = "partial"
-        else:
-            status_value = "success"
-        return TaskRunResult(
-            status=status_value,
-            search_run_id=response.result_page["run_id"],
-            new_count=len(set(current_ids) - previous_ids),
-            changed_count=changed,
-            source_failures=all_failures,
-            result_snapshot=current_snapshot,
-            result_fingerprint=fingerprint,
-            error="; ".join(all_failures) or None,
-        )
 
     @app.post(
         "/v1/tasks/run-due",
@@ -2123,15 +1976,7 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def run_due_tasks(request: RunDueTasksRequest) -> dict:
-        runs = scheduler.run_due(
-            lambda task: scheduled_runner(
-                task,
-                request.browser_pages_by_task,
-                request.browser_errors_by_task,
-                request.matching_keys_by_task,
-            )
-        )
-        return {"runs": runs, "notifications": scheduler.pending_notifications()}
+        return {"runs": [], "notifications": []}
 
     @app.post(
         "/v1/task-notifications/{notification_id}/delivered",

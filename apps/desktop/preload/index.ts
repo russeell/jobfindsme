@@ -4,6 +4,7 @@ import type { DesktopBridge } from "../shared/contracts";
 const bridge: DesktopBridge = Object.freeze({
   matchingRules: workspaceId => ipcRenderer.invoke("desktop:matching-rules",workspaceId),
   saveMatchingRule: input => ipcRenderer.invoke("desktop:save-matching-rule",input),
+  deleteMatchingRule: (workspaceId,ruleVersionId) => ipcRenderer.invoke("desktop:delete-matching-rule",workspaceId,ruleVersionId),
   matchingTrial: input => ipcRenderer.invoke("desktop:matching-trial",input),
   matchingInput: (workspaceId,runId) => ipcRenderer.invoke("desktop:matching-input",workspaceId,runId),
   rerankMatching: (workspaceId,runId) => ipcRenderer.invoke("desktop:rerank-matching",workspaceId,runId),

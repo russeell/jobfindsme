@@ -36,6 +36,7 @@ import type {
 export class DesktopApiClient {
   matchingRules(workspaceId:string):Promise<MatchingRuleState> { return this.json(`/v1/matching-rules?${new URLSearchParams({workspace_id:workspaceId})}`); }
   saveMatchingRule(input:MatchingRuleInput):Promise<MatchingRule> { return this.json("/v1/matching-rules",{method:"POST",body:JSON.stringify(input)}); }
+  async deleteMatchingRule(workspaceId:string,ruleVersionId:string):Promise<void> { await this.json(`/v1/matching-rules/${encodeURIComponent(ruleVersionId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{method:"DELETE"}); }
   matchingTrial(input:{workspace_id:string;job_id:string;rule_version_id:string}):Promise<SearchResultPage> { return this.json("/v1/matching-trials",{method:"POST",body:JSON.stringify(input)}); }
   matchingInput(workspaceId:string,runId:string):Promise<MatchingInput> { return this.json(`/v1/matching-input?${new URLSearchParams({workspace_id:workspaceId,run_id:runId})}`); }
   rerankMatching(input:{workspace_id:string;run_id:string;request_id:string;api_key:string}):Promise<RerankResult> { return this.json("/v1/matching-rerank",{method:"POST",body:JSON.stringify(input)},75000); }

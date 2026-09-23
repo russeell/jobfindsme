@@ -214,138 +214,28 @@ def test_rejects_invented_quotes_cancel_and_no_resume(tmp_path):
         matching.input_for_run(other, base)
 
 
-def test_api_and_new_scheduled_tasks_freeze_active_prompt(tmp_path):
+def test_scheduled_api_is_disabled_while_manual_matching_remains_available(tmp_path):
     db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
     rule = save(matching, ws, conn, "优先最后")
-    client = TestClient(
-        create_app(
-            token="secret",
-            database_path=tmp_path / "matching.db",
-            model_gateway_override=ModelGateway(transport),
-        )
-    )
+    client = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db", model_gateway_override=ModelGateway(transport)))
     headers = {"Authorization": "Bearer secret"}
-    assert (
-        client.get("/v1/matching-rules", params={"workspace_id": ws}).status_code == 401
-    )
-    task = client.post(
-        "/v1/tasks",
-        headers=headers,
-        json={
-            "workspace_id": ws,
-            "name": "合成任务",
-            "intent": "Python",
-            "source_ids": ["liepin"],
-            "frequency": "interval",
-            "timezone": "Asia/Shanghai",
-            "interval_minutes": 60,
-        },
-    ).json()
-    assert task["rule_version_id"] == rule["rule_version_id"]
-    saved = save(matching, ws, conn, "优先最前")
-    assert (
-        LocalScheduler(db).get_task(task["task_id"])["rule_version_id"]
-        == rule["rule_version_id"]
-    )
-    assert service.ensure_rule_version(ws) == saved["rule_version_id"]
-    trial = client.post(
-        "/v1/matching-trials",
-        headers=headers,
-        json={
-            "workspace_id": ws,
-            "job_id": jobs[0].job_id,
-            "rule_version_id": rule["rule_version_id"],
-        },
-    ).json()
-    result = client.post(
-        "/v1/matching-rerank",
-        headers=headers,
-        json={
-            "workspace_id": ws,
-            "run_id": trial["run_id"],
-            "request_id": "test-request-123456",
-        },
-    ).json()
-    assert result["status"] == "complete"
-    assert "优先最后" in transport.prompts[-1]
-
-
-def test_scheduled_execution_uses_frozen_prompt_and_reports_missing_key(tmp_path):
-    from datetime import timedelta
-
-    from jobfindsme.connectors import RawJobRecord
-    from jobfindsme.contracts import SourceKind
-    from jobfindsme.search.desktop import SourcePage
-
-    db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
-    old = save(matching, ws, conn, "优先最后")
-    now = [datetime(2026, 9, 19, tzinfo=UTC)]
-
-    class Adapter:
-        def fetch_page(self, cursor):
-            return SourcePage(
-                records=tuple(
-                    RawJobRecord(
-                        source_kind=SourceKind.CAREER_SITE,
-                        source_name="猎聘",
-                        source_url=f"https://www.liepin.com/job/{i}",
-                        external_id=str(i),
-                        payload={
-                            "title": f"合成岗位{i}",
-                            "company": "合成公司",
-                            "description": "Python 工程师",
-                        },
-                    )
-                    for i in range(3)
-                )
-            )
-
-    app = create_app(
-        token="secret",
-        database_path=tmp_path / "matching.db",
-        model_gateway_override=ModelGateway(transport),
-        source_adapter_factory_override=lambda *_: Adapter(),
-        scheduler_clock_override=lambda: now[0],
-    )
-    client = TestClient(app)
-    headers = {"Authorization": "Bearer secret"}
-    task = client.post(
-        "/v1/tasks",
-        headers=headers,
-        json={
-            "workspace_id": ws,
-            "name": "冻结提示词任务",
-            "intent": "Python",
-            "source_ids": ["liepin"],
-            "frequency": "interval",
-            "timezone": "Asia/Shanghai",
-            "interval_minutes": 60,
-        },
-    ).json()
-    save(matching, ws, conn, "优先最前")
-    now[0] += timedelta(hours=2)
-    response = client.post(
-        "/v1/tasks/run-due",
-        headers=headers,
-        json={"matching_keys_by_task": {task["task_id"]: ""}},
-    )
-    assert response.status_code == 200, response.text
-    assert transport.prompts and "优先最后" in transport.prompts[-1]
+    payload = {"workspace_id": ws, "name": "合成任务", "intent": "Python", "source_ids": ["liepin"], "frequency": "interval", "timezone": "Asia/Shanghai", "interval_minutes": 60}
+    assert client.post("/v1/tasks", headers=headers, json=payload).status_code == 410
+    # A legacy active task remains as history, but restart/due execution cannot run it.
+    legacy = LocalScheduler(db).create_task(workspace_id=ws, name="旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=rule["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
     with db.connect() as sql:
-        row = sql.execute(
-            "SELECT search_run_id FROM desktop_task_runs WHERE task_id=?",
-            (task["task_id"],),
-        ).fetchone()
-    page = service.page(workspace_id=ws, run_id=row[0], page=1, page_size=10)
-    assert (
-        page["rule_version_id"] == old["rule_version_id"]
-        and page["rerank"]["candidate_count"] == 3
-    )
-    now[0] += timedelta(hours=2)
-    count = len(transport.prompts)
-    client.post("/v1/tasks/run-due", headers=headers, json={})
-    assert len(transport.prompts) == count
-    assert "模型重排失败" in LocalScheduler(db).get_task(task["task_id"])["last_error"]
+        sql.execute("UPDATE desktop_scheduled_tasks SET next_run_at='2020-01-01T00:00:00+00:00' WHERE task_id=?", (legacy["task_id"],))
+    assert client.get("/v1/tasks/due", headers=headers).json() == []
+    assert client.post("/v1/tasks/run-due", headers=headers, json={}).json() == {"runs": [], "notifications": []}
+    assert client.post(f"/v1/tasks/{legacy['task_id']}/resume", headers=headers).status_code == 410
+    restarted = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db", model_gateway_override=ModelGateway(transport)))
+    assert restarted.get("/v1/tasks/due", headers=headers).json() == []
+    assert restarted.post("/v1/tasks/run-due", headers=headers, json={}).json()["runs"] == []
+    assert restarted.get("/v1/tasks", headers=headers, params={"workspace_id": ws}).json()[0]["task_id"] == legacy["task_id"]
+    with db.connect() as sql:
+        assert sql.execute("SELECT COUNT(*) FROM desktop_task_runs").fetchone()[0] == 0
+    trial = restarted.post("/v1/matching-trials", headers=headers, json={"workspace_id": ws, "job_id": jobs[0].job_id, "rule_version_id": rule["rule_version_id"]})
+    assert trial.status_code == 200, trial.text
 
 
 def test_cancel_before_registration_and_no_resume_trial(tmp_path):
@@ -390,3 +280,44 @@ def test_cancel_before_registration_and_no_resume_trial(tmp_path):
         },
     )
     assert trial.status_code == 400 and "尚未评分" in trial.text
+
+
+def test_matching_history_delete_guards_and_restart(tmp_path):
+    db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
+    old = save(matching, ws, conn, "旧版本")
+    active = save(matching, ws, conn, "当前版本")
+    with pytest.raises(ValueError, match="当前"):
+        matching.delete_version(ws, active["rule_version_id"])
+    other = WorkspaceService(db).create().workspace_id
+    with pytest.raises(ValueError, match="不存在"):
+        matching.delete_version(other, old["rule_version_id"])
+    matching.delete_version(ws, old["rule_version_id"])
+    with pytest.raises(ValueError, match="不属于"):
+        matching.get(ws, old["rule_version_id"])
+    unused = save(matching, ws, conn, "将被引用")
+    save(matching, ws, conn, "更新当前")
+    service.create_snapshot(workspace_id=ws, intent="Python", job_ids=[jobs[0].job_id], resume_version=resume, filters=DesktopJobFilters(), rule_version_id=unused["rule_version_id"])
+    with pytest.raises(ValueError, match="引用"):
+        matching.delete_version(ws, unused["rule_version_id"])
+    scheduled = save(matching, ws, conn, "历史计划规则")
+    save(matching, ws, conn, "新的当前规则")
+    LocalScheduler(db).create_task(workspace_id=ws, name="合成旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=scheduled["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
+    with pytest.raises(ValueError, match="引用"):
+        matching.delete_version(ws, scheduled["rule_version_id"])
+    restarted = MatchingPromptService(db, service, matching.connections, matching.gateway)
+    assert restarted.get(ws, unused["rule_version_id"])["prompt"] == "将被引用"
+
+
+def test_matching_delete_api_returns_protected_error_and_removes_unused(tmp_path):
+    db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
+    old = save(matching, ws, conn, "旧规则")
+    active = save(matching, ws, conn, "当前规则")
+    client = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db"))
+    headers = {"Authorization": "Bearer secret"}
+    base = "/v1/matching-rules/"
+    params = {"workspace_id": ws}
+    assert client.delete(base + active["rule_version_id"], params=params, headers=headers).status_code == 400
+    result = client.delete(base + old["rule_version_id"], params=params, headers=headers)
+    assert result.status_code == 200, result.text
+    assert result.json()["deleted"] is True
+    assert old["rule_version_id"] not in {value["rule_version_id"] for value in client.get("/v1/matching-rules", params=params, headers=headers).json()["versions"]}

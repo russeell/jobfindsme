@@ -237,3 +237,49 @@ nav button .nav-label {font-size:13px;}
   .research-page .heading-row>.button-row {max-width:none;justify-content:flex-start;}
   .discovery-page .job-detail {padding:14px;}
 }
+/* D48: compact maintenance surfaces */
+.sources-heading {align-items:center;}
+.sources-heading p {max-width:580px;}
+.source-audit-progress {display:flex;align-items:center;gap:12px;margin:6px 0 12px;font-size:12px;color:var(--text-muted);}
+.source-audit-progress progress {width:min(180px,30%);height:7px;}
+.source-card-status {font-size:12px;color:var(--text-muted);margin:8px 0;}
+.source-card>details,.source-guidance {font-size:11px;color:var(--text-muted);margin-top:10px;}
+.source-card>details summary,.source-guidance summary {cursor:pointer;}
+.source-login-help {font-size:11px;}
+.matching-page {max-width:870px;}
+.matching-heading {align-items:center;}
+.matching-form {padding:18px;}
+.matching-prompt {min-height:190px;width:100%;resize:vertical;}
+.matching-mode-note {margin:8px 0 15px;}
+.matching-options,.matching-history {border-top:1px solid var(--line);padding-top:12px;margin-top:12px;}
+.matching-options>summary,.matching-history>summary {cursor:pointer;font-weight:600;font-size:12px;}
+.matching-option-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-top:14px;}
+.matching-option-fields>.note,.matching-option-fields>.advanced-weights {grid-column:1/-1;}
+.matching-version {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;}
+.matching-version>span {min-width:0;overflow-wrap:anywhere;}
+.matching-version>.history-confirm {grid-column:1/-1;}
+.resume-maintenance .resume-history .version-list>.resume-history-row {display:block;padding:8px 0;border-bottom:1px solid var(--line);}
+.resume-history-main {display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.resume-history-main>span {min-width:0;overflow-wrap:anywhere;}
+.resume-history-main .button-row {flex-wrap:wrap;justify-content:flex-end;}
+.history-confirm {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--surface-soft);border:1px solid var(--line);border-radius:7px;padding:8px 10px;margin-top:7px;font-size:11px;}
+.history-confirm p {margin:0;}
+.history-confirm .notice {width:100%;color:#a5302b;}
+.history-confirm .button-row {margin:0;}
+.research-history-filter {display:flex;align-items:center;gap:6px;width:max-content;margin:7px 0 0;font-size:11px;color:var(--text-muted);}
+.research-history-filter input {min-height:0;}
+.research-history-row {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding:5px 0;}
+.research-history-row>button:first-child {min-width:0;display:grid;gap:2px;}
+.research-history-row>button:first-child strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.research-history-row>button:first-child small {font-size:10px;color:var(--text-muted);}
+.research-history-row>.history-confirm {grid-column:1/-1;}
+.research-history-list {max-height:300px;}
+.report-summary strong {font-size:17px;}
+.report-summary span {font-size:11px;}
+@container(max-width:720px){
+ .matching-option-fields {grid-template-columns:1fr;}
+ .matching-version,.research-history-row {grid-template-columns:1fr;}
+ .resume-history-main {align-items:flex-start;flex-direction:column;}
+ .resume-history-main .button-row {justify-content:flex-start;}
+ .source-audit-progress {flex-wrap:wrap;}
+}

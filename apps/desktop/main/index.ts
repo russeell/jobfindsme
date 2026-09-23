@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 
 import type { DesktopApiClient } from "./backend/api-client";
 import { saveModelConnectionWithSecret } from "./backend/model-connection-service";
@@ -66,8 +66,6 @@ const sourceAutoCheckPending=new Set<string>();
 let researchController: AbortController | undefined;
 let researchRequestId: string | undefined;
 let researchWorkspaceId: string | undefined;
-let schedulerTimer: NodeJS.Timeout | undefined;
-let schedulerPolling = false;
 let isQuitting = false;
 
 function shutdownAndExit(): Promise<void> {
@@ -75,7 +73,6 @@ function shutdownAndExit(): Promise<void> {
   apiClient = undefined;
   serviceStatus = { connected: false, message: "本地服务正在退出" };
   isQuitting = true;
-  if (schedulerTimer) clearInterval(schedulerTimer);
   shutdownPromise = pythonService
     .stop()
     .catch((error) => console.error("JobFindsMe failed to stop cleanly", error))
@@ -180,6 +177,7 @@ function matchingClient(event: Electron.IpcMainInvokeEvent) {
 }
 ipcMain.handle("desktop:matching-rules",(event,workspaceId:string)=>matchingClient(event).matchingRules(workspaceId));
 ipcMain.handle("desktop:save-matching-rule",(event,input)=>matchingClient(event).saveMatchingRule(input));
+ipcMain.handle("desktop:delete-matching-rule",(event,workspaceId:string,ruleVersionId:string)=>matchingClient(event).deleteMatchingRule(workspaceId,ruleVersionId));
 ipcMain.handle("desktop:matching-trial",(event,input)=>matchingClient(event).matchingTrial(input));
 ipcMain.handle("desktop:matching-input",(event,workspaceId:string,runId:string)=>matchingClient(event).matchingInput(workspaceId,runId));
 ipcMain.handle("desktop:rerank-matching",async(event,workspaceId:string,runId:string)=>{
@@ -717,92 +715,17 @@ ipcMain.handle("desktop:list-scheduled-tasks", (_event, workspaceId: string) => 
   return apiClient.listScheduledTasks(workspaceId);
 });
 ipcMain.handle("desktop:create-scheduled-task", (_event, input: ScheduledTaskInput) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.createScheduledTask(input);
+  throw new Error("定时检索已停用；请使用手动岗位检索。");
 });
 ipcMain.handle("desktop:set-scheduled-task-paused", (_event, taskId: string, paused: boolean) => {
   if (!apiClient) throw new Error("desktop API is not ready");
+  if (!paused) throw new Error("定时检索已停用；历史计划不能恢复。");
   return apiClient.setScheduledTaskPaused(taskId, paused);
 });
 ipcMain.handle("desktop:legacy-task-status", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.legacyTaskStatus(workspaceId);
 });
-
-async function pollScheduledTasks(): Promise<void> {
-  if (!apiClient || schedulerPolling) return;
-  schedulerPolling = true;
-  try {
-    const dueTasks = await apiClient.listDueTasks();
-    const matchingKeysByTask:Record<string,string> = {};
-    const browserPagesByTask: Record<string, Record<string, BrowserSourcePage[]>> = {};
-    const browserErrorsByTask: Record<string, Record<string, string>> = {};
-    for (const task of dueTasks) {
-      try {
-        const state=await apiClient.matchingRules(task.workspace_id);
-        const rule=state.versions.find(r=>r.rule_version_id===task.rule_version_id);
-        if(rule?.mode === "model" && rule.model_snapshot){
-          const model=rule.model_snapshot;
-          if(model.auth_mode === "none") matchingKeysByTask[task.task_id]="";
-          else if(model.credential_ref){const key=secretStore.get(model.credential_ref);if(key!==undefined)matchingKeysByTask[task.task_id]=key;}
-        }
-      } catch { /* The scheduler reports model failure, preserving local results. */ }
-
-      const input: SourceSearchInput = {
-        workspace_id: task.workspace_id,
-        intent: task.intent,
-        source_ids: task.source_ids,
-        city: task.filters.cities?.[0] || "",
-        filters: task.filters,
-        page_size: 50,
-      };
-      try {
-        const preflight = await apiClient.searchPreflight({
-          ...input,
-          resume_version_id: task.resume_version_id,
-          rule_version_id: task.rule_version_id,
-        });
-        const browser = await collectBrowserSourcePages(input, preflight, false);
-        browserPagesByTask[task.task_id] = browser.pages;
-        browserErrorsByTask[task.task_id] = browser.errors;
-      } catch (error) {
-        console.error(`JobFindsMe task ${task.task_id} preflight failed`, error);
-      }
-    }
-    const result = await apiClient.runDueTasks({
-      matching_keys_by_task:matchingKeysByTask,
-      browser_pages_by_task: browserPagesByTask,
-      browser_errors_by_task: browserErrorsByTask,
-    });
-    for (const item of result.notifications) {
-      if (await showTaskNotification(item.title, item.body)) {
-        await apiClient.markTaskNotificationDelivered(item.notification_id);
-      }
-    }
-  } catch (error) {
-    console.error("JobFindsMe scheduled search poll failed", error);
-  } finally {
-    schedulerPolling = false;
-  }
-}
-
-async function showTaskNotification(title: string, body: string): Promise<boolean> {
-  if (!Notification.isSupported()) return false;
-  return new Promise((resolve) => {
-    const notification = new Notification({ title, body });
-    let settled = false;
-    const finish = (shown: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      resolve(shown);
-    };
-    const timer = setTimeout(() => finish(false), 5_000);
-    notification.once("show", () => finish(true));
-    notification.once("failed", () => finish(false));
-    notification.show();
-  });
-}
 
 app.whenReady().then(async () => {
   if(!ownsInstance)return;
@@ -813,8 +736,6 @@ app.whenReady().then(async () => {
     if (shutdownPromise) return;
     serviceStatus = {connected:true};
     mainWindow?.webContents.send("desktop:service-status", serviceStatus);
-    schedulerTimer = setInterval(() => void pollScheduledTasks(), 60_000);
-    void pollScheduledTasks();
   } catch (error) {
     if (!shutdownPromise) {
       console.error("JobFindsMe failed to start", error);

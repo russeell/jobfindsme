@@ -256,11 +256,10 @@ def _normalize_content(
         values = content.get(section, ())
         if not isinstance(values, (list, tuple)):
             raise ResumeEditorError(f"resume section {section} must be a list")
-        cleaned = tuple(
-            " ".join(str(value).split()) for value in values if str(value).strip()
-        )
+        # Preserve the editor's line breaks and spacing exactly across versions.
+        cleaned = tuple(str(value) for value in values)
         normalized[section] = cleaned
-    if not any(normalized.values()):
+    if not any(value.strip() for values in normalized.values() for value in values):
         raise ResumeEditorError("resume content must not be empty")
     return normalized
 

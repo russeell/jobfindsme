@@ -17,7 +17,7 @@ Search by role or skill, choose cities, salary ranges and experience requirement
 - Select multiple sources, select all, or check their availability.
 - Read job details alongside the original page in the embedded browser.
 - Save roles and track read and application status.
-- Schedule local searches instead of entering the same criteria repeatedly.
+- Run searches manually when you want updated listings; historical plans and run records remain stored locally.
 
 You submit applications yourself on the hiring website. Opening a link does not mark a job as applied.
 
@@ -71,7 +71,7 @@ The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpre
 ## Things to know
 
 - **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
-- **Scheduled searches require the app to run.** They do not wake a sleeping or powered-off computer or run after the app fully exits.
+- **Scheduled searches are disabled.** Plans do not run or catch up automatically, and new plans cannot be created or resumed. Historical plans and run records remain stored locally.
 - **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access; external model features send relevant requests to the configured provider.
 - **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
 
