@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-09-19",
+  "updated_at": "2026-09-23",
   "status_values": [
     "pending",
     "in_progress",
@@ -157,7 +157,9 @@
         "11 家官网逐项给出能力状态，通过的适配器可启用，其余明确受限"
       ],
       "verification": "完成 D04a/D04b 后逐来源执行完整接入验收；只复测 D01 之后改变的真实路径。",
-      "evidence": ["docs/desktop/evidence/D38.md"],
+      "evidence": [
+        "docs/desktop/evidence/D38.md"
+      ],
       "blocker": null
     },
     {
@@ -1174,12 +1176,93 @@
     {
       "id": "D38",
       "title": "来源浏览器兜底修复与真实续页筛选补验",
-      "depends_on": ["D37"],
-      "status": "in_progress",
-      "scope": ["前程无忧已登录结果页、阿里实际岗位点击、京东官网路由", "逐源网站续页去重和关键词城市筛选", "更正真实会话与能力证据并交付新独立包"],
-      "acceptance": ["实际页面观察确认入口和链接，不猜岗位ID", "网站下一页或滚动新增独立于桌面分页记录", "本地过滤明确有限候选范围与未知字段", "可自主修复项完成后才能停止，登录验证码限流单独记录", "保留UI19与UI20及用户登录选择，不提交发布投递"],
+      "depends_on": [
+        "D37"
+      ],
+      "status": "blocked",
+      "scope": [
+        "前程无忧已登录结果页、阿里实际岗位点击、京东官网路由",
+        "逐源网站续页去重和关键词城市筛选",
+        "更正真实会话与能力证据并交付新独立包"
+      ],
+      "acceptance": [
+        "实际页面观察确认入口和链接，不猜岗位ID",
+        "网站下一页或滚动新增独立于桌面分页记录",
+        "本地过滤明确有限候选范围与未知字段",
+        "可自主修复项完成后才能停止，登录验证码限流单独记录",
+        "保留UI19与UI20及用户登录选择，不提交发布投递"
+      ],
       "verification": "按差异有界实测与定向契约验证，避免全量重测",
-      "evidence": [],
+      "evidence": [
+        "docs/desktop/evidence/D38.md",
+        "docs/desktop/evidence/D41.md"
+      ],
+      "blocker": "智联登录表单已在 D41 修复，仍需用户完成会话后验证列表/详情/网站续页；阿里详情资源加载失败。京东和前程无忧局部实测见 D38。"
+    },
+    {
+      "id": "D39",
+      "title": "简历主流程收敛",
+      "depends_on": [
+        "D36"
+      ],
+      "status": "done",
+      "scope": [
+        "简历导入解析校对、确认当前版本、手动维护、版本历史和必要导出",
+        "主流程移除对话补丁、模型选择和针对 JD 改写；历史数据只读保留"
+      ],
+      "acceptance": [
+        "默认与窄窗实际页面无对话工作台",
+        "新导入、编辑另存、历史恢复和导出可用；旧数据保留"
+      ],
+      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
+      "evidence": [
+        "docs/desktop/evidence/D41.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D40",
+      "title": "口碑调查按兴趣取证",
+      "depends_on": [
+        "D36"
+      ],
+      "status": "done",
+      "scope": [
+        "自定义调查问题优先，快捷方向可选；保留报告历史",
+        "有界公开检索、主体/团队/时间语境核对与证据限制"
+      ],
+      "acceptance": [
+        "自定义问题实际进入查询并保存",
+        "已保存报告默认显示结果；原文链接、限制与未查明项可见"
+      ],
+      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
+      "evidence": [
+        "docs/desktop/evidence/D41.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D41",
+      "title": "来源登录与自动能力状态",
+      "depends_on": [
+        "D36"
+      ],
+      "status": "done",
+      "scope": [
+        "智联真实登录入口诊断修复",
+        "20 来源能力更新，前台状态自动刷新与有界检索前探测",
+        "统一来源卡片和兜底状态"
+      ],
+      "acceptance": [
+        "自动状态不把登录当检索成功",
+        "首选失败后的同平台浏览器兜底或明确人工限制",
+        "隔离应用默认/窄窗验收"
+      ],
+      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
+      "evidence": [
+        "docs/desktop/evidence/D41.md",
+        "docs/desktop/evidence/D41/source-matrix.json"
+      ],
       "blocker": null
     }
   ]

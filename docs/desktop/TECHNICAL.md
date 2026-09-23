@@ -171,3 +171,7 @@ BOSS 使用 `boss-page.ts` 的已加载DOM解析及 `boss-collector.ts` 单来�
 复用research_reports.job_context_json保存canonical_url/job_snapshot/source_statuses/outcome/version_number，事务内按workspace和岗位ID/规范URL计数分配版本；旧行只读推导版本，不覆盖历史。粘贴岗位ID按规范URL散列，详情跟踪参数移除，官网岗位ID查询保留。reportMatchesJob用于按钮/历史归属，读取报告不检索。
 
 来源沿用jfm.sources.selected：缺失/null/非法旧偏好为空，显式数组去重保留，两页共享App状态。Discovery仅提交已选且live_search_enabled集合，主进程拒绝空选，后端二次门禁。选择用于下次请求，不重筛当前结果；新任务冻结明确集合，旧任务不变。normalizeDiscoveryFilters仅用于交互检索/重筛，不注入调度执行。完整JD依赖source.detail_level详情证据或明确用户确认文本，structured_source摘要不能当全文。
+
+## 2026-09-23 最新授权（覆盖前文冲突）
+
+固定 userData 与来源 persist 分区继续复用；前台地址栏及跨站导航须保持来源会话，网页搜索进入通用分区时应明示。自动状态检查只读已加载页面并去抖；主动网络检索须有预算、过期策略和风险停源。首选失败用同来源持久分区 Electron DOM 有界续页与按需详情，失败保持部分结果和真实原因。研究问题、检索范围及未核对证据随不可变报告保存，不删除旧数据。
