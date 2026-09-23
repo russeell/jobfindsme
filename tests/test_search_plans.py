@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 
 from jobfindsme.contracts import SalaryPolicy
-from jobfindsme.search_plans import SearchPlanNotFoundError, SearchPlanService
+from jobfindsme.search.plans import SearchPlanNotFoundError, SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 

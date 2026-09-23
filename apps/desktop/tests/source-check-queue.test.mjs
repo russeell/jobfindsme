@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {runSourceCheckQueue} from "../dist-electron/main/source-check-queue.js";
+import {runSourceCheckQueue} from "../dist-electron/main/sources/source-check-queue.js";
 
 const source=(id,changes={})=>({source_id:id,source_type:id.startsWith("company_")?"company":"platform",name:id,
   login_required:["boss","zhilian","wuyou"].includes(id),live_search_enabled:false,session_status:"unverified",

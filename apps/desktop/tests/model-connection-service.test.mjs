@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { saveModelConnectionWithSecret } from "../dist-electron/main/model-connection-service.js";
+import { saveModelConnectionWithSecret } from "../dist-electron/main/backend/model-connection-service.js";
 
 const existing = {
   connection_id: "connection-1",

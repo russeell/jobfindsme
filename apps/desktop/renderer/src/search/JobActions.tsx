@@ -1,6 +1,6 @@
 import {useState} from "react";
 import type {JobTrackingState} from "../../../shared/contracts";
-import {PopoverButton} from "./PopoverButton";
+import {PopoverButton} from "../shared/PopoverButton";
 
 export function JobActions({tracking,onTrack,onOpen,onResearch,onError,researchDisabledReason,hasReport}: {tracking:JobTrackingState;onTrack(event:"read"|"saved"|"applied",enabled:boolean):Promise<unknown>;onOpen():Promise<unknown>;onResearch?():void;researchDisabledReason?:string;hasReport?:boolean;onError(message?:string):void}) {
   const [pending,setPending]=useState("");

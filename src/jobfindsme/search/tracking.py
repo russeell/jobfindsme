@@ -25,7 +25,7 @@ from jobfindsme.contracts import (
     SearchChanges,
 )
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.matching import matches_query
+from jobfindsme.search.matching import matches_query
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]

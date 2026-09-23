@@ -98,7 +98,7 @@ def run_live_search_loop(
         refresh_mode=SearchRefreshMode.FULL,
         limit=limit,
     )
-    from jobfindsme.matching import score_signals
+    from jobfindsme.search.matching import score_signals
 
     # The server owns deterministic JobMatch scores. Report the
     # deterministic signal score so averages have operational meaning.

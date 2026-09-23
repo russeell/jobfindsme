@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {BossCollector} from '../dist-electron/main/boss-collector.js';import {bossSearchUrl,canonicalBossJob} from '../dist-electron/main/boss-page.js';
+import {BossCollector} from '../dist-electron/main/sources/boss-collector.js';import {bossSearchUrl,canonicalBossJob} from '../dist-electron/main/sources/boss-page.js';
 const job=n=>({title:`Python ${n}`,company:'示例',location:'上海',salary:'K',url:`https://www.zhipin.com/job_detail/${n}.html?securityId=not-exported`});
 const page=(jobs,extra={})=>({authenticated:true,loginRequired:false,blocked:null,readable:true,empty:false,ended:false,jobs,...extra});
 function driver(pages){let index=0,url='',loads=0,details=0;return {get loads(){return loads},get details(){return details},load:async(u,d)=>{if(d){url=u;details++}else{index=0;loads++}},scroll:async()=>{index=Math.min(index+1,pages.length-1)},read:async d=>d?page([],{detail:{title:'Python',company:'示例',description:'真实岗位职责与要求\n'.repeat(15),url}}):pages[index]};}

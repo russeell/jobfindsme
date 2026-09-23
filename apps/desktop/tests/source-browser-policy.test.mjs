@@ -18,7 +18,7 @@ import {
   sourceBrowserSpecs,
   sourceBrowserIdForSourceName,
   summarizeSourceVerification,
-} from "../dist-electron/main/source-browser-policy.js";
+} from "../dist-electron/shared/source-browser-policy.js";
 
 test("each source has its own persistent partition", () => {
   const partitions = Object.values(sourceBrowserSpecs).map((item) => item.partition);

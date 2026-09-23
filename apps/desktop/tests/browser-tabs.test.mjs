@@ -4,7 +4,7 @@ import {EventEmitter} from 'node:events';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
-const file=new URL('../dist-electron/main/source-browser.js',import.meta.url);
+const file=new URL('../dist-electron/main/browser/source-browser.js',import.meta.url);
 const nativeRequire=createRequire(file);
 class FakeView {
   constructor(options){this.options=options;this.visible=false;const wc=new EventEmitter();this.webContents=wc;let urls=[],index=-1,closed=false;wc.getURL=()=>urls[index]||'';wc.getTitle=()=>wc.getURL();wc.isLoading=wc.isLoadingMainFrame=()=>false;wc.isDestroyed=()=>closed;wc.close=()=>{closed=true;};wc.setWindowOpenHandler=handler=>{wc.popup=handler;};wc.loadURL=async url=>{urls=urls.slice(0,index+1);urls.push(url);index++;};wc.reload=()=>{};let zoom=1;wc.setZoomFactor=v=>{zoom=v;};wc.getZoomFactor=()=>zoom;wc.getUserAgent=()=>wc.userAgent||'Mozilla/5.0 Chrome/152';wc.setUserAgent=value=>{wc.userAgent=value;};wc.executeJavaScript=async()=>({width:Math.max(1280,640/zoom),viewport:640/zoom});wc.navigationHistory={canGoBack:()=>index>0,canGoForward:()=>index<urls.length-1,goBack:()=>index--,goForward:()=>index++};FakeView.onCreate?.(this);}

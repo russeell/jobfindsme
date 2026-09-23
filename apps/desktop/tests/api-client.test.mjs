@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
-const { DesktopApiClient } = require("../dist-electron/main/api-client.js");
+const { DesktopApiClient } = require("../dist-electron/main/backend/api-client.js");
 
 test("resume export keeps the path version out of the strict request body", async () => {
   const originalFetch = globalThis.fetch;

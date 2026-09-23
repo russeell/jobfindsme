@@ -1,4 +1,4 @@
-import type { ModelConnection, ModelConnectionInput } from "../shared/contracts";
+import type { ModelConnection, ModelConnectionInput } from "../../shared/contracts";
 
 export type ModelConfigurationApi = {
   modelConnection(connectionId: string): Promise<ModelConnection>;

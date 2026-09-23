@@ -5,13 +5,9 @@ from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
-from test_job_snapshots import _job
 
 from jobfindsme.desktop_api import create_app
-from jobfindsme.desktop_jobs import DesktopJobFilters, DesktopJobService
-from jobfindsme.desktop_rules import DEFAULT_WEIGHTS
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.matching_prompts import MatchingPromptService
 from jobfindsme.models import (
     CancellationToken,
     ModelConnectionRepository,
@@ -21,8 +17,12 @@ from jobfindsme.models import (
 from jobfindsme.models.gateway import ModelCancelledError, TransportResponse
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.scheduler import LocalScheduler
+from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
+from jobfindsme.search.matching_prompts import MatchingPromptService
+from jobfindsme.search.rules import DEFAULT_WEIGHTS
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
+from tests.desktop_api.test_job_snapshots import _job
 
 
 class SimulatedTransport:
@@ -275,7 +275,7 @@ def test_scheduled_execution_uses_frozen_prompt_and_reports_missing_key(tmp_path
 
     from jobfindsme.connectors import RawJobRecord
     from jobfindsme.contracts import SourceKind
-    from jobfindsme.desktop_search import SourcePage
+    from jobfindsme.search.desktop import SourcePage
 
     db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
     old = save(matching, ws, conn, "优先最后")

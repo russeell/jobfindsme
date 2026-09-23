@@ -30,7 +30,6 @@ from jobfindsme.contracts import (
     SearchRunResult,
     Workspace,
 )
-from jobfindsme.core.search import SearchOrchestrator
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import JobImportService
@@ -47,10 +46,11 @@ from jobfindsme.profiles.models import (
 )
 from jobfindsme.profiles.service import ProfileUseCase, ResumeProfileService
 from jobfindsme.resume_editor import ResumeEditorService
-from jobfindsme.search_plans import SearchPlanService
-from jobfindsme.source_subscriptions import SourceSubscriptionService
+from jobfindsme.search.orchestrator import SearchOrchestrator
+from jobfindsme.search.plans import SearchPlanService
+from jobfindsme.search.tracking import JobImpressionService, JobStateService, JobUseCase
+from jobfindsme.sources.subscriptions import SourceSubscriptionService
 from jobfindsme.storage import Database
-from jobfindsme.tracking import JobImpressionService, JobStateService, JobUseCase
 from jobfindsme.workspaces import WorkspaceService
 
 

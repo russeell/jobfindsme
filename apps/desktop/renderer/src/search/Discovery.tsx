@@ -5,10 +5,10 @@ import {userError} from "../../../shared/user-errors";
 import {JobActions} from "./JobActions";
 import {useEffect, useMemo,useState,useRef,type FormEvent} from "react";
 import type {BootstrapData,SearchFilters,SourceSearchResponse,SearchResultPage,SearchResultItem,MatchingWeights,SourceCollectionProgress,ResumeState} from "../../../shared/contracts";
-import {useOriginalBrowser} from "./Workbench";
+import {useOriginalBrowser} from "../shared/Workbench";
 import {SearchFilters as FilterControls} from "./SearchFilters";
 import {TasksPage} from "./TasksPage";
-import {sourceBrowserIdForSourceName} from "../../../main/source-browser-policy";
+import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
 import {createPortal} from "react-dom";
 import {formatSalary} from "./salary";
 

@@ -1,5 +1,5 @@
 import {bossSearchUrl} from "./boss-page";
-import { isAllowedSourceUrl, type SourceBrowserId } from "./source-browser-policy";
+import { isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
 
 type BrowserSearchSourceId = "boss" | "zhilian" | "wuyou";
 

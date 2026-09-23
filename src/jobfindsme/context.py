@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from jobfindsme.contracts import SearchPlan, Workspace
-from jobfindsme.search_plans import SearchPlanService
+from jobfindsme.search.plans import SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 

@@ -7,9 +7,9 @@ from time import monotonic
 from typing import Protocol
 
 from jobfindsme.connectors import ConnectorPolicy, RawJobRecord
-from jobfindsme.desktop_sources import DesktopSourceService, SourceGateError
 from jobfindsme.privacy import create_analysis_copy
 from jobfindsme.profiles.service import ResumeProfileService
+from jobfindsme.sources.desktop import DesktopSourceService, SourceGateError
 
 _TERM_SPLIT = re.compile(r"[\s,，、;；/|]+")
 _TECH_TERM = re.compile(r"[A-Za-z][A-Za-z0-9.+#_-]{1,30}")

@@ -1,17 +1,17 @@
 import {readSelectedSources} from "../../shared/discovery-filters";
 import {reportMatchesJob} from "../../shared/research-reports";
 import type {ResearchReport} from "../../shared/contracts";
-import {ResumePage} from "./components/ResumePage";
+import {ResumePage} from "./resume/ResumePage";
 import {userError} from "../../shared/user-errors";
-import {JobActions} from "./components/JobActions";
-import { MatchingRulesPage, defaultWeights } from "./components/MatchingRulesPage";
-import { Icon } from "./components/Icon";
-import { modelPresets, protocolNames } from "./components/model-presets";
-import { ResearchPage } from "./components/ResearchPage";
-import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../main/source-browser-policy";
-import { Discovery } from "./components/Discovery";
-import {formatSalary} from "./components/salary";
-import { Workbench, BrowserToggle, useOriginalBrowser } from "./components/Workbench";
+import {JobActions} from "./search/JobActions";
+import { MatchingRulesPage, defaultWeights } from "./settings/MatchingRulesPage";
+import { Icon } from "./shared/Icon";
+import { modelPresets, protocolNames } from "./settings/model-presets";
+import { ResearchPage } from "./research/ResearchPage";
+import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
+import { Discovery } from "./search/Discovery";
+import {formatSalary} from "./search/salary";
+import { Workbench, BrowserToggle, useOriginalBrowser } from "./shared/Workbench";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 

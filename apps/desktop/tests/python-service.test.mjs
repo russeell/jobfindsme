@@ -5,7 +5,7 @@ import test from "node:test";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { PythonService, resolvePythonLaunch } = require("../dist-electron/main/python-service.js");
+const { PythonService, resolvePythonLaunch } = require("../dist-electron/main/backend/python-service.js");
 
 test("packaged runtime resolves inside app resources without source checkout", () => {
   assert.deepEqual(

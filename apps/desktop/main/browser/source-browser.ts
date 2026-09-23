@@ -1,9 +1,9 @@
-import {publicAtsDetailEndpoint,parsePublicAtsDetail} from './public-detail';
-import {canonicalJobUrl} from '../shared/research-reports';
-import {careerPageScript,careerAdvanceScript,careerKeywordScript,careerRecords,careerEntryClickScript,careerClickableScript,type CareerPage} from './company-page';
-import {BossCollector} from "./boss-collector";
-import {bossPageScript,bossScrollScript,type BossPage} from "./boss-page";
-import { researchExtractionScript } from "./research-extraction";
+import {publicAtsDetailEndpoint,parsePublicAtsDetail} from '../sources/public-detail';
+import {canonicalJobUrl} from '../../shared/research-reports';
+import {careerPageScript,careerAdvanceScript,careerKeywordScript,careerRecords,careerEntryClickScript,careerClickableScript,type CareerPage} from '../sources/company-page';
+import {BossCollector} from "../sources/boss-collector";
+import {bossPageScript,bossScrollScript,type BossPage} from "../sources/boss-page";
+import { researchExtractionScript } from "../sources/research-extraction";
 import { BrowserWindow, WebContentsView, dialog } from "electron";
 
 import {
@@ -15,7 +15,7 @@ import {
   sourceBrowserSpecs, sourceBrowserIdForUrl,
   type SourceBrowserBounds,
   type SourceBrowserId,
-} from "./source-browser-policy";
+} from "../../shared/source-browser-policy";
 import {
   buildSourceSearchUrl,
   sanitizeSourceActionPage,
@@ -23,7 +23,7 @@ import {
   type ExtractedSourceJob,
   type SourceActionPage,
   passiveSourceObservationScript, type PassiveSourceObservation,
-} from "./source-actions";
+} from "../sources/source-actions";
 
 type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;

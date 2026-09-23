@@ -25,7 +25,9 @@ from jobfindsme.contracts import (
 )
 from jobfindsme.importing.discovery import JobDiscoveryService
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.matching import (
+from jobfindsme.profiles.models import FactType
+from jobfindsme.profiles.service import ResumeProfileService
+from jobfindsme.search.matching import (
     eligible_count,
     extract_job_signals,
     filter_jobs,
@@ -33,16 +35,14 @@ from jobfindsme.matching import (
     score_breakdown,
     undisclosed_salary_counts,
 )
-from jobfindsme.profiles.models import FactType
-from jobfindsme.profiles.service import ResumeProfileService
-from jobfindsme.search_plans import SearchPlanService
-from jobfindsme.source_catalog import (
+from jobfindsme.search.plans import SearchPlanService
+from jobfindsme.search.tracking import JobImpressionService
+from jobfindsme.sources.catalog import (
     recommended_connectors,
     reconcile_catalog_sources,
     source_links,
 )
-from jobfindsme.source_subscriptions import SourceSubscriptionService
-from jobfindsme.tracking import JobImpressionService
+from jobfindsme.sources.subscriptions import SourceSubscriptionService
 
 _log = logging.getLogger(__name__)
 

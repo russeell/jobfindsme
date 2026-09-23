@@ -1,7 +1,7 @@
-import {isAllowedSourceUrl,type SourceBrowserId} from './source-browser-policy';
+import {isAllowedSourceUrl,type SourceBrowserId} from '../../shared/source-browser-policy';
 import type {SourceActionPage} from './source-actions';
-import {browserSiteNames} from '../shared/browser-search';
-import {canonicalJobUrl} from '../shared/research-reports';
+import {browserSiteNames} from '../../shared/browser-search';
+import {canonicalJobUrl} from '../../shared/research-reports';
 
 export type CareerPage = {jobs:Array<{title:string;url:string;location:string;company:string;salary:string;description?:string}>;next:boolean;entry?:string;blocked?:string;empty:boolean;loading:boolean};
 /** Read only visible DOM and real links; never invent an ATS route or a job ID. */

@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
 from jobfindsme.desktop_api.app import create_app
-from jobfindsme.desktop_search import (
+from jobfindsme.profiles.service import ResumeProfileService
+from jobfindsme.search.desktop import (
     BudgetedSourceExecutor,
     DesktopSearchService,
     SearchPreflightError,
@@ -14,8 +15,7 @@ from jobfindsme.desktop_search import (
     build_search_keywords,
     connector_adapter_for,
 )
-from jobfindsme.desktop_sources import DesktopSourceService, SourceGateError
-from jobfindsme.profiles.service import ResumeProfileService
+from jobfindsme.sources.desktop import DesktopSourceService, SourceGateError
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 

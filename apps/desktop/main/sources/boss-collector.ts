@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {bossSearchUrl,canonicalBossJob,type BossJob,type BossPage} from './boss-page';
-import type {BrowserSourcePage,SourceCollectionProgress} from '../shared/contracts';
+import type {BrowserSourcePage,SourceCollectionProgress} from '../../shared/contracts';
 export type BossDetail={title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string};
 export type BossDriver={load(url:string,detail:boolean,signal:AbortSignal):Promise<void>;read(detail:boolean):Promise<BossPage>;scroll():Promise<void>};
 type Input={keyword:string;city:string;maxBatches:number;seconds:number;cursor?:string};

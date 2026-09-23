@@ -1,10 +1,10 @@
 import {reportMatchesJob,reportStatus,reportJob} from "../../../shared/research-reports";
 import { ReputationEvidence } from "./ReputationEvidence";
 import {userError} from "../../../shared/user-errors";
-import { sourceBrowserSpecs, isSourceBrowserId, isAllowedSourceUrl } from "../../../main/source-browser-policy";
+import { sourceBrowserSpecs, isSourceBrowserId, isAllowedSourceUrl } from "../../../shared/source-browser-policy";
 import { useEffect, useRef, useState } from "react";
 import type { BootstrapData, SearchResultItem, ResearchReport } from "../../../shared/contracts";
-import { useOriginalBrowser } from "./Workbench";
+import { useOriginalBrowser } from "../shared/Workbench";
 type Props = {onReports(value:ResearchReport[]):void;active:boolean; data?: BootstrapData; target?: SearchResultItem["job"];  onBack():void; onError(message?:string):void};
 export function ResearchPage({active,data,target,onBack,onError,onReports}:Props) {
   const workspaceId = data?.workspaces[0]?.workspace_id;

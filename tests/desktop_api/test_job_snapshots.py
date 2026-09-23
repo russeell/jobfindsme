@@ -5,11 +5,11 @@ import pytest
 
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
-from jobfindsme.desktop_jobs import DesktopJobFilters, DesktopJobService
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.profiles.service import ResumeProfileService
-from jobfindsme.search_plans import SearchPlanService
+from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
+from jobfindsme.search.plans import SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 

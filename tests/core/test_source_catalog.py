@@ -1,5 +1,5 @@
 from jobfindsme.contracts import DiscoverySource
-from jobfindsme.source_catalog import (
+from jobfindsme.sources.catalog import (
     recommended_connectors,
     reconcile_catalog_sources,
     source_links,

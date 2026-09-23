@@ -13,8 +13,8 @@ from jobfindsme.contracts import (
     MatchEvidence,
     SearchPlan,
 )
-from jobfindsme.matching import _hard_filter, _profile_experience_years, tokenize
 from jobfindsme.profiles.models import FactType, ProfileSummary
+from jobfindsme.search.matching import _hard_filter, _profile_experience_years, tokenize
 from jobfindsme.taxonomy import (
     expand_location_terms,
     expand_role_terms,

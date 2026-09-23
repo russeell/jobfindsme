@@ -5,14 +5,14 @@ import path from "node:path";
 
 import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from "electron";
 
-import type { DesktopApiClient } from "./api-client";
-import { saveModelConnectionWithSecret } from "./model-connection-service";
-import { PythonService, type ServiceStatus } from "./python-service";
-import { SecureSecretStore } from "./secure-secret-store";
-import { SourceBrowserManager } from "./source-browser";
-import {runSourceCheckQueue} from "./source-check-queue";
+import type { DesktopApiClient } from "./backend/api-client";
+import { saveModelConnectionWithSecret } from "./backend/model-connection-service";
+import { PythonService, type ServiceStatus } from "./backend/python-service";
+import { SecureSecretStore } from "./security/secure-secret-store";
+import { SourceBrowserManager } from "./browser/source-browser";
+import {runSourceCheckQueue} from "./sources/source-check-queue";
 import {browserSiteNames} from "../shared/browser-search";
-import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "./source-browser-policy";
+import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "../shared/source-browser-policy";
 import type {
   ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
   PromptPatchDecision, PromptSessionInput, PromptTurnInput, SourceSearchInput,

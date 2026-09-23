@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 
 import pytest
-from test_job_snapshots import _job, _services
 
-from jobfindsme.desktop_jobs import DesktopJobFilters
-from jobfindsme.desktop_rules import DEFAULT_WEIGHTS, evaluate, work_years
+from jobfindsme.search.jobs import DesktopJobFilters
+from jobfindsme.search.rules import DEFAULT_WEIGHTS, evaluate, work_years
+from tests.desktop_api.test_job_snapshots import _job, _services
 
 
 def test_four_dimensions_use_confirmed_sections_and_actual_requirements():

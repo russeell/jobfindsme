@@ -8,9 +8,9 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from jobfindsme.desktop_rules import DEFAULT_WEIGHTS
 from jobfindsme.models.gateway import ConnectionStatus, ModelConnection
 from jobfindsme.privacy import create_analysis_copy
+from jobfindsme.search.rules import DEFAULT_WEIGHTS
 
 TEMPLATES = [
     {

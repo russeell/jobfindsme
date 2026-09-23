@@ -16,18 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from jobfindsme.app import jobfindsmecore
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
-from jobfindsme.desktop_jobs import DesktopJobFilters, DesktopJobService
-from jobfindsme.desktop_search import (
-    BudgetedSourceExecutor,
-    DesktopSearchService,
-    SearchPreflightError,
-    SerializedPageAdapter,
-    SourcePage,
-    connector_adapter_for,
-)
-from jobfindsme.desktop_sources import DesktopSourceService, SourceGateError
 from jobfindsme.importing.normalizer import normalize_job
-from jobfindsme.matching_prompts import MatchingPromptService
 from jobfindsme.models import (
     CancellationToken,
     ModelCancelledError,
@@ -47,6 +36,17 @@ from jobfindsme.resume_editor import (
     ResumeEditorError,
 )
 from jobfindsme.scheduler import LocalScheduler, ScheduleError, TaskRunResult
+from jobfindsme.search.desktop import (
+    BudgetedSourceExecutor,
+    DesktopSearchService,
+    SearchPreflightError,
+    SerializedPageAdapter,
+    SourcePage,
+    connector_adapter_for,
+)
+from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
+from jobfindsme.search.matching_prompts import MatchingPromptService
+from jobfindsme.sources.desktop import DesktopSourceService, SourceGateError
 
 
 class StrictResponse(BaseModel):
@@ -1040,7 +1040,7 @@ def create_app(
 
     @app.post("/v1/matching-preview", dependencies=[Depends(require_token)])
     def matching_preview(request: MatchingPreviewRequest) -> dict:
-        from jobfindsme.desktop_rules import DEFAULT_WEIGHTS, evaluate
+        from jobfindsme.search.rules import DEFAULT_WEIGHTS, evaluate
 
         try:
             weights = desktop_jobs._validate_weights(request.weights)

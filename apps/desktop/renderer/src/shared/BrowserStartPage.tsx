@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {type SourceBrowserId} from "../../../main/source-browser-policy";
+import {type SourceBrowserId} from "../../../shared/source-browser-policy";
 import {browserSiteNames,normalizeSearchEngine,resolveWebsiteHomepage,resolveWebSearch,searchEngineNames,type BrowserDestination} from "../../../shared/browser-search";
 
 export function BrowserStartPage({onOpen,limitReached}:{onOpen(destination:Extract<BrowserDestination,{url:string}>):void;limitReached:boolean}) {

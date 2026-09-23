@@ -1,5 +1,7 @@
 # 当前交接
 
+D47 目录归组进行中；阶段 1 路径迁移和离线验证完成，尚待清理及打包验收。目标/映射见 [STRUCTURE](STRUCTURE.md)，验证见 [D47](evidence/D47.md)。本轮不恢复自动化、不修改用户活跃应用和数据。
+
 2026-09-23：D42–D46 已完成，任务状态以 [tasks.json](tasks.json) 为准。用户提供的 [智联官方登录入口](https://passport.zhaopin.com/login?bkUrl=https%3A%2F%2Fi.zhaopin.com%2Fblank%3Fhttps%3A%2F%2Fwww.zhaopin.com%2Findex%3FvalidateCampus%3D) 与应用现有入口一致。公开登录页可见扫码/验证码表单；Chrome 会话不会自动同步到 JobFindsMe 的独立来源分区。智联登录后的列表、详情与网站续页仍属于 D38 外部登录阻塞，不能从页面可见推定可用。
 
 - 交付包：`/private/tmp/JobFindsMe-D46-UI34.app`，版本 `D46-20260923-ui34`。此普通包未启动，不触碰用户正在使用的 D38 会话。隔离 QA33 预览包使用 `jobfindsme-preview-D45-qa33`，其中仅有合成简历、岗位和报告。

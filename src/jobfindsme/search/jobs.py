@@ -10,8 +10,8 @@ from typing import Literal
 from uuid import uuid4
 
 from jobfindsme.contracts import EmploymentType, JobPosting, RecruitmentTrack
-from jobfindsme.desktop_rules import DEFAULT_WEIGHTS, evaluate
 from jobfindsme.importing.repository import JobRepository
+from jobfindsme.search.rules import DEFAULT_WEIGHTS, evaluate
 from jobfindsme.storage import Database
 from jobfindsme.taxonomy import extract_skills
 

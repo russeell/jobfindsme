@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {publicAtsDetailEndpoint,parsePublicAtsDetail} from '../dist-electron/main/public-detail.js';
+import {publicAtsDetailEndpoint,parsePublicAtsDetail} from '../dist-electron/main/sources/public-detail.js';
 test('public ATS detail parsing binds the response to the requested tenant and job ID',()=>{
  const url='https://xiaomi.jobs.f.mioffice.cn/index/position/123/detail';
  assert.equal(publicAtsDetailEndpoint(url),'https://xiaomi.jobs.f.mioffice.cn/api/v1/job/posts/123');

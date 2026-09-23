@@ -1,4 +1,4 @@
-import type {MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../shared/contracts";
+import type {MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
 import type {
   AnalysisPreview,
   AnalysisPreviewInput,
@@ -31,7 +31,7 @@ import type {
   ScheduledTaskInput,
   LegacyTaskStatus,
   TaskNotification,
-} from "../shared/contracts";
+} from "../../shared/contracts";
 
 export class DesktopApiClient {
   matchingRules(workspaceId:string):Promise<MatchingRuleState> { return this.json(`/v1/matching-rules?${new URLSearchParams({workspace_id:workspaceId})}`); }
@@ -47,10 +47,10 @@ export class DesktopApiClient {
     private readonly token: string,
   ) {}
 
-  enrichBossJob(workspaceId:string,jobId:string,detail:import("./boss-collector").BossDetail):Promise<import("../shared/contracts").SearchResultItem["job"]> {
+  enrichBossJob(workspaceId:string,jobId:string,detail:import("../sources/boss-collector").BossDetail):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
     return this.json(`/v1/jobs/${encodeURIComponent(jobId)}/boss-detail`,{method:"POST",body:JSON.stringify({workspace_id:workspaceId,...detail})});
   }
-  enrichSourceJob(workspaceId:string,jobId:string,detail:import("./boss-collector").BossDetail):Promise<import("../shared/contracts").SearchResultItem["job"]> {return this.json(`/v1/jobs/${encodeURIComponent(jobId)}/source-detail`,{method:'POST',body:JSON.stringify({workspace_id:workspaceId,...detail})});}
+  enrichSourceJob(workspaceId:string,jobId:string,detail:import("../sources/boss-collector").BossDetail):Promise<import("../../shared/contracts").SearchResultItem["job"]> {return this.json(`/v1/jobs/${encodeURIComponent(jobId)}/source-detail`,{method:'POST',body:JSON.stringify({workspace_id:workspaceId,...detail})});}
   prepareResearchJob(input: {workspace_id:string; url:string; title:string; company:string; description:string}) {
     return this.json("/v1/research-jobs", {method:"POST",body:JSON.stringify(input)});
   }
@@ -300,7 +300,7 @@ export class DesktopApiClient {
     });
   }
 
-  correctResearch(reportId:string,input:import("../shared/contracts").ResearchCorrectionInput):Promise<ResearchReport> {
+  correctResearch(reportId:string,input:import("../../shared/contracts").ResearchCorrectionInput):Promise<ResearchReport> {
     return this.json(`/v1/research-runs/${encodeURIComponent(reportId)}/corrections`,{method:"POST",body:JSON.stringify(input)});
   }
   listResearchReports(workspaceId: string): Promise<ResearchReport[]> {

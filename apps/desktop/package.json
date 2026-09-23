@@ -4,14 +4,15 @@
   "version": "0.1.0",
   "main": "dist-electron/main/index.js",
   "scripts": {
-    "build": "npm run typecheck && vite build && tsc -p tsconfig.electron.json",
+    "build": "npm run typecheck && vite build && npm run clean:electron && tsc -p tsconfig.electron.json",
     "build:python-runtime": "PYINSTALLER_CONFIG_DIR=/private/tmp/jobfindsme-pyinstaller ../../.venv/bin/python -m PyInstaller --clean --noconfirm --distpath runtime/python --workpath ../../build/jobfindsme-api ../../scripts/jobfindsme_api.spec",
     "dev": "vite",
     "start": "electron .",
     "pack:mac:dir": "npm run build && node scripts/package-macos.mjs",
     "audit:mac:dir": "node scripts/audit-macos-package.mjs",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "test": "tsc -p tsconfig.electron.json && node --test tests/*.test.mjs"
+    "test": "tsc -p tsconfig.electron.json && node --test tests/*.test.mjs",
+    "clean:electron": "node -e \"require('node:fs').rmSync('dist-electron', {recursive:true, force:true})\""
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

@@ -1,7 +1,7 @@
 import {hasDiscoveryFilters} from "../../../shared/discovery-filters";
 import {useState} from "react";
 import type {SearchFilters as Filters,SourceCapability} from "../../../shared/contracts";
-import {PopoverButton} from "./PopoverButton";
+import {PopoverButton} from "../shared/PopoverButton";
 const cities="北京 上海 深圳 广州 杭州 成都 南京 苏州 武汉 西安 长沙 重庆 天津 郑州 合肥 厦门 福州 济南 青岛 宁波 无锡 东莞 佛山 珠海 昆明 南宁 贵阳 南昌 石家庄 太原 沈阳 大连 长春 哈尔滨 海口 兰州 银川 西宁 乌鲁木齐 拉萨 呼和浩特 香港 澳门 台北 远程".split(" ");
 export function SearchFilters({value,onChange,sources,selectedSources,onSource,onSelectAllSources,onReset}:{value:Filters;onChange(value:Filters):void;sources:SourceCapability[];selectedSources:string[];onSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;onReset():void}) {
   const [query,setQuery]=useState("");

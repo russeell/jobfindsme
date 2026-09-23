@@ -1,9 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
-from jobfindsme.desktop_jobs import DesktopJobService
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.scheduler import LocalScheduler, TaskRunResult
+from jobfindsme.search.jobs import DesktopJobService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 

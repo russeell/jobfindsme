@@ -1,4 +1,4 @@
-import {isAllowedSourceUrl,isPublicWebUrl,sourceBrowserSpecs,type ForegroundBrowserId,type SourceBrowserId} from "../main/source-browser-policy";
+import {isAllowedSourceUrl,isPublicWebUrl,sourceBrowserSpecs,type ForegroundBrowserId,type SourceBrowserId} from "./source-browser-policy";
 
 export type SearchEngine = "bing" | "baidu" | "google";
 export const searchEngineNames:Record<SearchEngine,string>={bing:"Bing",baidu:"百度",google:"Google"};

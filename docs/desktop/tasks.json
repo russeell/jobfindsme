@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D47",
   "tasks": [
     {
       "id": "D01",
@@ -1376,6 +1376,30 @@
       "evidence": [
         "docs/desktop/ui/UI34-plan.md",
         "docs/desktop/ui/UI34-evidence.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D47",
+      "title": "目录归组与已确认废弃分发文件清理",
+      "depends_on": [
+        "D46"
+      ],
+      "status": "in_progress",
+      "scope": [
+        "Python/Electron/renderer 纯路径迁移",
+        "旧插件市场清单退役",
+        "文档、引用、构建与隔离验收"
+      ],
+      "acceptance": [
+        "现有业务与历史读取保持",
+        "迁移映射、删除依据和保留项可查",
+        "Python/Node/TS与隔离包验收"
+      ],
+      "verification": "离线回归、构建、资源审计及隔离启动，不联网检索",
+      "evidence": [
+        "docs/desktop/STRUCTURE.md",
+        "docs/desktop/evidence/D47.md"
       ],
       "blocker": null
     }

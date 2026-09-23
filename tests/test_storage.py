@@ -76,6 +76,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0029_research_optional_resume",
         "0030_research_job_context",
         "0031_resume_conversation",
+        "0032_hidden_history",
     ]
     assert foreign_keys == 1
 

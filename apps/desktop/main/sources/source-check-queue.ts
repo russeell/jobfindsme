@@ -1,4 +1,4 @@
-import type {SourceCapability,SourceCheckResult} from "../shared/contracts";
+import type {SourceCapability,SourceCheckResult} from "../../shared/contracts";
 
 type CheckOptions={
   sources:SourceCapability[];

@@ -5,7 +5,7 @@ import {
   buildSourceSearchUrl,
   sanitizeSourceActionPage,
   sourceListExtractionScript, passiveSourceObservationScript,
-} from "../dist-electron/main/source-actions.js";
+} from "../dist-electron/main/sources/source-actions.js";
 
 test("browser source actions build only fixed allowlisted search targets", () => {
   const boss = new URL(buildSourceSearchUrl("boss", "AI 工程师", "上海", 1));
