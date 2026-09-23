@@ -1,46 +1,86 @@
 # JobFindsMe
 
-A local desktop workspace for finding jobs and researching company and role reputation, with resume maintenance and an embedded browser. Electron/React provides the interface; Python provides the local API, search, matching and storage.
+**Find a promising role. Learn more about the company before you apply.**
 
-[中文说明](README.md)
+JobFindsMe is a local desktop workspace for job search, reputation research and resume maintenance. Browse results alongside the original hiring website, save interesting roles, and investigate the opportunities you want to pursue.
 
-## Features
+[中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
-- **Job search**: select platforms and company career sites, search using keywords and a confirmed resume, filter results, and track read, saved and application status. Bulk source checks distinguish login from extraction capability.
-- **Reputation research**: choose company feedback, role information, or both. Reports cover public feedback, responsibilities, workload, leave and benefits, with source links and explicit evidence gaps. Saved reports can be revisited and historical reports deleted.
-- **Resume maintenance**: import PDF, DOCX, Markdown or TXT; review content, maintain versions, preview and export. Current and referenced versions are protected from deletion.
-- **Embedded browser**: retain app-specific login sessions and open original pages when automated collection is unavailable. Applications are submitted manually.
+![JobFindsMe desktop workspace with job results and details beside an embedded hiring website](docs/images/jobfindsme-workspace.png)
 
-## Status and limitations
+*Actual desktop interface, D46. Listings and source status reflect the time of capture.*
 
-This is a local macOS development build, not a fully verified release. The catalog includes four hiring platforms and sixteen company career sites; registration or successful login does not establish working search, pagination and full job descriptions.
+## Find jobs with fewer open windows
 
-Zhilian's authenticated extraction still needs verification, and Alibaba detail resources have known access issues. Platforms may require reauthentication or verification; browser fallback does not guarantee extraction. See the [handoff](docs/desktop/HANDOFF.md) and [task records](docs/desktop/tasks.json).
+Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. An imported, confirmed resume can also inform search terms and matching.
 
-PDF import extracts text; scanned PDFs have no OCR support yet. Convert old DOC files to DOCX. The interface focuses on resume maintenance rather than conversational or JD-specific rewriting. Scheduled searches require the app to remain running and do not wake a sleeping or powered-off machine.
+- Select multiple sources, select all, or check their availability.
+- Read job details alongside the original page in the embedded browser.
+- Save roles and track read and application status.
+- Schedule local searches instead of entering the same criteria repeatedly.
 
-Research presents attributed public statements, not verified company-wide facts, ratings or recommendations. Experiences may differ by team, role and date; consult the original sources.
+You submit applications yourself on the hiring website. Opening a link does not mark a job as applied.
 
-## Run locally
+## Research before applying
 
-Requires Python 3.11+ and Node.js/npm. From the repository root:
+Open a role and choose company feedback, role information, or both:
+
+| Direction | What to look for |
+| --- | --- |
+| **Company feedback** | Positive and negative public accounts, with supporting sources |
+| **Role information** | Responsibilities, workload, leave and employee benefits |
+
+Reports include source links and remain saved with the job for later reading. Historical reports can be deleted. Missing evidence is stated explicitly; the app does not invent findings or rate companies.
+
+## Keep your resume up to date
+
+Import **PDF, DOCX, Markdown or TXT**, review the extracted content, and save a version for search and matching. Preview and export your resume, and manage older versions. Current and referenced versions are protected from deletion.
+
+Scanned PDFs do not yet support OCR. Convert older DOC files to DOCX first.
+
+## Keep the original website close
+
+The embedded browser supports multiple tabs and retains app-specific login sessions. Websites may still require you to sign in again when sessions expire or verification is needed.
+
+When automated retrieval is unavailable, open the original site and continue browsing. A working webpage does not guarantee successful automated extraction.
+
+The source catalog currently includes **four hiring platforms and sixteen company career sites**. Availability varies; check the status shown in the app.
+
+## Get started
+
+This project is currently a **macOS desktop development build**. To run from source, install Git, Python 3.11+ and Node.js/npm:
 
 ```bash
+git clone https://github.com/russeell/jobfindsme.git
+cd jobfindsme
+
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,browser]"
+
 cd apps/desktop
 npm ci
 npm run build
 npm start
 ```
 
-The desktop app defaults to `.venv/bin/python`; set `JFM_PYTHON` to use another interpreter. Normal startup uses existing application data. Use an isolated preview package for testing.
+Choose sources, sign in where needed, then enter a keyword to search. Import and confirm a resume when you want personalized matching. Open a result to read the original listing, save it or research its reputation.
 
-See the [Chinese README](README.md) for test and packaging commands, the [directory map](docs/desktop/STRUCTURE.md) for module ownership, and the [technical documentation](docs/desktop/TECHNICAL.md) for architecture.
+The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpreter.
 
-## Compatibility
+## Things to know
 
-The Python distribution is still named `agent-job-search`. Existing CLI/MCP entrypoints and resources remain for compatibility and are not required to launch the desktop app. Plugin marketplace manifests have been retired. [Legacy documentation](docs/legacy/README.en.md) describes those compatibility interfaces.
+- **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
+- **Scheduled searches require the app to run.** They do not wake a sleeping or powered-off computer or run after the app fully exits.
+- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access; external model features send relevant requests to the configured provider.
+- **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
 
-[Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [MIT License](LICENSE)
+## For contributors
+
+The desktop uses **Electron, React and TypeScript**; local services and storage use **Python and SQLite**.
+
+[Directory map](docs/desktop/STRUCTURE.md) · [Architecture](docs/desktop/TECHNICAL.md) · [Development](docs/desktop/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md)
+
+Existing CLI/MCP users can consult the [compatibility documentation](docs/legacy/README.en.md). Those interfaces are not required to use the desktop app.
+
+[Security](SECURITY.md) · [MIT License](LICENSE)

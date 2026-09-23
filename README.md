@@ -1,90 +1,103 @@
 # JobFindsMe
 
-本地桌面求职工作台：找工作、口碑调查、简历管理、岗位记录与定时检索。
-Electron/React 提供界面与隔离浏览器，Python 提供本地 API、检索、匹配和持久化。
+**找到合适的岗位，再多了解一点即将加入的公司。**
 
-## 核心功能
+JobFindsMe 是一个本地桌面求职工具，把岗位检索、口碑调查和简历维护放在同一个工作台里。你可以一边筛选岗位，一边打开招聘原页；看到感兴趣的机会，再了解公司的公开评价和岗位情况。
 
-- **找工作**：选择招聘平台和公司官网，按关键词、求职条件与已确认简历检索和匹配；查看岗位详情，记录已读、收藏及投递状态。来源支持全选和批量检查，登录状态与检索能力分别显示。
-- **口碑调查**：选择“公司评价”“岗位情况”，调查公开反馈、工作内容、工作强度、假期与福利。报告保存到岗位，支持再次查看和删除历史报告；证据附原始链接，缺失信息明确标注。
-- **简历维护**：导入 PDF、DOCX、Markdown 或 TXT，核对内容、维护版本、预览和导出。简历用于检索与匹配；历史版本删除受当前版本及引用保护。
-- **内嵌浏览器**：打开岗位原页、登录招聘平台，持久保存本应用会话；自动采集不可用时提供原页操作入口。不会自动投递。
+[English](README.en.md) · [开始使用](#开始使用) · [开发文档](docs/desktop/README.md)
 
-## 当前状态与限制
+![JobFindsMe 工作台：左侧检索和查看岗位，右侧通过内嵌浏览器访问招聘官网](docs/images/jobfindsme-workspace.png)
 
-当前为 macOS 本地开发版本，尚不是全部来源完成验收的正式发行版。
+*实际桌面界面（D46）：岗位列表、详情和招聘网站并排显示。截图中的岗位与来源状态仅代表拍摄时的结果。*
 
-- 目录覆盖 4 个招聘平台与 16 家公司官网；“已收录”“已登录”“可打开官网”均不等于列表、续页和完整 JD 全部可检索。以应用中的实际检查结果为准。
-- 平台可以要求重新登录或验证；应用不导入其他浏览器的登录状态，也不绕过验证码或限流。浏览器兜底不能保证自动提取成功。
-- 智联登录后的列表、详情与续页仍有验收缺口；阿里详情资源访问仍存在已知问题。完整记录见[当前交接](docs/desktop/HANDOFF.md)。
-- PDF 支持文本提取，扫描件暂无 OCR；旧 DOC 请先转为 DOCX。简历界面聚焦维护，不提供复杂对话改写或针对 JD 改写流程。
-- 口碑报告整理公开来源中的陈述，不把用户评价当作确定事实，不作公司评分或推荐；内容可能因团队、岗位和时间而不同，请核对原文。
-- 定时检索依赖本机应用运行；完全退出、关机或休眠时不会自动唤醒执行。
+## 找工作，少切几个窗口
 
-[桌面开发入口](docs/desktop/README.md) · [任务状态](docs/desktop/tasks.json) · [English](README.en.md)
+输入岗位或技能关键词，选择城市、薪资、工作经验和招聘来源，集中查看匹配的机会。你也可以导入简历，让已确认的经历与技能参与检索和排序。
 
-## 本地运行
+- **自己决定搜哪里**：选择多个招聘平台和公司官网，也可以一键全选、检查来源状态。
+- **看见岗位，也看见原文**：在列表中浏览岗位，打开右侧浏览器查看招聘原页；详情不完整时，可以尝试补全 JD 或直接阅读原页。
+- **保留求职进度**：收藏感兴趣的岗位，区分已读与投递状态，回来时接着看。
+- **按计划查更新**：设置本地定时检索，减少重复输入。
 
-需要 Python 3.11+、Node.js/npm；桌面打包目前以 macOS 为验证环境。
-在仓库根目录创建 `.venv`，桌面端默认从这里启动 Python 服务：
+投递由你在招聘网站完成。打开岗位链接不会被记作已经投递。
+
+## 投递之前，做一次口碑调查
+
+在岗位详情中点击「调查口碑」，选择想了解的方向即可开始，不需要先配置一长串信息来源。
+
+| 调查方向 | 可以了解什么 |
+| --- | --- |
+| **公司评价** | 公开渠道中的正面与负面反馈，以及对应的原始证据 |
+| **岗位情况** | 工作内容、工作强度、假期情况、员工福利 |
+
+两个方向可以同时选择。报告会保存在该岗位下，方便随时重看，也可以删除不再需要的历史报告。
+
+我们希望帮你找到值得阅读的材料，而不是替你判断一家公司好不好。报告附上来源链接；找不到证据就说明缺失，不为凑齐报告编造结论。
+
+## 简历维护，保持简单
+
+导入 **PDF、DOCX、Markdown 或 TXT**，核对提取内容，再保存为简历版本。确认后的简历可用于岗位检索与匹配，也可以预览和导出。
+
+历史版本可以管理和删除；正在使用或被记录引用的版本会受到保护。扫描 PDF 暂不支持 OCR，旧版 DOC 请先转成 DOCX。
+
+## 招聘网站，就在工作台里
+
+内嵌浏览器支持多标签浏览，登录后会保留本应用的会话，方便下次继续使用。网站要求重新验证或会话过期时，仍需要你重新登录。
+
+自动检索遇到障碍时，可以打开原网站继续查找。网页能打开不代表系统一定能自动读取其中的岗位，来源状态会单独提示。
+
+目前来源目录包含 **4 个招聘平台和 16 家公司官网**。各来源的可用程度不同，部分功能仍在验证和完善中，请以应用内的检查结果为准。
+
+## 开始使用
+
+目前项目处于 **macOS 桌面开发阶段**。如果你愿意从源码运行，需要先安装 Git、Python 3.11+ 和 Node.js/npm。
 
 ```bash
+git clone https://github.com/russeell/jobfindsme.git
+cd jobfindsme
+
+# 准备本地 Python 环境
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,browser]"
+
+# 构建并启动桌面应用
 cd apps/desktop
 npm ci
 npm run build
 npm start
 ```
 
-已有其他 Python 环境时可用 `JFM_PYTHON` 指定解释器路径。普通启动使用现有应用数据目录；隔离验收请按[开发方案](docs/desktop/DEVELOPMENT.md)使用独立预览包，避免影响账号会话与用户数据。
+第一次打开后，可以按这个顺序使用：
 
-## 检查与打包
+1. 在「岗位来源」选择想检索的平台，按提示登录并检查状态。
+2. 在「找工作」输入关键词开始检索；需要按个人经历匹配时，再到「我的简历」导入并确认简历。
+3. 打开感兴趣的岗位，查看原页、收藏，或发起口碑调查。
 
-```bash
-# 仓库根目录，已激活 .venv
-python -m pytest
+桌面端默认使用仓库内的 `.venv/bin/python`。如果使用其他 Python 环境，可通过 `JFM_PYTHON` 指定解释器路径。
 
-# apps/desktop
-npm test
-npm run typecheck
+## 使用前了解这些限制
 
-# 打包前在 .venv 安装构建依赖
-../../.venv/bin/python -m pip install pyinstaller
-npm run build:python-runtime
-npm run pack:mac:dir
-npm run audit:mac:dir
-```
+- **来源仍在完善**：智联登录后的检索链路仍有待验证项，阿里岗位详情存在已知访问问题。其他来源也可能受网站改版、登录或访问限制影响。详见[当前状态](docs/desktop/HANDOFF.md)。
+- **定时检索需要应用运行**：完全退出、关机或休眠后，不会自动唤醒执行。
+- **本地保存不等于完全离线**：岗位记录、简历和报告保存在本机；检索网站需要联网，使用外部模型时也会向所配置的服务发送相应请求。
+- **公开评价不是确定事实**：JobFindsMe 仅整理公开信息和原始来源，不保证用户陈述的真实性、完整性或代表性，不对公司或岗位作评分、推荐或好坏判断。请结合岗位、团队、时间和原文自行判断。
 
-默认目录包输出位于 `apps/desktop/release`。这些命令不执行签名、公证或发布；测试通过也不代表在线来源全部可用。
+## 想参与开发？
 
-## 项目目录
+项目使用 **Electron + React + TypeScript** 构建桌面界面，**Python + SQLite** 处理本地服务和数据。
 
 ```text
-apps/desktop/
-  main/              index.ts + browser/ sources/ backend/ security/
-  renderer/src/      App.tsx + search/ research/ resume/ settings/ shared/
-  shared/            IPC 契约与两端共享纯函数
-  preload/           受限桌面桥接
-  scripts/ tests/     打包审计与回归
-src/jobfindsme/
-  desktop_api/       鉴权回环 API，保留现有组装入口
-  search/ sources/   检索匹配、岗位记录、来源目录与准入
-  profiles/ resume_editor/ research/
-  connectors/ contracts/ importing/
-  models/ scheduler/ migrations/ resources/
-  storage.py privacy.py context.py workspaces.py taxonomy.py
-  mcp/ cli.py ...    保留的兼容入口
-scripts/              构建、历史数据与质量检查
-tests/               Python 回归
-evaluation/          匹配数据集及兼容行为评测
-docs/desktop/        当前方案、任务及验收
-docs/legacy/         CLI/MCP 兼容文档
+apps/desktop/       桌面界面、内嵌浏览器与系统集成
+src/jobfindsme/      检索、口碑调查、简历与本地数据服务
+tests/              Python 回归测试
+evaluation/         检索与匹配评测
+scripts/            构建和检查工具
+docs/               使用、设计与开发文档
 ```
 
-## 保留的兼容入口
+[目录与模块说明](docs/desktop/STRUCTURE.md) · [技术方案](docs/desktop/TECHNICAL.md) · [开发与验收](docs/desktop/DEVELOPMENT.md) · [贡献指南](CONTRIBUTING.md)
 
-Python 分发名仍为 `agent-job-search`，CLI、MCP、安装脚本及其资源暂保留，避免破坏已有外部调用；旧插件市场清单已撤下。它们不作为桌面启动前置。参见 [兼容文档](docs/legacy/README.zh.md)。所有 SQLite 迁移、历史读取兼容和有效构建配置保留。
+已有 CLI/MCP 用户可查阅[兼容文档](docs/legacy/README.zh.md)。这些入口暂时保留，不影响桌面应用的使用。
 
-[贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [MIT License](LICENSE)
+[安全说明](SECURITY.md) · [MIT License](LICENSE)
