@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端重构
 
-最新交付：[UI19](/private/tmp/JobFindsMe-D36-UI19.app)。报告自动保存/历史入口、跨页来源多选、固定宽松筛选和JD精简完成，见[D36](evidence/D36.md)。沿用灰白配色，用户当前UI18保持运行。任务状态以[tasks.json](tasks.json)为准。
+最新本地交付：[UI32](/private/tmp/JobFindsMe-D45-UI32.app)。双主题紧凑调研、单条历史移除、20 来源状态盘点和发现页来源全选/清空完成，见 [D42](evidence/D42.md)、[D43](evidence/D43.md)、[D44](evidence/D44.md)、[D45](evidence/D45.md)。沿用灰白配色；普通交付包未启动，用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |

@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D38",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -1262,6 +1262,91 @@
       "evidence": [
         "docs/desktop/evidence/D41.md",
         "docs/desktop/evidence/D41/source-matrix.json"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D42",
+      "title": "双主题紧凑岗位调研",
+      "depends_on": [
+        "D40"
+      ],
+      "status": "done",
+      "scope": [
+        "双主题紧凑岗位调研"
+      ],
+      "acceptance": [
+        "调研仅公司评价/岗位情况可单选或双选，岗位上下文自动带入，来源自动选取",
+        "请求分别覆盖公司反馈与岗位工作/强度/假期/福利；报告分组、逐项链接、未知与正负证据边界",
+        "旧报告及自定义问题保持可读；合成数据端到端及窄窗验收"
+      ],
+      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
+      "evidence": [
+        "docs/desktop/evidence/D42.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D43",
+      "title": "简历版本与研究报告单条删除",
+      "depends_on": [
+        "D39",
+        "D42"
+      ],
+      "status": "done",
+      "scope": [
+        "简历版本与研究报告单条删除"
+      ],
+      "acceptance": [
+        "单条明确对象的删除确认，逻辑隐藏并保留被引用快照",
+        "当前或被引用简历拒绝删除，工作区隔离与事务保护",
+        "报告删除后视图和计数刷新，重启仍隐藏；仅合成数据验收"
+      ],
+      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
+      "evidence": [
+        "docs/desktop/evidence/D43.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D44",
+      "title": "岗位来源全目录有界检查",
+      "depends_on": [
+        "D41"
+      ],
+      "status": "done",
+      "scope": [
+        "岗位来源全目录有界检查"
+      ],
+      "acceptance": [
+        "检查全部覆盖4平台16公司且与选择和任务快照解耦",
+        "进度、每源状态时间、取消和部分完成；预算及风控停源",
+        "受控契约覆盖全队列，在线仅必要小样本"
+      ],
+      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
+      "evidence": [
+        "docs/desktop/evidence/D44.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D45",
+      "title": "发现页来源全选与清空",
+      "depends_on": [
+        "D36"
+      ],
+      "status": "done",
+      "scope": [
+        "发现页来源全选与清空"
+      ],
+      "acceptance": [
+        "弹层全选和清空同步持久化到来源页",
+        "检索仅提交已选且可用来源并提示跳过项",
+        "定向状态测试及默认/窄窗原生验收"
+      ],
+      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
+      "evidence": [
+        "docs/desktop/evidence/D45.md"
       ],
       "blocker": null
     }
