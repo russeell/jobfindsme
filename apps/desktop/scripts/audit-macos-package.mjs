@@ -40,10 +40,18 @@ for (const required of [
   "Contents/Resources/jobfindsme.icns",
   "Contents/Resources/app/dist/index.html",
   "Contents/Resources/app/dist-electron/main/index.js",
+  "Contents/Resources/app/dist-electron/main/browser/source-browser.js",
+  "Contents/Resources/app/dist-electron/main/backend/python-service.js",
+  "Contents/Resources/app/dist-electron/shared/source-browser-policy.js",
   "Contents/Resources/python/jobfindsme-api/jobfindsme-api",
   "Contents/Frameworks/Electron Framework.framework/Resources/icudtl.dat",
   "Contents/Frameworks/Electron Framework.framework/Resources/resources.pak",
 ]) {
   if (!existsSync(path.join(appRoot, required))) throw new Error(`missing ${required}`);
+}
+for (const stale of ["source-browser", "source-browser-policy", "api-client", "python-service", "boss-page"]) {
+  if (existsSync(path.join(appRoot, `Contents/Resources/app/dist-electron/main/${stale}.js`))) {
+    throw new Error(`obsolete pre-D47 module in package: ${stale}`);
+  }
 }
 console.log("package audit passed");

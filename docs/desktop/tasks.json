@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D47",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -1385,7 +1385,7 @@
       "depends_on": [
         "D46"
       ],
-      "status": "in_progress",
+      "status": "done",
       "scope": [
         "Python/Electron/renderer 纯路径迁移",
         "旧插件市场清单退役",
@@ -1396,7 +1396,7 @@
         "迁移映射、删除依据和保留项可查",
         "Python/Node/TS与隔离包验收"
       ],
-      "verification": "离线回归、构建、资源审计及隔离启动，不联网检索",
+      "verification": "39 个源码路径迁移；Python 470 项迁移回归经失败项补测覆盖，退役清单测试后保留469项；Node77项、TS构建、32迁移与资源比对、两包审计、隔离原生四页面加载/退出通过；不联网检索。",
       "evidence": [
         "docs/desktop/STRUCTURE.md",
         "docs/desktop/evidence/D47.md"

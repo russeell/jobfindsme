@@ -97,3 +97,7 @@ CLI/MCP/installer/doctor/branding/技能资源：pyproject scripts、python -m j
 - `docs/development.md` → `docs/legacy/development.md`（根 README 另写当前桌面入口）。
 
 旧 AGENTS 中已被桌面方案覆盖的长篇产品描述移除；现存 CLI 行为仍以其 canonical Skill 为准，无需复制另一份历史说明。
+
+## 实施结果
+
+39 个源码文件迁移、4 份旧说明归档；删除上列5个插件清单及 core 空包初始化文件（共6个文件）。所有阶段完成，实际验证和包路径见 [D47](evidence/D47.md)。无额外目录拆分或业务重写。仓库内导入已同步；这些内部 Python 模块不是保留的 CLI 命令入口，直接导入旧内部路径的外部代码需按表迁移。
