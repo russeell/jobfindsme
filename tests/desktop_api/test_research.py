@@ -7,6 +7,7 @@ from jobfindsme.importing.repository import JobRepository
 from jobfindsme.models import ModelConnectionRepository, ModelProtocol
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.research import EvidenceCandidate, ResearchService, WebEvidenceSearch
+from jobfindsme.research.service import DIRECTIONS
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 
@@ -643,9 +644,30 @@ def test_interest_question_drives_query_and_report(tmp_path, monkeypatch):
         interest_question="AI 团队 的工作节奏如何？",
     )
     assert report["job_context"]["interest_question"] == "AI 团队 的工作节奏如何？"
+    assert report["directions"] == []
+    reopened = service.get_report(
+        workspace_id=workspace.workspace_id, report_id=report["report_id"]
+    )
+    assert reopened["directions"] == []
+    assert reopened["job_context"]["interest_question"] == report["job_context"][
+        "interest_question"
+    ]
+    listed = service.list_reports(workspace_id=workspace.workspace_id)
+    assert listed[0]["directions"] == []
+    assert listed[0]["job_context"]["interest_question"] == report["job_context"][
+        "interest_question"
+    ]
     assert len(queries) == 1
     assert "AI 团队 的工作节奏如何？" in queries[0]
     assert "工作强度 加班 工作时间" not in queries[0]
+    with service.database.connect() as conn:
+        conn.execute(
+            "UPDATE research_reports SET directions_json = ? WHERE report_id = ?",
+            ("null", report["report_id"]),
+        )
+    assert service.get_report(
+        workspace_id=workspace.workspace_id, report_id=report["report_id"]
+    )["directions"] == list(DIRECTIONS)
 
 
 def test_company_name_only_in_footer_does_not_verify_article(monkeypatch):

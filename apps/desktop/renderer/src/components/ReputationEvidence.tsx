@@ -12,7 +12,7 @@ export function ReputationEvidence({report,workspaceId,onReport}:{report?:Resear
  <p className="notice">{reputationDisclaimer}</p>
  <p className="muted">不同来源的陈述分别保留；如有冲突，请并列查阅原文。公司名称匹配不代表主体身份或内容真实性已核实。</p>
  {report && <p>本次检索记录 {entries.length} 条，其中读取原文 {entries.filter(e=>e.verification_status==="independently_retrieved").length} 条。仅统计本次结果，不代表公司整体或员工总体。</p>}
- {report?.directions && <p className="muted">本报告快捷调查方向：{report.directions.map(key=>key==="salary"?"薪资（历史调查方向）":researchDirections[key]).join("、")}</p>}
+ {report?.directions && <p className="muted">本报告快捷调查方向：{report.directions.length?report.directions.map(key=>key==="salary"?"薪资（历史调查方向）":researchDirections[key]).join("、"):"未选择"}</p>}
  {report?.job_context?.interest_question&&<p className="notice">本次兴趣问题：{report.job_context.interest_question}</p>}
  {!entries.length && <p className="notice">暂无可展示的公开原文。来源受限或没有结果，不代表不存在相关陈述。</p>}
  <div className="evidence-grid">{entries.map(item=>{const context=item.context||{};const expired=!!item.published_at&&Date.parse(item.published_at)<Date.now()-730*86400000;const corrections=report?.corrections?.filter(c=>c.evidence_id===item.evidence_id)||[];return <article className="evidence-card" key={item.evidence_id}>

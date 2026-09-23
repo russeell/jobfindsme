@@ -525,6 +525,9 @@ class ResearchService:
                 == canonical_job_url(url)
                 for previous in older
             )
+        stored_directions = (
+            json.loads(row["directions_json"]) if row["directions_json"] else None
+        )
         return {
             "version_number": version_number,
             "canonical_url": context.get(
@@ -535,7 +538,11 @@ class ResearchService:
             ),
             "job_snapshot": context.get("job_snapshot"),
             "job_context": context,
-            "directions": json.loads(row["directions_json"]) or list(DIRECTIONS),
+            "directions": (
+                stored_directions
+                if stored_directions is not None
+                else list(DIRECTIONS)
+            ),
             "disclaimer": DISCLAIMER,
             "corrections": [dict(item) for item in corrections],
             "report_id": row["report_id"],
