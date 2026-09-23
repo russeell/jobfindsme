@@ -104,3 +104,26 @@ input, select, textarea { color-scheme: light; accent-color: var(--ink); }
 .source-picker fieldset {border:0;padding:0;margin:10px 0 14px;}.source-picker legend {font-size:12px;font-weight:600;margin-bottom:8px;}.source-picker-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}.source-picker-grid label {display:flex;align-items:flex-start;gap:7px;padding:8px;background:var(--surface-soft);border-radius:6px;font-size:12px;min-width:0;}.source-picker-grid input {margin:2px 0 0;flex-shrink:0;}.source-picker-grid small {display:block;color:var(--text-muted);font-size:10px;margin-top:4px;}.source-picker>.primary-button {width:100%;}.source-selection-summary,.source-unavailable {font-size:12px;line-height:1.6;}.source-unavailable {max-height:70px;overflow:auto;margin:5px 0;}.job-jd {margin-top:16px;}.job-jd>.button-row:empty {display:none;}
 .research-history {padding:12px;border:1px solid var(--line);border-radius:8px;margin:12px 0;}.research-history-list {display:grid;gap:7px;margin-top:10px;max-height:230px;overflow:auto;}.research-history-list button {text-align:left;white-space:normal;line-height:1.7;}.research-history-list button[aria-pressed=true] {background:var(--surface-selected);}.report-saved {border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface-soft);}.report-saved p {margin:6px 0;}
 .source-picker fieldset {min-inline-size:0;}.filter-popover .source-picker-grid input[type=checkbox] {width:14px;height:14px;padding:0;margin:2px 0 0;flex:0 0 14px;}.source-picker-grid label>span {min-width:0;flex:1;overflow-wrap:anywhere;}
+
+/* The maintenance view has one scroll surface at every window width. */
+.resume-maintenance {overflow-y:auto;overscroll-behavior:contain;padding-right:4px;gap:0;}
+.resume-maintenance .resume-heading {position:sticky;top:0;z-index:2;background:var(--surface);padding:4px 0 12px;margin-bottom:0;}
+.resume-maintenance .resume-current,.resume-maintenance .resume-confirm,.resume-maintenance .resume-history,.resume-maintenance .resume-export {width:100%;max-width:980px;flex-shrink:0;}
+.resume-maintenance .resume-summary {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin-top:14px;}
+.resume-maintenance .resume-summary section {min-width:0;border-top:1px solid var(--line);padding-top:8px;}
+.resume-maintenance .resume-summary h3 {margin:0 0 5px;}.resume-maintenance .resume-summary p {margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere;}
+.resume-maintenance .resume-editor {margin-top:14px;}.resume-maintenance .resume-editor textarea {min-height:75px;}
+.resume-maintenance .resume-history summary,.resume-maintenance .resume-export summary {cursor:pointer;font-weight:600;}
+.resume-maintenance .resume-preview {max-width:720px;margin:16px auto;min-height:0;}
+.resume-maintenance .version-list>div {padding:7px 0;}.resume-maintenance .button-row {flex-wrap:wrap;}
+@container(max-width:760px){.resume-maintenance .resume-summary {grid-template-columns:1fr;}.resume-maintenance .resume-heading,.resume-maintenance .resume-current>.heading-row {align-items:flex-start;flex-wrap:wrap;}}
+.research-settings {margin-top:16px;}.research-settings>summary {cursor:pointer;font-weight:600;}.research-settings .research-subject {margin-top:15px;}.research-interest {display:grid;gap:6px;margin:14px 0;font-size:12px;}.research-interest textarea {width:100%;min-height:76px;padding:9px;border:1px solid var(--line);border-radius:7px;}.research-settings .research-directions {margin-top:13px;}
+.source-catalog {grid-template-columns:repeat(2,minmax(0,1fr));}
+.source-catalog .source-card {display:flex;flex-direction:column;gap:10px;min-width:0;}
+.source-catalog .source-card-head {display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.source-catalog .source-choice {display:flex;align-items:center;gap:8px;min-width:0;}
+.source-catalog .source-card-status {display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text-muted);}
+.source-catalog .source-card-actions {margin-top:auto;}.source-catalog .source-card-actions button {white-space:nowrap;}
+.source-catalog .source-card details {font-size:11px;color:var(--text-muted);}.source-catalog .source-card details summary {cursor:pointer;}
+.source-catalog .source-card>.note {margin:0;}.source-catalog .source-card>.note,.source-catalog .source-card details {overflow-wrap:anywhere;}
+@container(max-width:760px){.source-catalog {grid-template-columns:1fr;}}

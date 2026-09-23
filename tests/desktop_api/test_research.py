@@ -621,3 +621,46 @@ def test_reports_reopen_with_stable_job_url_versions_snapshots_and_failures(tmp_
     assert failed["outcome"] == "failed" and failed["status"] == "limited"
     assert "private transport" not in str(failed)
     assert len(reloaded.list_reports(workspace_id=workspace.workspace_id)) == 3
+
+
+def test_interest_question_drives_query_and_report(tmp_path, monkeypatch):
+    import urllib.parse
+
+    queries = []
+    class EmptyRss:
+        headers = None
+        def __enter__(self): return self
+        def __exit__(self, *_args): return None
+        def read(self, *_args): return b"<rss><channel></channel></rss>"
+    def capture(request, **_kwargs):
+        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        return EmptyRss()
+    monkeypatch.setattr("urllib.request.urlopen", capture)
+    workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
+    report = service.create_report(
+        workspace_id=workspace.workspace_id, job_id=job.job_id,
+        source_ids=("maimai",), directions=(),
+        interest_question="AI 团队 的工作节奏如何？",
+    )
+    assert report["job_context"]["interest_question"] == "AI 团队 的工作节奏如何？"
+    assert len(queries) == 1
+    assert "AI 团队 的工作节奏如何？" in queries[0]
+    assert "工作强度 加班 工作时间" not in queries[0]
+
+
+def test_company_name_only_in_footer_does_not_verify_article(monkeypatch):
+    body = (
+        "<html><body><article>另一家公司工程师写下了很长的项目工作经历，"
+        "涉及团队、岗位和地点；这里并未讨论目标主体，只是一个独立页面的公开表达。"
+        "</article><footer>示例公司 版权所有</footer></body></html>"
+    )
+    monkeypatch.setattr(
+        "urllib.request.urlopen",
+        lambda *_args, **_kwargs: FakePage("https://maimai.cn/article/1", body),
+    )
+    item = WebEvidenceSearch()._verify_original_page(
+        url="https://maimai.cn/article/1", expected_domain="maimai.cn",
+        platform="脉脉", search_title="搜索标题", search_excerpt="搜索摘要",
+        search_published_at=None, company="示例公司", team=None,
+    )
+    assert item.verification_level == "search_summary_only"

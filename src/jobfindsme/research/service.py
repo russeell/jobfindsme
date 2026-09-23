@@ -103,15 +103,13 @@ class WebEvidenceSearch:
                 statuses[source_id] = "unsupported"
                 continue
             platform, domain = source
-            terms = [
-                f'"{company}"',
-                " OR ".join(
-                    "工作强度 加班 工作时间" if key == "workload" else DIRECTIONS[key]
-                    for key in directions
-                ),
-                f"site:{domain}",
-            ]
-            if job_context and job_context.get("title"):
+            question = str((job_context or {}).get("interest_question") or "").strip()
+            topic = question if question else " OR ".join(
+                "工作强度 加班 工作时间" if key == "workload" else DIRECTIONS[key]
+                for key in directions
+            )
+            terms = [f'"{company}"', topic, f"site:{domain}"]
+            if job_context and job_context.get("title") and not question:
                 terms.insert(1, f'("{job_context["title"][:80]}" OR 工作 OR 假期)')
             if team:
                 terms.insert(1, f'"{team}"')
@@ -232,10 +230,20 @@ class WebEvidenceSearch:
             parser.feed(body)
         except Exception:
             return summary
-        text = " ".join(parser.text.split())
+        text = " ".join((parser.article_text or parser.text).split())
         company_key = _normalized(company)
-        if len(text) < 80 or not company_key or company_key not in _normalized(text):
-            return summary
+        # A company name in a site footer or navigation is not article evidence.
+        anchored = bool(parser.article_text) or company_key in _normalized(parser.title)
+        if (
+            len(text) < (50 if parser.article_text else 80)
+            or not company_key
+            or not anchored
+            or company_key not in _normalized(text)
+        ):
+            return replace(
+                summary,
+                limitations="原页未能把公司名称定位到文章正文或标题；不能据此核实主体。",
+            )
         excerpt = _excerpt_around(text, company, limit=1200)
         page_date = _page_published_at(parser.meta)
         team_match = bool(team and _normalized(team) in _normalized(text))
@@ -282,10 +290,16 @@ class ResearchService:
         directions: tuple[str, ...] = tuple(DIRECTIONS),
         context_company: str | None = None,
         context_description: str | None = None,
+        interest_question: str | None = None,
     ) -> dict:
         directions = tuple(dict.fromkeys(directions))
-        if not directions or any(key not in DIRECTIONS for key in directions):
-            raise ResearchError("请选择支持的调查方向。")
+        question = " ".join((interest_question or "").split())
+        if len(question) > 300:
+            raise ResearchError("兴趣问题最多 300 字。")
+        if (not directions and not question) or any(
+            key not in DIRECTIONS for key in directions
+        ):
+            raise ResearchError("请填写兴趣问题或选择调查方向。")
         job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
         resume = self._resume(workspace_id, resume_version_id, required=False)
         report_id = f"research_{uuid4().hex}"
@@ -303,6 +317,7 @@ class ResearchService:
             "title": job.title,
             "company": company,
             "description": description,
+            "interest_question": question or None,
             "url": job.apply_url,
             "team": query_team,
             "locations": list(job.locations),
@@ -351,6 +366,9 @@ class ResearchService:
             if state != "verified_original_body"
         ]
         if not evidence:
+            limitations.append(
+                "后续可在来源原页用公司全称、岗位/团队及兴趣问题分别检索，核对作者、发布时间和原文上下文；登录受限时需人工查看。"
+            )
             limitations.append(
                 "未检索到可独立核验的原始评价链接，不得生成公司口碑结论。"
             )
@@ -787,6 +805,8 @@ class _ReadableHtml(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
+        self.article_parts: list[str] = []
+        self._article_depth = 0
         self.meta: dict[str, str] = {}
         self.title = ""
         self._in_title = False
@@ -796,7 +816,13 @@ class _ReadableHtml(HTMLParser):
     def text(self) -> str:
         return " ".join(self.parts)
 
+    @property
+    def article_text(self) -> str:
+        return " ".join(self.article_parts)
+
     def handle_starttag(self, tag: str, attrs) -> None:
+        if tag in {"article", "main"}:
+            self._article_depth += 1
         values = {str(key).casefold(): str(value) for key, value in attrs if value}
         if tag in {"script", "style", "noscript", "svg"}:
             self._ignored_depth += 1
@@ -809,6 +835,8 @@ class _ReadableHtml(HTMLParser):
                 self.meta[key] = content
 
     def handle_endtag(self, tag: str) -> None:
+        if tag in {"article", "main"} and self._article_depth:
+            self._article_depth -= 1
         if tag in {"script", "style", "noscript", "svg"} and self._ignored_depth:
             self._ignored_depth -= 1
         elif tag == "title":
@@ -820,6 +848,8 @@ class _ReadableHtml(HTMLParser):
         value = data.strip()
         if value:
             self.parts.append(value)
+            if self._article_depth:
+                self.article_parts.append(value)
             if self._in_title:
                 self.title = f"{self.title} {value}".strip()[:300]
 

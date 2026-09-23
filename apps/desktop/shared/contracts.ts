@@ -204,6 +204,7 @@ export type SourceSearchRun = {
 };
 
 export type SourceSearchResponse = {
+  source_diagnostics?: {started_at:string;first_source_ms:number|null;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>};
   workspace_id: string;
   resume_version_id: string | null;
   keywords: string[];
@@ -392,7 +393,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {title?:string;company?:string;description?:string;url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
+  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;
@@ -415,6 +416,7 @@ export type ResearchReport = {
 export type ResearchRunInput = {
   context_company?:string;
   context_description?:string;
+  interest_question?:string;
   directions?: ResearchDirection[];
   workspace_id: string;
   job_id: string;
