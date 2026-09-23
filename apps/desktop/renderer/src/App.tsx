@@ -11,11 +11,11 @@ import { ResearchPage } from "./components/ResearchPage";
 import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../main/source-browser-policy";
 import { Discovery } from "./components/Discovery";
 import { Workbench, BrowserToggle, useOriginalBrowser } from "./components/Workbench";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
 import type {
-  BootstrapData, ModelConnection, ModelConnectionInput,
+  BootstrapData, ModelConnection, ModelConnectionInput, SourceCapability,
   ModelProtocol, ServiceStatus,
   SearchResultItem, TrackedJob, MatchingWeights,
 } from "../../shared/contracts";
@@ -38,6 +38,7 @@ export function App() {
   useEffect(()=>localStorage.setItem("jfm.sources.selected",JSON.stringify(chosenSources)),[chosenSources]);
   const [reports,setReports]=useState<ResearchReport[]>([]);
   function chooseSource(id:string, selected:boolean) {setChosenSources(current => {const previous=current;const next=selected ? [...new Set([...previous,id])] : previous.filter(s=>s!==id);localStorage.setItem("jfm.sources.selected",JSON.stringify(next));return next;});}
+  function chooseAllSources(selected:boolean) {setChosenSources(selected?(data?.sources.map(source=>source.source_id)??[]):[]);}
   const [page, setPage] = useState<Page>("discover");
   useEffect(()=>{const show=()=>setPage("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[]);
   const [data, setData] = useState<BootstrapData>();
@@ -85,7 +86,7 @@ export function App() {
       </div>)}
       <div className="local-status"><span className={!serviceStatus.connected ? "dot error" : "dot"} />{serviceStatus.connected ? "个人工作空间 · 本地优先" : serviceStatus.message}</div>
     </>}>
-  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} reports={reports} weights={weights} onWeightsChange={setWeights} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "scores" && <MatchingRulesPage workspaceId={data?.workspaces[0]?.workspace_id} weights={weights} onApply={setWeights} />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 完全退出后不调度 · {buildInfo.label}</footer></section>
+  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} weights={weights} onWeightsChange={setWeights} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "scores" && <MatchingRulesPage workspaceId={data?.workspaces[0]?.workspace_id} weights={weights} onApply={setWeights} />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 完全退出后不调度 · {buildInfo.label}</footer></section>
   </Workbench>;
 }
 
@@ -110,8 +111,12 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
 }
 
 function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
+  const capabilityLabel=(status:string)=>({verified:"已验证",partial:"部分可用",blocked:"受阻",unverified:"待验证"})[status]??status;
   const [tab, setTab] = useState<"platform" | "company">("platform");
   const [verifying, setVerifying] = useState<string>();
+  const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCapability[];startedAt:string}>();
+  const auditEpoch=useRef(0);
+  useEffect(()=>()=>{auditEpoch.current++;},[]);
   const openBrowser = useOriginalBrowser();
   const platforms = data?.sources.filter(source => source.source_type === "platform") ?? [];
   const companies = data?.sources.filter(source => source.source_type === "company") ?? [];
@@ -127,9 +132,40 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
       setVerifying(undefined);
     }
   }
+  async function inspectAll() {
+    if(audit?.running)return;
+    const ids=data?.sources.map(source=>source.source_id)??[];
+    if(!ids.length)return;
+    const epoch=++auditEpoch.current;
+    const startedAt=new Date().toISOString();
+    const rows:SourceCapability[]=[];
+    setAudit({done:0,total:ids.length,running:true,cancelled:false,rows:[],startedAt});
+    onError(undefined);
+    try {
+      const deadline=Date.now()+20000;
+      for(const id of ids){
+        if(epoch!==auditEpoch.current || Date.now()>=deadline)break;
+        // Re-read the persisted capability after each source; browser observations may update it meanwhile.
+        let timeout:ReturnType<typeof setTimeout>|undefined;
+        const snapshot=await Promise.race([window.jobfindsme!.getBootstrap(),new Promise<BootstrapData>((_,reject)=>{timeout=setTimeout(()=>reject(Error("本地来源状态读取超时，已保留已完成的检查。")),Math.min(3000,Math.max(1,deadline-Date.now())));})]).finally(()=>clearTimeout(timeout));
+        if(epoch!==auditEpoch.current)break;
+        const source=snapshot.sources.find(item=>item.source_id===id);
+        if(source)rows.push(source);
+        setAudit({done:rows.length,total:ids.length,running:true,cancelled:false,rows:[...rows],startedAt});
+        onRefresh(snapshot);
+      }
+      if(epoch===auditEpoch.current)setAudit({done:rows.length,total:ids.length,running:false,cancelled:rows.length<ids.length,rows:[...rows],startedAt});
+    } catch(error){
+      if(epoch===auditEpoch.current){setAudit({done:rows.length,total:ids.length,running:false,cancelled:true,rows:[...rows],startedAt});onError(messageOf(error));}
+    }
+  }
+  function cancelInspect(){auditEpoch.current++;setAudit(current=>current&&({...current,running:false,cancelled:true}));}
   const rows = tab === "platform" ? platforms : companies;
   return <>
     <div className="heading-row"><div><h1>岗位来源</h1><p>多选下次想检索的平台或公司官网，与发现岗位同步。已创建的定时任务不受影响。</p></div></div>
+    <section className="panel source-audit"><div className="source-audit-heading"><div><h2>全部来源状态</h2><p className="note">依次读取 4 个平台和 16 个公司官网的现有能力记录与已观察的会话，不会打开 20 个窗口或批量发起网站搜索。实际检索仍以各来源的有界检查为准。</p></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部来源</button>{audit?.running&&<button onClick={cancelInspect}>取消</button>}</div></div>
+      {audit&&<><p role="status">{audit.running?"检查中":audit.cancelled?"部分完成":"已完成"} · {audit.done}/{audit.total} · {new Date(audit.startedAt).toLocaleString()}</p><progress value={audit.done} max={audit.total} aria-label="来源检查进度"/><div className="source-audit-rows">{audit.rows.map(source=><div key={source.source_id}><strong>{source.name}</strong><span>{source.login_required?source.session_status==="verified"?"会话已确认":source.session_status==="expired"?"需重新登录":source.session_status==="blocked"?"验证受阻":"会话待确认":"公开来源"}</span><span>列表 {capabilityLabel(source.list_status)} · 详情 {capabilityLabel(source.detail_status)} · 字段 {capabilityLabel(source.fields_status)} · 网站续页 {capabilityLabel(source.pagination_status)}</span><span>{source.live_search_enabled?source.last_verified_at&&Date.now()-Date.parse(source.last_verified_at)>86400000?"历史可检索 · 待复查":"当前可检索":"自动检索未开放"}{source.last_verified_at?` · 上次验证 ${new Date(source.last_verified_at).toLocaleString()}`:" · 尚未验证"}</span></div>)}</div></>}
+    </section>
     <p className="source-selection-summary" role="status">已选 {selected.length} 个来源 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个来源"}</p><div className="source-tabs"><button className={tab === "platform" ? "active" : ""} onClick={() => setTab("platform")}>招聘平台 · {platforms.length}</button><button className={tab === "company" ? "active" : ""} onClick={() => setTab("company")}>公司官网 · {companies.length}</button></div>
     <section className="source-grid source-catalog">{rows.map(source => {
       const stale=!!source.last_verified_at && Date.now()-Date.parse(source.last_verified_at)>24*60*60*1000;
@@ -138,11 +174,11 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
       return <article className="panel source-card" key={source.source_id}>
         <div className="source-card-head"><label className="source-choice"><input type="checkbox" checked={selected.includes(source.source_id)} onChange={event=>onSelect(source.source_id,event.target.checked)}/><strong>{source.name}</strong></label><span className={source.live_search_enabled&&!stale?"ready":"muted"}>{ability}</span></div>
         <div className="source-card-status"><span>登录：{login}</span></div>
-        <div className="button-row source-card-actions"><button className="primary-button" onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>{source.login_required?"打开来源 / 登录":"打开官网"}</button><button disabled={Boolean(verifying)} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"重试检查"}</button></div>
+        <div className="button-row source-card-actions"><button className="primary-button" onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>{source.login_required?"打开来源 / 登录":"打开官网"}</button><button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"重试检查"}</button></div>
         <p className="note">{source.last_verified_at?`最近检查 ${new Date(source.last_verified_at).toLocaleString()} · `:"尚未检查 · "}{source.live_search_enabled?"实际搜索前仍会核对会话与页面；列表、详情和网站续页可能只覆盖部分结果。":"请先在来源原页确认页面可用；可浏览不代表自动检索成功。"}</p>
-        <details><summary>能力与限制</summary><p className="note">列表：{source.list_status} · 详情：{source.detail_status} · 字段：{source.fields_status} · 网站续页：{source.pagination_status}</p><p className="note">{source.detail}</p></details>
+        <details><summary>能力与限制</summary><p className="note">列表：{capabilityLabel(source.list_status)} · 详情：{capabilityLabel(source.detail_status)} · 字段：{capabilityLabel(source.fields_status)} · 网站续页：{capabilityLabel(source.pagination_status)}</p><p className="note">{source.detail}</p></details>
       </article>;
-    })}</section><p className="note">平台登录与实际检索分别核对。打开来源后会观察已加载页面；只有看到可读列表才做一次有冷却期的限额检查。风险验证立即停源；手动检查仅用于重试。关闭原页不清除平台允许保存的会话，登录仍可能过期。</p>
+    })}</section><p className="note">平台登录与实际检索分别核对。智联在应用内打开您提供的 passport.zhaopin.com 登录页；Chrome 登录不会自动同步到应用的独立会话。打开来源后会观察已加载页面；只有看到可读列表才做一次有冷却期的限额检查。风险验证立即停源；手动检查仅用于重试。关闭原页不清除平台允许保存的会话，登录仍可能过期。</p>
   </>;
 }
 

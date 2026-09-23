@@ -14,7 +14,7 @@ import {createPortal} from "react-dom";
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 const weightLabels:Record<string,string>={skills:"技能",projects:"项目经历",education:"学历",experience:"工作经验",responsibilities:"职责（旧版）",bonus:"加分项（旧版）"};
 
-export function Discovery({ active, data, weights, onWeightsChange, onError, onResearch,selectedSources,onSelectSource,reports }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;reports:ResearchReport[]; active:boolean; data?: BootstrapData; weights: MatchingWeights; onWeightsChange(weights: MatchingWeights): void; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
+export function Discovery({ active, data, weights, onWeightsChange, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[]; active:boolean; data?: BootstrapData; weights: MatchingWeights; onWeightsChange(weights: MatchingWeights): void; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
   const sources = useMemo(() => data?.sources ?? [], [data]);
   const enabled = selectedSearchSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
@@ -114,7 +114,7 @@ export function Discovery({ active, data, weights, onWeightsChange, onError, onR
   async function openOriginal() { if (!selected) return; const sourceId = sourceBrowserIdForSourceName(selected.job.source.source_name) || "web"; try { await track("apply_opened"); openBrowser({ sourceId, url: selected.job.apply_url, title: selected.job.title }); } catch (e) { onError(messageOf(e)); } }
   return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>发现岗位</h1></div><button ref={scheduleTrigger} className="quiet-button" onClick={() => setShowTasks(!showTasks)}>◷ 定时检索</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位或方向，例如 AI 应用工程师" value={intent} onChange={(event) => setIntent(event.target.value)} /><button disabled={!intent.trim() || searching || reranking || !workspaceId || enabled.length === 0}>{searching ? "检索中…" : "检索岗位"}</button></form>
-    <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onReset={resetFilters} />
+    <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     {!selectedSources.length&&<p className="notice" role="status">请先选择岗位来源，再开始检索。</p>}
     {!!unavailable.length&&<p className="note source-unavailable">已选但暂不可检索：{unavailable.map(s=>`${s.name}（${s.login_required&&s.session_status!=="verified"?"需登录 / 检查":"能力待验证"}）`).join("、")}。<button onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>查看来源</button></p>}
     {(searchError||collection||matchingMessage) && <div className="discovery-feedback"><details><summary title={searchError?.message||collection?.message||matchingMessage}>{searchError?.message||collection?.message||matchingMessage||"来源状态"}</summary><div className="discovery-feedback-details">
