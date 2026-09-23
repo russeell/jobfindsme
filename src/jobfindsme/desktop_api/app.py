@@ -449,6 +449,7 @@ class ResearchRunRequest(StrictResponse):
     context_company: str | None = Field(default=None, max_length=300)
     context_description: str | None = Field(default=None, max_length=30000)
     interest_question: str | None = Field(default=None, max_length=300)
+    topics: list[Literal["company", "job"]] = Field(default_factory=list, max_length=2)
     workspace_id: str
     job_id: str
     resume_version_id: str | None = None
@@ -1381,6 +1382,24 @@ def create_app(
             for version in core.resume_editor.list_versions(workspace_id=workspace_id)
         ]
 
+    @app.delete(
+        "/v1/resume-versions/{version_id}",
+        dependencies=[Depends(require_token)],
+    )
+    def hide_resume_version(version_id: str, workspace_id: str) -> dict:
+        try:
+            core.resume_editor.hide_version(
+                workspace_id=workspace_id, version_id=version_id
+            )
+        except ResumeEditorError as error:
+            code = (
+                409
+                if any(word in str(error) for word in ("current", "referenced"))
+                else 404
+            )
+            raise HTTPException(status_code=code, detail=str(error)) from error
+        return {"hidden": True}
+
     @app.post(
         "/v1/resume-versions",
         response_model=ResumeVersionResponse,
@@ -1752,6 +1771,7 @@ def create_app(
                 resume_version_id=request.resume_version_id,
                 team=request.team,
                 directions=tuple(request.directions),
+                topics=tuple(request.topics),
                 context_company=request.context_company,
                 context_description=request.context_description,
                 interest_question=request.interest_question,
@@ -1876,6 +1896,17 @@ def create_app(
     )
     def list_research_reports(workspace_id: str) -> list[dict]:
         return research.list_reports(workspace_id=workspace_id)
+
+    @app.delete(
+        "/v1/research-runs/{report_id}",
+        dependencies=[Depends(require_token)],
+    )
+    def hide_research_report(report_id: str, workspace_id: str) -> dict:
+        try:
+            research.hide_report(workspace_id=workspace_id, report_id=report_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="report not found") from error
+        return {"hidden": True}
 
     @app.post(
         "/v1/tasks",

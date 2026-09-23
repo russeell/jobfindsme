@@ -433,6 +433,10 @@ ipcMain.handle("desktop:list-resume-versions", (_event, workspaceId: string) => 
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listResumeVersions(workspaceId);
 });
+ipcMain.handle("desktop:hide-resume-version", (event, workspaceId:string, versionId:string) => {
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  return apiClient.hideResumeVersion(workspaceId,versionId);
+});
 ipcMain.handle("desktop:save-resume-version", (_event, input: ResumeEditInput) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.saveResumeVersion(input);
@@ -595,6 +599,10 @@ ipcMain.handle("desktop:correct-research",(event,reportId:string,input:import(".
 ipcMain.handle("desktop:list-research-reports", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listResearchReports(workspaceId);
+});
+ipcMain.handle("desktop:hide-research-report", (event, workspaceId:string, reportId:string) => {
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  return apiClient.hideResearchReport(workspaceId,reportId);
 });
 ipcMain.handle("desktop:create-research-report", async (_event, input: ResearchRunInput) => {
   if (!apiClient) throw new Error("desktop API is not ready");

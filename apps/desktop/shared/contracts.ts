@@ -63,6 +63,7 @@ export type DesktopBridge = {
   abandonResume(workspaceId: string, profileId: string): Promise<ResumeState>;
   previewAnalysisCopy(input: AnalysisPreviewInput): Promise<AnalysisPreview>;
   listResumeVersions(workspaceId: string): Promise<ResumeVersion[]>;
+  hideResumeVersion(workspaceId:string,versionId:string):Promise<void>;
   saveResumeVersion(input: ResumeEditInput): Promise<ResumeVersion>;
   restoreResumeVersion(workspaceId: string, versionId: string): Promise<ResumeVersion>;
   exportResume(input: ResumeExportInput): Promise<ResumeExport | undefined>;
@@ -80,6 +81,7 @@ export type DesktopBridge = {
   prepareResearchJob(input: {workspace_id:string; url:string; title:string; company:string; description:string}): Promise<SearchResultItem["job"]>;
   correctResearch(reportId:string,input:ResearchCorrectionInput):Promise<ResearchReport>;
   listResearchReports(workspaceId: string): Promise<ResearchReport[]>;
+  hideResearchReport(workspaceId:string,reportId:string):Promise<void>;
   createResearchReport(input: ResearchRunInput): Promise<ResearchReport>;
   cancelResearch(): Promise<ResearchReport | undefined>;
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]>;
@@ -373,7 +375,7 @@ export type ServiceStatus = {
 export type ResearchDirection = "role" | "workload" | "salary" | "leave" | "care";
 export type ResearchCorrectionInput = {workspace_id:string;evidence_id:string;kind:"wrong_entity"|"broken_link"|"wrong_team"|"other";note:string};
 export type ResearchEvidence = {
-  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string};
+  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"positive"|"negative"|null};
   evidence_id: string;
   url: string | null;
   platform: string;
@@ -393,7 +395,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
+  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;
@@ -414,6 +416,7 @@ export type ResearchReport = {
 };
 
 export type ResearchRunInput = {
+  topics?:Array<"company"|"job">;
   context_company?:string;
   context_description?:string;
   interest_question?:string;

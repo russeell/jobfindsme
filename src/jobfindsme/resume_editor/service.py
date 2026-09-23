@@ -50,10 +50,42 @@ class ResumeEditorService:
         with self.database.connect() as connection:
             rows = connection.execute(
                 """SELECT * FROM resume_versions WHERE workspace_id = ?
+                AND hidden_at IS NULL
                 ORDER BY version_number DESC""",
                 (workspace_id,),
             ).fetchall()
         return [_version_from_row(row) for row in rows]
+
+    def hide_version(self, *, workspace_id: str, version_id: str) -> None:
+        """Hide one historical version while retaining its immutable references."""
+        self.database.migrate()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT is_current, hidden_at FROM resume_versions "
+                "WHERE workspace_id=? AND version_id=?",
+                (workspace_id, version_id),
+            ).fetchone()
+            if row is None or row["hidden_at"] is not None:
+                raise ResumeEditorError("resume version not found")
+            if row["is_current"]:
+                raise ResumeEditorError("current resume version cannot be hidden")
+            for table in (
+                "desktop_search_runs", "desktop_scheduled_tasks", "research_reports"
+            ):
+                if connection.execute(
+                    f"SELECT 1 FROM {table} WHERE workspace_id=? "
+                    "AND resume_version_id=? LIMIT 1",
+                    (workspace_id, version_id),
+                ).fetchone():
+                    raise ResumeEditorError(
+                        "referenced resume version cannot be hidden"
+                    )
+            connection.execute(
+                "UPDATE resume_versions SET hidden_at=? "
+                "WHERE workspace_id=? AND version_id=? AND is_current=0",
+                (datetime.now(UTC).isoformat(), workspace_id, version_id),
+            )
 
     def get_version(self, *, workspace_id: str, version_id: str) -> ResumeVersion:
         self.database.migrate()
@@ -88,6 +120,11 @@ class ResumeEditorService:
         version_id: str,
     ) -> ResumeVersion:
         target = self.get_version(workspace_id=workspace_id, version_id=version_id)
+        if not any(
+            version.version_id == target.version_id
+            for version in self.list_versions(workspace_id=workspace_id)
+        ):
+            raise ResumeEditorError("hidden resume version cannot be restored")
         with self.database.connect() as connection:
             current = connection.execute(
                 """SELECT version_id FROM resume_versions

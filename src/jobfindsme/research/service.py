@@ -6,6 +6,7 @@ import hashlib
 import html
 import json
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -39,6 +40,7 @@ DIRECTIONS = {
     "leave": "假期情况",
     "care": "员工关怀 / 体验",
 }
+RESEARCH_TOPICS = {"company", "job"}
 DISCLAIMER = (
     "JobFindsMe 仅整理互联网上可公开访问的信息及原始来源，"
     "不对用户生成内容的真实性、完整性或代表性作保证；"
@@ -66,6 +68,8 @@ class EvidenceCandidate:
     role: str | None = None
     level: str | None = None
     region: str | None = None
+    topic: str | None = None
+    search_angle: str | None = None
 
 
 class PublicEvidenceSearch(Protocol):
@@ -97,6 +101,8 @@ class WebEvidenceSearch:
     ) -> tuple[list[EvidenceCandidate], dict[str, str]]:
         candidates: list[EvidenceCandidate] = []
         statuses: dict[str, str] = {}
+        topics = tuple((job_context or {}).get("research_topics") or ())
+        deadline = time.monotonic() + 30
         for source_id in dict.fromkeys(source_ids):
             source = _SUPPORTED_SOURCES.get(source_id)
             if source is None:
@@ -104,67 +110,95 @@ class WebEvidenceSearch:
                 continue
             platform, domain = source
             question = str((job_context or {}).get("interest_question") or "").strip()
-            topic = question if question else " OR ".join(
-                "工作强度 加班 工作时间" if key == "workload" else DIRECTIONS[key]
-                for key in directions
-            )
-            terms = [f'"{company}"', topic, f"site:{domain}"]
-            if job_context and job_context.get("title") and not question:
-                terms.insert(1, f'("{job_context["title"][:80]}" OR 工作 OR 假期)')
-            if team:
-                terms.insert(1, f'"{team}"')
-            query = urllib.parse.urlencode({"q": " ".join(terms), "format": "rss"})
-            request = urllib.request.Request(
-                f"https://www.bing.com/search?{query}",
-                headers={"User-Agent": "JobFindsMe/desktop-research"},
-            )
-            try:
-                with urllib.request.urlopen(
-                    request, timeout=self.timeout_seconds
-                ) as response:
-                    body = response.read(1_000_000)
-                root = ET.fromstring(body)
-            except Exception:
-                statuses[source_id] = "restricted_or_unavailable"
-                continue
+            searches: list[tuple[str | None, str | None, str]] = []
+            if topics:
+                if "company" in topics:
+                    searches.extend([
+                        ("company", "positive", "员工评价 优点 正面 认可"),
+                        ("company", "negative", "员工评价 缺点 负面 吐槽"),
+                    ])
+                if "job" in topics:
+                    title = str((job_context or {}).get("title") or "")[:80]
+                    searches.append(
+                        ("job", None, f'"{title}" 工作内容 工作强度 假期 员工福利')
+                    )
+            else:
+                legacy_topic = question if question else " OR ".join(
+                    "工作强度 加班 工作时间" if key == "workload" else DIRECTIONS[key]
+                    for key in directions
+                )
+                searches.append((None, None, legacy_topic))
             summaries = 0
             verified = 0
-            for item in root.findall(".//item")[:8]:
-                url = (item.findtext("link") or "").strip()
-                parsed = urllib.parse.urlsplit(url)
-                if parsed.scheme not in {"http", "https"} or not (
-                    parsed.hostname == domain
-                    or (parsed.hostname or "").endswith(f".{domain}")
-                ):
-                    continue
-                description = html.unescape(
-                    _TAG_RE.sub(" ", item.findtext("description") or "")
-                )
-                description = " ".join(description.split())[:700]
-                if not description:
-                    continue
-                published = _published_at(item.findtext("pubDate"))
-                summaries += 1
-                candidate = self._verify_original_page(
-                    url=url,
-                    expected_domain=domain,
-                    platform=platform,
-                    search_title=(item.findtext("title") or "").strip()[:300],
-                    search_excerpt=description,
-                    search_published_at=published,
-                    company=company,
-                    team=team,
-                )
-                candidates.append(candidate)
-                if candidate.verification_level == "original_body_verified":
-                    verified += 1
-                if verified >= 3:
+            failed = 0
+            for topic_kind, angle, topic_text in searches:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    failed += 1
                     break
+                terms = [f'"{company}"', topic_text, f"site:{domain}"]
+                if team:
+                    terms.insert(1, f'"{team}"')
+                query = urllib.parse.urlencode({"q": " ".join(terms), "format": "rss"})
+                request = urllib.request.Request(
+                    f"https://www.bing.com/search?{query}",
+                    headers={"User-Agent": "JobFindsMe/desktop-research"},
+                )
+                try:
+                    with urllib.request.urlopen(
+                        request, timeout=min(self.timeout_seconds, remaining)
+                    ) as response:
+                        body = response.read(1_000_000)
+                    root = ET.fromstring(body)
+                except Exception:
+                    failed += 1
+                    continue
+                query_verified = 0
+                for item in root.findall(".//item")[:4]:
+                    url = (item.findtext("link") or "").strip()
+                    parsed = urllib.parse.urlsplit(url)
+                    if parsed.scheme not in {"http", "https"} or not (
+                        parsed.hostname == domain
+                        or (parsed.hostname or "").endswith(f".{domain}")
+                    ):
+                        continue
+                    description = html.unescape(
+                        _TAG_RE.sub(" ", item.findtext("description") or "")
+                    )
+                    description = " ".join(description.split())[:700]
+                    if not description:
+                        continue
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        failed += 1
+                        break
+                    published = _published_at(item.findtext("pubDate"))
+                    summaries += 1
+                    candidate = self._verify_original_page(
+                        url=url,
+                        expected_domain=domain,
+                        platform=platform,
+                        search_title=(item.findtext("title") or "").strip()[:300],
+                        search_excerpt=description,
+                        search_published_at=published,
+                        company=company,
+                        team=team,
+                        timeout_seconds=min(self.timeout_seconds, remaining),
+                    )
+                    candidate = replace(candidate, topic=topic_kind, search_angle=angle)
+                    candidates.append(candidate)
+                    if candidate.verification_level == "original_body_verified":
+                        verified += 1
+                        query_verified += 1
+                    if query_verified >= 1:
+                        break
             statuses[source_id] = (
                 "verified_original_body"
                 if verified
                 else "search_summary_only"
                 if summaries
+                else "restricted_or_unavailable"
+                if failed
                 else "no_public_evidence"
             )
         return candidates, statuses
@@ -180,6 +214,7 @@ class WebEvidenceSearch:
         search_published_at: str | None,
         company: str,
         team: str | None,
+        timeout_seconds: float | None = None,
     ) -> EvidenceCandidate:
         summary = EvidenceCandidate(
             url=url,
@@ -194,7 +229,7 @@ class WebEvidenceSearch:
         )
         try:
             with urllib.request.urlopen(
-                request, timeout=self.timeout_seconds
+                request, timeout=timeout_seconds or self.timeout_seconds
             ) as response:
                 final_url = response.geturl()
                 parsed = urllib.parse.urlsplit(final_url)
@@ -288,17 +323,19 @@ class ResearchService:
         source_ids: tuple[str, ...] = ("maimai", "offershow", "kanzhun"),
         user_evidence: tuple[dict, ...] = (),
         directions: tuple[str, ...] = tuple(DIRECTIONS),
+        topics: tuple[str, ...] = (),
         context_company: str | None = None,
         context_description: str | None = None,
         interest_question: str | None = None,
     ) -> dict:
         directions = tuple(dict.fromkeys(directions))
+        topics = tuple(dict.fromkeys(topics))
         question = " ".join((interest_question or "").split())
         if len(question) > 300:
             raise ResearchError("兴趣问题最多 300 字。")
-        if (not directions and not question) or any(
+        if (not directions and not question and not topics) or any(
             key not in DIRECTIONS for key in directions
-        ):
+        ) or any(key not in RESEARCH_TOPICS for key in topics):
             raise ResearchError("请填写兴趣问题或选择调查方向。")
         job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
         resume = self._resume(workspace_id, resume_version_id, required=False)
@@ -318,6 +355,7 @@ class ResearchService:
             "company": company,
             "description": description,
             "interest_question": question or None,
+            "research_topics": list(topics),
             "url": job.apply_url,
             "team": query_team,
             "locations": list(job.locations),
@@ -357,6 +395,7 @@ class ResearchService:
             self._user_evidence(report_id, job.company, team, item, now)
             for item in user_evidence
         )
+        evidence = list({item["evidence_id"]: item for item in evidence}.values())
         jd_facts, resume_observations, rewrites, interviews = self._guidance(
             job=job, resume=resume
         )
@@ -365,6 +404,17 @@ class ResearchService:
             for source_id, state in source_statuses.items()
             if state != "verified_original_body"
         ]
+        if "company" in topics:
+            for angle, label in (("positive", "正向"), ("negative", "负向")):
+                if not any(
+                    item.topic == "company"
+                    and item.search_angle == angle
+                    and item.verification_level == "original_body_verified"
+                    for item in candidates
+                ):
+                    limitations.append(
+                        f"{label}检索未取得可独立核验的原始评价；不能据此推断该类评价不存在。"
+                    )
         if not evidence:
             limitations.append(
                 "后续可在来源原页用公司全称、岗位/团队及兴趣问题分别检索，核对作者、发布时间和原文上下文；登录受限时需人工查看。"
@@ -476,6 +526,7 @@ class ResearchService:
         with self.database.connect() as connection:
             rows = connection.execute(
                 "SELECT report_id FROM research_reports WHERE workspace_id = ? "
+                "AND hidden_at IS NULL "
                 "ORDER BY created_at DESC",
                 (workspace_id,),
             ).fetchall()
@@ -483,6 +534,18 @@ class ResearchService:
             self.get_report(workspace_id=workspace_id, report_id=row["report_id"])
             for row in rows
         ]
+
+    def hide_report(self, *, workspace_id: str, report_id: str) -> None:
+        """Hide a report from normal history; preserve evidence and corrections."""
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            updated = connection.execute(
+                "UPDATE research_reports SET hidden_at=? "
+                "WHERE workspace_id=? AND report_id=? AND hidden_at IS NULL",
+                (datetime.now(UTC).isoformat(), workspace_id, report_id),
+            )
+            if updated.rowcount != 1:
+                raise LookupError(report_id)
 
     def get_report(self, *, workspace_id: str, report_id: str) -> dict:
         with self.database.connect() as connection:
@@ -755,6 +818,8 @@ class ResearchService:
                 "role": item.role,
                 "level": item.level,
                 "region": item.region,
+                "research_topic": item.topic,
+                "search_angle": item.search_angle,
                 "company_match": "name_in_text"
                 if item.verification_level == "original_body_verified"
                 else "unknown",

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from jobfindsme.desktop_api import create_app
 from jobfindsme.models import ModelGateway
 from jobfindsme.models.gateway import ModelGatewayError, TransportResponse
+from jobfindsme.resume_editor import ResumeEditorService
 from jobfindsme.storage import Database
 
 
@@ -161,6 +162,54 @@ def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:
     )
     assert restored.status_code == 200
     assert restored.json()["content"] == original["content"]
+    current_id = restored.json()["version_id"]
+    endpoint = f"/v1/resume-versions/{current_id}"
+    workspace_params = {"workspace_id": draft["workspace_id"]}
+    assert client.delete(
+        endpoint, headers=headers, params=workspace_params
+    ).status_code == 409
+    with Database(tmp_path / "desktop.db").connect() as connection:
+        connection.execute(
+            "INSERT INTO scoring_rule_versions "
+            "(rule_version_id, workspace_id, name, weights_json, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (
+                "rule-snapshot", draft["workspace_id"], "fixture", "{}",
+                "2026-01-01T00:00:00Z",
+            ),
+        )
+        connection.execute(
+            "INSERT INTO desktop_search_runs "
+            "(run_id, workspace_id, resume_version_id, rule_version_id, "
+            "intent, filter_snapshot_json, ordered_job_ids_json, "
+            "scores_json, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            ("run-snapshot", draft["workspace_id"], saved.json()["version_id"],
+             "rule-snapshot", "fixture", "{}", "[]", "{}", "2026-01-01T00:00:00Z",),
+        )
+    assert client.delete(
+        f"/v1/resume-versions/{saved.json()['version_id']}",
+        headers=headers, params=workspace_params,
+    ).status_code == 409
+    old_endpoint = f"/v1/resume-versions/{original['version_id']}"
+    assert client.delete(
+        old_endpoint, headers=headers, params={"workspace_id": "other"}
+    ).status_code == 404
+    assert client.delete(
+        old_endpoint, headers=headers, params=workspace_params
+    ).status_code == 200
+    visible = client.get(
+        "/v1/resume-versions", headers=headers, params=workspace_params
+    ).json()
+    assert {item["version_id"] for item in visible} == {
+        saved.json()["version_id"], current_id
+    }
+    hidden = ResumeEditorService(Database(tmp_path / "desktop.db")).get_version(
+        workspace_id=draft["workspace_id"], version_id=original["version_id"]
+    )
+    assert {key: list(value) for key, value in hidden.content.items()} == original[
+        "content"
+    ]
 
 
 def test_prompt_resume_api_requires_verified_connection_and_saves_patch(

@@ -171,6 +171,11 @@ export class DesktopApiClient {
     return this.json(`/v1/resume-versions?${query}`);
   }
 
+  hideResumeVersion(workspaceId:string,versionId:string):Promise<void> {
+    const query=new URLSearchParams({workspace_id:workspaceId});
+    return this.json(`/v1/resume-versions/${encodeURIComponent(versionId)}?${query}`,{method:"DELETE"});
+  }
+
   saveResumeVersion(input: ResumeEditInput): Promise<ResumeVersion> {
     return this.json("/v1/resume-versions", {
       method: "POST",
@@ -299,6 +304,11 @@ export class DesktopApiClient {
   listResearchReports(workspaceId: string): Promise<ResearchReport[]> {
     const query = new URLSearchParams({ workspace_id: workspaceId });
     return this.json(`/v1/research-runs?${query}`);
+  }
+
+  hideResearchReport(workspaceId:string,reportId:string):Promise<void> {
+    const query=new URLSearchParams({workspace_id:workspaceId});
+    return this.json(`/v1/research-runs/${encodeURIComponent(reportId)}?${query}`,{method:"DELETE"});
   }
 
   createResearchReport(

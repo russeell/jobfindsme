@@ -1,7 +1,10 @@
 from datetime import UTC, datetime
 
+from fastapi.testclient import TestClient
+
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
+from jobfindsme.desktop_api import create_app
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.models import ModelConnectionRepository, ModelProtocol
@@ -668,6 +671,115 @@ def test_interest_question_drives_query_and_report(tmp_path, monkeypatch):
     assert service.get_report(
         workspace_id=workspace.workspace_id, report_id=report["report_id"]
     )["directions"] == list(DIRECTIONS)
+
+
+def test_two_topic_research_queries_and_saved_groups(tmp_path, monkeypatch):
+    import urllib.parse
+
+    queries = []
+
+    class EmptyRss:
+        headers = None
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, *_args):
+            return b"<rss><channel></channel></rss>"
+
+    def capture(request, **_kwargs):
+        queries.append(
+            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)[
+                "q"
+            ][0]
+        )
+        return EmptyRss()
+
+    monkeypatch.setattr("urllib.request.urlopen", capture)
+    workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
+    report = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("maimai",),
+        topics=("company", "job"),
+        directions=("role", "workload", "leave", "care"),
+    )
+    assert len(queries) == 3
+    assert "优点 正面" in queries[0]
+    assert "缺点 负面" in queries[1]
+    assert "工作内容 工作强度 假期 员工福利" in queries[2]
+    assert report["job_context"]["research_topics"] == ["company", "job"]
+    assert service.get_report(
+        workspace_id=workspace.workspace_id, report_id=report["report_id"]
+    )["job_context"]["research_topics"] == ["company", "job"]
+    assert any("正向检索未取得" in text for text in report["limitations"])
+    assert any("负向检索未取得" in text for text in report["limitations"])
+
+
+def test_company_only_research_preserves_topic_on_evidence(tmp_path):
+    search = FakeEvidenceSearch(
+        [
+            EvidenceCandidate(
+                url="https://maimai.cn/article/sample",
+                platform="脉脉",
+                title="样本",
+                excerpt="示例公司样本原文",
+                verification_level="original_body_verified",
+                topic="company",
+                search_angle="positive",
+            )
+        ],
+        {"maimai": "verified_original_body"},
+    )
+    workspace, job, service = setup_research(tmp_path, search)
+    report = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("maimai",),
+        topics=("company",),
+        directions=(),
+    )
+    assert report["directions"] == []
+    assert report["evidence"][0]["context"]["research_topic"] == "company"
+    assert report["evidence"][0]["url"] == "https://maimai.cn/article/sample"
+    assert not any("正向检索未取得" in text for text in report["limitations"])
+    assert any("负向检索未取得" in text for text in report["limitations"])
+
+
+def test_hide_report_keeps_immutable_evidence_but_removes_history(tmp_path):
+    workspace, job, service = setup_research(
+        tmp_path,
+        FakeEvidenceSearch(
+            [EvidenceCandidate(
+                url="https://maimai.cn/article/sample",
+                platform="脉脉",
+                title="样本",
+                excerpt="示例公司样本原文",
+                verification_level="original_body_verified",
+            )]
+        ),
+    )
+    report = service.create_report(
+        workspace_id=workspace.workspace_id, job_id=job.job_id
+    )
+    client = TestClient(
+        create_app(token="fixture-token", database_path=service.database.path)
+    )
+    endpoint = f"/v1/research-runs/{report['report_id']}"
+    headers = {"Authorization": "Bearer fixture-token"}
+    assert client.delete(
+        endpoint, headers=headers, params={"workspace_id": "other"}
+    ).status_code == 404
+    assert client.delete(
+        endpoint, headers=headers, params={"workspace_id": workspace.workspace_id}
+    ).status_code == 200
+    assert service.list_reports(workspace_id=workspace.workspace_id) == []
+    assert service.get_report(
+        workspace_id=workspace.workspace_id, report_id=report["report_id"]
+    )["evidence"] == report["evidence"]
 
 
 def test_company_name_only_in_footer_does_not_verify_article(monkeypatch):
