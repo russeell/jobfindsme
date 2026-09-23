@@ -599,3 +599,26 @@ def test_public_page_bridge_caches_and_keeps_partial_on_failure(tmp_path):
         ).status_code
         == 409
     )
+
+
+def test_public_page_bridge_force_refresh_bypasses_success_cache(tmp_path):
+    calls = []
+
+    class Adapter:
+        def fetch_page(self, cursor):
+            calls.append(cursor)
+            return SourcePage(records=(), next_cursor=None)
+
+    client = TestClient(
+        create_app(
+            token="fixture",
+            database_path=tmp_path / "db",
+            source_adapter_factory_override=lambda *_: Adapter(),
+        )
+    )
+    endpoint = "/v1/sources/company_12/public-pages"
+    headers = {"Authorization": "Bearer fixture"}
+    body = {"keyword": "Python", "max_pages": 1}
+    for request in (body, body, {**body, "force_refresh": True}):
+        assert client.post(endpoint, json=request, headers=headers).status_code == 200
+    assert calls == [None, None]

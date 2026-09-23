@@ -22,6 +22,15 @@ export type SourceCapability = {
   last_verified_at: string | null;
 };
 
+export type SourceCheckResult = {
+  source: SourceCapability;
+  outcome: "verified_now" | "cached_recent" | "skipped_cooldown" | "login_required" | "risk_control" | "unverified" | "failed" | "not_checked_budget" | "cancelled";
+  evidence: "live" | "cache" | "history" | "none";
+  attempted_at: string | null;
+  detail: string;
+  duration_ms: number;
+};
+
 export type BootstrapData = {
   product: string;
   workspaces: Array<{ workspace_id: string; name: string }>;
@@ -50,6 +59,9 @@ export type DesktopBridge = {
   readBossDetail(url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;job?:SearchResultItem["job"]}>;
   readSourceDetail(sourceId:string,url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;job?:SearchResultItem["job"]}>;
   verifySource(sourceId: string): Promise<SourceCapability>;
+  checkAllSources(runId:string):Promise<SourceCheckResult[]>;
+  cancelAllSourceChecks():Promise<void>;
+  onSourceCheckProgress(listener:(value:{runId:string;result:SourceCheckResult;done:number;total:number})=>void):()=>void;
   openJobOriginal(sourceId: string, url: string, bounds: SourceBrowserBounds): Promise<void>;
   selectBrowserTab(id:string):Promise<SourceBrowserState>;
   navigateBrowserTab(id:string,url:string):Promise<SourceBrowserState>;

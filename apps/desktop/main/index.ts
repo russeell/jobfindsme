@@ -10,12 +10,13 @@ import { saveModelConnectionWithSecret } from "./model-connection-service";
 import { PythonService, type ServiceStatus } from "./python-service";
 import { SecureSecretStore } from "./secure-secret-store";
 import { SourceBrowserManager } from "./source-browser";
+import {runSourceCheckQueue} from "./source-check-queue";
 import {browserSiteNames} from "../shared/browser-search";
 import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "./source-browser-policy";
 import type {
   ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
   PromptPatchDecision, PromptSessionInput, PromptTurnInput, SourceSearchInput,
-  BrowserSourcePage, ResearchRunInput, ScheduledTaskInput, SourceSearchPreflight,
+  BrowserSourcePage, ResearchRunInput, ScheduledTaskInput, SourceSearchPreflight, SourceCapability,
 } from "../shared/contracts";
 
 const packageInfo=JSON.parse(readFileSync(path.join(app.getAppPath(),"package.json"),"utf8"));
@@ -59,6 +60,7 @@ let promptController: AbortController | undefined;
 let promptSessionId: string | undefined;
 let promptRequestId: string | undefined;
 let sourceBrowserManager: SourceBrowserManager | undefined;
+let sourceCheckController:AbortController|undefined;
 const sourceAutoCheckAt=new Map<string,number>();
 const sourceAutoCheckPending=new Set<string>();
 let researchController: AbortController | undefined;
@@ -207,11 +209,15 @@ ipcMain.handle("desktop:get-bootstrap", async () => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.bootstrap();
 });
+let sourceSearchActive=0;
 ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInput) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) {
     throw new Error("desktop API is not ready");
   }
   if(!Array.isArray(input.source_ids)||!input.source_ids.length)throw new Error("请先选择岗位来源。");
+  if(sourceCheckController)throw Error("全部来源检查进行中，请先结束检查");
+  sourceSearchActive++;
+  try{
   input={...input,filters:normalizeDiscoveryFilters(input.filters)};
   const preflight = await apiClient.searchPreflight(input);
   const browser = await collectBrowserSourcePages(input, preflight);
@@ -223,6 +229,7 @@ ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInp
     browser_errors: browser.errors,
   });
   mainWindow?.webContents.send("desktop:source-status-changed");return {...response,source_diagnostics:browser.diagnostics};
+  }finally{sourceSearchActive--;}
 });
 
 let sourceSearchEpoch=0;
@@ -335,11 +342,65 @@ ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bo
   if (!isSourceBrowserId(sourceId)) throw new Error("unknown source browser");
   await sourceBrowserManager.show(sourceId, bounds);
 });
+async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal):Promise<SourceCapability>{
+  if(!sourceBrowserManager||!apiClient||!isSourceBrowserId(source.source_id))throw Error("source_contract_error:来源不可检查");
+  const sourceId=source.source_id;
+  const stop=()=>sourceBrowserManager?.cancelCareerSearch();
+  if(sourceId==="boss"){
+    const page=await sourceBrowserManager.observeBoss(true);
+    if(!page?.authenticated||!page.readable||page.blocked)throw Error("source_contract_error:请在应用内打开 BOSS 已登录的岗位列表后检查");
+    return (await apiClient.bootstrap()).sources.find(item=>item.source_id===sourceId)!;
+  }
+  signal.addEventListener("abort",stop,{once:true});
+  try{
+    let pages:BrowserSourcePage[];
+    if(sourceId==="zhilian"||sourceId==="wuyou"){
+      const page=await sourceBrowserManager.searchPage(sourceId,{keyword:"工程师",city:"",page:1,forceRefresh:true});
+      pages=[page];
+    }else if(["liepin","company_01","company_12"].includes(sourceId)){
+      pages=await apiClient.publicSourcePages(sourceId,{keyword:"工程师",city:"",max_pages:1,seconds:8,force_refresh:true},signal);
+    }else{
+      pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:"工程师",city:"",maxPages:1,seconds:8,forceRefresh:true})];
+    }
+    if(signal.aborted)throw Error("source_check_cancelled");
+    if(pages.some(page=>page.collection?.failure==="risk_control"))throw Error("risk_control:来源要求安全验证");
+    if(pages.some(page=>page.collection?.failure==="login_required"))throw Error("login_required:来源要求重新登录");
+    const first=pages.flatMap(page=>page.records)[0];
+    if(!first)throw Error("no_matching:本次没有读取到匹配岗位；不能判定来源不可用");
+    const summary=summarizeSourceVerification(pages);
+    summary.session_status=source.login_required?"verified":"anonymous";
+    summary.pagination_status="unverified";
+    summary.notes=`批量检查本次仅验证 1 个列表页；JD 与网站续页未在本次重查。${summary.notes}`;
+    return apiClient.recordSourceVerification(sourceId,summary,signal);
+  }catch(error){
+    const message=String(error);
+    if(!signal.aborted&&/risk_control:|login_required:/.test(message)){
+      await apiClient.recordSourceRuntimeFailure(sourceId,message.includes("risk_control:")?"risk_control":"login_required",message.slice(0,500)).catch(()=>{});
+    }
+    throw error;
+  }finally{signal.removeEventListener("abort",stop);}
+}
+ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient||!sourceBrowserManager||!/^[-a-zA-Z0-9]{8,80}$/.test(runId))throw Error("source verification is not available");
+  if(sourceCheckController)throw Error("全部来源检查已在运行");
+  if(sourceSearchActive)throw Error("岗位检索进行中，请结束后检查全部来源");
+  const controller=new AbortController();sourceCheckController=controller;
+  try{
+    const sources=(await apiClient.bootstrap()).sources;
+    const results=await runSourceCheckQueue({sources,signal:controller.signal,probe:probeSourceForBulk,
+      maxLiveProbes:previewBuild?1:undefined,
+      onProgress:(result,done,total)=>mainWindow?.webContents.send("desktop:source-check-progress",{runId,result,done,total})});
+    mainWindow?.webContents.send("desktop:source-status-changed");
+    return results;
+  }finally{if(sourceCheckController===controller)sourceCheckController=undefined;}
+});
+ipcMain.handle("desktop:cancel-all-source-checks",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceCheckController?.abort();});
 ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager || !apiClient) {
     throw new Error("source verification is not available");
   }
   if(!isSourceBrowserId(sourceId))throw Error('unknown source');
+  if(sourceCheckController)throw Error('全部来源检查进行中，请结束后再单独重试');
   if(!requiresElectronSourceSearch(sourceId)){
     let pages:BrowserSourcePage[];
     try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}

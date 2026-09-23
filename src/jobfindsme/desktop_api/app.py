@@ -149,6 +149,7 @@ class PublicSourcePagesRequest(StrictResponse):
     city: str = Field(default="", max_length=30)
     max_pages: int = Field(default=2, ge=1, le=3)
     seconds: float = Field(default=15, ge=1, le=60)
+    force_refresh: bool = False
 
 
 class SourceVerificationRequest(StrictResponse):
@@ -637,7 +638,11 @@ def create_app(
         )
         with public_pages_lock:
             cached = public_pages_cache.get(key)
-            if cached and time.monotonic() - cached[0] < 120:
+            if (
+                not request.force_refresh
+                and cached
+                and time.monotonic() - cached[0] < 120
+            ):
                 return cached[1]
             failure = public_pages_failures.get(source_id)
             if failure and time.monotonic() - failure[0] < 300:

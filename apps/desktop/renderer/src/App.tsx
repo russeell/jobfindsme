@@ -15,7 +15,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
 import type {
-  BootstrapData, ModelConnection, ModelConnectionInput, SourceCapability,
+  BootstrapData, ModelConnection, ModelConnectionInput, SourceCheckResult,
   ModelProtocol, ServiceStatus,
   SearchResultItem, TrackedJob, MatchingWeights,
 } from "../../shared/contracts";
@@ -112,11 +112,12 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
 
 function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
   const capabilityLabel=(status:string)=>({verified:"已验证",partial:"部分可用",blocked:"受阻",unverified:"待验证"})[status]??status;
+  const outcomeLabel=(result:SourceCheckResult)=>({verified_now:"本次探测通过",cached_recent:"最近验证缓存",skipped_cooldown:"冷却中跳过",login_required:"需在应用内登录",risk_control:"平台验证 / 风控",unverified:"本次未确认",failed:"本次检查失败",not_checked_budget:"预算未轮到",cancelled:"取消未检查"})[result.outcome];
   const [tab, setTab] = useState<"platform" | "company">("platform");
   const [verifying, setVerifying] = useState<string>();
-  const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCapability[];startedAt:string}>();
-  const auditEpoch=useRef(0);
-  useEffect(()=>()=>{auditEpoch.current++;},[]);
+  const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCheckResult[];startedAt:string}>();
+  const auditRunId=useRef("");
+  useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;setAudit(current=>current&&({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}));});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
   const openBrowser = useOriginalBrowser();
   const platforms = data?.sources.filter(source => source.source_type === "platform") ?? [];
   const companies = data?.sources.filter(source => source.source_type === "company") ?? [];
@@ -134,37 +135,27 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
   }
   async function inspectAll() {
     if(audit?.running)return;
-    const ids=data?.sources.map(source=>source.source_id)??[];
-    if(!ids.length)return;
-    const epoch=++auditEpoch.current;
+    const count=data?.sources.length??0;
+    if(!count)return;
+    const runId=crypto.randomUUID();auditRunId.current=runId;
     const startedAt=new Date().toISOString();
-    const rows:SourceCapability[]=[];
-    setAudit({done:0,total:ids.length,running:true,cancelled:false,rows:[],startedAt});
+    setAudit({done:0,total:count,running:true,cancelled:false,rows:[],startedAt});
     onError(undefined);
     try {
-      const deadline=Date.now()+20000;
-      for(const id of ids){
-        if(epoch!==auditEpoch.current || Date.now()>=deadline)break;
-        // Re-read the persisted capability after each source; browser observations may update it meanwhile.
-        let timeout:ReturnType<typeof setTimeout>|undefined;
-        const snapshot=await Promise.race([window.jobfindsme!.getBootstrap(),new Promise<BootstrapData>((_,reject)=>{timeout=setTimeout(()=>reject(Error("本地来源状态读取超时，已保留已完成的检查。")),Math.min(3000,Math.max(1,deadline-Date.now())));})]).finally(()=>clearTimeout(timeout));
-        if(epoch!==auditEpoch.current)break;
-        const source=snapshot.sources.find(item=>item.source_id===id);
-        if(source)rows.push(source);
-        setAudit({done:rows.length,total:ids.length,running:true,cancelled:false,rows:[...rows],startedAt});
-        onRefresh(snapshot);
-      }
-      if(epoch===auditEpoch.current)setAudit({done:rows.length,total:ids.length,running:false,cancelled:rows.length<ids.length,rows:[...rows],startedAt});
+      const results=await window.jobfindsme!.checkAllSources(runId);
+      if(auditRunId.current!==runId)return;
+      setAudit({done:results.length,total:results.length,running:false,cancelled:results.some(result=>result.outcome==="cancelled"),rows:results,startedAt});
+      onRefresh(await window.jobfindsme!.getBootstrap());
     } catch(error){
-      if(epoch===auditEpoch.current){setAudit({done:rows.length,total:ids.length,running:false,cancelled:true,rows:[...rows],startedAt});onError(messageOf(error));}
-    }
+      if(auditRunId.current===runId){setAudit(current=>current&&({...current,running:false,cancelled:true}));onError(messageOf(error));}
+    }finally{if(auditRunId.current===runId)auditRunId.current="";}
   }
-  function cancelInspect(){auditEpoch.current++;setAudit(current=>current&&({...current,running:false,cancelled:true}));}
+  function cancelInspect(){setAudit(current=>current&&({...current,cancelled:true}));void window.jobfindsme!.cancelAllSourceChecks().catch(error=>onError(messageOf(error)));}
   const rows = tab === "platform" ? platforms : companies;
   return <>
     <div className="heading-row"><div><h1>岗位来源</h1><p>多选下次想检索的平台或公司官网，与发现岗位同步。已创建的定时任务不受影响。</p></div></div>
-    <section className="panel source-audit"><div className="source-audit-heading"><div><h2>全部来源状态</h2><p className="note">依次读取 4 个平台和 16 个公司官网的现有能力记录与已观察的会话，不会打开 20 个窗口或批量发起网站搜索。实际检索仍以各来源的有界检查为准。</p></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部来源</button>{audit?.running&&<button onClick={cancelInspect}>取消</button>}</div></div>
-      {audit&&<><p role="status">{audit.running?"检查中":audit.cancelled?"部分完成":"已完成"} · {audit.done}/{audit.total} · {new Date(audit.startedAt).toLocaleString()}</p><progress value={audit.done} max={audit.total} aria-label="来源检查进度"/><div className="source-audit-rows">{audit.rows.map(source=><div key={source.source_id}><strong>{source.name}</strong><span>{source.login_required?source.session_status==="verified"?"会话已确认":source.session_status==="expired"?"需重新登录":source.session_status==="blocked"?"验证受阻":"会话待确认":"公开来源"}</span><span>列表 {capabilityLabel(source.list_status)} · 详情 {capabilityLabel(source.detail_status)} · 字段 {capabilityLabel(source.fields_status)} · 网站续页 {capabilityLabel(source.pagination_status)}</span><span>{source.live_search_enabled?source.last_verified_at&&Date.now()-Date.parse(source.last_verified_at)>86400000?"历史可检索 · 待复查":"当前可检索":"自动检索未开放"}{source.last_verified_at?` · 上次验证 ${new Date(source.last_verified_at).toLocaleString()}`:" · 尚未验证"}</span></div>)}</div></>}
+    <section className="panel source-audit"><div className="source-audit-heading"><div><h2>检查全部来源</h2><p className="note">按队列检查 4 个平台和 16 个公司官网；每源最多 8 秒、合计最多 45 秒，只探测一个岗位列表页。未登录、冷却或超预算的来源明确标为未检查，不把历史可用写成本次通过。</p></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>开始检查全部</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div>
+      {audit&&<><p role="status">{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"本次队列结束"} · 已处理 {audit.done}/{audit.total} · 本次通过 {audit.rows.filter(row=>row.outcome==="verified_now").length} · {new Date(audit.startedAt).toLocaleString()}</p><progress value={audit.done} max={audit.total} aria-label="来源检查进度"/><div className="source-audit-rows">{audit.rows.map(result=><div key={result.source.source_id}><strong>{result.source.name}</strong><span>{outcomeLabel(result)}<small>{result.evidence==="live"?"本次探测":result.evidence==="cache"?"最近缓存":result.evidence==="history"?"历史状态":"未探测"}</small></span><span>列表 {capabilityLabel(result.source.list_status)} · 详情 {capabilityLabel(result.source.detail_status)} · 字段 {capabilityLabel(result.source.fields_status)} · 网站续页 {capabilityLabel(result.source.pagination_status)}</span><span>{result.detail}{result.attempted_at?` · 处理 ${new Date(result.attempted_at).toLocaleTimeString()}`:""}{result.source.last_verified_at?` · 上次验证 ${new Date(result.source.last_verified_at).toLocaleString()}`:""}</span></div>)}</div></>}
     </section>
     <p className="source-selection-summary" role="status">已选 {selected.length} 个来源 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个来源"}</p><div className="source-tabs"><button className={tab === "platform" ? "active" : ""} onClick={() => setTab("platform")}>招聘平台 · {platforms.length}</button><button className={tab === "company" ? "active" : ""} onClick={() => setTab("company")}>公司官网 · {companies.length}</button></div>
     <section className="source-grid source-catalog">{rows.map(source => {

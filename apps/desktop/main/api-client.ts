@@ -85,14 +85,16 @@ export class DesktopApiClient {
       session_status: string; list_status: string; detail_status: string;
       fields_status: string; pagination_status: string; enabled: boolean; notes: string;
     },
+    signal?:AbortSignal,
   ): Promise<SourceCapability> {
     return this.json(`/v1/sources/${sourceId}/verification`, {
       method: "PUT",
       body: JSON.stringify(input),
+      signal,
     });
   }
 
-  publicSourcePages(sourceId:string,input:{keyword:string;city:string;max_pages:number;seconds:number}):Promise<BrowserSourcePage[]>{return this.json(`/v1/sources/${sourceId}/public-pages`,{method:'POST',body:JSON.stringify(input)},65000);}
+  publicSourcePages(sourceId:string,input:{keyword:string;city:string;max_pages:number;seconds:number;force_refresh?:boolean},signal?:AbortSignal):Promise<BrowserSourcePage[]>{return this.json(`/v1/sources/${sourceId}/public-pages`,{method:'POST',body:JSON.stringify(input),signal},65000);}
 
   searchPreflight(input: SourceSearchExecutionInput): Promise<SourceSearchPreflight> {
     return this.json("/v1/search-preflight", {

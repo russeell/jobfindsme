@@ -295,7 +295,7 @@ export class SourceBrowserManager {
   cancelCareerSearch(){this.careerEpoch++;}
   private careerPending=new Map<string,Promise<SourceActionPage>>();
   private careerTail=new Map<SourceBrowserId,Promise<unknown>>();
-  collectCareer(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number}):Promise<SourceActionPage>{
+  collectCareer(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
     const key=JSON.stringify([sourceId,input]),existing=this.careerPending.get(key);if(existing)return existing;
     const epoch=this.careerEpoch;
     const tail=this.careerTail.get(sourceId)||Promise.resolve();
@@ -303,9 +303,9 @@ export class SourceBrowserManager {
     const settled=work.catch(()=>{});this.careerTail.set(sourceId,settled);
     this.careerPending.set(key,work);void work.finally(()=>{this.careerPending.delete(key);if(this.careerTail.get(sourceId)===settled)this.careerTail.delete(sourceId);}).catch(()=>{});return work;
   }
-  private async collectCareerRun(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number}):Promise<SourceActionPage>{
+  private async collectCareerRun(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
     const key=JSON.stringify([sourceId,input]),now=Date.now(),cached=this.careerCache.get(key);
-    if(cached&&now-cached.time<120000)return structuredClone(cached.page);
+    if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
     const epoch=this.careerEpoch,deadline=now+Math.min(60000,input.seconds*1000),view=this.backgroundView(sourceId),seen=new Set<string>(),records:SourceActionPage['records']=[];
     const check=()=>{if(epoch!==this.careerEpoch||Date.now()>deadline)throw Error('source_budget:已停止，保留已读取岗位');};
@@ -376,7 +376,7 @@ export class SourceBrowserManager {
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
   private platformPending=new Map<string,Promise<SourceActionPage>>();
-  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number}):Promise<SourceActionPage>{
+  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
     if(sourceId==="boss")return Promise.reject(Error("请使用 BOSS 有界采集入口"));
     const key=JSON.stringify([sourceId,input]),existing=this.platformPending.get(key);if(existing)return existing;
     const tail=this.platformTail.get(sourceId)||Promise.resolve();
@@ -388,10 +388,10 @@ export class SourceBrowserManager {
 
   private async searchPageRun(
     sourceId: "zhilian" | "wuyou",
-    input: { keyword: string; city: string; page: number },
+    input: { keyword: string; city: string; page: number; forceRefresh?:boolean },
   ): Promise<SourceActionPage> {
     const key=JSON.stringify([sourceId,input]),cached=this.careerCache.get(key),now=Date.now();
-    if(cached&&now-cached.time<120000)return structuredClone(cached.page);
+    if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
     const view=this.backgroundView(sourceId),epoch=this.careerEpoch,deadline=now+18000;
     const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));})]);}finally{if(timer)clearTimeout(timer);}};
