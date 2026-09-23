@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D46",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -1353,12 +1353,30 @@
     {
       "id": "D46",
       "title": "双核心流程界面迭代",
-      "depends_on": ["D42", "D43", "D44", "D45"],
-      "status": "in_progress",
-      "scope": ["找工作与口碑调查信息架构", "报告与岗位结果优先阅读", "来源及简历辅助流程", "普通及窄窗原生验收"],
-      "acceptance": ["两条主流程首屏有唯一明确下一步", "有证据与无证据报告均可读且不露内部状态", "有内容岗位普通及约860px窗口可读", "来源和历史能力保留且窄窗可操作"],
-      "verification": "合成内容原生交互与截图、定向测试、TypeScript 构建和包审计；不做20来源全量实时检索。",
-      "evidence": ["docs/desktop/ui/UI34-plan.md"],
+      "depends_on": [
+        "D42",
+        "D43",
+        "D44",
+        "D45"
+      ],
+      "status": "done",
+      "scope": [
+        "找工作与口碑调查信息架构",
+        "报告与岗位结果优先阅读",
+        "来源及简历辅助流程",
+        "普通及窄窗原生验收"
+      ],
+      "acceptance": [
+        "两条主流程首屏有唯一明确下一步",
+        "有证据与无证据报告均可读且不露内部状态",
+        "有内容岗位普通及约860px窗口可读",
+        "来源和历史能力保留且窄窗可操作"
+      ],
+      "verification": "原生隔离预览 1162×768 与 854×768 合成内容交互/截图；Node 77/77、TypeScript 构建、预览及普通包审计。预览来源检查仅一源真实探测；完成后逐源 20/20。",
+      "evidence": [
+        "docs/desktop/ui/UI34-plan.md",
+        "docs/desktop/ui/UI34-evidence.md"
+      ],
       "blocker": null
     }
   ]

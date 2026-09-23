@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端重构
 
-最新本地交付：[UI33](/private/tmp/JobFindsMe-D45-UI33.app)。双主题紧凑调研、单条历史移除、20 来源有界检查和发现页来源全选/清空完成，见 [D42](evidence/D42.md)、[D43](evidence/D43.md)、[D44](evidence/D44.md)、[D45](evidence/D45.md)。沿用灰白配色；普通交付包未启动，用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
+最新本地交付：[UI34](/private/tmp/JobFindsMe-D46-UI34.app)。找工作与口碑调查两条主流程、来源和简历辅助界面已迭代，见 [UI34 方案](ui/UI34-plan.md)及[原生验收](ui/UI34-evidence.md)。此前双主题调研、单条历史移除、20 来源有界检查和来源全选/清空见 [D42](evidence/D42.md)、[D43](evidence/D43.md)、[D44](evidence/D44.md)、[D45](evidence/D45.md)。普通交付包未启动，用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |
