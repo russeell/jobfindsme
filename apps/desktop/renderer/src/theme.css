@@ -129,3 +129,111 @@ input, select, textarea { color-scheme: light; accent-color: var(--ink); }
 .source-catalog .source-card details {font-size:11px;color:var(--text-muted);}.source-catalog .source-card details summary {cursor:pointer;}
 .source-catalog .source-card>.note {margin:0;}.source-catalog .source-card>.note,.source-catalog .source-card details {overflow-wrap:anywhere;}
 @container(max-width:760px){.source-catalog {grid-template-columns:1fr;}}
+
+/* UI34: make the two daily flows readable before secondary controls. */
+:root {--text-muted:#626262;}
+button,select,input,textarea {min-height:34px;}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[role="button"]:focus-visible {outline:2px solid #343434;outline-offset:2px;}
+nav button {font-size:13px;min-height:38px;align-items:center;justify-content:flex-start;gap:10px;}
+nav button .nav-label {font-size:13px;}
+.sidebar .eyebrow {font-size:11px;letter-spacing:.04em;}
+.content {padding:22px 22px 18px;}
+.heading-row h1 {font-size:23px;letter-spacing:-.04em;}
+.heading-row p,.note,.muted {font-size:12px;line-height:1.6;}
+.primary-button {background:#282828!important;color:#fff!important;border-color:#282828!important;font-size:12px!important;font-weight:600;}
+.primary-button:hover:not(:disabled) {background:#111!important;}
+.discovery-resume-state {margin-top:3px!important;color:var(--text-muted);}
+.discovery-resume-state button,.discovery-next-step button {border:0;background:transparent;text-decoration:underline;padding:2px 4px;color:var(--text);min-height:0;}
+.discovery-next-step {font-size:12px;color:var(--text-muted);margin:6px 0;}
+.discovery-controls .searchbar {margin-top:12px;padding:5px;min-height:49px;}
+.discovery-controls .searchbar input {font-size:14px;min-width:0;}
+.discovery-controls .searchbar button {min-width:94px;}
+.discovery-controls .popover-trigger {font-size:12px;min-height:34px;}
+.filter-extra {display:grid;gap:10px;min-width:210px;}
+.filter-extra label {display:grid;gap:5px;font-size:12px;}
+.filter-extra select {width:100%;}
+.source-picker-footer {display:flex;gap:8px;position:sticky;bottom:0;background:var(--surface);padding-top:8px;border-top:1px solid var(--line);}
+.source-picker-footer button {flex:1;white-space:normal;}
+.source-audit {padding:16px;}
+.source-audit-heading .note {font-size:12px;max-width:670px;}
+.source-audit>p[role="status"] {font-size:12px;margin:10px 0 4px;}
+.source-audit-details {margin-top:8px;}
+.source-audit-details>summary {font-size:12px;font-weight:600;cursor:pointer;}
+.source-audit-rows {margin-top:8px;}
+.discovery-page .job-card {padding:12px 14px!important;border-bottom:1px solid var(--line);}
+.discovery-page .job-card:hover {background:var(--surface-soft);}
+.discovery-page .job-card.selected {box-shadow:inset 3px 0 0 var(--ink);background:var(--surface-soft);}
+.discovery-page .job-card strong {font-size:14px;line-height:1.4;}
+.discovery-page .job-card p {font-size:12px;margin:5px 0 3px;line-height:1.5;}
+.discovery-page .job-card small {font-size:11px;color:var(--text-muted);}
+.job-score {font-size:11px;color:var(--text-muted);white-space:nowrap;}
+.discovery-page .detail-pane {border-color:var(--line);}
+.discovery-page .job-detail {min-height:0;padding:16px;}
+.discovery-page .job-detail h3 {font-size:18px;line-height:1.4;margin:0;}
+.discovery-page .job-detail small {font-size:11px;color:var(--text-muted);}
+.discovery-page .job-detail p {font-size:12px;}
+.discovery-page .job-jd {margin-top:18px;border-top:1px solid var(--line);padding-top:12px;}
+.discovery-page .job-jd h4 {margin:0 0 8px;font-size:13px;}
+.discovery-page .job-description {font-size:12px;line-height:1.7;color:var(--text);}
+.discovery-page .job-jd .note button {min-height:0;margin-left:5px;padding:3px 5px;}
+.discovery-page .workspace.no-selection {flex:0 0 auto;display:block;overflow:visible;}
+.discovery-page .workspace.no-selection .detail-pane {display:none;}
+.discovery-page .workspace.no-selection .list-pane>.empty {min-height:130px;flex:none;border:0;background:var(--surface-soft);}
+.discovery-page .workspace.no-selection .pagination {display:none;}
+.scoring-details,.model-evidence {margin-top:12px;font-size:12px;color:var(--text-muted);}
+.job-action-buttons {flex-wrap:wrap;gap:8px;}
+.job-actions .research-job-action,.job-actions .save-job {font-size:12px;}
+.research-page {max-width:980px;}
+.research-page .heading-row {align-items:flex-start;}
+.research-page .heading-row>.button-row {flex-wrap:wrap;justify-content:flex-end;}
+.research-page .research-history {border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);border-radius:0;padding:10px 0;margin:16px 0;}
+.research-history-toggle {border:0!important;background:transparent!important;padding:4px 0!important;margin:0!important;font-size:12px!important;color:var(--text-muted)!important;text-align:left;}
+.research-history-list button {font-size:12px;}
+.research-context {margin:12px 0 4px;font-size:12px;gap:12px;}
+.research-context>span {color:var(--text);font-weight:600;}
+.research-context button {font-size:12px;text-decoration:underline;white-space:nowrap;}
+.research-body {padding:10px 0;max-width:920px;}
+.report-saved {background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:0 0 12px;margin-bottom:16px;}
+.report-summary {display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.report-summary strong {font-size:15px;}
+.report-summary span {font-size:11px;color:var(--text-muted);}
+.report-saved p {margin:4px 0;}
+.report-saved details {font-size:12px;color:var(--text-muted);}
+.research-new-run {margin:16px 0;border-top:1px solid var(--line);padding-top:12px;}
+.research-new-run>summary {font-size:13px;font-weight:600;cursor:pointer;}
+.research-compact {padding:12px 0 0;}
+.research-compact>.note {margin:0 0 12px;}
+.research-topic-choice {border:0;padding:0;margin:0 0 14px;min-inline-size:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.research-topic-choice legend {grid-column:1 / -1;font-size:12px;color:var(--text-muted);margin-bottom:8px;padding:0;}
+.research-topic-card {display:flex!important;align-items:flex-start;gap:10px;margin:0!important;padding:14px;border:1px solid var(--line);border-radius:9px;cursor:pointer;min-height:82px;}
+.research-topic-card:has(input:checked) {border-color:#777;background:var(--surface-soft);}
+.research-topic-card input {min-height:0;width:17px;height:17px;margin:2px 0 0;flex:0 0 17px;}
+.research-topic-card span {display:grid;gap:4px;min-width:0;}
+.research-topic-card strong {font-size:14px;color:var(--text);}
+.research-topic-card small {font-size:11px;color:var(--text-muted);line-height:1.5;}
+.research-compact .button-row {margin:6px 0 0;}
+.reputation-caution {font-size:11px;color:var(--text-muted);margin:0 0 12px;}
+.research-empty {padding:18px;background:var(--surface-soft);border-radius:8px;max-width:660px;}
+.research-empty strong {font-size:14px;}
+.research-empty p {font-size:12px;line-height:1.6;margin:6px 0 0;color:var(--text-muted);}
+.research-topic-result {border-top:1px solid var(--line);padding:14px 0;}
+.research-topic-result h2 {font-size:15px;margin:0 0 10px;}
+.evidence-grid {gap:10px;}
+.evidence-card {border:1px solid var(--line);border-radius:8px;padding:14px;}
+.evidence-head {display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;}
+.evidence-head span,.evidence-source {font-size:11px;color:var(--text-muted);}
+.evidence-card blockquote {font-size:13px;line-height:1.65;margin:10px 0;}
+.evidence-source {display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.evidence-card details {margin-top:10px;font-size:11px;color:var(--text-muted);}
+.evidence-card details summary,.research-diagnostics summary,.research-jd-facts summary {cursor:pointer;}
+.evidence-card .correction-trigger {font-size:11px;min-height:0;margin-top:10px;}
+.research-diagnostics,.research-jd-facts {font-size:11px;color:var(--text-muted);margin-top:12px;}
+.research-diagnostics p {margin:6px 0;line-height:1.5;}
+.resume-maintenance .resume-heading {padding-bottom:10px;}
+.resume-maintenance .resume-current {border-color:var(--line);}
+@container(max-width:720px){
+  .research-topic-choice {grid-template-columns:1fr;}
+  .research-page .heading-row {flex-wrap:wrap;}
+  .research-page .heading-row>.button-row {max-width:none;justify-content:flex-start;}
+  .discovery-page .job-detail {padding:14px;}
+}

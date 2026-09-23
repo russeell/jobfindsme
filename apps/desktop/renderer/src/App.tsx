@@ -10,6 +10,7 @@ import { modelPresets, protocolNames } from "./components/model-presets";
 import { ResearchPage } from "./components/ResearchPage";
 import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../main/source-browser-policy";
 import { Discovery } from "./components/Discovery";
+import {formatSalary} from "./components/salary";
 import { Workbench, BrowserToggle, useOriginalBrowser } from "./components/Workbench";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
@@ -23,11 +24,11 @@ import type {
 type Page = "discover" | "research" | "records" | "resume" | "scores" | "sources" | "models";
 
 const navGroups: Array<[string, Array<[string, Page | undefined]>]> = [
-  ["工作空间", [
-    ["发现岗位", "discover"], ["岗位研究", "research"],
+  ["开始", [
+    ["找工作", "discover"], ["口碑调查", "research"],
     ["已看过", "records"],
   ]],
-  ["资料与设置", [
+  ["设置与资料", [
     ["我的简历", "resume"], ["匹配规则", "scores"],
     ["岗位来源", "sources"], ["模型设置", "models"],
   ]],
@@ -86,7 +87,7 @@ export function App() {
       </div>)}
       <div className="local-status"><span className={!serviceStatus.connected ? "dot error" : "dot"} />{serviceStatus.connected ? "个人工作空间 · 本地优先" : serviceStatus.message}</div>
     </>}>
-  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} weights={weights} onWeightsChange={setWeights} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "scores" && <MatchingRulesPage workspaceId={data?.workspaces[0]?.workspace_id} weights={weights} onApply={setWeights} />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 完全退出后不调度 · {buildInfo.label}</footer></section>
+  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} onResume={()=>setPage("resume")} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} weights={weights} onWeightsChange={setWeights} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "scores" && <MatchingRulesPage workspaceId={data?.workspaces[0]?.workspace_id} weights={weights} onApply={setWeights} />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 完全退出后不调度 · {buildInfo.label}</footer></section>
   </Workbench>;
 }
 
@@ -107,7 +108,13 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
     } catch (error) { onError(messageOf(error)); }
   }
   useEffect(() => { if (workspaceId) void window.jobfindsme!.listJobTracking(workspaceId).then(setItems).catch((error) => onError(messageOf(error))); }, [workspaceId, onError]);
-  return <><div className="heading-row"><div><h1>已看过</h1><p>回到你认真看过的机会。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div><div className="source-tabs">{[["read","已看过"],["saved","收藏"],["applied","已投递"]].map(([key,label]) => <button key={key} className={filter === key ? "active" : ""} onClick={() => setFilter(key)}>{label}</button>)}</div><div className="job-list section">{visibleItems.length ? visibleItems.map((item) => <article key={item.job.job_id}><div><strong>{item.job.title}</strong><span>{item.job.source.source_name}</span></div><p>{item.job.company} · {item.job.locations.join("/") || "地点未知"}</p><JobActions hasReport={reports.some(r=>reportMatchesJob(r,item.job))} tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,"apply_opened")} onResearch={()=>onResearch(item.job)} onError={onError}/></article>) : <div className="empty"><strong>暂无记录</strong><p>打开岗位详情后会保留阅读记录；收藏与投递状态独立保存。</p></div>}</div></>;
+  return <><div className="heading-row"><div><h1>已看过</h1><p>回到你认真看过的机会。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div>
+    <div className="source-tabs">{[["read","已看过"],["saved","收藏"],["applied","已投递"]].map(([key,label])=><button key={key} className={filter===key?"active":""} onClick={()=>setFilter(key)}>{label}</button>)}</div>
+    <div className="job-list section">{visibleItems.length?visibleItems.map(item=><article key={item.job.job_id}>
+      <div><strong>{item.job.title}</strong><span>{item.job.source.source_name}</span></div>
+      <p>{item.job.company} · {item.job.locations.join("/")||"地点未知"} · {formatSalary(item.job)}</p>
+      <JobActions hasReport={reports.some(report=>reportMatchesJob(report,item.job))} tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,"apply_opened")} onResearch={()=>onResearch(item.job)} onError={onError}/>
+    </article>):<div className="empty"><strong>暂无记录</strong><p>阅读过的岗位会留在这里；收藏和投递状态分别保存。</p></div>}</div></>;
 }
 
 function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
@@ -117,7 +124,7 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
   const [verifying, setVerifying] = useState<string>();
   const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCheckResult[];startedAt:string}>();
   const auditRunId=useRef("");
-  useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;setAudit(current=>current&&({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}));});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
+  useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;setAudit(current=>current?.running?({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}):current);});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
   const openBrowser = useOriginalBrowser();
   const platforms = data?.sources.filter(source => source.source_type === "platform") ?? [];
   const companies = data?.sources.filter(source => source.source_type === "company") ?? [];
@@ -144,10 +151,12 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
     try {
       const results=await window.jobfindsme!.checkAllSources(runId);
       if(auditRunId.current!==runId)return;
+      auditRunId.current="";
       setAudit({done:results.length,total:results.length,running:false,cancelled:results.some(result=>result.outcome==="cancelled"),rows:results,startedAt});
       onRefresh(await window.jobfindsme!.getBootstrap());
     } catch(error){
-      if(auditRunId.current===runId){setAudit(current=>current&&({...current,running:false,cancelled:true}));onError(messageOf(error));}
+      if(auditRunId.current===runId)setAudit(current=>current&&({...current,running:false,cancelled:true}));
+      onError(messageOf(error));
     }finally{if(auditRunId.current===runId)auditRunId.current="";}
   }
   function cancelInspect(){setAudit(current=>current&&({...current,cancelled:true}));void window.jobfindsme!.cancelAllSourceChecks().catch(error=>onError(messageOf(error)));}
@@ -155,7 +164,7 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
   return <>
     <div className="heading-row"><div><h1>岗位来源</h1><p>多选下次想检索的平台或公司官网，与发现岗位同步。已创建的定时任务不受影响。</p></div></div>
     <section className="panel source-audit"><div className="source-audit-heading"><div><h2>检查全部来源</h2><p className="note">按队列检查 4 个平台和 16 个公司官网；每源最多 8 秒、合计最多 45 秒，只探测一个岗位列表页。未登录、冷却或超预算的来源明确标为未检查，不把历史可用写成本次通过。</p></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>开始检查全部</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div>
-      {audit&&<><p role="status">{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"本次队列结束"} · 已处理 {audit.done}/{audit.total} · 本次通过 {audit.rows.filter(row=>row.outcome==="verified_now").length} · {new Date(audit.startedAt).toLocaleString()}</p><progress value={audit.done} max={audit.total} aria-label="来源检查进度"/><div className="source-audit-rows">{audit.rows.map(result=><div key={result.source.source_id}><strong>{result.source.name}</strong><span>{outcomeLabel(result)}<small>{result.evidence==="live"?"本次探测":result.evidence==="cache"?"最近缓存":result.evidence==="history"?"历史状态":"未探测"}</small></span><span>列表 {capabilityLabel(result.source.list_status)} · 详情 {capabilityLabel(result.source.detail_status)} · 字段 {capabilityLabel(result.source.fields_status)} · 网站续页 {capabilityLabel(result.source.pagination_status)}</span><span>{result.detail}{result.attempted_at?` · 处理 ${new Date(result.attempted_at).toLocaleTimeString()}`:""}{result.source.last_verified_at?` · 上次验证 ${new Date(result.source.last_verified_at).toLocaleString()}`:""}</span></div>)}</div></>}
+      {audit&&<><p role="status">{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"本次队列结束"} · 已处理 {audit.done}/{audit.total} · 本次通过 {audit.rows.filter(row=>row.outcome==="verified_now").length} · {new Date(audit.startedAt).toLocaleString()}</p><progress value={audit.done} max={audit.total} aria-label="来源检查进度"/><details className="source-audit-details"><summary>查看逐源结果 · {audit.rows.length} 条</summary><div className="source-audit-rows">{audit.rows.map(result=><div key={result.source.source_id}><strong>{result.source.name}</strong><span>{outcomeLabel(result)}<small>{result.evidence==="live"?"本次探测":result.evidence==="cache"?"最近缓存":result.evidence==="history"?"历史状态":"未探测"}</small></span><span>列表 {capabilityLabel(result.source.list_status)} · 详情 {capabilityLabel(result.source.detail_status)} · 字段 {capabilityLabel(result.source.fields_status)} · 网站续页 {capabilityLabel(result.source.pagination_status)}</span><span>{result.detail}{result.attempted_at?` · 处理 ${new Date(result.attempted_at).toLocaleTimeString()}`:""}{result.source.last_verified_at?` · 上次验证 ${new Date(result.source.last_verified_at).toLocaleString()}`:""}</span></div>)}</div></details></>}
     </section>
     <p className="source-selection-summary" role="status">已选 {selected.length} 个来源 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个来源"}</p><div className="source-tabs"><button className={tab === "platform" ? "active" : ""} onClick={() => setTab("platform")}>招聘平台 · {platforms.length}</button><button className={tab === "company" ? "active" : ""} onClick={() => setTab("company")}>公司官网 · {companies.length}</button></div>
     <section className="source-grid source-catalog">{rows.map(source => {
