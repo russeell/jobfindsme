@@ -25,7 +25,7 @@ export const sourceBrowserSpecs: Record<SourceBrowserId, {
     partition: "persist:jobfindsme-source-liepin",
   },
   zhilian: {
-    loginUrl: "https://passport.zhaopin.com/login",
+    loginUrl: "https://passport.zhaopin.com/login?bkUrl=https%3A%2F%2Fi.zhaopin.com%2Fblank%3Fhttps%3A%2F%2Fwww.zhaopin.com%2Findex%3FvalidateCampus%3D",
     allowedHosts: ["zhaopin.com"],
     partition: "persist:jobfindsme-source-zhilian",
   },
@@ -128,6 +128,10 @@ export function isAllowedSourceUrl(sourceId: SourceBrowserId, value: string): bo
   } catch {
     return false;
   }
+}
+
+export function sourceBrowserIdForUrl(value:string):SourceBrowserId|undefined {
+  return (Object.keys(sourceBrowserSpecs) as SourceBrowserId[]).find(id=>isAllowedSourceUrl(id,value));
 }
 
 export function isAllowedNavigationAbort(

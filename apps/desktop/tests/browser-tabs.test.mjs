@@ -7,7 +7,7 @@ import vm from 'node:vm';
 const file=new URL('../dist-electron/main/source-browser.js',import.meta.url);
 const nativeRequire=createRequire(file);
 class FakeView {
-  constructor(options){this.options=options;this.visible=false;const wc=new EventEmitter();this.webContents=wc;let urls=[],index=-1,closed=false;wc.getURL=()=>urls[index]||'';wc.getTitle=()=>wc.getURL();wc.isLoading=wc.isLoadingMainFrame=()=>false;wc.isDestroyed=()=>closed;wc.close=()=>{closed=true;};wc.setWindowOpenHandler=handler=>{wc.popup=handler;};wc.loadURL=async url=>{urls=urls.slice(0,index+1);urls.push(url);index++;};wc.reload=()=>{};let zoom=1;wc.setZoomFactor=v=>{zoom=v;};wc.getZoomFactor=()=>zoom;wc.executeJavaScript=async()=>({width:Math.max(1280,640/zoom),viewport:640/zoom});wc.navigationHistory={canGoBack:()=>index>0,canGoForward:()=>index<urls.length-1,goBack:()=>index--,goForward:()=>index++};FakeView.onCreate?.(this);}
+  constructor(options){this.options=options;this.visible=false;const wc=new EventEmitter();this.webContents=wc;let urls=[],index=-1,closed=false;wc.getURL=()=>urls[index]||'';wc.getTitle=()=>wc.getURL();wc.isLoading=wc.isLoadingMainFrame=()=>false;wc.isDestroyed=()=>closed;wc.close=()=>{closed=true;};wc.setWindowOpenHandler=handler=>{wc.popup=handler;};wc.loadURL=async url=>{urls=urls.slice(0,index+1);urls.push(url);index++;};wc.reload=()=>{};let zoom=1;wc.setZoomFactor=v=>{zoom=v;};wc.getZoomFactor=()=>zoom;wc.getUserAgent=()=>wc.userAgent||'Mozilla/5.0 Chrome/152';wc.setUserAgent=value=>{wc.userAgent=value;};wc.executeJavaScript=async()=>({width:Math.max(1280,640/zoom),viewport:640/zoom});wc.navigationHistory={canGoBack:()=>index>0,canGoForward:()=>index<urls.length-1,goBack:()=>index--,goForward:()=>index++};FakeView.onCreate?.(this);}
   setVisible(value){this.visible=value;}setBounds(bounds){this.bounds=bounds;}
 }
 const module={exports:{}};
@@ -39,11 +39,11 @@ test('foreground permits arbitrary HTTP(S) but background remains source-scoped'
 test('fit width is capped at 100 percent and idempotent from manual zoom levels',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);for(const start of [1.2,1,.6]){await m.command('zoom-reset');const command=start>1?'zoom-in':'zoom-out';for(let n=0;n<Math.round(Math.abs(start-1)*10);n++)await m.command(command);await m.command('fit-width');const fit=m.state().zoom;assert.equal(fit,.5);await m.command('fit-width');assert.equal(m.state().zoom,fit);}w.children[0].webContents.executeJavaScript=async()=>({width:640,viewport:640});await m.command('fit-width');assert.equal(m.state().zoom,1);m.destroy();});
 
 test('address navigation reuses its tab and session, supports back/forward, and rejects unsafe URLs',async()=>{
- const {w,m}=setup();await m.show('web',bounds,'https://example.com/');m.layout(bounds);const id=m.state().activeTabId,view=w.children[0];
- await m.navigateTab(id,a);assert.equal(m.state().tabs.length,1);assert.equal(m.state().activeTabId,id);assert.equal(w.children[0],view);assert.equal(m.state().url,a);assert.equal(m.state().canGoBack,true);
- await m.command('back');assert.equal(m.state().url,'https://example.com/');assert.equal(m.state().canGoForward,true);await m.command('forward');assert.equal(m.state().url,a);
+ const {w,m}=setup();await m.show('web',bounds,'https://example.com/');m.layout(bounds);const id=m.state().activeTabId,view=w.children[0];const other='https://docs.example.org/page';
+ await m.navigateTab(id,other);assert.equal(m.state().tabs.length,1);assert.equal(m.state().activeTabId,id);assert.equal(w.children[0],view);assert.equal(m.state().url,other);assert.equal(m.state().canGoBack,true);
+ await m.command('back');assert.equal(m.state().url,'https://example.com/');assert.equal(m.state().canGoForward,true);await m.command('forward');assert.equal(m.state().url,other);
  for(const url of ['file:///etc/passwd','javascript:alert(1)','http://localhost:8000'])await assert.rejects(m.navigateTab(id,url),/HTTP|本地/);
- await assert.rejects(m.navigateTab('closed',a),/关闭/);assert.equal(m.state().url,a);assert.equal(m.state().tabs.length,1);m.destroy();
+ await assert.rejects(m.navigateTab('closed',a),/关闭/);assert.equal(m.state().url,other);assert.equal(m.state().tabs.length,1);m.destroy();
 });
 
 test('BOSS observation never revives an expired session from a stale foreground DOM',async()=>{
@@ -72,4 +72,22 @@ test('career risk control pauses a source and never turns the failure into an em
  const {m}=setup();let loads=0;
  FakeView.onCreate=v=>{const load=v.webContents.loadURL;v.webContents.loadURL=async url=>{loads++;await load(url);};v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[],next:false,empty:false,loading:false,blocked:'访问过于频繁'}:false;};
  try{const input={keyword:'AI',city:'',maxPages:1,seconds:5};await assert.rejects(m.collectCareer('company_14',input),/risk_control/);await assert.rejects(m.collectCareer('company_14',input),/source_backoff/);assert.equal(loads,1);}finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+
+test('search tab entering a registered source opens its persistent session',async()=>{
+ const {w,m}=setup();await m.show('web',bounds,'https://www.bing.com/search?q=jobs');m.layout(bounds);
+ const web=m.state().activeTabId;
+ const result=await m.navigateTab(web,'https://www.zhaopin.com/');
+ assert.equal(result.tabs.length,2);
+ assert.equal(result.tabs.find(t=>t.id===web).sourceId,'web');
+ assert.equal(result.tabs.find(t=>t.id===result.activeTabId).sourceId,'zhilian');
+ assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-source-zhilian');
+ m.destroy();
+});
+
+test('Zhilian foreground user agent removes non-header characters for its login widget',async()=>{
+ const {m}=setup();let used;
+ FakeView.onCreate=view=>{view.webContents.getUserAgent=()=> 'Mozilla/5.0 JobFindsMe测试版/0.1 Chrome/152 Electron/44 Safari/537.36';view.webContents.setUserAgent=value=>{used=value;};};
+ try{await m.show('zhilian',bounds,'https://www.zhaopin.com/');assert.equal(used,'Mozilla/5.0 JobFindsMe/0.1 Chrome/152 Electron/44 Safari/537.36');}finally{FakeView.onCreate=undefined;m.destroy();}
 });

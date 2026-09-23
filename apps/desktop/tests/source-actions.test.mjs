@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildSourceSearchUrl,
   sanitizeSourceActionPage,
-  sourceListExtractionScript,
+  sourceListExtractionScript, passiveSourceObservationScript,
 } from "../dist-electron/main/source-actions.js";
 
 test("browser source actions build only fixed allowlisted search targets", () => {
@@ -55,4 +55,14 @@ test('named cities are never sent as opaque platform city codes',()=>{
  const url=new URL(buildSourceSearchUrl(id,'工程师','上海',1));
  assert.equal(url.searchParams.has(id==='zhilian'?'jl':'jobArea'),false);
  }
+});
+
+
+test('passive source observation separates splash, login form, and readable list without searches',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const script=passiveSourceObservationScript('zhilian');
+ function observe(text,inputs,cards){return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},document:{body:{innerText:text},querySelectorAll(selector){return Array.from({length:selector.startsWith('input')?inputs:cards},()=>({}));}}});}
+ assert.equal(observe('找风口工作，就上智联招聘',0,0).kind,'splash');
+ assert.equal(observe('求职者登录',2,0).kind,'login');
+ assert.equal(observe('搜索岗位',0,3).kind,'list');
 });

@@ -208,3 +208,23 @@ export function sanitizeSourceActionPage(
     next_cursor: raw.hasNext ? String(page + 1) : null,
   };
 }
+
+
+export type PassiveSourceObservation = {
+  url:string; kind:"list"|"login"|"challenge"|"splash"|"unknown"; cardCount:number; formCount:number;
+};
+
+// Reads the already loaded foreground document. It never clicks, navigates or searches.
+export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):string {
+  return `(() => {
+    const text=(document.body?.innerText||'').slice(0,4000);
+    const cardCount=${JSON.stringify(sourceId)}==='wuyou'
+      ? document.querySelectorAll('.joblist-item,[class*="joblist-item"]').length
+      : document.querySelectorAll('.joblist-box__item,.positionlist__item,[class*="joblist"] article').length;
+    const formCount=document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]').length;
+    const challenge=/滑动验证|安全验证|访问过于频繁|captcha|请完成验证/i.test(text);
+    const login=/passport\.zhaopin\.com|login\.51job\.com/.test(location.hostname) || (/请登录|登录后查看/.test(text)&&!cardCount);
+    const splash=!cardCount&&!formCount&&/找风口工作|登录|招聘/.test(text)&&text.length<1200;
+    return {url:location.href,kind:challenge?'challenge':cardCount?'list':formCount||login?'login':splash?'splash':'unknown',cardCount,formCount};
+  })()`;
+}

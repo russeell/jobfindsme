@@ -178,3 +178,9 @@ test('Moka tenants stay isolated',()=>{
  assert(!isAllowedSourceUrl('company_14','https://app.mokahr.com/social-recruitment/high-flyer/140576#/job/a'));
  assert(!isAllowedSourceUrl('company_12','https://app.mokahr.com/social-recruitment/high-flyer/140576evil#/job/a'));
 });
+
+
+test('job seeker entry uses the observed official login route in its persistent partition',()=>{
+ assert.equal(sourceBrowserSpecs.zhilian.loginUrl,'https://passport.zhaopin.com/login?bkUrl=https%3A%2F%2Fi.zhaopin.com%2Fblank%3Fhttps%3A%2F%2Fwww.zhaopin.com%2Findex%3FvalidateCampus%3D');
+ assert.equal(sourceBrowserSpecs.zhilian.partition,'persist:jobfindsme-source-zhilian');
+});
