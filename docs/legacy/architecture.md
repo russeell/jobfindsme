@@ -1,3 +1,5 @@
+> Compatibility documentation for the retained CLI/MCP. The current product is the [desktop app](../../README.md). Native plugin marketplace distribution was retired in D47. Historical platform claims below do not establish desktop source availability.
+
 # Architecture
 
 Agent Job Search is a **local-first job search and incremental tracking engine
@@ -11,8 +13,8 @@ Everything the user ever hears about reduces to four concepts:
 | Concept | 中文 | Meaning | Owned by |
 |---|---|---|---|
 | Profile | 我是谁 | resume parsed into reviewable facts (skills, experience, education) | `profiles/service.py` |
-| Search | 我找什么 | role, locations, salary, track, type — the current preferences | `core/search.py` |
-| Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `tracking.py` |
+| Search | 我找什么 | role, locations, salary, track, type — the current preferences | `search/orchestrator.py` |
+| Job | 找到了什么 | a discovered posting with evidence, signals, and apply link | `search/tracking.py` |
 | Tracking | 和上次相比有什么变化 | new / changed / reopened / closed, and applied-saved-rejected state | `tracking` (impressions, states) |
 
 Internal concepts — `Workspace`, `ActiveContext`, `SearchPlan ID`,
@@ -44,7 +46,7 @@ Where each decision happens:
   plus evidence coverage
   bonus from skill overlap, experience, degree, liveness, and salary
   visibility)
-- **记录变化** — `tracking.py` (select_and_record: new, changed,
+- **记录变化** — `search/tracking.py` (select_and_record: new, changed,
   reopened, closed, repeated suppression; applied jobs are never
   re-suggested)
 - **返回 Agent** — `mcp/responses.py` (bounded structured facts in
@@ -95,16 +97,10 @@ skills/agent-job-search/SKILL.md                 canonical behavior source
   └─ src/jobfindsme/resources/agent_job_search/  generated wheel mirror
 
 .mcp.json                                 shared stdio MCP definition
-.codex-plugin/plugin.json                 Codex plugin marketplace manifest
-.claude-plugin/marketplace.json
-  + .claude-plugin/plugin.json            Claude Code plugin marketplace manifest
-.agents/plugins/marketplace.json          Agents SDK plugin marketplace manifest
-.cursor-plugin/plugin.json                Cursor plugin manifest
 ```
 
 One standard MCP config plus one Skill serves every MCP-compatible host.
-Native plugin marketplaces (Codex / Claude Code) install the Skill and the
-MCP config in a single command; `agent-job-search connect` covers every other host.
+The compatibility command `agent-job-search connect` installs the Skill and config.
 `scripts/sync_skill.py --check` and distribution tests enforce the boundary.
 
 Agent behavior has a separate gate from Python correctness. Fixed prompts and
@@ -119,12 +115,12 @@ are required for release compatibility claims.
 | Path | Role |
 |---|---|
 | `contracts/` | domain types, one file per domain, unified exports |
-| `core/search.py` | search use case: preferences → refresh → match → radar |
+| `search/orchestrator.py` | search use case: preferences → refresh → match → radar |
 | `profiles/` | resume extraction + parser + service |
-| `matching.py` | hard filter, signal extraction, deterministic coarse rank |
+| `search/matching.py` | hard filter, signal extraction, deterministic coarse rank |
 | `importing/` | connectors output → normalized canonical jobs |
 | `connectors/` | BOSS直聘、猎聘、智联招聘、前程无忧的来源适配器 |
-| `tracking.py` | impressions (incremental radar) and user job state |
+| `search/tracking.py` | impressions (incremental radar) and user job state |
 | `presentation/` | deterministic rendering of search results and job blocks |
 | `mcp/` | protocol entry (server.py), contracts (schemas.py), tools (tools.py), responses (responses.py) |
 | `installer.py` | compatibility installation for hosts without native plugins |

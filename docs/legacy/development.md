@@ -1,3 +1,5 @@
+> Compatibility documentation for the retained CLI/MCP. The current product is the [desktop app](../../README.md). Native plugin marketplace distribution was retired in D47. Historical platform claims below do not establish desktop source availability.
+
 # Development
 
 ## Setup
@@ -40,7 +42,7 @@ python scripts/sync_skill.py
 python -m pytest tests/plugins tests/evaluation/test_agent_behavior.py
 ```
 
-The same Skill is consumed by the Codex, Claude, and Cursor plugin manifests.
+The same Skill remains available to compatibility CLI installations.
 The old host-specific `connect` installer is a compatibility adapter, not a
 second Skill source. Fixture behavior tests are deterministic CI evidence;
 cross-Agent release claims require redacted `live_agent` transcripts from all
@@ -49,7 +51,7 @@ three hosts. See `evaluation/agent_behavior/data/README.md`.
 ## Release
 
 Version lives in `pyproject.toml`, the offline pin in `scripts/install.sh`,
-the plugin manifests, and the git tag (the release workflow verifies the
+and the git tag (the release workflow verifies the
 tag and package version). A release run builds the wheel, verifies it
 contains no retired modules, runs the installed-package and pre-0.12 SQLite
 compatibility smokes, and publishes the GitHub release.

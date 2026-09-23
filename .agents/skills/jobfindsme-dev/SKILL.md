@@ -12,6 +12,8 @@ description: 按项目方案逐步开发 JobFindsMe 本地桌面求职工具，�
 
 开始一轮工作，读取项目 `AGENTS.md`、`docs/desktop/README.md`、`docs/desktop/DEVELOPMENT.md`、`docs/desktop/tasks.json` 和 `docs/desktop/HANDOFF.md`。
 初次使用或方案发生变动时再完整读取 `REFACTOR.md`、`TECHNICAL.md`；后续按任务查阅相关章节。
+目录与兼容边界见 `docs/desktop/STRUCTURE.md`：Python search/sources、Electron main/browser/sources/backend/security、renderer 业务目录与 shared。旧 CLI/MCP 文档位于 `docs/legacy/`，插件市场清单已撤下，但有外部入口的兼容模块和测试仍保留。D47 不恢复自动化、不拆组装入口，不以减少文件数为由删除迁移或有效资源。
+
 在写代码前检查 git 状态，保留用户现有改动；目标分支为 `codex/desktop-refactor`，已处于其他用户工作分支时不擅自切换。
 
 最新版 UI 已归档为 `docs/desktop/ui/jobfindsme-desktop.html`，配套差距见 `docs/desktop/ui/README.md`。沿用其布局与灰白配色，补齐后续确认的需求；不要重新从零设计 UI，也不要把原型的示例数据或模拟动作当成正式功能。

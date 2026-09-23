@@ -88,3 +88,12 @@ CLI/MCP/installer/doctor/branding/技能资源：pyproject scripts、python -m j
 1. 路径迁移：导入解析、Python 回归、TS/Node 与构建通过后本地提交。
 2. 有限删除与文档：保留兼容测试，校验分发入口和文档后本地提交。
 3. 集成：重建 Python runtime 与 Electron 包，包资源/隐私审计和隔离原生启动；不执行真实批量检索，记录实际限制后提交证据。
+
+## 文档迁移
+
+- `README.md` → `docs/legacy/README.zh.md`（根 README 另写当前桌面入口）。
+- `README.en.md` → `docs/legacy/README.en.md`（根 README 另写当前桌面入口）。
+- `docs/architecture.md` → `docs/legacy/architecture.md`（根 README 另写当前桌面入口）。
+- `docs/development.md` → `docs/legacy/development.md`（根 README 另写当前桌面入口）。
+
+旧 AGENTS 中已被桌面方案覆盖的长篇产品描述移除；现存 CLI 行为仍以其 canonical Skill 为准，无需复制另一份历史说明。

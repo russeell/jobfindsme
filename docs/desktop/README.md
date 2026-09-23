@@ -7,6 +7,7 @@
 | [重构方案](REFACTOR.md) | 做什么、保留什么、何时移除旧代码 |
 | [技术方案](TECHNICAL.md) | 架构、目录、数据与实现约束 |
 | [项目管理方案](DEVELOPMENT.md) | 分阶段推进、适量验证、交接 |
+| [目录与清理清单](STRUCTURE.md) | 当前 tree、职责边界和保留理由 |
 | [任务清单](tasks.json) | 后续管理 skill 的机器可读入口 |
 
 开发主目录：`/Users/russeell/Documents/开源项目开发/jobfindsme`。

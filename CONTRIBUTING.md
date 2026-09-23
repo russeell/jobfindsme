@@ -1,6 +1,8 @@
 # Contributing
 
-## Agent Skill
+Desktop development follows [DEVELOPMENT](docs/desktop/DEVELOPMENT.md), [tasks](docs/desktop/tasks.json) and the [directory manifest](docs/desktop/STRUCTURE.md). Run relevant Python tests, desktop type/build and Node checks. Preserve migrations, history and account isolation.
+
+## Retained CLI/MCP Skill
 
 `skills/agent-job-search/SKILL.md` is the only source of Agent behavior. Do not edit
 the packaged copy under `src/jobfindsme/resources/` directly and do not create
@@ -26,5 +28,4 @@ Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`.
 3. Run `python -m scripts.validate_taxonomy` and `python -m pytest tests/test_taxonomy.py`.
 4. Include one realistic resume or job-description example in the pull request.
 
-The default matcher remains deterministic and requires no model API. Semantic
-matching can be added later as an optional, separately evaluated provider.
+The default matcher remains deterministic and requires no model API. Desktop model reranking is opt-in and separately validated.

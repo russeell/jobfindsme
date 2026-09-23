@@ -66,35 +66,9 @@ Electron 管窗口、浏览器、进程生命周期和系统通知；Python 复�
 建议本地 API：`POST /search-runs`、`GET /search-runs/{id}/jobs?page=`、`GET /jobs/{id}`、`POST /jobs/{id}/events`；`/resumes`、`/resume-versions`、`/edit-sessions`、`/research-runs`、`/sources`、`/tasks`、`/model-connections` 按用例扩展。
 长任务返回任务 ID，由统一事件流报告进度、取消和失败；不让界面长时间阻塞。
 
-## 6. 目标目录（规划，未创建）
+## 6. 当前目录（D47）
 
-```text
-jobfindsme/
-├── apps/desktop/
-│   ├── main/              # 窗口、会话、浏览器桥、Python 子进程
-│   ├── preload/           # 最小 IPC 接口
-│   └── renderer/
-│       ├── features/      # jobs / research / resumes / sources / tasks / settings
-│       └── components/    # 双栏、分页、差异视图、简历预览
-├── src/jobfindsme/
-│   ├── core/              # 现有搜索编排及用例
-│   ├── connectors/        # 平台、公司官网、浏览器适配
-│   ├── importing/         # 归一化、去重与岗位存储
-│   ├── profiles/          # 现有解析、事实核对 + 简历版本
-│   ├── resume_editor/     # Prompt 会话、补丁、模板、导出
-│   ├── research/          # JD、口碑证据、报告
-│   ├── models/            # 模型协议与输出校验
-│   ├── scheduler/         # 本地任务与运行记录
-│   ├── desktop_api/       # 本地接口、鉴权、事件流
-│   ├── matching.py        # 先原位扩展，复杂后再拆包
-│   ├── tracking.py        # 展示、阅读、收藏、投递
-│   ├── contracts/         # 类型契约
-│   ├── storage.py
-│   └── migrations/
-├── tests/                 # 核心单元、边界集成、少量桌面冒烟
-├── evaluation/            # 匹配与研究质量样例
-└── docs/desktop/           # 本方案与后续 skill 任务入口
-```
+实际目录和逐文件迁移映射见 [STRUCTURE](STRUCTURE.md)。Python search/sources 归组检索业务和来源准入；Electron main/browser、sources、backend、security 区分会话、提取、进程通信和密钥。renderer/src 保留 App 与全局布局，业务目录为 search/research/resume/settings，共用 UI 在 shared。跨端 IPC 契约仍在 desktop/shared。
 
 技术参考：[WebContentsView](https://www.electronjs.org/docs/latest/api/web-contents-view)、[独立持久 session](https://www.electronjs.org/docs/latest/api/session)。仅证明框架能力，不证明招聘平台兼容性。
 
@@ -185,3 +159,7 @@ BOSS 使用 `boss-page.ts` 的已加载DOM解析及 `boss-collector.ts` 单来�
 ## D46 界面契约
 
 主导航以“找工作”“口碑调查”为两条入口。筛选及来源选择仍复用 D36 状态与后端门禁；界面只改变呈现顺序。已有调查报告优先显示，证据按公司/岗位主题分组，原链接、发布时间、范围随摘录展示；新调查主题和来源说明按需展开，无证据仅有一个空态。简历当前版优先，预览与历史按需展开。来源检查完成后以返回的最终结果覆盖进度列表，结束时清空 run ID；迟到的进度通知不再追加，保证逐源行数等于队列结果数。无数据推断、来源能力扩大或自动投递。
+
+## D47 目录归组与有限清理（当前授权）
+
+实际目录及迁移映射以 [STRUCTURE](STRUCTURE.md) 为准。本轮不改变产品行为或数据库；旧插件市场清单撤下，CLI/MCP/安装器及资源因外部入口保留，后续退役需独立处理。main/index.ts、desktop_api/app.py 和 App.tsx 不拆分。历史章节中的旧文件名可通过迁移表定位。
