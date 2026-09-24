@@ -6,9 +6,9 @@ JobFindsMe 是一个本地桌面求职工具，把岗位检索、岗位研究和
 
 [English](README.en.md) · [开始使用](#开始使用) · [开发文档](docs/desktop/README.md)
 
-![JobFindsMe 岗位研究输入框：合成岗位与双主题](docs/desktop/evidence/D52/composer-start-focused-default.jpg)
+![JobFindsMe 岗位研究输入框：合成岗位与双主题](docs/images/jobfindsme-research.jpg)
 
-*D52 当前界面，使用隔离测试环境的合成岗位；不代表真实招聘或企业评价。*
+*界面示意，使用隔离测试环境的合成岗位；不代表真实招聘或企业评价。*
 
 ## 找工作，少切几个窗口
 

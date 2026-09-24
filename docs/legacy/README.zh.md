@@ -148,7 +148,7 @@ Chrome：智联读取真实搜索页，前程无忧由真实搜索页发起同�
 
 四来源的实时可用性会随平台安全策略和本机登录状态变化。项目不会把缓存或
 被拦截响应伪装成实时结果；每次搜索都返回逐来源状态。最新实盘报告见
-[four-source search report](../../evaluation/evidence/latest_four_source_search.md)。
+[four-source search report](https://github.com/russeell/jobfindsme/blob/1beb7dbe4c465ade47452ae706de487a3582b0eb/evaluation/evidence/latest_four_source_search.md)。
 
 ---
 
