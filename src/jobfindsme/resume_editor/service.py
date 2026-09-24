@@ -392,6 +392,7 @@ def _register_cjk_font(pdfmetrics, ttfont) -> str:
     candidates = (
         Path("/System/Library/Fonts/STHeiti Light.ttc"),
         Path("/System/Library/Fonts/Supplemental/Songti.ttc"),
+        Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),
         Path("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"),
     )
     for candidate in candidates:
@@ -404,7 +405,7 @@ def _register_cjk_font(pdfmetrics, ttfont) -> str:
             except Exception:
                 continue
     raise ResumeEditorError(
-        "PDF export requires an installed Chinese font (PingFang/Heiti/Noto CJK)"
+        "PDF export requires a TrueType Chinese font (PingFang/Heiti/WenQuanYi)"
     )
 
 
