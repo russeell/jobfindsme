@@ -63,7 +63,7 @@ def _topic_queries(source_id: str, topics: tuple[str, ...], title: str, question
         return queries
     queries = []
     if question:
-        queries.append(("job" if "job" in topics else "company", "question", f'"{title[:80]}" {question}', None))
+        queries.append(("job" if "job" in topics else "company", "question", f'"{title[:80]}" {question}' if title else question, None))
     if "company" in topics:
         queries.extend((
             ("company", "positive", "员工评价 优点 正面 认可", None),
@@ -358,7 +358,7 @@ class ResearchService:
         self,
         *,
         workspace_id: str,
-        job_id: str,
+        job_id: str | None = None,
         resume_version_id: str | None = None,
         team: str | None = None,
         source_ids: tuple[str, ...] = ("maimai", "offershow", "kanzhun"),
@@ -366,6 +366,7 @@ class ResearchService:
         directions: tuple[str, ...] = tuple(DIRECTIONS),
         topics: tuple[str, ...] = (),
         context_company: str | None = None,
+        context_title: str | None = None,
         context_description: str | None = None,
         interest_question: str | None = None,
         cancellation: CancellationToken | None = None,
@@ -379,21 +380,26 @@ class ResearchService:
             key not in DIRECTIONS for key in directions
         ) or any(key not in RESEARCH_TOPICS for key in topics):
             raise ResearchError("请填写兴趣问题或选择调查方向。")
-        job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
-        resume = self._resume(workspace_id, resume_version_id, required=False)
+        job = self.jobs.get(workspace_id=workspace_id, job_id=job_id) if job_id else None
+        if job is None and (not context_company or not context_company.strip()):
+            raise ResearchError("请先说明要研究的公司名称，问题会保留。")
+        if job is None and "job" in topics and not (context_title or "").strip():
+            raise ResearchError("研究具体岗位时，请说明岗位名称或选择已保存岗位。")
+        resume = self._resume(workspace_id, resume_version_id, required=False) if job else None
         report_id = f"research_{uuid4().hex}"
         now = datetime.now(UTC).isoformat()
-        company = (context_company or job.company).strip()
-        if company in {"公司未知", "未知", "BOSS直聘"}:
+        company = (context_company or (job.company if job else "")).strip()
+        if company in {"公司未知", "未知", "某公司", "这家公司", "该公司", "BOSS直聘"}:
             raise ResearchError("公司名称未知，请先读取岗位原页或补充公司名称。")
-        description = (context_description or job.description).strip()
+        description = (context_description or (job.description if job else "")).strip()
         # Only an explicitly labelled team in the JD can become a query scope.
         team_match = re.search(
             r"(?:部门|团队)\s*[:：]\s*([^\n。；]{2,40})", description
         )
         query_team = team or (team_match.group(1).strip() if team_match else None)
         job_context = {
-            "title": job.title,
+            "scope": "job" if job else "company",
+            "title": job.title if job else (context_title or "").strip(),
             "company": company,
             "description": description,
             "interest_question": question or None,
@@ -402,16 +408,13 @@ class ResearchService:
                 ["business", "listing", "positive", "negative", "workload", "benefits"]
                 if "company" in topics else []
             ) + (["role", "development"] if "job" in topics else []),
-            "url": job.apply_url,
+            "url": job.apply_url if job else "",
             "team": query_team,
-            "locations": list(job.locations),
+            "locations": list(job.locations) if job else [],
             "supplemented_by_user": bool(context_company or context_description),
-            "canonical_url": canonical_job_url(job.apply_url),
-            "job_snapshot": {
-                **job.model_dump(mode="json"),
-                "company": company,
-                "description": description,
-            },
+            "canonical_url": canonical_job_url(job.apply_url) if job else "",
+            "job_snapshot": ({**job.model_dump(mode="json"), "company": company,
+                              "description": description} if job else None),
         }
         try:
             candidates, source_statuses = self.evidence_search.search(
@@ -443,12 +446,12 @@ class ResearchService:
             )
         ]
         evidence.extend(
-            self._user_evidence(report_id, job.company, team, item, now)
+            self._user_evidence(report_id, company, team, item, now)
             for item in user_evidence
         )
         evidence = list({item["evidence_id"]: item for item in evidence}.values())
-        jd_facts, resume_observations, rewrites, interviews = self._guidance(
-            job=job, resume=resume
+        jd_facts, resume_observations, rewrites, interviews = (
+            self._guidance(job=job, resume=resume) if job else ([], [], [], [])
         )
         if "job" in topics:
             skills = list(extract_skills(description))[:5]
@@ -526,9 +529,11 @@ class ResearchService:
                 (workspace_id,),
             ).fetchall()
             job_context["version_number"] = 1 + sum(
-                row["job_id"] == job_id
-                or canonical_job_url(json.loads(row["job_context_json"]).get("url", ""))
-                == job_context["canonical_url"]
+                (bool(job_id) and (row["job_id"] == job_id or bool(job_context["canonical_url"])
+                 and canonical_job_url(json.loads(row["job_context_json"]).get("url", ""))
+                 == job_context["canonical_url"]))
+                or (not job_id and row["job_id"] is None
+                    and json.loads(row["job_context_json"]).get("company", "").casefold() == company.casefold())
                 for row in previous
             )
             connection.execute(
@@ -729,6 +734,8 @@ class ResearchService:
         """Build a redacted prompt; JD and web excerpts are untrusted data."""
 
         report = self.get_report(workspace_id=workspace_id, report_id=report_id)
+        if not report["job_id"]:
+            raise ResearchError("公司研究没有岗位 JD，不能生成岗位简历改写。")
         job = self.jobs.get(workspace_id=workspace_id, job_id=report["job_id"])
         resume = self._resume(workspace_id, report["resume_version_id"])
         resume_text = "\n".join(

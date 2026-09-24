@@ -116,6 +116,48 @@ def test_research_with_no_evidence_never_invents_reputation(tmp_path):
     assert any("不得生成公司口碑结论" in item for item in report["limitations"])
 
 
+def test_company_question_without_job_keeps_real_evidence_and_history(tmp_path):
+    search = FakeEvidenceSearch([
+        EvidenceCandidate(url="https://maimai.cn/article/company-example", platform="脉脉",
+                          title="合成科技福利", excerpt="作者称所在团队有弹性工作时间；具体团队未核实。",
+                          verification_level="original_body_verified", topic="company",
+                          search_angle="question")
+    ], {"maimai": "available"})
+    workspace, _, service = setup_research(tmp_path, search)
+    with service.database.connect() as connection:
+        before = connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
+    first = service.create_report(workspace_id=workspace.workspace_id, job_id=None,
+                                  context_company="合成科技", interest_question="合成科技福利如何？",
+                                  topics=("company",), directions=(), source_ids=("maimai",))
+    second = service.create_report(workspace_id=workspace.workspace_id, job_id=None,
+                                   context_company="合成科技", interest_question="经营情况如何？",
+                                   topics=("company",), directions=(), source_ids=("maimai",))
+    with service.database.connect() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == before
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    assert first["job_id"] is None and first["job_snapshot"] is None
+    assert first["job_context"]["scope"] == "company"
+    assert first["evidence"][0]["verification_status"] == "independently_retrieved"
+    assert second["version_number"] == first["version_number"] + 1
+    assert service.list_reports(workspace_id=workspace.workspace_id)[0]["report_id"] == second["report_id"]
+
+
+def test_company_question_api_requires_explicit_company(tmp_path):
+    workspace, _, service = setup_research(tmp_path, FakeEvidenceSearch([], {"maimai": "no_public_evidence"}))
+    client = TestClient(create_app(token="fixture-token", database_path=service.database.path,
+                                   research_evidence_search_override=FakeEvidenceSearch([], {"maimai": "no_public_evidence"})))
+    headers = {"Authorization": "Bearer fixture-token"}
+    base = {"workspace_id": workspace.workspace_id, "interest_question": "经营与福利如何？",
+            "topics": ["company"], "directions": [], "source_ids": ["maimai"]}
+    missing = client.post("/v1/research-runs", headers=headers, json=base)
+    assert missing.status_code == 409
+    assert "公司名称" in missing.json()["detail"]
+    result = client.post("/v1/research-runs", headers=headers,
+                         json={**base, "context_company": "合成科技"})
+    assert result.status_code == 200
+    assert result.json()["job_id"] is None
+
+
 def test_research_model_prompt_is_redacted_and_result_is_schema_checked(tmp_path):
     workspace, job, service = setup_research(
         tmp_path,

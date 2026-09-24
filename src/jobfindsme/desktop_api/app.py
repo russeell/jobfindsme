@@ -460,11 +460,12 @@ class ResearchCorrectionRequest(StrictResponse):
 
 class ResearchRunRequest(StrictResponse):
     context_company: str | None = Field(default=None, max_length=300)
+    context_title: str | None = Field(default=None, max_length=300)
     context_description: str | None = Field(default=None, max_length=30000)
     interest_question: str | None = Field(default=None, max_length=300)
     topics: list[Literal["company", "job"]] = Field(default_factory=list, max_length=2)
     workspace_id: str
-    job_id: str
+    job_id: str | None = None
     resume_version_id: str | None = None
     team: str | None = Field(default=None, max_length=160)
     directions: list[Literal["role", "workload", "leave", "care"]] = Field(
@@ -1857,6 +1858,7 @@ def create_app(
                 directions=tuple(request.directions),
                 topics=tuple(request.topics),
                 context_company=request.context_company,
+                context_title=request.context_title,
                 context_description=request.context_description,
                 interest_question=request.interest_question,
                 source_ids=tuple(request.source_ids),

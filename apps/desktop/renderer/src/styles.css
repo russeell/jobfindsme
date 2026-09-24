@@ -336,11 +336,16 @@ h3 { font-size:14px; }
 .research-mount:not([hidden]) {flex:1;min-height:0;min-width:0;}
 .research-topbar-actions {display:flex;align-items:center;justify-content:flex-end;min-width:0;margin-left:auto;}
 .research-topbar-actions:empty {display:none;}
-.research-topbar-actions .button-row {display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;}
+.research-topbar-actions .button-row {display:flex;align-items:center;gap:5px;flex-wrap:nowrap;justify-content:flex-end;}
 .research-topbar-actions button {white-space:nowrap;font-size:11px;padding:5px 8px;}
+.research-more {position:relative;}
+.research-more summary {list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:5px 8px;font-size:11px;white-space:nowrap;}
+.research-more summary::-webkit-details-marker {display:none;}
+.research-more-menu {position:absolute;right:0;top:calc(100% + 5px);z-index:10;display:grid;gap:4px;min-width:120px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:0 8px 25px #0002;}
 .topbar:has(.research-topbar-actions:not(:empty)) {gap:8px;padding-inline:16px;height:auto;min-height:53px;}
 .topbar:has(.research-topbar-actions:not(:empty)) > .pill {display:none;}
-@media(max-height:650px){.research-composer {gap:5px;padding:7px 12px}.research-composer textarea {height:48px;min-height:40px;max-height:80px}.research-composer-help {display:none}.research-reading {padding-bottom:12px}}
+.topbar:has(.research-topbar-actions:not(:empty)) > span:first-child {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+@media(max-height:650px){.research-composer {gap:4px;padding:7px 10px}.research-composer textarea {min-height:40px;max-height:72px}.research-scroll-region {padding-bottom:10px}}
 .discovery-mount:not([hidden]), .discovery-page { flex:1; min-height:0; display:flex; flex-direction:column; }
 .discovery-controls { flex-shrink:0; max-height:46%; overflow:auto; overflow-x:hidden; }
 .discovery-controls .searchbar { margin-top:16px; }

@@ -25,6 +25,7 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
   const legacyEntries=entries.filter(item=>!item.context?.research_topic);
   const hasPositive=companyEntries.some(item=>item.context?.search_angle==="positive");
   const hasNegative=companyEntries.some(item=>item.context?.search_angle==="negative");
+  const showCompanySection=topics.includes("company")&&!!entries.length&&(!!companyEntries.length||!questionEntries.length);
   async function save(){
     if(!report||!editing)return;
     setBusy(true);setMessage("");
@@ -47,20 +48,21 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
     </article>;
   }
   return <div className="research-reading">
-    <p className="research-overview">{entries.length?`本次保存 ${entries.length} 条可追溯材料。请按来源时间、公司或团队范围核对。`:
-      "本次没有取得可核对的公开原文。来源受限或暂无结果不代表相关信息不存在；可调整公司全称后再次研究。"}</p>
-    {report?.job_context?.interest_question&&<section className="research-question-result" aria-label="本次问题的检索结果"><span className="research-eyebrow">本次追问</span><h2>{report.job_context.interest_question}</h2><p>{verifiedQuestionCount?`有 ${verifiedQuestionCount} 条与问题相关的原页材料；能确认存在下列公开陈述，但还不能据此确定具体团队或岗位情况。请核对时间与适用范围。`:"本次没有取得可核对的直接材料，暂不能回答这个问题；可调整问题或打开来源核对。"}</p>{questionEntries.map(card)}</section>}
-    {topics.includes("company")&&<section className="research-reading-section"><div className="research-section-heading"><span>01</span><h2>公司情况</h2></div>
+    <p className="research-overview">{entries.length?`已保存 ${entries.length} 条可追溯材料；请核对来源、时间及适用范围。`:
+      "本次未取得可核对的公开原文；相关结论保持未知。来源受限不代表信息不存在。"}</p>
+    {report?.job_context?.interest_question&&<section className="research-question-result" aria-label="本次问题的检索结果"><span className="research-eyebrow">本次问题</span><h2>{report.job_context.interest_question}</h2>{verifiedQuestionCount?<p>找到 {verifiedQuestionCount} 条相关原页陈述；团队与岗位适用性仍需核对。</p>:entries.length?<p>现有材料未直接回答这个问题。</p>:null}{questionEntries.map(card)}</section>}
+    {showCompanySection&&<section className="research-reading-section"><div className="research-section-heading"><span>01</span><h2>公司情况</h2></div>
       <p className="research-section-intro">经营与上市信息优先看公开披露；工作体验来自个人陈述，不能代表整个公司。</p>
-      {companyEntries.length?<div className="research-angles">{companyAngles.map(([angle,label])=>{const found=companyEntries.filter(item=>item.context?.search_angle===angle);return found.length?<section key={angle} className="research-angle"><h3>{label}</h3>{found.map(card)}</section>:null;})}</div>:<p className="research-unknown">本次未取得可核对的公司原文；经营情况、上市状态与员工体验均保持未知。</p>}
+      {companyEntries.length?<div className="research-angles">{companyAngles.map(([angle,label])=>{const found=companyEntries.filter(item=>item.context?.search_angle===angle);return found.length?<section key={angle} className="research-angle"><h3>{label}</h3>{found.map(card)}</section>:null;})}</div>:<p className="research-unknown">现有材料未覆盖公司经营与员工体验。</p>}
       {companyEntries.length>0&&(!companyEntries.some(item=>item.context?.search_angle==="business")||!companyEntries.some(item=>item.context?.search_angle==="listing"))&&<p className="research-unknown">{!companyEntries.some(item=>item.context?.search_angle==="business")?"经营情况未核实。":""} {!companyEntries.some(item=>item.context?.search_angle==="listing")?"上市状态未核实。":""}</p>}
       {hasPositive&&hasNegative&&<p className="research-conflict">正面与负面陈述并存；请结合发表时间、团队及岗位范围分别阅读。</p>}
     </section>}
-    {topics.includes("job")&&<section className="research-reading-section"><div className="research-section-heading"><span>{topics.includes("company")?"02":"01"}</span><h2>岗位内容与发展</h2></div>
+    {topics.includes("job")&&<section className="research-reading-section"><div className="research-section-heading"><span>{showCompanySection?"02":"01"}</span><h2>岗位内容与发展</h2></div>
       <p className="research-section-intro">以下岗位信息来自保存时的 JD；发展判断另看公司的业务证据。</p>
-      {report?.job_context?.description?<div className="research-jd-excerpt"><h3>岗位原文</h3><p>{report.job_context.description}</p></div>:<p className="research-unknown">保存时未取得完整岗位 JD，职责与技能要求未知。</p>}
+      {report?.job_context?.description?<div className="research-jd-excerpt"><h3>岗位原文</h3><p>{report.job_context.description}</p></div>:<p className="research-unknown">缺少完整岗位 JD，职责与发展暂不能核对。</p>}
       {jobAngles.map(([angle,label])=>{const found=jobEntries.filter(item=>item.context?.search_angle===angle);return found.length?<section className="research-angle" key={angle}><h3>{label}的公开材料</h3>{found.map(card)}</section>:null;})}
-      <div className="research-analysis"><h3>发展线索 · 基于现有证据的分析</h3><p>{report?.job_context?.development_analysis?.text||"旧报告未记录发展分析；请核对岗位原文与公司业务资料。"}</p>{!!report?.job_context?.development_analysis?.basis_evidence_ids?.length&&<small>依据：本页公司经营材料；未核实晋升路径。</small>}</div>
+      {!!report?.job_context?.description&&report?.job_context?.development_analysis?.status==="limited"&&<div className="research-analysis"><h3>发展线索 · 基于现有证据的分析</h3><p>{report.job_context.development_analysis.text}</p>{!!report.job_context.development_analysis.basis_evidence_ids?.length&&<small>依据：本页公司经营材料；未核实晋升路径。</small>}</div>}
+      {!!report?.job_context?.description&&report?.job_context?.development_analysis?.status!=="limited"&&<p className="research-unknown">发展路径仍缺少可核对的公司经营依据。</p>}
     </section>}
     {!!legacyEntries.length&&<section className="research-reading-section"><div className="research-section-heading"><span>旧</span><h2>历史材料</h2></div>{legacyEntries.map(card)}</section>}
     {message&&<p role="status">{message}</p>}

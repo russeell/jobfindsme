@@ -413,13 +413,13 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
+  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;
   report_id: string;
   workspace_id: string;
-  job_id: string;
+  job_id: string|null;
   resume_version_id: string | null;
   status: "complete" | "limited";
   jd_facts: string[];
@@ -436,11 +436,12 @@ export type ResearchReport = {
 export type ResearchRunInput = {
   topics?:Array<"company"|"job">;
   context_company?:string;
+  context_title?:string;
   context_description?:string;
   interest_question?:string;
   directions?: ResearchDirection[];
   workspace_id: string;
-  job_id: string;
+  job_id?: string|null;
   resume_version_id?: string;
   team?: string;
   source_ids: string[];
