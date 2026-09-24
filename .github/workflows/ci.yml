@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libcurl4-openssl-dev
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq libcurl4-openssl-dev fonts-noto-cjk
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest
       - name: Synthetic evaluation regression gate
