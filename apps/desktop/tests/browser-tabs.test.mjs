@@ -16,6 +16,31 @@ const {SourceBrowserManager}=module.exports;
 function setup(onBossPage){const w=new EventEmitter();w.children=[];w.contentView={addChildView:v=>w.children.push(v),removeChildView:v=>{w.children=w.children.filter(x=>x!==v);}};w.getContentSize=()=>[1240,800];w.isDestroyed=()=>false;return {w,m:new SourceBrowserManager(w,onBossPage)};}
 const bounds={x:650,y:100,width:590,height:700};
 const a='https://careers.tencent.com/jobdesc.html?postId=1';const b='https://careers.tencent.com/jobdesc.html?postId=2';
+test('source buttons reopen public homepages without forcing sign-in pages',async()=>{
+ const {m}=setup();
+ await m.show('liepin',bounds);assert.equal(m.state().url,'https://www.liepin.com/');
+ await m.show('wuyou',bounds);assert.equal(m.state().url,'https://www.51job.com/');
+ await m.show('company_16',bounds);assert.equal(m.state().url,'https://app.mokahr.com/social-recruitment/step/94904#/');
+ m.destroy();
+});
+test('shutdown flushes each opened persistent source session once',async()=>{
+ const sessions=new Map(),flushed=[];
+ FakeView.onCreate=view=>{
+  const partition=view.options.webPreferences.partition;
+  if(!sessions.has(partition)){
+   const session=new EventEmitter();session.cookies={flushStore:async()=>{flushed.push(partition);}};
+   session.setPermissionCheckHandler=()=>{};session.setPermissionRequestHandler=()=>{};
+   session.webRequest={onBeforeRequest:()=>{}};sessions.set(partition,session);
+  }
+  view.webContents.session=sessions.get(partition);
+ };
+ const {m}=setup();
+ try{
+  await m.show('liepin',bounds);await m.show('liepin',bounds,'https://www.liepin.com/job/1');
+  await m.show('wuyou',bounds);await m.flushSessions();
+  assert.deepEqual(flushed.sort(),['persist:jobfindsme-source-liepin','persist:jobfindsme-source-wuyou']);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
 test('zoom is bounded and restored per tab; fit width reads the document without rewriting it',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);const one=m.state().activeTabId;await m.command('fit-width');assert.equal(m.state().zoom,.5);await m.show('company_01',bounds,b);assert.equal(m.state().zoom,1);await m.command('zoom-in');assert.equal(m.state().zoom,1.1);m.selectTab(one);assert.equal(w.children[0].webContents.getZoomFactor(),.5);for(let i=0;i<10;i++)await m.command('zoom-out');assert.equal(m.state().zoom,.3);await m.command('zoom-reset');assert.equal(m.state().zoom,1);m.destroy();});
 test('blocked navigation stays with its tab and removes query secrets from notices',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);const one=m.state().activeTabId;let prevented=false;w.children[0].webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'file:///private/path?token=private',false,true);assert.equal(prevented,true);assert.match(m.state().notice,/重定向.*private\/path/);assert.doesNotMatch(m.state().notice,/token=private/);await m.show('company_01',bounds,b);assert.equal(m.state().notice,'');m.selectTab(one);assert.match(m.state().notice,/此协议/);await m.command('reload');assert.equal(m.state().notice,'');m.destroy();});
 test('tabs preserve per-page history, reuse URL, share source partition and isolate background',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);m.layout(bounds);const one=m.state().activeTabId;const view=w.children[0];await view.webContents.loadURL(a+'&detail=1');await m.show('company_01',bounds,b);const two=m.state().activeTabId;const second=w.children[0];assert.equal(m.state().tabs.length,2);assert.equal(view.options.webPreferences.partition,second.options.webPreferences.partition);assert.equal(view.visible,false);assert.equal(w.children.length,1);assert.equal(m.state().canGoBack,false);m.selectTab(one);assert.equal(m.state().canGoBack,true);m.command('back');assert.equal(m.state().url,a);m.selectTab(two);assert.equal(m.state().url,b);await m.show('company_01',bounds,b);assert.equal(m.state().tabs.length,2);const background=m.backgroundView('company_01');await background.webContents.loadURL(a);assert.equal(m.state().url,b);assert.notEqual(background,second);m.layout(null);assert.equal(second.visible,false);m.selectTab(one);assert.equal(view.visible,false);m.layout(bounds);assert.equal(view.visible,true);m.closeTab(one);assert.equal(m.state().activeTabId,two);assert.equal(view.webContents.isDestroyed(),true);m.destroy();assert.equal(m.state().tabs.length,0);assert.equal(background.webContents.isDestroyed(),true);});

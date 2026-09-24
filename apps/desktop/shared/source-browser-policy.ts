@@ -10,6 +10,7 @@ export type SourceBrowserBounds = {
 
 export const sourceBrowserSpecs: Record<SourceBrowserId, {
   loginUrl: string;
+  homeUrl?: string;
   allowedHosts: string[];
   partition: string;
   allowedPaths?: string[];
@@ -21,6 +22,7 @@ export const sourceBrowserSpecs: Record<SourceBrowserId, {
   },
   liepin: {
     loginUrl: "https://www.liepin.com/login/",
+    homeUrl: "https://www.liepin.com/",
     allowedHosts: ["liepin.com"],
     partition: "persist:jobfindsme-source-liepin",
   },
@@ -31,6 +33,7 @@ export const sourceBrowserSpecs: Record<SourceBrowserId, {
   },
   wuyou: {
     loginUrl: "https://login.51job.com/login.php",
+    homeUrl: "https://www.51job.com/",
     allowedHosts: ["51job.com"],
     partition: "persist:jobfindsme-source-wuyou",
   },

@@ -73,10 +73,13 @@ function shutdownAndExit(): Promise<void> {
   apiClient = undefined;
   serviceStatus = { connected: false, message: "本地服务正在退出" };
   isQuitting = true;
-  shutdownPromise = pythonService
-    .stop()
-    .catch((error) => console.error("JobFindsMe failed to stop cleanly", error))
-    .then(() => app.exit(0));
+  shutdownPromise = Promise.allSettled([
+    pythonService.stop(),
+    sourceBrowserManager?.flushSessions() ?? Promise.resolve(),
+  ]).then(results => {
+    for (const result of results) if (result.status === "rejected") console.error("JobFindsMe shutdown failed", result.reason);
+    app.exit(0);
+  });
   return shutdownPromise;
 }
 

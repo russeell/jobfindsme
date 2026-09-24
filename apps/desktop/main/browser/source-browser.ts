@@ -84,7 +84,7 @@ export class SourceBrowserManager {
     }finally{signal.removeEventListener("abort",stop);}
   }
   async show(sourceId: ForegroundBrowserId, bounds: SourceBrowserBounds, requestedUrl?: string): Promise<void> {
-    const target=requestedUrl ?? (sourceId === "web" ? "" : sourceBrowserSpecs[sourceId].loginUrl);
+    const target=requestedUrl ?? (sourceId === "web" ? "" : sourceBrowserSpecs[sourceId].homeUrl ?? sourceBrowserSpecs[sourceId].loginUrl);
     if(!isPublicWebUrl(target))throw new Error("仅支持普通 HTTP/HTTPS 网页；本地或内部地址不可在此打开。");
     this.requestedBounds=bounds;
     const existing=this.tabs.find(tab=>tab.sourceId===sourceId && (tab.view.webContents.getURL()===target || (tab.view.webContents.isLoading() && tab.initialUrl===target)));
@@ -432,6 +432,10 @@ export class SourceBrowserManager {
     this.backgrounds.clear();
     for(const [session,handler] of this.downloadHandlers)session.removeListener("will-download",handler);
     this.downloadHandlers.clear();
+  }
+
+  async flushSessions(): Promise<void> {
+    await Promise.all([...this.downloadHandlers.keys()].map(session=>session.cookies.flushStore()));
   }
 
   private createView(sourceId: ForegroundBrowserId, foreground=false, popupOptions?:Electron.BrowserWindowConstructorOptions): WebContentsView {
