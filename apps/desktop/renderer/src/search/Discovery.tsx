@@ -9,10 +9,11 @@ import {useOriginalBrowser} from "../shared/Workbench";
 import {SearchFilters as FilterControls} from "./SearchFilters";
 import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
 import {formatSalary} from "./salary";
+import {ResumePage} from "../resume/ResumePage";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 
-export function Discovery({ active, data, onError, onResearch,onResume,selectedSources,onSelectSource,onSelectAllSources,reports }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[]; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void;onResume():void }) {
+export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[]; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
   const sources = useMemo(() => data?.sources ?? [], [data]);
   const enabled = selectedSearchSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
@@ -22,6 +23,21 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
   const [collection,setCollection]=useState<SourceCollectionProgress>();
   const [readingDetail,setReadingDetail]=useState(false);
   const [resumeState,setResumeState]=useState<ResumeState>();
+  const [resumeOpen,setResumeOpen]=useState(false);
+  const resumeTrigger=useRef<HTMLButtonElement>(null);
+  const resumeClose=useRef<HTMLButtonElement>(null);
+  const resumeDialog=useRef<HTMLDivElement>(null);
+  function closeResume(){setResumeOpen(false);resumeTrigger.current?.focus();}
+  useEffect(()=>{if(!active)setResumeOpen(false);},[active]);
+  useEffect(()=>{if(!resumeOpen||!active)return;resumeClose.current?.focus();const onKey=(event:KeyboardEvent)=>{
+    if(event.key==="Escape"){event.preventDefault();closeResume();return;}
+    if(event.key!=="Tab"||!resumeDialog.current)return;
+    const focusable=Array.from(resumeDialog.current.querySelectorAll<HTMLElement>("button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],summary")).filter(element=>element.getClientRects().length>0);
+    if(!focusable.length)return;
+    const first=focusable[0],last=focusable[focusable.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  };window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[resumeOpen,active]);
   const [detailTimes,setDetailTimes]=useState<Record<string,string>>({});
   useEffect(()=>window.jobfindsme?.onSourceCollectionProgress(setCollection),[]);
   const [matchingMessage,setMatchingMessage]=useState("");
@@ -105,7 +121,7 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
       setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?{...row,tracking}:row)}));
     }).catch(error=>onError(messageOf(error)));
   }
-  return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>找工作</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"当前简历已参与岗位匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"当前未使用简历，可先搜索岗位"} {resumeState&&<button type="button" onClick={onResume}>{resumeState.search_profile_state==="ready"?"维护简历":"设置简历"}</button>}</p></div></div>
+  return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>找工作</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"当前未使用简历，可先搜索岗位"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"添加简历"}</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder={resumeState?.search_profile_state==="ready"?"可留空按已确认简历搜索，或输入岗位方向":"输入岗位关键词，例如 AI 工程师"} value={intent} onChange={(event) => setIntent(event.target.value)} /><button className="primary-button" disabled={searching || !workspaceId || enabled.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
     {!intent.trim()&&resumeState?.search_profile_state==="ready"&&<p className="note">留空将从已确认的技能和经历生成有限检索词；实际使用词会在结果中列出。</p>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
@@ -137,5 +153,7 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
         {page?.resume_version_id&&<details className="scoring-details"><summary>岗位与简历的对应线索</summary><p className="note">依据岗位描述和已确认简历；请核对原文，未知条件不视为满足。</p>{Object.entries(selected.details||{}).map(([key,value])=><p key={key}>{({skills:"技能",projects:"项目经历",education:"学历",experience:"工作经验"} as Record<string,string>)[key]||key}：{value.explanation.replaceAll("暂不计分","仍需核对").replace("，按达成比例计分","")}</p>)}</details>}
         {selected.model_match&&<details className="model-evidence"><summary>历史模型分析记录</summary>{selected.model_match.evidence.map((entry,index)=><p className="note" key={index}>简历：{entry.resume_quote}<br/>JD：{entry.jd_quote}</p>)}<p className="note">未知：{selected.model_match.unknowns.join("；")||"未列出"}</p></details>}
       </div>:<div className="empty"><strong>选择一个岗位</strong><p>从左侧列表查看岗位职责与原页。</p></div>}
-      {result && <details className="source-coverage"><summary>来源覆盖与实际检索词</summary><p>{result.keywords.join(" · ")}</p>{result.source_diagnostics&&<p>首个来源读取完成：{result.source_diagnostics.first_source_ms===null?"未读到结果":`${(result.source_diagnostics.first_source_ms/1000).toFixed(1)} 秒`} · 本次开始于 {new Date(result.source_diagnostics.started_at).toLocaleString()}</p>}{sources.map((source) => { const run = result.source_runs.find((item) => item.source_id === source.source_id); return <p key={source.source_id}>{source.name}：{run ? `${run.status==="success"?"已完成":run.status==="partial"?"部分结果":"未完成"} · ${result.source_diagnostics?.sources[source.source_id]?`${(result.source_diagnostics.sources[source.source_id].elapsed_ms/1000).toFixed(1)} 秒 · ${result.source_diagnostics.sources[source.source_id].records} 条候选 · `:""}${run.pages_fetched} ${source.source_id==="boss"?"采集批次":"页"} · ${run.coverage_status==="complete"?"本次范围已读完":"未覆盖全部岗位"} · ${({complete:"已读完",batch_budget:"达到批次上限",record_budget:"达到数量上限",time_budget:"达到时间上限",cancelled:"已停止",no_growth:"暂未发现新增",risk_control:"平台要求验证",login_required:"需要登录",unsupported_city:"该城市编码尚未核验",city_scope:"本次仅检索首个城市"} as Record<string,string>)[run.stop_reason]||"来源暂不可读取"}` : result.blocked_sources[source.source_id] ?? "未执行"}</p>; })}</details>}</aside></div></div>;
+      {result && <details className="source-coverage"><summary>来源覆盖与实际检索词</summary><p>{result.keywords.join(" · ")}</p>{result.source_diagnostics&&<p>首个来源读取完成：{result.source_diagnostics.first_source_ms===null?"未读到结果":`${(result.source_diagnostics.first_source_ms/1000).toFixed(1)} 秒`} · 本次开始于 {new Date(result.source_diagnostics.started_at).toLocaleString()}</p>}{sources.map((source) => { const run = result.source_runs.find((item) => item.source_id === source.source_id); return <p key={source.source_id}>{source.name}：{run ? `${run.status==="success"?"已完成":run.status==="partial"?"部分结果":"未完成"} · ${result.source_diagnostics?.sources[source.source_id]?`${(result.source_diagnostics.sources[source.source_id].elapsed_ms/1000).toFixed(1)} 秒 · ${result.source_diagnostics.sources[source.source_id].records} 条候选 · `:""}${run.pages_fetched} ${source.source_id==="boss"?"采集批次":"页"} · ${run.coverage_status==="complete"?"本次范围已读完":"未覆盖全部岗位"} · ${({complete:"已读完",batch_budget:"达到批次上限",record_budget:"达到数量上限",time_budget:"达到时间上限",cancelled:"已停止",no_growth:"暂未发现新增",risk_control:"平台要求验证",login_required:"需要登录",unsupported_city:"该城市编码尚未核验",city_scope:"本次仅检索首个城市"} as Record<string,string>)[run.stop_reason]||"来源暂不可读取"}` : result.blocked_sources[source.source_id] ?? "未执行"}</p>; })}</details>}</aside></div>
+    {active&&resumeOpen&&<div className="resume-modal-backdrop" data-browser-overlay="modal" onMouseDown={event=>{if(event.target===event.currentTarget)closeResume();}}><div ref={resumeDialog} className="resume-modal" role="dialog" aria-modal="true" aria-label="简历维护"><header className="resume-modal-header"><strong>简历维护</strong><button ref={resumeClose} type="button" onClick={closeResume} aria-label="关闭简历维护">关闭 ×</button></header><ResumePage onChanged={setResumeState}/></div></div>}
+    </div>;
 }

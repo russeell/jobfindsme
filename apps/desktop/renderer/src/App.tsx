@@ -1,7 +1,6 @@
 import {readSelectedSources} from "../../shared/discovery-filters";
 import {reportMatchesJob} from "../../shared/research-reports";
 import type {ResearchReport} from "../../shared/contracts";
-import {ResumePage} from "./resume/ResumePage";
 import {userError} from "../../shared/user-errors";
 import {JobActions} from "./search/JobActions";
 import { Icon } from "./shared/Icon";
@@ -20,19 +19,11 @@ import type {
   SearchResultItem, TrackedJob,
 } from "../../shared/contracts";
 
-type Page = "discover" | "research" | "records" | "resume" | "sources" | "models";
-
-const navGroups: Array<[string, Array<[string, Page | undefined]>]> = [
-  ["开始", [
-    ["找工作", "discover"], ["岗位研究", "research"],
-    ["已看过", "records"],
-  ]],
-  ["设置与资料", [
-    ["我的简历", "resume"],
-    ["岗位来源", "sources"], ["模型设置", "models"],
-  ]],
-];
-const navItems = navGroups.flatMap(([, items]) => items);
+type WorkPage = "discover" | "research" | "records";
+type Page = WorkPage | "settings";
+type SettingsTab = "sources" | "models";
+const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["岗位研究", "research"], ["已看过", "records"]];
+const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
   useEffect(()=>localStorage.setItem("jfm.sources.selected",JSON.stringify(chosenSources)),[chosenSources]);
@@ -40,7 +31,10 @@ export function App() {
   function chooseSource(id:string, selected:boolean) {setChosenSources(current => {const previous=current;const next=selected ? [...new Set([...previous,id])] : previous.filter(s=>s!==id);localStorage.setItem("jfm.sources.selected",JSON.stringify(next));return next;});}
   function chooseAllSources(selected:boolean) {setChosenSources(selected?(data?.sources.map(source=>source.source_id)??[]):[]);}
   const [page, setPage] = useState<Page>("discover");
-  useEffect(()=>{const show=()=>setPage("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[]);
+  const [settingsTab,setSettingsTab]=useState<SettingsTab>("sources");
+  const [returnPage,setReturnPage]=useState<WorkPage>("discover");
+  function openSettings(tab:SettingsTab){if(page!=="settings")setReturnPage(page);setSettingsTab(tab);setPage("settings");}
+  useEffect(()=>{const show=()=>openSettings("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[page]);
   const [data, setData] = useState<BootstrapData>();
   const [error, setError] = useState<string>();
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
@@ -76,15 +70,17 @@ export function App() {
     return () => { cancelled = true; unsubscribe(); unsubscribeSources(); };
   }, []);
   return <Workbench onError={setError} sidebar={<>
-      <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
-      {navGroups.map(([group, items]) => <div className="nav-group" key={group}>
-        <p className="eyebrow">{group}</p><nav>{items.map(([label, target]) =>
-          <button key={label} className={page === target ? "active" : ""} disabled={!target || !serviceStatus.connected} title={label} aria-label={label} aria-current={page === target ? "page" : undefined} onClick={() => target && setPage(target)}><span className="nav-icon"><Icon name={target ?? "discover"} /></span><span className="nav-label">{label}</span>{!target && <span>待接入</span>}</button>
-        )}</nav>
-      </div>)}
-      <div className="local-status"><span className={!serviceStatus.connected ? "dot error" : "dot"} />{serviceStatus.connected ? "个人工作空间 · 本地优先" : serviceStatus.message}</div>
-    </>}>
-  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} onResume={()=>setPage("resume")} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 定时检索已停用 · {buildInfo.label}</footer></section>
+    <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
+    <div className="nav-group"><p className="eyebrow">开始</p><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
+    <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button><div className="local-status"><span className={!serviceStatus.connected?"dot error":"dot"}/>{serviceStatus.connected?"个人工作空间 · 本地优先":serviceStatus.message}</div></div>
+  </>}>
+    <section className="main"><header className="topbar"><span>工作空间 / {page==="settings"?"设置":navItems.find(([,target])=>target===page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length??0} 个工作空间</span><BrowserToggle/></header><div className="content">
+      {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);openSettings("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}
+      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
+      <div hidden={page!=="research"}><ResearchPage onReports={setReports} active={page==="research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>
+      {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
+      {page==="settings"&&<section className="settings-page"><header className="settings-page-header"><div><h1>设置</h1><p>管理招聘来源与模型连接。</p></div><button onClick={()=>setPage(returnPage)}>← 返回{navItems.find(([,target])=>target===returnPage)?.[0]}</button></header><nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:<ModelsPage onError={setError}/>}</div></section>}
+    </div><footer className="footer">本地优先 · 手动投递 · 定时检索已停用 · {buildInfo.label}</footer></section>
   </Workbench>;
 }
 

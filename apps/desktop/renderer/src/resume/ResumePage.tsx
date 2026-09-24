@@ -4,7 +4,7 @@ import {userError} from "../../../shared/user-errors";
 
 const factLabels:Record<string,string>={skill:"专业技能",project:"项目经历",experience:"工作经历",education:"教育经历"};
 
-export function ResumePage(){
+export function ResumePage({onChanged}:{onChanged?:(state:ResumeState)=>void}={}){
   const [state,setState]=useState<ResumeState>();
   const [current,setCurrent]=useState<ResumeVersion>();
   const [accepted,setAccepted]=useState<Set<string>>(new Set());
@@ -12,7 +12,7 @@ export function ResumePage(){
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState(""),[confirmClear,setConfirmClear]=useState(false);
   const draft:ResumeDraft|null|undefined=state?.active_draft;
   async function reload(){
-    const next=await window.jobfindsme!.getResumeState();setState(next);
+    const next=await window.jobfindsme!.getResumeState();setState(next);onChanged?.(next);
     if(next.active_draft){setAccepted(new Set(next.active_draft.facts.map(f=>f.fact_id)));setCorrections(Object.fromEntries(next.active_draft.facts.map(f=>[f.fact_id,f.value])));}
     const workspace=next.workspace_id;
     const versions=workspace?await window.jobfindsme!.listResumeVersions(workspace):[];

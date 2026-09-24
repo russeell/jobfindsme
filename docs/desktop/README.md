@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端开发
 
-当前进行 D51：把 D50 的证据化研究接入对话式主题输入、真实追问、统一历史入口和取消流程。上一独立交付是 [D50 应用包](/private/tmp/JobFindsMe-D50-Research.app)，见 [D50 证据](evidence/D50.md)。定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
+D52 已完成：研究输入框聚焦重叠已修复，侧栏只保留找工作、岗位研究、已看过，底部「设置」维护来源和模型；简历在找工作页内弹层维护。当前独立交付为 [D52 应用包](/private/tmp/JobFindsMe-D52-Layout.app)，见 [D52 证据](evidence/D52.md)。定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |

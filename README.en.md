@@ -6,9 +6,9 @@ JobFindsMe is a local desktop workspace for job search, role research and resume
 
 [中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
-![Current JobFindsMe research report with a synthetic role, sources and evidence](docs/desktop/evidence/D51/report-default.png)
+![Current JobFindsMe research composer with a synthetic role](docs/desktop/evidence/D52/composer-start-focused-default.jpg)
 
-*Current D51 interface using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
+*Current D52 interface using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
 
 ## Find jobs with fewer open windows
 
@@ -65,7 +65,7 @@ npm run build
 npm start
 ```
 
-Choose sources, sign in where needed, then enter a keyword to search. Import and confirm a resume when you want personalized matching. Open a result to read the original listing, save it or research its reputation.
+Open **Settings → Job sources** from the bottom of the sidebar, choose sources, and sign in where needed. Enter a keyword on **Find jobs**; its small **Add resume / Resume** button opens resume maintenance without leaving the search. Open a result to read the original listing, save it or research its reputation.
 
 The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpreter.
 
