@@ -30,11 +30,13 @@ verification and known limitations in desktop evidence.
 2026-09-25: the user authorizes GitHub-based development and repository updates.
 After each independently verified change, commit locally and sync its development
 branch to origin. Fetch before pushing; never force-push or overwrite remote work.
-Use pull requests for subsequent integration into main; this authorization does not
-authorize merging those future pull requests, publishing packages, or creating releases.
-Direct main push was rejected by automatic approval review; sync the development
-branch and open a PR instead. Do not retry direct main integration without approval. Exclude credentials, login profiles, private
-resumes and generated build artifacts. This policy supersedes legacy Git rules.
+The user's latest preference (2026-09-25) is to integrate verified changes
+directly into main when permitted. Fetch and merge the current origin/main first;
+never force-push or overwrite remote work. If branch protection or approval
+review prevents direct integration, use a pull request with an English title
+and description. Do not publish packages or create releases without separate
+authorization. Exclude credentials, login profiles, private resumes and
+generated build artifacts. This policy supersedes legacy Git rules.
 
 ## Current structure and compatibility
 
