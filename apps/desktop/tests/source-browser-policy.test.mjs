@@ -158,7 +158,7 @@ test("browser layout never expands a small slot over adjacent controls", () => {
 });
 
 test("all company homepages can be browsed without expanding search capabilities", () => {
-  for (let index = 1; index <= 11; index++) {
+  for (let index = 1; index <= 16; index++) {
     const id = `company_${String(index).padStart(2, "0")}`;
     const spec = sourceBrowserSpecs[id];
     assert.ok(isAllowedSourceUrl(id, spec.loginUrl));

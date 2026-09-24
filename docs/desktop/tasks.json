@@ -1640,6 +1640,27 @@
         "docs/desktop/evidence/D56.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D57",
+      "title": "来源登录会话跨重启与测试包延续",
+      "depends_on": ["D23"],
+      "status": "done",
+      "scope": [
+        "猎聘和前程无忧不强制从登录页重开",
+        "应用退出前刷写已使用来源的持久 Cookie",
+        "测试包沿用固定资料目录且 QA 可显式隔离",
+        "确认 16 个公司官网分区与跨重启边界"
+      ],
+      "acceptance": [
+        "同一测试包与后续新版包使用同一用户资料目录",
+        "猎聘和前程无忧打开首页并沿用原分区",
+        "合成持久 Cookie 在隔离原生应用退出重启后仍存在",
+        "不复制或删除现有账号数据；站点过期不误报已登录"
+      ],
+      "verification": "TypeScript 构建、来源浏览器定向测试、隔离原生重启与包审计",
+      "evidence": ["docs/desktop/evidence/D57.md"],
+      "blocker": null
     }
   ]
 }
