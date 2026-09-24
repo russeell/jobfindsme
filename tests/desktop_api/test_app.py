@@ -465,6 +465,24 @@ def test_latest_resume_draft_can_be_recovered_confirmed_or_abandoned(tmp_path) -
     assert abandoned.json()["active_draft"] is None
 
 
+def test_existing_education_draft_recovers_year_from_original_excerpt(tmp_path) -> None:
+    database_path = tmp_path / "desktop.db"
+    client = TestClient(create_app(token="test-secret", database_path=database_path))
+    headers = {"Authorization": "Bearer test-secret"}
+    source = tmp_path / "education.md"
+    source.write_text("教育经历\n2020.09-2024.06 示例大学 计算机科学 本科\n", encoding="utf-8")
+    draft = client.post("/v1/resumes/import", headers=headers,
+                        json={"source_path": str(source)}).json()
+    fact = next(item for item in draft["facts"] if item["fact_type"] == "education")
+    with Database(database_path).connect() as connection:
+        connection.execute("UPDATE profile_facts SET current_value=? WHERE fact_id=?",
+                           (fact["value"][5:], fact["fact_id"]))
+    state = client.get("/v1/resumes/state", headers=headers).json()
+    restored = next(item for item in state["active_draft"]["facts"]
+                    if item["fact_id"] == fact["fact_id"])
+    assert restored["value"] == fact["value"]
+
+
 def test_cancel_closes_active_model_transport_and_preserves_cancelled_state(
     tmp_path,
 ) -> None:

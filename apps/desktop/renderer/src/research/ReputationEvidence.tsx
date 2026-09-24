@@ -26,6 +26,7 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
   const hasPositive=companyEntries.some(item=>item.context?.search_angle==="positive");
   const hasNegative=companyEntries.some(item=>item.context?.search_angle==="negative");
   const showCompanySection=topics.includes("company")&&!!entries.length&&(!!companyEntries.length||!questionEntries.length);
+  const limitations=[...new Set(report?.limitations||[])];
   async function save(){
     if(!report||!editing)return;
     setBusy(true);setMessage("");
@@ -48,8 +49,8 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
     </article>;
   }
   return <div className="research-reading">
-    <p className="research-overview">{entries.length?`已保存 ${entries.length} 条可追溯材料；请核对来源、时间及适用范围。`:
-      "本次未取得可核对的公开原文；相关结论保持未知。来源受限不代表信息不存在。"}</p>
+    <p className="research-overview">{entries.length?`已保存 ${entries.length} 条可追溯材料；结论仍需结合来源和适用范围。`:
+      "暂无可核对的公开原文，相关结论保持未知。"}</p>
     {report?.job_context?.interest_question&&<section className="research-question-result" aria-label="本次问题的检索结果"><span className="research-eyebrow">本次问题</span><h2>{report.job_context.interest_question}</h2>{verifiedQuestionCount?<p>找到 {verifiedQuestionCount} 条相关原页陈述；团队与岗位适用性仍需核对。</p>:entries.length?<p>现有材料未直接回答这个问题。</p>:null}{questionEntries.map(card)}</section>}
     {showCompanySection&&<section className="research-reading-section"><div className="research-section-heading"><span>01</span><h2>公司情况</h2></div>
       <p className="research-section-intro">经营与上市信息优先看公开披露；工作体验来自个人陈述，不能代表整个公司。</p>
@@ -66,6 +67,6 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
     </section>}
     {!!legacyEntries.length&&<section className="research-reading-section"><div className="research-section-heading"><span>旧</span><h2>历史材料</h2></div>{legacyEntries.map(card)}</section>}
     {message&&<p role="status">{message}</p>}
-    <details className="research-diagnostics"><summary>来源与说明</summary><p>{reputationDisclaimer}</p>{report?.limitations.map((item,index)=><p key={index}>{readableLimit(item)}</p>)}{!topics.length&&!!report?.directions?.length&&<p>历史方向：{report.directions.map(key=>key==="salary"?"薪资（历史）":researchDirections[key]).join("、")}</p>}</details>
+    <details className="research-diagnostics"><summary>来源与说明</summary><p>{reputationDisclaimer}</p>{!!limitations.length&&<details className="research-limitations"><summary>{limitations.length} 条检索限制与未知信息</summary><ul>{limitations.map((item,index)=><li key={index}>{readableLimit(item)}</li>)}</ul></details>}{!topics.length&&!!report?.directions?.length&&<p>历史方向：{report.directions.map(key=>key==="salary"?"薪资（历史）":researchDirections[key]).join("、")}</p>}</details>
   </div>;
 }

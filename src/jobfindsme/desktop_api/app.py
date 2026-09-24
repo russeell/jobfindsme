@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import threading
 from collections.abc import Callable
 from dataclasses import asdict
@@ -26,7 +27,7 @@ from jobfindsme.models import (
 )
 from jobfindsme.models.gateway import ConnectionStatus, ModelGatewayError
 from jobfindsme.privacy import create_analysis_copy
-from jobfindsme.profiles.models import ResumeImportMode
+from jobfindsme.profiles.models import FactType, ResumeImportMode
 from jobfindsme.profiles.parser import ResumeExtractionError
 from jobfindsme.profiles.service import ProfileError, ProfileNotFoundError
 from jobfindsme.research import ResearchError, ResearchService
@@ -1221,6 +1222,16 @@ def create_app(
             return core.create_workspace("我的求职工作区")
         return None
 
+    def resume_review_value(fact) -> str:
+        # Older drafts could lose the year when "2020." was read as a list marker.
+        if fact.fact_type is FactType.EDUCATION:
+            original = " ".join(fact.evidence_snippet.split())
+            if (re.match(r"^\d{4}\.", original)
+                    and original.endswith(fact.value)
+                    and len(original) - len(fact.value) == 5):
+                return original
+        return fact.value
+
     def resume_payload(workspace_id: str, profile_id: str) -> ResumeResponse:
         profile = core.profiles.load_review(
             workspace_id=workspace_id,
@@ -1240,7 +1251,7 @@ def create_app(
                 ResumeFactResponse(
                     fact_id=fact.fact_id,
                     fact_type=fact.fact_type.value,
-                    value=fact.value,
+                    value=resume_review_value(fact),
                     status=fact.status.value,
                 )
                 for fact in profile.facts

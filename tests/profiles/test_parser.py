@@ -43,6 +43,22 @@ def test_parser_v3_groups_wrapped_resume_sections_without_line_noise() -> None:
     )
 
 
+def test_two_distinct_education_entries_remain_separate_facts() -> None:
+    text = """教育经历
+2020.09-2024.06 示例大学 计算机科学 本科
+2024.09-2026.06 示例研究院 人工智能 硕士
+"""
+    education = [fact for fact in DeterministicResumeParser().parse(text)
+                 if fact.fact_type is FactType.EDUCATION]
+    assert len(education) == 2
+    assert education[0].value.startswith("2020.09-2024.06")
+    assert education[1].value.startswith("2024.09-2026.06")
+    assert "示例大学" in education[0].value
+    assert "示例研究院" in education[1].value
+    assert all(text[fact.evidence_start:fact.evidence_end] == fact.evidence_snippet
+               for fact in education)
+
+
 def test_inline_section_labels_yield_reviewable_facts_without_private_basics():
     from jobfindsme.profiles.models import FactType
 

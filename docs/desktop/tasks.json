@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D55",
   "tasks": [
     {
       "id": "D01",
@@ -1544,6 +1544,17 @@
       "evidence": [
         "docs/desktop/evidence/D54.md"
       ],
+      "blocker": null
+    },
+    {
+      "id": "D55",
+      "title": "简历核对分组、来源弹层与研究阅读列修复",
+      "depends_on": ["D54"],
+      "status": "in_progress",
+      "scope": ["多条教育事实分组核对", "来源选择紧凑批量操作", "自由提问与研究空态", "阅读列与证据说明收敛", "隔离原生验收"],
+      "acceptance": ["两段教育经历独立勾选编辑并确认，不按类型去重", "来源弹层紧凑且部分选择可键盘操作，门禁不变", "无对象空态居中，移除主题芯片后自由提问仍正确选择公司与岗位范围", "报告和输入居中对齐、单一细滚动条、来源说明折叠且信息可追溯", "默认、窄窗、短窗及浏览器分栏原生验证，独立包审计和本地提交"],
+      "verification": "合成双教育简历与来源选择边界、研究意图定向测试、桌面构建、隔离原生截图和包审计",
+      "evidence": ["docs/desktop/evidence/D55.md"],
       "blocker": null
     }
   ]

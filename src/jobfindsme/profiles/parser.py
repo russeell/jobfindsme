@@ -322,7 +322,7 @@ def _split_entries(lines: list[_Line]) -> list[list[_Line]]:
 
 def _normalize_block(lines: list[_Line]) -> str:
     parts = [
-        re.sub(r"^(?:[-*•·+]|\d+[.)、])\s*", "", line.text).strip() for line in lines
+        re.sub(r"^(?:[-*•·+]\s*|\d+[.)、]\s+)", "", line.text).strip() for line in lines
     ]
     return " ".join(part for part in parts if part)
 
