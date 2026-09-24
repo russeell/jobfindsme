@@ -82,7 +82,7 @@ export function Splitter({ label, value, min, max, onChange, reverse = false, ca
 export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; children: ReactNode; onError(message: string): void }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => stored("jfm.sidebar.width", 196, 160, 300));
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("jfm.sidebar.collapsed") === "true");
-  const [browserWidth, setBrowserWidth] = useState(() => stored("jfm.browser.width", 650, 520, 1200));
+  const [browserWidth, setBrowserWidth] = useState(() => stored("jfm.browser.width", 520, 520, 1200));
   const [target, setTarget] = useState<Target>();
   const [panelOpen,setPanelOpen] = useState(false);
   const [browserExpanded,setBrowserExpanded] = useState(false);

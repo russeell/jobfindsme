@@ -6,9 +6,9 @@ JobFindsMe is a local desktop workspace for job search, role research and resume
 
 [中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
-![JobFindsMe desktop workspace with job results and details beside an embedded hiring website](docs/images/jobfindsme-workspace.png)
+![Current JobFindsMe research report with a synthetic role, sources and evidence](docs/desktop/evidence/D51/report-default.png)
 
-*Historical D46 interface. Its sidebar differs from the current build; listings and source status reflect the time of capture.*
+*Current D51 interface using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
 
 ## Find jobs with fewer open windows
 
@@ -24,14 +24,14 @@ You submit applications yourself on the hiring website. Opening a link does not 
 
 ## Research the role before applying
 
-Open a role and choose company context, role content and development, or both:
+Open a role and use the research composer. Company and role topics are selected by default. Start without typing, or add a question that enters a bounded public web search:
 
 | Direction | What to look for |
 | --- | --- |
 | **Company context** | Business and listing information, positive and negative accounts, workload and everyday benefits |
 | **Role content and development** | The saved job description, responsibilities and skills, considered alongside company business evidence |
 
-Reports keep source links, publication dates and scope, and remain saved with the job for later reading. Updating the research saves a new report while preserving earlier evidence. Official disclosures are distinguished from personal accounts. Missing evidence remains unknown; development analysis does not promise promotion or rate companies.
+Reports keep source links, publication dates and scope. The History button reopens earlier versions. A follow-up searches for evidence related to the question and saves a new version; without direct evidence, the app says it cannot answer. Cancellation or failure leaves the report you were reading in place. Official disclosures are distinguished from personal accounts. Missing evidence remains unknown; development analysis does not promise promotion or rate companies.
 
 ## Keep your resume up to date
 
@@ -73,7 +73,7 @@ The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpre
 
 - **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
 - **Scheduled searches are disabled.** Plans do not run or catch up automatically, and new plans cannot be created or resumed. Historical plans and run records remain stored locally.
-- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access. Ordinary job search does not automatically call a paid model.
+- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access. Ordinary job search and research do not automatically call a paid model. A free-form question is used as a public web search term; do not include private information.
 - **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
 
 ## For contributors

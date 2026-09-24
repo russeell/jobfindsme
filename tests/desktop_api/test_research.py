@@ -8,6 +8,7 @@ from jobfindsme.desktop_api import create_app
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.models import ModelConnectionRepository, ModelProtocol
+from jobfindsme.models import CancellationToken, ModelCancelledError
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.research import EvidenceCandidate, ResearchService, WebEvidenceSearch
 from jobfindsme.research.service import DIRECTIONS
@@ -720,6 +721,82 @@ def test_two_topic_research_queries_and_saved_groups(tmp_path, monkeypatch):
     )["job_context"]["research_topics"] == ["company", "job"]
     assert any("正向检索未取得" in text for text in report["limitations"])
     assert any("负向检索未取得" in text for text in report["limitations"])
+
+
+def test_followup_question_uses_its_own_queries_and_keeps_prior_report(tmp_path, monkeypatch):
+    import urllib.parse
+
+    queries = []
+    class EmptyRss:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return None
+        def read(self, *_args): return b"<rss><channel></channel></rss>"
+    def capture(request, **_kwargs):
+        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        return EmptyRss()
+    monkeypatch.setattr("urllib.request.urlopen", capture)
+    workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
+    first = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
+                                  source_ids=("maimai",), topics=("company", "job"), directions=())
+    count = len(queries)
+    second = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
+                                   source_ids=("maimai",), topics=("company", "job"), directions=(),
+                                   interest_question="团队通常几点下班？")
+    assert "团队通常几点下班？" in queries[count]
+    assert second["job_context"]["interest_question"] == "团队通常几点下班？"
+    assert second["version_number"] == first["version_number"] + 1
+    assert service.get_report(workspace_id=workspace.workspace_id, report_id=first["report_id"])["report_id"] == first["report_id"]
+
+
+def test_cancelled_research_does_not_save_a_new_report(tmp_path):
+    workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
+    token = CancellationToken()
+    token.cancel()
+    import pytest
+    with pytest.raises(ModelCancelledError):
+        service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
+                              source_ids=("maimai",), topics=("company",), directions=(), cancellation=token)
+    assert service.list_reports(workspace_id=workspace.workspace_id) == []
+
+
+def test_unpaid_research_request_can_be_cancelled_before_snapshot(tmp_path):
+    import threading
+    import time
+
+    ready = threading.Event()
+    class WaitingSearch:
+        def search(self, **kwargs):
+            ready.set()
+            token = kwargs["cancellation"]
+            for _ in range(300):
+                token.raise_if_cancelled()
+                time.sleep(.01)
+            raise AssertionError("cancellation did not reach the search")
+    workspace, job, service = setup_research(tmp_path, WaitingSearch())
+    client = TestClient(create_app(token="fixture-token", database_path=service.database.path,
+                                   research_evidence_search_override=WaitingSearch()))
+    headers = {"Authorization": "Bearer fixture-token"}
+    request_id = "research-test-cancel-12345"
+    response = {}
+    def start():
+        response["run"] = client.post("/v1/research-runs", headers=headers, json={
+            "workspace_id": workspace.workspace_id, "job_id": job.job_id,
+            "request_id": request_id, "topics": ["company"], "directions": [],
+            "source_ids": ["maimai"],
+        })
+    worker = threading.Thread(target=start)
+    worker.start()
+    try:
+        assert ready.wait(2)
+        stopped = client.post(f"/v1/research-requests/{request_id}/cancel", headers=headers,
+                              params={"workspace_id": workspace.workspace_id})
+        assert stopped.status_code == 200
+        assert stopped.json() == {"cancelled": True}
+    finally:
+        worker.join(timeout=4)
+    assert not worker.is_alive()
+    assert response["run"].status_code == 409
+    assert service.list_reports(workspace_id=workspace.workspace_id) == []
 
 
 def test_official_query_plan_and_evidence_based_development(tmp_path, monkeypatch):

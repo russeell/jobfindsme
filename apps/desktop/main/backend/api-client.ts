@@ -331,7 +331,7 @@ export class DesktopApiClient {
     }, 60_000);
   }
 
-  cancelResearch(requestId: string, workspaceId: string): Promise<ResearchReport> {
+  cancelResearch(requestId: string, workspaceId: string): Promise<ResearchReport | {cancelled:true}> {
     const query = new URLSearchParams({ workspace_id: workspaceId });
     return this.json(`/v1/research-requests/${requestId}/cancel?${query}`, {
       method: "POST",

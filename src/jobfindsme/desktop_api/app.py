@@ -590,7 +590,7 @@ def create_app(
     active_model_tests_lock = threading.Lock()
     active_prompt_requests: dict[str, tuple[str, CancellationToken]] = {}
     active_prompt_requests_lock = threading.Lock()
-    active_research_requests: dict[str, tuple[str, CancellationToken]] = {}
+    active_research_requests: dict[str, tuple[str | None, CancellationToken]] = {}
     active_research_requests_lock = threading.Lock()
     require_token = _authorization_dependency(token)
     app = FastAPI(
@@ -1842,6 +1842,12 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def create_research_report(request: ResearchRunRequest) -> dict:
+        if request.connection_id is None and request.api_key:
+            raise HTTPException(status_code=400, detail="model credentials require a selected connection")
+        search_cancellation = CancellationToken() if request.request_id else None
+        if request.connection_id is None and request.request_id and search_cancellation:
+            with active_research_requests_lock:
+                active_research_requests[request.request_id] = (None, search_cancellation)
         try:
             report = research.create_report(
                 workspace_id=request.workspace_id,
@@ -1854,20 +1860,24 @@ def create_app(
                 context_description=request.context_description,
                 interest_question=request.interest_question,
                 source_ids=tuple(request.source_ids),
+                cancellation=search_cancellation,
                 user_evidence=tuple(
                     item.model_dump() for item in request.user_evidence
                 ),
             )
+        except ModelCancelledError as error:
+            raise HTTPException(status_code=409, detail="岗位研究已取消。") from error
         except LookupError as error:
             raise HTTPException(status_code=404, detail="job not found") from error
         except ResearchError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
+        finally:
+            if request.connection_id is None and request.request_id:
+                with active_research_requests_lock:
+                    active = active_research_requests.get(request.request_id)
+                    if active is not None and active[1] is search_cancellation:
+                        active_research_requests.pop(request.request_id, None)
         if request.connection_id is None:
-            if request.api_key or request.request_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="model credentials require a selected connection",
-                )
             return report
         if request.api_key is None or not request.request_id:
             raise HTTPException(
@@ -1947,6 +1957,8 @@ def create_app(
                 raise HTTPException(
                     status_code=409, detail="research request is not active"
                 )
+        if report_id is None:
+            return {"cancelled": True}
         try:
             return research.get_report(
                 workspace_id=workspace_id,

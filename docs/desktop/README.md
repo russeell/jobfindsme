@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端开发
 
-当前进行 D50：简历页移除求职偏好、支持确认简历空关键词检索，并将口碑调查扩展为证据化岗位研究。上一独立交付是 [D49 应用包](/private/tmp/JobFindsMe-D49-Flow.app)，见 [D49 证据](evidence/D49.md)。定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
+当前进行 D51：把 D50 的证据化研究接入对话式主题输入、真实追问、统一历史入口和取消流程。上一独立交付是 [D50 应用包](/private/tmp/JobFindsMe-D50-Research.app)，见 [D50 证据](evidence/D50.md)。定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |

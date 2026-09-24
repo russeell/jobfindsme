@@ -327,3 +327,47 @@ nav button .nav-label {font-size:13px;}
 .report-saved details {margin-top:5px;font-size:11px;color:var(--text-muted);}
 .report-saved details summary {cursor:pointer;}
 .research-again-shortcut {margin:9px 0 0;padding:0;border:0;background:transparent;color:var(--text);font-size:12px;text-decoration:underline;}
+
+/* D51: one composer for first research and evidence-backed follow-up. */
+.research-workbench {max-width:940px;margin:0 auto;padding-bottom:30px;}
+.research-header {display:flex;align-items:flex-start;justify-content:space-between;gap:18px;border-bottom:1px solid var(--line);padding:0 0 17px;margin-bottom:24px;}
+.research-header h1 {font-size:24px;line-height:1.34;letter-spacing:-.025em;margin:5px 0 3px;}
+.research-header p {margin:0;color:var(--text-muted);font-size:12px;line-height:1.6;}
+.research-eyebrow {font-size:11px;color:var(--text-muted);letter-spacing:.06em;}
+.research-header .button-row {justify-content:flex-end;flex-wrap:wrap;gap:6px;}
+.research-header button {font-size:12px;white-space:nowrap;}
+.research-history-panel {border-bottom:1px solid var(--line);padding:0 0 15px;margin:-10px 0 22px;max-width:800px;}
+.research-history-title {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;}
+.research-history-title label {display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);}
+.research-history-panel .research-history-list {max-height:250px;margin-top:8px;}
+.research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto;}
+.research-history-panel .research-history-row button:first-child {padding:7px 9px;}
+.research-history-panel .research-history-row small {white-space:normal;line-height:1.5;}
+.research-empty-note {font-size:13px;color:var(--text-muted);line-height:1.7;}
+.research-message {max-width:800px;padding:11px 14px;margin:0 0 18px;border-radius:8px;background:var(--surface-soft);font-size:13px;line-height:1.6;}
+.research-start {max-width:720px;padding:8px 0 0;}
+.research-context-label {font-size:13px;font-weight:600;margin:0 0 10px;}
+.research-last-report,.research-switch-job {border:0!important;background:transparent!important;text-decoration:underline;padding:4px 0!important;font-size:12px!important;}
+.research-company-supplement {display:grid;gap:6px;max-width:360px;margin:14px 0;font-size:12px;}
+.research-link-entry {max-width:800px;margin:16px 0 28px;}
+.research-link-entry label {display:block;font-size:12px;color:var(--text-muted);margin-bottom:8px;}
+.research-link-entry .searchbar {margin:0;}
+.research-candidate {padding:16px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.research-candidate p {max-width:68ch;color:var(--text-muted);line-height:1.7;}
+.research-report-meta {display:flex;justify-content:space-between;gap:10px;max-width:800px;font-size:11px;color:var(--text-muted);margin:0 0 12px;}
+.research-question-result {max-width:720px;background:var(--surface-soft);border-radius:10px;padding:17px 19px;margin:0 0 29px;}
+.research-question-result h2 {font-size:17px;line-height:1.5;margin:5px 0 9px;overflow-wrap:anywhere;}
+.research-question-result>p {font-size:13px;line-height:1.7;margin:0 0 12px;color:var(--text-muted);}
+.research-question-result .evidence-card {background:var(--surface);}
+.research-composer {max-width:800px;border:1px solid var(--line);border-radius:12px;padding:14px 17px;margin:20px 0;background:var(--surface);}
+.research-composer-context {display:flex;justify-content:space-between;gap:6px 20px;flex-wrap:wrap;font-size:12px;font-weight:600;}
+.research-composer-context span {font-weight:400;color:var(--text-muted);}
+.research-composer textarea {display:block;width:100%;min-height:84px;border:0;background:transparent;padding:14px 0 10px;resize:vertical;font-size:14px;line-height:1.7;outline-offset:3px;}
+.research-composer-actions {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.research-topic-chips {display:flex;gap:7px;flex-wrap:wrap;}
+.research-topic-chips button {min-height:32px;border-radius:7px;font-size:12px;}
+.research-topic-chips button[aria-pressed=true] {background:var(--surface-selected);border-color:#a7a7a7;}
+.research-composer .button-row {gap:7px;flex-wrap:wrap;}
+.research-composer-help {font-size:11px;color:var(--text-muted);line-height:1.6;margin:10px 0 0;}
+.research-reading .evidence-source button {padding:0;border:0;background:transparent;text-decoration:underline;font-size:12px;min-height:0;}
+@container(max-width:720px){.research-header {display:block}.research-header .button-row {justify-content:flex-start;margin-top:12px}.research-workbench {padding-right:2px}.research-composer {padding:12px}.research-composer-actions {align-items:stretch}.research-composer-actions>.button-row {margin-left:auto}.research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto}}

@@ -18,6 +18,7 @@ from html.parser import HTMLParser
 from typing import Protocol
 from uuid import uuid4
 
+from jobfindsme.models import CancellationToken, ModelCancelledError
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.privacy import create_analysis_copy
 from jobfindsme.profiles.service import ResumeProfileService
@@ -53,11 +54,16 @@ def _topic_queries(source_id: str, topics: tuple[str, ...], title: str, question
     if not topics:
         return [(None, None, question or "工作强度 加班 工作时间", None)]
     if source_id == "official":
-        return [
+        queries = [
             ("company", angle, terms, domain)
             for angle, terms, domain in _OFFICIAL_QUERIES
         ] if "company" in topics else []
+        if question:
+            queries.insert(0, ("company", "question", question, "cninfo.com.cn"))
+        return queries
     queries = []
+    if question:
+        queries.append(("job" if "job" in topics else "company", "question", f'"{title[:80]}" {question}', None))
     if "company" in topics:
         queries.extend((
             ("company", "positive", "员工评价 优点 正面 认可", None),
@@ -116,6 +122,7 @@ class PublicEvidenceSearch(Protocol):
         source_ids: tuple[str, ...],
         directions: tuple[str, ...] = tuple(DIRECTIONS),
         job_context: dict | None = None,
+        cancellation: CancellationToken | None = None,
     ) -> tuple[list[EvidenceCandidate], dict[str, str]]: ...
 
 
@@ -133,12 +140,15 @@ class WebEvidenceSearch:
         source_ids: tuple[str, ...],
         directions: tuple[str, ...] = tuple(DIRECTIONS),
         job_context: dict | None = None,
+        cancellation: CancellationToken | None = None,
     ) -> tuple[list[EvidenceCandidate], dict[str, str]]:
         candidates: list[EvidenceCandidate] = []
         statuses: dict[str, str] = {}
         topics = tuple((job_context or {}).get("research_topics") or ())
         deadline = time.monotonic() + 45
         for source_id in dict.fromkeys(source_ids):
+            if cancellation:
+                cancellation.raise_if_cancelled()
             source = _SUPPORTED_SOURCES.get(source_id)
             if source is None:
                 statuses[source_id] = "unsupported"
@@ -153,11 +163,13 @@ class WebEvidenceSearch:
                 # Spread angles across independent employee sites within the
                 # same bounded run, instead of exhausting the budget on one.
                 offset = tuple(source_ids).index(source_id)
-                searches = [entry for index, entry in enumerate(searches) if index % 2 == offset % 2]
+                searches = [entry for index, entry in enumerate(searches) if entry[1] == "question" or index % 2 == offset % 2]
             summaries = 0
             verified = 0
             failed = 0
             for topic_kind, angle, topic_text, query_domain in searches:
+                if cancellation:
+                    cancellation.raise_if_cancelled()
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     failed += 1
@@ -182,6 +194,8 @@ class WebEvidenceSearch:
                     continue
                 query_verified = 0
                 for item in root.findall(".//item")[:4]:
+                    if cancellation:
+                        cancellation.raise_if_cancelled()
                     url = (item.findtext("link") or "").strip()
                     parsed = urllib.parse.urlsplit(url)
                     if parsed.scheme not in {"http", "https"} or not (
@@ -354,6 +368,7 @@ class ResearchService:
         context_company: str | None = None,
         context_description: str | None = None,
         interest_question: str | None = None,
+        cancellation: CancellationToken | None = None,
     ) -> dict:
         directions = tuple(dict.fromkeys(directions))
         topics = tuple(dict.fromkeys(topics))
@@ -405,7 +420,10 @@ class ResearchService:
                 source_ids=source_ids,
                 directions=directions,
                 job_context=job_context,
+                cancellation=cancellation,
             )
+        except ModelCancelledError:
+            raise
         except Exception:
             # Preserve a failed attempt without treating it as completed research.
             candidates, source_statuses = (
@@ -413,6 +431,8 @@ class ResearchService:
                 {key: "retrieval_failed" for key in source_ids},
             )
         job_context["source_statuses"] = source_statuses
+        if cancellation:
+            cancellation.raise_if_cancelled()
         evidence = [
             self._public_evidence(report_id, company, query_team, item, now)
             for item in candidates
@@ -496,6 +516,8 @@ class ResearchService:
         )
         job_context["outcome"] = outcome
         status = "complete" if outcome == "complete" else "limited"
+        if cancellation:
+            cancellation.raise_if_cancelled()
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             previous = connection.execute(

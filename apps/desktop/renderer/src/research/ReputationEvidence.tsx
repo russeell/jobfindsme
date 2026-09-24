@@ -10,7 +10,7 @@ const readableLimit=(value:string)=>value.replace(/no_public_evidence|restricted
 const companyAngles=[['business','经营情况'],['listing','上市状态'],['positive','正面反馈'],['negative','负面反馈'],['workload','工作强度'],['benefits','日常福利']] as const;
 const jobAngles=[['role','岗位内容'],['development','岗位发展']] as const;
 
-export function ReputationEvidence({report,workspaceId,onReport}:{report?:ResearchReport;workspaceId:string;onReport(value:ResearchReport):void}) {
+export function ReputationEvidence({report,workspaceId,onReport,onSource}:{report?:ResearchReport;workspaceId:string;onReport(value:ResearchReport):void;onSource?(url:string):void}) {
   const [editing,setEditing]=useState<string>();
   const [kind,setKind]=useState<ResearchCorrectionInput["kind"]>("wrong_entity");
   const [note,setNote]=useState("");
@@ -18,8 +18,10 @@ export function ReputationEvidence({report,workspaceId,onReport}:{report?:Resear
   const [message,setMessage]=useState("");
   const entries=report?.evidence||[];
   const topics=report?.job_context?.research_topics||[];
-  const companyEntries=entries.filter(item=>item.context?.research_topic==="company");
-  const jobEntries=entries.filter(item=>item.context?.research_topic==="job");
+  const questionEntries=entries.filter(item=>item.context?.search_angle==="question");
+  const verifiedQuestionCount=questionEntries.filter(item=>item.verification_status==="independently_retrieved").length;
+  const companyEntries=entries.filter(item=>item.context?.research_topic==="company"&&item.context?.search_angle!=="question");
+  const jobEntries=entries.filter(item=>item.context?.research_topic==="job"&&item.context?.search_angle!=="question");
   const legacyEntries=entries.filter(item=>!item.context?.research_topic);
   const hasPositive=companyEntries.some(item=>item.context?.search_angle==="positive");
   const hasNegative=companyEntries.some(item=>item.context?.search_angle==="negative");
@@ -37,7 +39,7 @@ export function ReputationEvidence({report,workspaceId,onReport}:{report?:Resear
     return <article className="evidence-card" key={item.evidence_id}>
       <div className="evidence-head"><strong>{item.platform}</strong><span>{official?"官方披露":"个人陈述"} · {Number.isFinite(publishedTime)?new Date(publishedTime).toLocaleDateString():"发布时间未知"}</span></div>
       {item.excerpt&&<blockquote>{item.excerpt}</blockquote>}
-      <div className="evidence-source"><span>{item.verification_status==="independently_retrieved"?"已读取原页":"原页未核实"} · {item.relevance==="team"?"仅涉及所述团队":"团队范围未知"}</span>{item.url&&/^https?:\/\//i.test(item.url)&&<a href={item.url} target="_blank" rel="noreferrer">查看来源 ↗</a>}</div>
+      <div className="evidence-source"><span>{item.verification_status==="independently_retrieved"?"已读取原页":"原页未核实"} · {item.relevance==="team"?"仅涉及所述团队":"团队范围未知"}</span>{item.url&&/^https?:\/\//i.test(item.url)&&(onSource?<button type="button" onClick={()=>onSource(item.url!)}>查看来源 ↗</button>:<a href={item.url} target="_blank" rel="noreferrer">查看来源 ↗</a>)}</div>
       <details><summary>来源范围与核验</summary><dl className="evidence-context"><dt>公司</dt><dd>{item.company||"未知"}</dd><dt>团队</dt><dd>{item.team||"未知"}</dd><dt>岗位 / 地区</dt><dd>{context.role||"未知"} / {context.region||"未知"}</dd><dt>读取时间</dt><dd>{item.retrieved_at||"未知"}</dd><dt>链接状态</dt><dd>{{reachable:"读取时可访问；当前未复查",broken:"已失效",unavailable:"暂无法读取",unknown:"未知"}[context.link_status||"unknown"]}</dd></dl><p className="note">{item.limitations}</p></details>
       {!!corrections.length&&<p className="note">本机更正：{corrections.map(c=>`${correctionKinds[c.kind]}${c.note?`：${c.note}`:""}`).join("；")}</p>}
       <button className="correction-trigger" onClick={()=>{setEditing(item.evidence_id);setNote("");setMessage("");}}>记录信息更正</button>
@@ -47,6 +49,7 @@ export function ReputationEvidence({report,workspaceId,onReport}:{report?:Resear
   return <div className="research-reading">
     <p className="research-overview">{entries.length?`本次保存 ${entries.length} 条可追溯材料。请按来源时间、公司或团队范围核对。`:
       "本次没有取得可核对的公开原文。来源受限或暂无结果不代表相关信息不存在；可调整公司全称后再次研究。"}</p>
+    {report?.job_context?.interest_question&&<section className="research-question-result" aria-label="本次问题的检索结果"><span className="research-eyebrow">本次追问</span><h2>{report.job_context.interest_question}</h2><p>{verifiedQuestionCount?`有 ${verifiedQuestionCount} 条与问题相关的原页材料；能确认存在下列公开陈述，但还不能据此确定具体团队或岗位情况。请核对时间与适用范围。`:"本次没有取得可核对的直接材料，暂不能回答这个问题；可调整问题或打开来源核对。"}</p>{questionEntries.map(card)}</section>}
     {topics.includes("company")&&<section className="research-reading-section"><div className="research-section-heading"><span>01</span><h2>公司情况</h2></div>
       <p className="research-section-intro">经营与上市信息优先看公开披露；工作体验来自个人陈述，不能代表整个公司。</p>
       {companyEntries.length?<div className="research-angles">{companyAngles.map(([angle,label])=>{const found=companyEntries.filter(item=>item.context?.search_angle===angle);return found.length?<section key={angle} className="research-angle"><h3>{label}</h3>{found.map(card)}</section>:null;})}</div>:<p className="research-unknown">本次未取得可核对的公司原文；经营情况、上市状态与员工体验均保持未知。</p>}

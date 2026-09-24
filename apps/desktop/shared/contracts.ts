@@ -99,7 +99,7 @@ export type DesktopBridge = {
   listResearchReports(workspaceId: string): Promise<ResearchReport[]>;
   hideResearchReport(workspaceId:string,reportId:string):Promise<void>;
   createResearchReport(input: ResearchRunInput): Promise<ResearchReport>;
-  cancelResearch(): Promise<ResearchReport | undefined>;
+  cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]>;
   createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask>;
   setScheduledTaskPaused(taskId: string, paused: boolean): Promise<ScheduledTask>;
@@ -393,7 +393,7 @@ export type ServiceStatus = {
 export type ResearchDirection = "role" | "workload" | "salary" | "leave" | "care";
 export type ResearchCorrectionInput = {workspace_id:string;evidence_id:string;kind:"wrong_entity"|"broken_link"|"wrong_team"|"other";note:string};
 export type ResearchEvidence = {
-  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|null;source_type?:"official_disclosure"|"personal_account"};
+  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|"question"|null;source_type?:"official_disclosure"|"personal_account"};
   evidence_id: string;
   url: string | null;
   platform: string;

@@ -687,12 +687,12 @@ ipcMain.handle("desktop:create-research-report", async (_event, input: ResearchR
     if (connection.status !== "verified" || (!apiKey && connection.auth_mode !== "none")) {
       throw new Error("模型连接未验证或本地 API Key 不可用。");
     }
-    researchController?.abort();
-    researchController = new AbortController();
-    requestId = `research-${randomUUID()}`;
-    researchRequestId = requestId;
-    researchWorkspaceId = input.workspace_id;
   }
+  researchController?.abort();
+  researchController = new AbortController();
+  requestId = `research-${randomUUID()}`;
+  researchRequestId = requestId;
+  researchWorkspaceId = input.workspace_id;
   try {
     return await apiClient.createResearchReport(
       input,
