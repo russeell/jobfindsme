@@ -140,7 +140,7 @@ class BrowserSourcePage(StrictResponse):
 
 class SearchPreflightRequest(StrictResponse):
     workspace_id: str
-    intent: str = Field(min_length=1, max_length=80)
+    intent: str = Field(default="", max_length=80)
     source_ids: list[str] = Field(default_factory=lambda: ["liepin"], max_length=20)
     city: str = Field(default="", max_length=30)
     max_pages: int = Field(default=3, ge=1, le=20)

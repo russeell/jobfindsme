@@ -150,6 +150,12 @@ def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) 
               "accepted_fact_ids": [fact["fact_id"] for fact in draft["facts"]]},
     ).json()
     version_id = confirmed["current_version_id"]
+    generated = client.post("/v1/search-preflight", headers=headers,
+                            json={"workspace_id": workspace_id, "intent": "",
+                                  "source_ids": ["liepin"]})
+    assert generated.status_code == 200
+    assert generated.json()["resume_version_id"] == version_id
+    assert "Python" in " ".join(generated.json()["keywords"])
     cleared = client.post("/v1/resumes/clear-current", headers=headers,
                           json=params)
     assert cleared.status_code == 200
@@ -173,6 +179,10 @@ def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) 
     assert preflight.status_code == 200
     assert preflight.json()["resume_version_id"] is None
     assert preflight.json()["keywords"] == ["数据工程师"]
+    missing = restarted.post("/v1/search-preflight", headers=headers,
+                             json={"workspace_id": workspace_id, "intent": "",
+                                   "source_ids": ["liepin"]})
+    assert missing.status_code == 409
 
 
 def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:

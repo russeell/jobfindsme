@@ -114,6 +114,27 @@ def test_confirmed_resume_is_forced_into_private_search_keywords(tmp_path) -> No
     assert set(preflight.blocked_sources) == {"boss", "zhilian", "wuyou"}
 
 
+def test_confirmed_resume_can_search_without_manual_keywords_then_clear(tmp_path) -> None:
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    service = DesktopSearchService(profiles=profiles, sources=DesktopSourceService(database))
+    generated = service.preflight(workspace_id=workspace.workspace_id, intent="",
+                                  source_ids=["liepin"])
+    assert generated.resume_version_id
+    assert 1 <= len(generated.keywords) <= 4
+    assert "Python" in " ".join(generated.keywords)
+    assert "张三" not in " ".join(generated.keywords)
+    assert "13800138000" not in " ".join(generated.keywords)
+    manual = service.preflight(workspace_id=workspace.workspace_id,
+                               intent="数据工程师", source_ids=["liepin"])
+    assert "数据工程师" in manual.keywords[0]
+    profiles.clear_current(workspace_id=workspace.workspace_id)
+    with pytest.raises(SearchPreflightError, match="enter a job keyword"):
+        service.preflight(workspace_id=workspace.workspace_id, intent="",
+                          source_ids=["liepin"])
+    assert service.preflight(workspace_id=workspace.workspace_id, intent="数据工程师",
+                             source_ids=["liepin"]).keywords == ("数据工程师",)
+
+
 def test_pending_resume_blocks_search_instead_of_falling_back(tmp_path) -> None:
     database = Database(tmp_path / "desktop.db")
     database.migrate()

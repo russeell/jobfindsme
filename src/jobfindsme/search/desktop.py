@@ -233,11 +233,11 @@ def build_search_keywords(*, intent: str, resume) -> tuple[str, ...]:
         text=" ".join(intent.split()),
     ).text
     clean_intent = _PRIVATE_PLACEHOLDER.sub("", clean_intent).strip()
-    if not clean_intent:
-        raise SearchPreflightError("a non-private job intent is required")
     if len(clean_intent) > 80:
         raise SearchPreflightError("job intent is too long")
     if resume is None:
+        if not clean_intent:
+            raise SearchPreflightError("enter a job keyword or confirm a resume first")
         return (clean_intent,)
 
     terms: list[str] = []
@@ -258,6 +258,10 @@ def build_search_keywords(*, intent: str, resume) -> tuple[str, ...]:
             ).text
             terms.extend(_TECH_TERM.findall(safe))
     unique_terms = tuple(dict.fromkeys(terms))[:6]
+    if not clean_intent:
+        if not unique_terms:
+            raise SearchPreflightError("confirmed resume has no usable skill or experience keywords")
+        return tuple(dict.fromkeys((" ".join(unique_terms[:2]), *unique_terms[:3])))[:4]
     queries = [
         " ".join((clean_intent, *unique_terms[:2])),
         clean_intent,

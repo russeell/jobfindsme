@@ -1,6 +1,6 @@
 import {reportMatchesJob,hasFullDescription} from "../../../shared/research-reports";
 import type {ResearchReport} from "../../../shared/contracts";
-import {applySearchPreferences,defaultDiscoveryFilters,normalizeDiscoveryFilters,selectedSearchSources} from "../../../shared/discovery-filters";
+import {defaultDiscoveryFilters,normalizeDiscoveryFilters,selectedSearchSources} from "../../../shared/discovery-filters";
 import {userError} from "../../../shared/user-errors";
 import {JobActions} from "./JobActions";
 import {useEffect, useMemo,useState,useRef,type FormEvent} from "react";
@@ -26,7 +26,6 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
   useEffect(()=>window.jobfindsme?.onSourceCollectionProgress(setCollection),[]);
   const [matchingMessage,setMatchingMessage]=useState("");
   const searchEpoch=useRef(0);
-  const lastPreferredRole=useRef("");
   const [result, setResult] = useState<SourceSearchResponse>();
   const [page, setPage] = useState<SearchResultPage>();
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
@@ -47,14 +46,8 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
   const openBrowser = useOriginalBrowser();
   const workspaceId = data?.workspaces[0]?.workspace_id;
   useEffect(()=>{if(!active||!workspaceId)return;let cancelled=false;
-    void Promise.all([window.jobfindsme!.getResumeState(),window.jobfindsme!.getSearchPreferences(workspaceId)]).then(([resume,prefs])=>{
-      if(cancelled)return;setResumeState(resume);
-      const previousRole=lastPreferredRole.current;
-      setIntent(value=>applySearchPreferences(value.trim()&&value!==previousRole?value:"",filters,prefs).intent);
-      lastPreferredRole.current=prefs.target_role;
-      setFilters(previous=>applySearchPreferences("",previous,prefs).filters);
-      setFilterKey(value=>value+1);
-    }).catch(()=>{});return()=>{cancelled=true;};},[active,workspaceId]);
+    void window.jobfindsme!.getResumeState().then(resume=>{if(!cancelled)setResumeState(resume);}).catch(()=>{});
+    return()=>{cancelled=true;};},[active,workspaceId]);
   useEffect(()=>{
     if(!active || !workspaceId)return;let cancelled=false;
     void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(cancelled)return;const byId=new Map(rows.map(row=>[row.job.job_id,row.tracking]));const fresh=(item:SearchResultItem)=>({...item,tracking:byId.get(item.job.job_id) ?? item.tracking});setPage(current=>current && {...current,items:current.items.map(fresh)});setSelected(current=>current && fresh(current));}).catch(error=>onError(messageOf(error)));
@@ -62,7 +55,8 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
   },[active,workspaceId]);
   async function search(event?: FormEvent, cursor?:string) {
     event?.preventDefault();
-    if (!workspaceId || !intent.trim()) return;
+    if (!workspaceId) return;
+    if (!intent.trim() && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
     if (!enabled.length || (cursor&&!enabled.some(s=>s.source_id==="boss"))) {onError("请先选择至少一个当前可检索的来源。");return;}
     if (filters.salary_min_k != null && filters.salary_max_k != null && filters.salary_min_k > filters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
     const epoch=++searchEpoch.current;filterEpoch.current++;
@@ -75,7 +69,7 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
       const blocked=Object.values(response.blocked_sources);
       if(failed.length||blocked.length)setSearchError(userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?"source_contract_error":"partial")));
       if(response.result_page.total || (!failed.length&&!blocked.length)){setPage(response.result_page);setSelected(response.result_page.items[0]);setMobileView("list");}
-      setMatchingMessage(response.result_page.resume_version_id?"已按已确认简历整理对应线索；请核对岗位原文。":"按关键词与明确筛选条件显示岗位。");
+      setMatchingMessage(`本次实际检索方向：${response.keywords.join(" · ")}。请核对岗位原文。`);
     } catch (error) { setSearchError(userError(error)); } finally { setSearching(false); }
   }
   async function completeDetail() {
@@ -112,7 +106,8 @@ export function Discovery({ active, data, onError, onResearch,onResume,selectedS
     }).catch(error=>onError(messageOf(error)));
   }
   return <div className="discovery-page"><div className="discovery-controls"><div className="heading-row"><div><h1>找工作</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"当前简历已参与岗位匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"当前未使用简历，可先搜索岗位"} {resumeState&&<button type="button" onClick={onResume}>{resumeState.search_profile_state==="ready"?"维护简历":"设置简历"}</button>}</p></div></div>
-    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位或方向，例如 AI 应用工程师" value={intent} onChange={(event) => setIntent(event.target.value)} /><button className="primary-button" disabled={!intent.trim() || searching || !workspaceId || enabled.length === 0}>{searching ? "检索中…" : "找岗位"}</button></form>
+    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="可留空按已确认简历搜索，或输入岗位方向" value={intent} onChange={(event) => setIntent(event.target.value)} /><button className="primary-button" disabled={searching || !workspaceId || enabled.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
+    {!intent.trim()&&resumeState?.search_profile_state==="ready"&&<p className="note">留空将从已确认的技能和经历生成有限检索词；实际使用词会在结果中列出。</p>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     {!selectedSources.length&&<p className="discovery-next-step" role="status">选择至少一个可检索来源，再输入岗位关键词。<button onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>选择来源</button></p>}
     {!!unavailable.length&&<p className="note source-unavailable">已选但暂不可检索：{unavailable.map(s=>`${s.name}（${s.login_required&&s.session_status!=="verified"?"需登录 / 检查":"能力待验证"}）`).join("、")}。<button onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>查看来源</button></p>}

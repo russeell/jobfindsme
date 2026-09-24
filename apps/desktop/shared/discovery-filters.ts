@@ -8,8 +8,3 @@ export function hasDiscoveryFilters(filters:SearchFilters,sourceId=''):boolean {
  const defaults=defaultDiscoveryFilters();
  return !!sourceId||Object.entries(normalizeDiscoveryFilters(filters)).some(([key,value])=>value!=null&&(!Array.isArray(value)||value.length>0)&&value!==defaults[key as keyof SearchFilters]);
 }
-
-export function applySearchPreferences(intent:string,filters:SearchFilters,preferences:import('./contracts').SearchPreferences):{intent:string;filters:SearchFilters}{
- const constrained=preferences.cities.length>0||preferences.salary_min_k!=null||preferences.salary_max_k!=null;
- return {intent:intent.trim()?intent:preferences.target_role,filters:{...filters,cities:[...preferences.cities],salary_min_k:preferences.salary_min_k??undefined,salary_max_k:preferences.salary_max_k??undefined,unknown_policy:constrained?'exclude':'include'}};
-}
