@@ -99,6 +99,16 @@ test('career risk control pauses a source and never turns the failure into an em
  try{const input={keyword:'AI',city:'',maxPages:1,seconds:5};await assert.rejects(m.collectCareer('company_14',input),/risk_control/);await assert.rejects(m.collectCareer('company_14',input),/source_backoff/);assert.equal(loads,1);}finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
+test('career SPA navigation accepts an allowed abort and still reads the current page',async()=>{
+ const {m}=setup();
+ FakeView.onCreate=v=>{
+  v.webContents.loadURL=async()=>{v.webContents.getURL=()=> 'https://app.mokahr.com/social-recruitment/step/94904#/jobs';throw Object.assign(Error('SPA navigation'),{code:'ERR_ABORTED'});};
+  v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[{title:'模型工程师',company:'阶跃星辰',location:'北京',salary:'',url:'https://app.mokahr.com/social-recruitment/step/94904#/job/observed'}],next:false,empty:false,loading:false}:false;
+ };
+ try{const result=await m.collectCareer('company_16',{keyword:'工程师',city:'',maxPages:1,seconds:5});assert.equal(result.records.length,1);assert.match(result.records[0].payload.url,/observed/);}
+ finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
 
 test('search tab entering a registered source opens its persistent session',async()=>{
  const {w,m}=setup();await m.show('web',bounds,'https://www.bing.com/search?q=jobs');m.layout(bounds);

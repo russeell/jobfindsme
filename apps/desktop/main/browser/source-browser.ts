@@ -315,7 +315,12 @@ export class SourceBrowserManager {
     try{
       const url=sourceBrowserSpecs[sourceId].loginUrl;
       const ready=new Promise<void>(resolve=>view.webContents.once('dom-ready',()=>resolve()));
-      await bounded(Promise.race([view.webContents.loadURL(url),ready]));
+      const loaded=view.webContents.loadURL(url).catch(async error=>{
+        if(!await confirmAllowedNavigationAfterAbort(sourceId,url,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;
+      });
+      await bounded(Promise.race([loaded,ready]));
+      // A stale dom-ready event can win the race while a SPA is redirecting.
+      if(view.webContents.isLoadingMainFrame())await bounded(loaded);
       check();if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:官网跳转超出已核验入口');
       let raw:CareerPage=await bounded(view.webContents.executeJavaScript(careerPageScript()));
       for(let wait=0;wait<12&&!raw.jobs.length&&!raw.entry&&!raw.blocked;wait++){check();await new Promise(r=>setTimeout(r,250));raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));}
@@ -348,8 +353,9 @@ export class SourceBrowserManager {
           const candidates=await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId))) as Array<{title:string;location:string}>;
           const listUrl=view.webContents.getURL();let clickedUrl='';
           view.webContents.setWindowOpenHandler(({url})=>{if(isAllowedSourceUrl(sourceId,url))clickedUrl=url;return {action:'deny'};});
-          try{for(let i=0;i<Math.min(candidates.length,5);i++){
+          try{let attempted=0;for(let i=0;i<candidates.length&&attempted<5;i++){
             if(!candidates[i].title.toLowerCase().includes(input.keyword.toLowerCase()))continue;
+            attempted++;
             check();clickedUrl='';await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId,i)));
             for(let wait=0;wait<8&&!clickedUrl&&view.webContents.getURL()===listUrl;wait++)await new Promise(r=>setTimeout(r,100));
             const target=clickedUrl||view.webContents.getURL();

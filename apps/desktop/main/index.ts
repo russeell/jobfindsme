@@ -408,8 +408,10 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   if(sourceCheckController)throw Error('全部来源检查进行中，请结束后再单独重试');
   if(!requiresElectronSourceSearch(sourceId)){
     let pages:BrowserSourcePage[];
-    try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
-    catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
+    if(["liepin","company_01","company_12"].includes(sourceId)){
+      try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
+      catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
+    }else pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];
     const first=pages.flatMap(p=>p.records)[0];
     if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
     if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}

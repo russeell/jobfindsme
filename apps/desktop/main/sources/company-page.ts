@@ -66,7 +66,7 @@ export function careerRecords(sourceId:SourceBrowserId,url:string,raw:CareerPage
 export function careerClickableScript(sourceId:SourceBrowserId,index=-1):string {
  const selectors:Partial<Record<SourceBrowserId,string>>={company_03:'._1RRlPtjyYmeDGCWt9lrk2P',company_04:'.position_list_item .postion_name .title',company_05:'[class*="post-title-content__"]',company_06:'a.link-tag[id]',company_07:'.list-card-content .f-title',company_08:'.item .name[title]',company_10:'.cursor-pointer.break-all'};
  const selector=selectors[sourceId];if(!selector)return '[]';
- return `(()=>{const nodes=Array.from(document.querySelectorAll(${JSON.stringify(selector)})).filter(e=>e.getBoundingClientRect().width>0);if(${index}>=0){nodes[${index}]?.click();return [];}return nodes.slice(0,20).map(e=>({title:(e.getAttribute('title')||e.innerText||'').trim(),location:(e.closest('.position_list_item')?.querySelector('.position_city')?.textContent||'').trim()}));})()`;
+ return `(()=>{const nodes=Array.from(document.querySelectorAll(${JSON.stringify(selector)})).filter(e=>e.getBoundingClientRect().width>0);if(${index}>=0){nodes[${index}]?.click();return [];}return nodes.slice(0,40).map(e=>({title:(e.getAttribute('title')||e.innerText||'').trim(),location:(e.closest('.position_list_item')?.querySelector('.position_city')?.textContent||'').trim()}));})()`;
 }
 export function careerEntryClickScript(sourceId:SourceBrowserId):string {
  if(!['company_01','company_03'].includes(sourceId))return 'false';
