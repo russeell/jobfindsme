@@ -1,7 +1,0 @@
-const {app,BrowserWindow}=require('electron'),fs=require('fs');
-const root='/Users/russeell/Documents/开源项目开发/jobfindsme',out='/private/tmp/jfm-d37-public-evidence';app.setPath('userData','/private/tmp/jfm-d37-entry-'+Date.now());
-const {SourceBrowserManager}=require(root+'/apps/desktop/dist-electron/main/source-browser.js');
-app.whenReady().then(async()=>{const w=new BrowserWindow({show:false}),m=new SourceBrowserManager(w);
-for(const [id,url,script] of [['company_03','https://talent.alibaba.com/',`(()=>{const x=Array.from(document.querySelectorAll('span')).find(e=>e.textContent==='进入招聘官网');x?.click();return !!x;})()`],['company_06','https://zhaopin.jd.com/',null]]){const v=m.backgroundView(id),events=[];v.webContents.on('will-redirect',(_e,url)=>events.push({redirect:url}));v.webContents.on('will-navigate',(_e,url)=>events.push({navigate:url}));v.webContents.setWindowOpenHandler(({url})=>{events.push({popup:url});return {action:'deny'};});
-try{await Promise.race([v.webContents.loadURL(url),new Promise((_,r)=>setTimeout(()=>r(Error('timeout')),10000))]).catch(e=>events.push({error:String(e)}));if(script){await new Promise(r=>setTimeout(r,1500));await Promise.race([v.webContents.executeJavaScript(script),new Promise((_,r)=>setTimeout(()=>r(Error('DOM timeout')),3000))]);await new Promise(r=>setTimeout(r,700));}}catch(e){events.push({error:String(e)});}fs.writeFileSync(out+'/'+id+'-entry.json',JSON.stringify({date:new Date().toISOString(),events,finalUrl:v.webContents.getURL()}));console.log(id,events);}
-m.destroy();w.destroy();app.quit();});

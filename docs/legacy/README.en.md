@@ -167,7 +167,7 @@ is still unavailable it is marked failed and other results are still returned.
 Live availability of all four varies with platform security policy and your
 local login state. The project never presents cached or blocked responses as
 live results; every search returns per-source status. See the latest live
-report: [four-source search report](../../evaluation/evidence/latest_four_source_search.md).
+report: [four-source search report](https://github.com/russeell/jobfindsme/blob/1beb7dbe4c465ade47452ae706de487a3582b0eb/evaluation/evidence/latest_four_source_search.md).
 
 ---
 

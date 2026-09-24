@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-09-24",
+  "updated_at": "2026-09-25",
   "status_values": [
     "pending",
     "in_progress",
@@ -1168,8 +1168,7 @@
       ],
       "verification": "第一方入口核查、少量公开样本与离线契约；登录受限明确保留",
       "evidence": [
-        "docs/desktop/evidence/D37.md",
-        "docs/desktop/evidence/D37/source-matrix.json"
+        "docs/desktop/evidence/D37.md"
       ],
       "blocker": null
     },
@@ -1260,8 +1259,7 @@
       ],
       "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
-        "docs/desktop/evidence/D41.md",
-        "docs/desktop/evidence/D41/source-matrix.json"
+        "docs/desktop/evidence/D41.md"
       ],
       "blocker": null
     },
@@ -1644,7 +1642,9 @@
     {
       "id": "D57",
       "title": "来源登录会话跨重启与测试包延续",
-      "depends_on": ["D23"],
+      "depends_on": [
+        "D23"
+      ],
       "status": "done",
       "scope": [
         "猎聘和前程无忧不强制从登录页重开",
@@ -1659,7 +1659,32 @@
         "不复制或删除现有账号数据；站点过期不误报已登录"
       ],
       "verification": "TypeScript 构建、来源浏览器定向测试、隔离原生重启与包审计",
-      "evidence": ["docs/desktop/evidence/D57.md"],
+      "evidence": [
+        "docs/desktop/evidence/D57.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D58",
+      "title": "整理 GitHub 文件树与历史验收附件",
+      "depends_on": [
+        "D56"
+      ],
+      "status": "done",
+      "scope": [
+        "移出不参与运行与测试的原始验收附件和生成报告",
+        "保留简短验收记录与历史证据可追溯性",
+        "更新目录说明和忽略规则"
+      ],
+      "acceptance": [
+        "源码、迁移、测试和构建配置保留",
+        "文档链接与 README 插图可用",
+        "桌面与 Python 测试通过"
+      ],
+      "verification": "桌面构建、Node 83/83、Python 测试、Skill 同步检查、文档链接与归档哈希审计",
+      "evidence": [
+        "docs/desktop/evidence/D58.md"
+      ],
       "blocker": null
     }
   ]

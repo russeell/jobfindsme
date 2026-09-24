@@ -6,9 +6,9 @@ JobFindsMe is a local desktop workspace for job search, role research and resume
 
 [中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
-![Current JobFindsMe research composer with a synthetic role](docs/desktop/evidence/D52/composer-start-focused-default.jpg)
+![Current JobFindsMe research composer with a synthetic role](docs/images/jobfindsme-research.jpg)
 
-*Current D52 interface using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
+*Interface example using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
 
 ## Find jobs with fewer open windows
 
