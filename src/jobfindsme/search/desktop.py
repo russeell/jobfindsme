@@ -260,7 +260,9 @@ def build_search_keywords(*, intent: str, resume) -> tuple[str, ...]:
     unique_terms = tuple(dict.fromkeys(terms))[:6]
     if not clean_intent:
         if not unique_terms:
-            raise SearchPreflightError("confirmed resume has no usable skill or experience keywords")
+            raise SearchPreflightError(
+                "confirmed resume has no usable skill or experience keywords"
+            )
         return tuple(dict.fromkeys((" ".join(unique_terms[:2]), *unique_terms[:3])))[:4]
     queries = [
         " ".join((clean_intent, *unique_terms[:2])),

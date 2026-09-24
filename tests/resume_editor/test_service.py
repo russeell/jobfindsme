@@ -133,30 +133,115 @@ def test_edit_preserves_spacing_and_hide_keeps_referenced_snapshots(tmp_path) ->
     first = profiles.current_version(workspace_id=workspace.workspace_id)
     assert first is not None
     content = {**first.content, "projects": ["  项目 A  ", "", "  项目 B  "]}
-    second = editor.save_edit(workspace_id=workspace.workspace_id, base_version_id=first.version_id, content=content)
+    second = editor.save_edit(
+        workspace_id=workspace.workspace_id,
+        base_version_id=first.version_id,
+        content=content,
+    )
     assert second.content["projects"] == ("  项目 A  ", "", "  项目 B  ")
-    assert ResumeEditorService(database).get_version(workspace_id=workspace.workspace_id, version_id=second.version_id).content["projects"] == second.content["projects"]
+    assert (
+        ResumeEditorService(database)
+        .get_version(workspace_id=workspace.workspace_id, version_id=second.version_id)
+        .content["projects"]
+        == second.content["projects"]
+    )
     with pytest.raises(ResumeEditorError, match="current"):
-        editor.hide_version(workspace_id=workspace.workspace_id, version_id=second.version_id)
+        editor.hide_version(
+            workspace_id=workspace.workspace_id, version_id=second.version_id
+        )
     jobs = JobRepository(database)
     job = _job(889)
     jobs.upsert(workspace.workspace_id, job)
     service = DesktopJobService(database, jobs)
-    run_id = service.create_snapshot(workspace_id=workspace.workspace_id, intent="合成检索", job_ids=[job.job_id], resume_version=first, filters=DesktopJobFilters())
+    run_id = service.create_snapshot(
+        workspace_id=workspace.workspace_id,
+        intent="合成检索",
+        job_ids=[job.job_id],
+        resume_version=first,
+        filters=DesktopJobFilters(),
+    )
     rule_id = service.ensure_rule_version(workspace.workspace_id)
-    plan = LocalScheduler(database).create_task(workspace_id=workspace.workspace_id, name="旧计划", intent="合成检索", source_ids=["liepin"], filters={}, resume_version_id=first.version_id, rule_version_id=rule_id, frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
+    plan = LocalScheduler(database).create_task(
+        workspace_id=workspace.workspace_id,
+        name="旧计划",
+        intent="合成检索",
+        source_ids=["liepin"],
+        filters={},
+        resume_version_id=first.version_id,
+        rule_version_id=rule_id,
+        frequency="interval",
+        timezone="Asia/Shanghai",
+        interval_minutes=60,
+    )
     with database.connect() as sql:
-        sql.execute("""INSERT INTO research_reports (report_id,workspace_id,job_id,resume_version_id,status,jd_facts_json,resume_observations_json,project_rewrites_json,interview_topics_json,limitations_json,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)""", ("synthetic-report",workspace.workspace_id,job.job_id,first.version_id,"limited","[]","[]","[]","[]","[]","2026-09-24T00:00:00+00:00"))
-    editor.hide_version(workspace_id=workspace.workspace_id, version_id=first.version_id)
-    editor.hide_version(workspace_id=workspace.workspace_id, version_id=first.version_id)
-    assert [item.version_id for item in ResumeEditorService(database).list_versions(workspace_id=workspace.workspace_id)] == [second.version_id]
-    assert editor.get_version(workspace_id=workspace.workspace_id, version_id=first.version_id).content == first.content
-    assert service.page(workspace_id=workspace.workspace_id, run_id=run_id, page=1, page_size=10)["resume_version_id"] == first.version_id
-    assert LocalScheduler(database).get_task(plan["task_id"])["resume_version_id"] == first.version_id
+        sql.execute(
+            (
+                "INSERT INTO research_reports "
+                "(report_id,workspace_id,job_id,resume_version_id,status,"
+                "jd_facts_json,resume_observations_json,project_rewrites_json,"
+                "interview_topics_json,limitations_json,created_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+            ),
+            (
+                "synthetic-report",
+                workspace.workspace_id,
+                job.job_id,
+                first.version_id,
+                "limited",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                "2026-09-24T00:00:00+00:00",
+            ),
+        )
+    editor.hide_version(
+        workspace_id=workspace.workspace_id, version_id=first.version_id
+    )
+    editor.hide_version(
+        workspace_id=workspace.workspace_id, version_id=first.version_id
+    )
+    assert [
+        item.version_id
+        for item in ResumeEditorService(database).list_versions(
+            workspace_id=workspace.workspace_id
+        )
+    ] == [second.version_id]
+    assert (
+        editor.get_version(
+            workspace_id=workspace.workspace_id, version_id=first.version_id
+        ).content
+        == first.content
+    )
+    assert (
+        service.page(
+            workspace_id=workspace.workspace_id, run_id=run_id, page=1, page_size=10
+        )["resume_version_id"]
+        == first.version_id
+    )
+    assert (
+        LocalScheduler(database).get_task(plan["task_id"])["resume_version_id"]
+        == first.version_id
+    )
     with database.connect() as sql:
-        assert sql.execute("SELECT resume_version_id FROM research_reports WHERE report_id='synthetic-report'").fetchone()[0] == first.version_id
+        assert (
+            sql.execute(
+                "SELECT resume_version_id FROM research_reports "
+                "WHERE report_id='synthetic-report'"
+            ).fetchone()[0]
+            == first.version_id
+        )
     from jobfindsme.research.service import ResearchService
-    assert ResearchService(database, jobs, profiles).get_report(workspace_id=workspace.workspace_id, report_id="synthetic-report")["resume_version_id"] == first.version_id
+
+    assert (
+        ResearchService(database, jobs, profiles).get_report(
+            workspace_id=workspace.workspace_id, report_id="synthetic-report"
+        )["resume_version_id"]
+        == first.version_id
+    )
     other = WorkspaceService(database).create()
     with pytest.raises(ResumeEditorError, match="not found"):
-        editor.hide_version(workspace_id=other.workspace_id, version_id=first.version_id)
+        editor.hide_version(
+            workspace_id=other.workspace_id, version_id=first.version_id
+        )

@@ -18,8 +18,8 @@ from html.parser import HTMLParser
 from typing import Protocol
 from uuid import uuid4
 
-from jobfindsme.models import CancellationToken, ModelCancelledError
 from jobfindsme.importing.repository import JobRepository
+from jobfindsme.models import CancellationToken, ModelCancelledError
 from jobfindsme.privacy import create_analysis_copy
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.storage import Database
@@ -54,27 +54,44 @@ def _topic_queries(source_id: str, topics: tuple[str, ...], title: str, question
     if not topics:
         return [(None, None, question or "工作强度 加班 工作时间", None)]
     if source_id == "official":
-        queries = [
-            ("company", angle, terms, domain)
-            for angle, terms, domain in _OFFICIAL_QUERIES
-        ] if "company" in topics else []
+        queries = (
+            [
+                ("company", angle, terms, domain)
+                for angle, terms, domain in _OFFICIAL_QUERIES
+            ]
+            if "company" in topics
+            else []
+        )
         if question:
             queries.insert(0, ("company", "question", question, "cninfo.com.cn"))
         return queries
     queries = []
     if question:
-        queries.append(("job" if "job" in topics else "company", "question", f'"{title[:80]}" {question}' if title else question, None))
+        queries.append(
+            (
+                "job" if "job" in topics else "company",
+                "question",
+                f'"{title[:80]}" {question}' if title else question,
+                None,
+            )
+        )
     if "company" in topics:
-        queries.extend((
-            ("company", "positive", "员工评价 优点 正面 认可", None),
-            ("company", "negative", "员工评价 缺点 负面 吐槽", None),
-            ("company", "workload", "工作强度 加班 工作时间", None),
-            ("company", "benefits", "员工福利 日常福利 休假", None),
-        ))
+        queries.extend(
+            (
+                ("company", "positive", "员工评价 优点 正面 认可", None),
+                ("company", "negative", "员工评价 缺点 负面 吐槽", None),
+                ("company", "workload", "工作强度 加班 工作时间", None),
+                ("company", "benefits", "员工福利 日常福利 休假", None),
+            )
+        )
     if "job" in topics:
         queries.append(("job", "role", f'"{title[:80]}" 工作内容 技能要求', None))
-        queries.append(("job", "development", f'"{title[:80]}" 岗位发展 业务方向', None))
+        queries.append(
+            ("job", "development", f'"{title[:80]}" 岗位发展 业务方向', None)
+        )
     return queries
+
+
 DIRECTIONS = {
     "role": "岗位情况",
     "workload": "工作强度",
@@ -163,7 +180,11 @@ class WebEvidenceSearch:
                 # Spread angles across independent employee sites within the
                 # same bounded run, instead of exhausting the budget on one.
                 offset = tuple(source_ids).index(source_id)
-                searches = [entry for index, entry in enumerate(searches) if entry[1] == "question" or index % 2 == offset % 2]
+                searches = [
+                    entry
+                    for index, entry in enumerate(searches)
+                    if entry[1] == "question" or index % 2 == offset % 2
+                ]
             summaries = 0
             verified = 0
             failed = 0
@@ -376,16 +397,24 @@ class ResearchService:
         question = " ".join((interest_question or "").split())
         if len(question) > 300:
             raise ResearchError("兴趣问题最多 300 字。")
-        if (not directions and not question and not topics) or any(
-            key not in DIRECTIONS for key in directions
-        ) or any(key not in RESEARCH_TOPICS for key in topics):
+        if (
+            (not directions and not question and not topics)
+            or any(key not in DIRECTIONS for key in directions)
+            or any(key not in RESEARCH_TOPICS for key in topics)
+        ):
             raise ResearchError("请填写兴趣问题或选择调查方向。")
-        job = self.jobs.get(workspace_id=workspace_id, job_id=job_id) if job_id else None
+        job = (
+            self.jobs.get(workspace_id=workspace_id, job_id=job_id) if job_id else None
+        )
         if job is None and (not context_company or not context_company.strip()):
             raise ResearchError("请先说明要研究的公司名称，问题会保留。")
         if job is None and "job" in topics and not (context_title or "").strip():
             raise ResearchError("研究具体岗位时，请说明岗位名称或选择已保存岗位。")
-        resume = self._resume(workspace_id, resume_version_id, required=False) if job else None
+        resume = (
+            self._resume(workspace_id, resume_version_id, required=False)
+            if job
+            else None
+        )
         report_id = f"research_{uuid4().hex}"
         now = datetime.now(UTC).isoformat()
         company = (context_company or (job.company if job else "")).strip()
@@ -406,15 +435,24 @@ class ResearchService:
             "research_topics": list(topics),
             "research_angles": (
                 ["business", "listing", "positive", "negative", "workload", "benefits"]
-                if "company" in topics else []
-            ) + (["role", "development"] if "job" in topics else []),
+                if "company" in topics
+                else []
+            )
+            + (["role", "development"] if "job" in topics else []),
             "url": job.apply_url if job else "",
             "team": query_team,
             "locations": list(job.locations) if job else [],
             "supplemented_by_user": bool(context_company or context_description),
             "canonical_url": canonical_job_url(job.apply_url) if job else "",
-            "job_snapshot": ({**job.model_dump(mode="json"), "company": company,
-                              "description": description} if job else None),
+            "job_snapshot": (
+                {
+                    **job.model_dump(mode="json"),
+                    "company": company,
+                    "description": description,
+                }
+                if job
+                else None
+            ),
         }
         try:
             candidates, source_statuses = self.evidence_search.search(
@@ -455,16 +493,21 @@ class ResearchService:
         )
         if "job" in topics:
             skills = list(extract_skills(description))[:5]
-            business = [item for item in evidence if item["platform"] in _OFFICIAL_LABELS.values()
-                        and item["context"].get("search_angle") == "business"
-                        and item["verification_status"] == "independently_retrieved"]
+            business = [
+                item
+                for item in evidence
+                if item["platform"] in _OFFICIAL_LABELS.values()
+                and item["context"].get("search_angle") == "business"
+                and item["verification_status"] == "independently_retrieved"
+            ]
             job_context["development_analysis"] = {
                 "status": "limited" if skills and business else "unknown",
                 "text": (
-                    f"岗位 JD 提及 {'、'.join(skills)}；另有公司经营原文可核对业务方向。"
+                    f"岗位 JD 提及 {'、'.join(skills)}；"
+                    "另有公司经营原文可核对业务方向。"
                     "目前没有可核对的晋升路径或发展承诺。"
-                    if skills and business else
-                    "尚缺少同时可核对的岗位技能与公司经营证据，不能推断发展路径。"
+                    if skills and business
+                    else "尚缺少同时可核对的岗位技能与公司经营证据，不能推断发展路径。"
                 ),
                 "basis_evidence_ids": [item["evidence_id"] for item in business[:2]],
             }
@@ -529,11 +572,25 @@ class ResearchService:
                 (workspace_id,),
             ).fetchall()
             job_context["version_number"] = 1 + sum(
-                (bool(job_id) and (row["job_id"] == job_id or bool(job_context["canonical_url"])
-                 and canonical_job_url(json.loads(row["job_context_json"]).get("url", ""))
-                 == job_context["canonical_url"]))
-                or (not job_id and row["job_id"] is None
-                    and json.loads(row["job_context_json"]).get("company", "").casefold() == company.casefold())
+                (
+                    bool(job_id)
+                    and (
+                        row["job_id"] == job_id
+                        or bool(job_context["canonical_url"])
+                        and canonical_job_url(
+                            json.loads(row["job_context_json"]).get("url", "")
+                        )
+                        == job_context["canonical_url"]
+                    )
+                )
+                or (
+                    not job_id
+                    and row["job_id"] is None
+                    and json.loads(row["job_context_json"])
+                    .get("company", "")
+                    .casefold()
+                    == company.casefold()
+                )
                 for row in previous
             )
             connection.execute(
@@ -675,9 +732,7 @@ class ResearchService:
             "job_snapshot": context.get("job_snapshot"),
             "job_context": context,
             "directions": (
-                stored_directions
-                if stored_directions is not None
-                else list(DIRECTIONS)
+                stored_directions if stored_directions is not None else list(DIRECTIONS)
             ),
             "disclaimer": DISCLAIMER,
             "corrections": [dict(item) for item in corrections],
@@ -896,7 +951,8 @@ class ResearchService:
                 "research_topic": item.topic,
                 "search_angle": item.search_angle,
                 "source_type": "official_disclosure"
-                if item.platform in _OFFICIAL_LABELS.values() else "personal_account",
+                if item.platform in _OFFICIAL_LABELS.values()
+                else "personal_account",
                 "company_match": "name_in_text"
                 if item.verification_level == "original_body_verified"
                 else "unknown",

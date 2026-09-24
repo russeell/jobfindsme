@@ -256,7 +256,10 @@ class ResumeProfileService:
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             connection.execute(
-                "UPDATE resume_versions SET is_current=0 WHERE workspace_id=? AND is_current=1",
+                (
+                    "UPDATE resume_versions SET is_current=0 "
+                    "WHERE workspace_id=? AND is_current=1"
+                ),
                 (workspace_id,),
             )
             connection.execute(

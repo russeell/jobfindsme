@@ -1,7 +1,6 @@
 """Protocol simulation: no paid/network model request is made."""
 
 import json
-from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -217,24 +216,85 @@ def test_rejects_invented_quotes_cancel_and_no_resume(tmp_path):
 def test_scheduled_api_is_disabled_while_manual_matching_remains_available(tmp_path):
     db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
     rule = save(matching, ws, conn, "优先最后")
-    client = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db", model_gateway_override=ModelGateway(transport)))
+    client = TestClient(
+        create_app(
+            token="secret",
+            database_path=tmp_path / "matching.db",
+            model_gateway_override=ModelGateway(transport),
+        )
+    )
     headers = {"Authorization": "Bearer secret"}
-    payload = {"workspace_id": ws, "name": "合成任务", "intent": "Python", "source_ids": ["liepin"], "frequency": "interval", "timezone": "Asia/Shanghai", "interval_minutes": 60}
+    payload = {
+        "workspace_id": ws,
+        "name": "合成任务",
+        "intent": "Python",
+        "source_ids": ["liepin"],
+        "frequency": "interval",
+        "timezone": "Asia/Shanghai",
+        "interval_minutes": 60,
+    }
     assert client.post("/v1/tasks", headers=headers, json=payload).status_code == 410
     # A legacy active task remains as history, but restart/due execution cannot run it.
-    legacy = LocalScheduler(db).create_task(workspace_id=ws, name="旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=rule["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
+    legacy = LocalScheduler(db).create_task(
+        workspace_id=ws,
+        name="旧计划",
+        intent="Python",
+        source_ids=["liepin"],
+        filters={},
+        resume_version_id=resume.version_id,
+        rule_version_id=rule["rule_version_id"],
+        frequency="interval",
+        timezone="Asia/Shanghai",
+        interval_minutes=60,
+    )
     with db.connect() as sql:
-        sql.execute("UPDATE desktop_scheduled_tasks SET next_run_at='2020-01-01T00:00:00+00:00' WHERE task_id=?", (legacy["task_id"],))
+        sql.execute(
+            (
+                "UPDATE desktop_scheduled_tasks "
+                "SET next_run_at='2020-01-01T00:00:00+00:00' WHERE task_id=?"
+            ),
+            (legacy["task_id"],),
+        )
     assert client.get("/v1/tasks/due", headers=headers).json() == []
-    assert client.post("/v1/tasks/run-due", headers=headers, json={}).json() == {"runs": [], "notifications": []}
-    assert client.post(f"/v1/tasks/{legacy['task_id']}/resume", headers=headers).status_code == 410
-    restarted = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db", model_gateway_override=ModelGateway(transport)))
+    assert client.post("/v1/tasks/run-due", headers=headers, json={}).json() == {
+        "runs": [],
+        "notifications": [],
+    }
+    assert (
+        client.post(
+            f"/v1/tasks/{legacy['task_id']}/resume", headers=headers
+        ).status_code
+        == 410
+    )
+    restarted = TestClient(
+        create_app(
+            token="secret",
+            database_path=tmp_path / "matching.db",
+            model_gateway_override=ModelGateway(transport),
+        )
+    )
     assert restarted.get("/v1/tasks/due", headers=headers).json() == []
-    assert restarted.post("/v1/tasks/run-due", headers=headers, json={}).json()["runs"] == []
-    assert restarted.get("/v1/tasks", headers=headers, params={"workspace_id": ws}).json()[0]["task_id"] == legacy["task_id"]
+    assert (
+        restarted.post("/v1/tasks/run-due", headers=headers, json={}).json()["runs"]
+        == []
+    )
+    assert (
+        restarted.get("/v1/tasks", headers=headers, params={"workspace_id": ws}).json()[
+            0
+        ]["task_id"]
+        == legacy["task_id"]
+    )
     with db.connect() as sql:
         assert sql.execute("SELECT COUNT(*) FROM desktop_task_runs").fetchone()[0] == 0
-    trial = restarted.post("/v1/matching-trials", headers=headers, json={"workspace_id": ws, "job_id": jobs[0].job_id, "rule_version_id": rule["rule_version_id"]})
+    trial = restarted.post(
+        "/v1/matching-trials",
+        headers=headers,
+        json={
+            "workspace_id": ws,
+            "job_id": jobs[0].job_id,
+            "rule_version_id": rule["rule_version_id"],
+        },
+    )
     assert trial.status_code == 200, trial.text
 
 
@@ -291,32 +351,76 @@ def test_matching_history_hide_preserves_search_and_old_plan(tmp_path):
     other = WorkspaceService(db).create().workspace_id
     with pytest.raises(ValueError, match="不存在"):
         matching.delete_version(other, referenced["rule_version_id"])
-    run_id = service.create_snapshot(workspace_id=ws, intent="Python", job_ids=[jobs[0].job_id], resume_version=resume, filters=DesktopJobFilters(), rule_version_id=referenced["rule_version_id"])
-    plan = LocalScheduler(db).create_task(workspace_id=ws, name="合成旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=referenced["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
+    run_id = service.create_snapshot(
+        workspace_id=ws,
+        intent="Python",
+        job_ids=[jobs[0].job_id],
+        resume_version=resume,
+        filters=DesktopJobFilters(),
+        rule_version_id=referenced["rule_version_id"],
+    )
+    plan = LocalScheduler(db).create_task(
+        workspace_id=ws,
+        name="合成旧计划",
+        intent="Python",
+        source_ids=["liepin"],
+        filters={},
+        resume_version_id=resume.version_id,
+        rule_version_id=referenced["rule_version_id"],
+        frequency="interval",
+        timezone="Asia/Shanghai",
+        interval_minutes=60,
+    )
     matching.delete_version(ws, referenced["rule_version_id"])
     matching.delete_version(ws, referenced["rule_version_id"])
-    restarted = MatchingPromptService(db, service, matching.connections, matching.gateway)
+    restarted = MatchingPromptService(
+        db, service, matching.connections, matching.gateway
+    )
     visible = {item["rule_version_id"] for item in restarted.state(ws)["versions"]}
     assert referenced["rule_version_id"] not in visible
     assert active["rule_version_id"] in visible
     assert restarted.get(ws, referenced["rule_version_id"])["prompt"] == "已引用规则"
-    assert service.page(workspace_id=ws, run_id=run_id, page=1, page_size=10)["rule_version_id"] == referenced["rule_version_id"]
-    assert LocalScheduler(db).get_task(plan["task_id"])["rule_version_id"] == referenced["rule_version_id"]
+    assert (
+        service.page(workspace_id=ws, run_id=run_id, page=1, page_size=10)[
+            "rule_version_id"
+        ]
+        == referenced["rule_version_id"]
+    )
+    assert (
+        LocalScheduler(db).get_task(plan["task_id"])["rule_version_id"]
+        == referenced["rule_version_id"]
+    )
     with db.connect() as sql:
-        assert sql.execute("SELECT hidden_at FROM scoring_rule_versions WHERE rule_version_id=?", (referenced["rule_version_id"],)).fetchone()[0]
-
+        assert sql.execute(
+            "SELECT hidden_at FROM scoring_rule_versions WHERE rule_version_id=?",
+            (referenced["rule_version_id"],),
+        ).fetchone()[0]
 
 
 def test_matching_delete_api_returns_protected_error_and_removes_unused(tmp_path):
     db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
     old = save(matching, ws, conn, "旧规则")
     active = save(matching, ws, conn, "当前规则")
-    client = TestClient(create_app(token="secret", database_path=tmp_path / "matching.db"))
+    client = TestClient(
+        create_app(token="secret", database_path=tmp_path / "matching.db")
+    )
     headers = {"Authorization": "Bearer secret"}
     base = "/v1/matching-rules/"
     params = {"workspace_id": ws}
-    assert client.delete(base + active["rule_version_id"], params=params, headers=headers).status_code == 400
-    result = client.delete(base + old["rule_version_id"], params=params, headers=headers)
+    assert (
+        client.delete(
+            base + active["rule_version_id"], params=params, headers=headers
+        ).status_code
+        == 400
+    )
+    result = client.delete(
+        base + old["rule_version_id"], params=params, headers=headers
+    )
     assert result.status_code == 200, result.text
     assert result.json()["deleted"] is True
-    assert old["rule_version_id"] not in {value["rule_version_id"] for value in client.get("/v1/matching-rules", params=params, headers=headers).json()["versions"]}
+    assert old["rule_version_id"] not in {
+        value["rule_version_id"]
+        for value in client.get(
+            "/v1/matching-rules", params=params, headers=headers
+        ).json()["versions"]
+    }

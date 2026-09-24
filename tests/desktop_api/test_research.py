@@ -7,8 +7,12 @@ from jobfindsme.contracts import SourceKind
 from jobfindsme.desktop_api import create_app
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.importing.repository import JobRepository
-from jobfindsme.models import ModelConnectionRepository, ModelProtocol
-from jobfindsme.models import CancellationToken, ModelCancelledError
+from jobfindsme.models import (
+    CancellationToken,
+    ModelCancelledError,
+    ModelConnectionRepository,
+    ModelProtocol,
+)
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.research import EvidenceCandidate, ResearchService, WebEvidenceSearch
 from jobfindsme.research.service import DIRECTIONS
@@ -117,21 +121,41 @@ def test_research_with_no_evidence_never_invents_reputation(tmp_path):
 
 
 def test_company_question_without_job_keeps_real_evidence_and_history(tmp_path):
-    search = FakeEvidenceSearch([
-        EvidenceCandidate(url="https://maimai.cn/article/company-example", platform="脉脉",
-                          title="合成科技福利", excerpt="作者称所在团队有弹性工作时间；具体团队未核实。",
-                          verification_level="original_body_verified", topic="company",
-                          search_angle="question")
-    ], {"maimai": "available"})
+    search = FakeEvidenceSearch(
+        [
+            EvidenceCandidate(
+                url="https://maimai.cn/article/company-example",
+                platform="脉脉",
+                title="合成科技福利",
+                excerpt="作者称所在团队有弹性工作时间；具体团队未核实。",
+                verification_level="original_body_verified",
+                topic="company",
+                search_angle="question",
+            )
+        ],
+        {"maimai": "available"},
+    )
     workspace, _, service = setup_research(tmp_path, search)
     with service.database.connect() as connection:
         before = connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0]
-    first = service.create_report(workspace_id=workspace.workspace_id, job_id=None,
-                                  context_company="合成科技", interest_question="合成科技福利如何？",
-                                  topics=("company",), directions=(), source_ids=("maimai",))
-    second = service.create_report(workspace_id=workspace.workspace_id, job_id=None,
-                                   context_company="合成科技", interest_question="经营情况如何？",
-                                   topics=("company",), directions=(), source_ids=("maimai",))
+    first = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=None,
+        context_company="合成科技",
+        interest_question="合成科技福利如何？",
+        topics=("company",),
+        directions=(),
+        source_ids=("maimai",),
+    )
+    second = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=None,
+        context_company="合成科技",
+        interest_question="经营情况如何？",
+        topics=("company",),
+        directions=(),
+        source_ids=("maimai",),
+    )
     with service.database.connect() as connection:
         assert connection.execute("SELECT COUNT(*) FROM jobs").fetchone()[0] == before
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
@@ -139,21 +163,41 @@ def test_company_question_without_job_keeps_real_evidence_and_history(tmp_path):
     assert first["job_context"]["scope"] == "company"
     assert first["evidence"][0]["verification_status"] == "independently_retrieved"
     assert second["version_number"] == first["version_number"] + 1
-    assert service.list_reports(workspace_id=workspace.workspace_id)[0]["report_id"] == second["report_id"]
+    assert (
+        service.list_reports(workspace_id=workspace.workspace_id)[0]["report_id"]
+        == second["report_id"]
+    )
 
 
 def test_company_question_api_requires_explicit_company(tmp_path):
-    workspace, _, service = setup_research(tmp_path, FakeEvidenceSearch([], {"maimai": "no_public_evidence"}))
-    client = TestClient(create_app(token="fixture-token", database_path=service.database.path,
-                                   research_evidence_search_override=FakeEvidenceSearch([], {"maimai": "no_public_evidence"})))
+    workspace, _, service = setup_research(
+        tmp_path, FakeEvidenceSearch([], {"maimai": "no_public_evidence"})
+    )
+    client = TestClient(
+        create_app(
+            token="fixture-token",
+            database_path=service.database.path,
+            research_evidence_search_override=FakeEvidenceSearch(
+                [], {"maimai": "no_public_evidence"}
+            ),
+        )
+    )
     headers = {"Authorization": "Bearer fixture-token"}
-    base = {"workspace_id": workspace.workspace_id, "interest_question": "经营与福利如何？",
-            "topics": ["company"], "directions": [], "source_ids": ["maimai"]}
+    base = {
+        "workspace_id": workspace.workspace_id,
+        "interest_question": "经营与福利如何？",
+        "topics": ["company"],
+        "directions": [],
+        "source_ids": ["maimai"],
+    }
     missing = client.post("/v1/research-runs", headers=headers, json=base)
     assert missing.status_code == 409
     assert "公司名称" in missing.json()["detail"]
-    result = client.post("/v1/research-runs", headers=headers,
-                         json={**base, "context_company": "合成科技"})
+    result = client.post(
+        "/v1/research-runs",
+        headers=headers,
+        json={**base, "context_company": "合成科技"},
+    )
     assert result.status_code == 200
     assert result.json()["job_id"] is None
 
@@ -674,19 +718,32 @@ def test_interest_question_drives_query_and_report(tmp_path, monkeypatch):
     import urllib.parse
 
     queries = []
+
     class EmptyRss:
         headers = None
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
-        def read(self, *_args): return b"<rss><channel></channel></rss>"
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, *_args):
+            return b"<rss><channel></channel></rss>"
+
     def capture(request, **_kwargs):
-        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        queries.append(
+            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0]
+        )
         return EmptyRss()
+
     monkeypatch.setattr("urllib.request.urlopen", capture)
     workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
     report = service.create_report(
-        workspace_id=workspace.workspace_id, job_id=job.job_id,
-        source_ids=("maimai",), directions=(),
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("maimai",),
+        directions=(),
         interest_question="AI 团队 的工作节奏如何？",
     )
     assert report["job_context"]["interest_question"] == "AI 团队 的工作节奏如何？"
@@ -695,14 +752,16 @@ def test_interest_question_drives_query_and_report(tmp_path, monkeypatch):
         workspace_id=workspace.workspace_id, report_id=report["report_id"]
     )
     assert reopened["directions"] == []
-    assert reopened["job_context"]["interest_question"] == report["job_context"][
-        "interest_question"
-    ]
+    assert (
+        reopened["job_context"]["interest_question"]
+        == report["job_context"]["interest_question"]
+    )
     listed = service.list_reports(workspace_id=workspace.workspace_id)
     assert listed[0]["directions"] == []
-    assert listed[0]["job_context"]["interest_question"] == report["job_context"][
-        "interest_question"
-    ]
+    assert (
+        listed[0]["job_context"]["interest_question"]
+        == report["job_context"]["interest_question"]
+    )
     assert len(queries) == 1
     assert "AI 团队 的工作节奏如何？" in queries[0]
     assert "工作强度 加班 工作时间" not in queries[0]
@@ -735,9 +794,7 @@ def test_two_topic_research_queries_and_saved_groups(tmp_path, monkeypatch):
 
     def capture(request, **_kwargs):
         queries.append(
-            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)[
-                "q"
-            ][0]
+            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0]
         )
         return EmptyRss()
 
@@ -765,29 +822,56 @@ def test_two_topic_research_queries_and_saved_groups(tmp_path, monkeypatch):
     assert any("负向检索未取得" in text for text in report["limitations"])
 
 
-def test_followup_question_uses_its_own_queries_and_keeps_prior_report(tmp_path, monkeypatch):
+def test_followup_question_uses_its_own_queries_and_keeps_prior_report(
+    tmp_path, monkeypatch
+):
     import urllib.parse
 
     queries = []
+
     class EmptyRss:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
-        def read(self, *_args): return b"<rss><channel></channel></rss>"
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, *_args):
+            return b"<rss><channel></channel></rss>"
+
     def capture(request, **_kwargs):
-        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        queries.append(
+            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0]
+        )
         return EmptyRss()
+
     monkeypatch.setattr("urllib.request.urlopen", capture)
     workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
-    first = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
-                                  source_ids=("maimai",), topics=("company", "job"), directions=())
+    first = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("maimai",),
+        topics=("company", "job"),
+        directions=(),
+    )
     count = len(queries)
-    second = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
-                                   source_ids=("maimai",), topics=("company", "job"), directions=(),
-                                   interest_question="团队通常几点下班？")
+    second = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("maimai",),
+        topics=("company", "job"),
+        directions=(),
+        interest_question="团队通常几点下班？",
+    )
     assert "团队通常几点下班？" in queries[count]
     assert second["job_context"]["interest_question"] == "团队通常几点下班？"
     assert second["version_number"] == first["version_number"] + 1
-    assert service.get_report(workspace_id=workspace.workspace_id, report_id=first["report_id"])["report_id"] == first["report_id"]
+    assert (
+        service.get_report(
+            workspace_id=workspace.workspace_id, report_id=first["report_id"]
+        )["report_id"]
+        == first["report_id"]
+    )
 
 
 def test_cancelled_research_does_not_save_a_new_report(tmp_path):
@@ -795,9 +879,16 @@ def test_cancelled_research_does_not_save_a_new_report(tmp_path):
     token = CancellationToken()
     token.cancel()
     import pytest
+
     with pytest.raises(ModelCancelledError):
-        service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
-                              source_ids=("maimai",), topics=("company",), directions=(), cancellation=token)
+        service.create_report(
+            workspace_id=workspace.workspace_id,
+            job_id=job.job_id,
+            source_ids=("maimai",),
+            topics=("company",),
+            directions=(),
+            cancellation=token,
+        )
     assert service.list_reports(workspace_id=workspace.workspace_id) == []
 
 
@@ -806,32 +897,51 @@ def test_unpaid_research_request_can_be_cancelled_before_snapshot(tmp_path):
     import time
 
     ready = threading.Event()
+
     class WaitingSearch:
         def search(self, **kwargs):
             ready.set()
             token = kwargs["cancellation"]
             for _ in range(300):
                 token.raise_if_cancelled()
-                time.sleep(.01)
+                time.sleep(0.01)
             raise AssertionError("cancellation did not reach the search")
+
     workspace, job, service = setup_research(tmp_path, WaitingSearch())
-    client = TestClient(create_app(token="fixture-token", database_path=service.database.path,
-                                   research_evidence_search_override=WaitingSearch()))
+    client = TestClient(
+        create_app(
+            token="fixture-token",
+            database_path=service.database.path,
+            research_evidence_search_override=WaitingSearch(),
+        )
+    )
     headers = {"Authorization": "Bearer fixture-token"}
     request_id = "research-test-cancel-12345"
     response = {}
+
     def start():
-        response["run"] = client.post("/v1/research-runs", headers=headers, json={
-            "workspace_id": workspace.workspace_id, "job_id": job.job_id,
-            "request_id": request_id, "topics": ["company"], "directions": [],
-            "source_ids": ["maimai"],
-        })
+        response["run"] = client.post(
+            "/v1/research-runs",
+            headers=headers,
+            json={
+                "workspace_id": workspace.workspace_id,
+                "job_id": job.job_id,
+                "request_id": request_id,
+                "topics": ["company"],
+                "directions": [],
+                "source_ids": ["maimai"],
+            },
+        )
+
     worker = threading.Thread(target=start)
     worker.start()
     try:
         assert ready.wait(2)
-        stopped = client.post(f"/v1/research-requests/{request_id}/cancel", headers=headers,
-                              params={"workspace_id": workspace.workspace_id})
+        stopped = client.post(
+            f"/v1/research-requests/{request_id}/cancel",
+            headers=headers,
+            params={"workspace_id": workspace.workspace_id},
+        )
         assert stopped.status_code == 200
         assert stopped.json() == {"cancelled": True}
     finally:
@@ -847,33 +957,57 @@ def test_official_query_plan_and_evidence_based_development(tmp_path, monkeypatc
     queries = []
 
     class EmptyRss:
-        def __enter__(self): return self
-        def __exit__(self, *_args): return None
-        def read(self, *_args): return b"<rss><channel></channel></rss>"
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, *_args):
+            return b"<rss><channel></channel></rss>"
 
     def capture(request, **_kwargs):
-        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        queries.append(
+            urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0]
+        )
         return EmptyRss()
 
     monkeypatch.setattr("urllib.request.urlopen", capture)
     workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
-    no_evidence = service.create_report(workspace_id=workspace.workspace_id,
-                                        job_id=job.job_id, source_ids=("official",),
-                                        topics=("company", "job"), directions=())
+    no_evidence = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("official",),
+        topics=("company", "job"),
+        directions=(),
+    )
     assert len(queries) == 4
     assert any("主营业务" in query and "cninfo.com.cn" in query for query in queries)
     assert any("上市公告" in query and "sse.com.cn" in query for query in queries)
     assert no_evidence["job_context"]["development_analysis"]["status"] == "unknown"
 
-    service.evidence_search = FakeEvidenceSearch([
-        EvidenceCandidate(url="https://www.cninfo.com.cn/example", platform="巨潮资讯",
-                          title="经营报告", excerpt="示例公司主营业务公开原文",
-                          published_at="2026-01-01", verification_level="original_body_verified",
-                          topic="company", search_angle="business")],
-        {"official": "verified_original_body"})
-    report = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
-                                   source_ids=("official",), topics=("company", "job"),
-                                   directions=())
+    service.evidence_search = FakeEvidenceSearch(
+        [
+            EvidenceCandidate(
+                url="https://www.cninfo.com.cn/example",
+                platform="巨潮资讯",
+                title="经营报告",
+                excerpt="示例公司主营业务公开原文",
+                published_at="2026-01-01",
+                verification_level="original_body_verified",
+                topic="company",
+                search_angle="business",
+            )
+        ],
+        {"official": "verified_original_body"},
+    )
+    report = service.create_report(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        source_ids=("official",),
+        topics=("company", "job"),
+        directions=(),
+    )
     analysis = report["job_context"]["development_analysis"]
     assert analysis["status"] == "limited"
     assert "Python" in analysis["text"]
@@ -915,13 +1049,15 @@ def test_hide_report_keeps_immutable_evidence_but_removes_history(tmp_path):
     workspace, job, service = setup_research(
         tmp_path,
         FakeEvidenceSearch(
-            [EvidenceCandidate(
-                url="https://maimai.cn/article/sample",
-                platform="脉脉",
-                title="样本",
-                excerpt="示例公司样本原文",
-                verification_level="original_body_verified",
-            )]
+            [
+                EvidenceCandidate(
+                    url="https://maimai.cn/article/sample",
+                    platform="脉脉",
+                    title="样本",
+                    excerpt="示例公司样本原文",
+                    verification_level="original_body_verified",
+                )
+            ]
         ),
     )
     report = service.create_report(
@@ -932,16 +1068,25 @@ def test_hide_report_keeps_immutable_evidence_but_removes_history(tmp_path):
     )
     endpoint = f"/v1/research-runs/{report['report_id']}"
     headers = {"Authorization": "Bearer fixture-token"}
-    assert client.delete(
-        endpoint, headers=headers, params={"workspace_id": "other"}
-    ).status_code == 404
-    assert client.delete(
-        endpoint, headers=headers, params={"workspace_id": workspace.workspace_id}
-    ).status_code == 200
+    assert (
+        client.delete(
+            endpoint, headers=headers, params={"workspace_id": "other"}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.delete(
+            endpoint, headers=headers, params={"workspace_id": workspace.workspace_id}
+        ).status_code
+        == 200
+    )
     assert service.list_reports(workspace_id=workspace.workspace_id) == []
-    assert service.get_report(
-        workspace_id=workspace.workspace_id, report_id=report["report_id"]
-    )["evidence"] == report["evidence"]
+    assert (
+        service.get_report(
+            workspace_id=workspace.workspace_id, report_id=report["report_id"]
+        )["evidence"]
+        == report["evidence"]
+    )
 
 
 def test_company_name_only_in_footer_does_not_verify_article(monkeypatch):
@@ -955,8 +1100,13 @@ def test_company_name_only_in_footer_does_not_verify_article(monkeypatch):
         lambda *_args, **_kwargs: FakePage("https://maimai.cn/article/1", body),
     )
     item = WebEvidenceSearch()._verify_original_page(
-        url="https://maimai.cn/article/1", expected_domain="maimai.cn",
-        platform="脉脉", search_title="搜索标题", search_excerpt="搜索摘要",
-        search_published_at=None, company="示例公司", team=None,
+        url="https://maimai.cn/article/1",
+        expected_domain="maimai.cn",
+        platform="脉脉",
+        search_title="搜索标题",
+        search_excerpt="搜索摘要",
+        search_published_at=None,
+        company="示例公司",
+        team=None,
     )
     assert item.verification_level == "search_summary_only"

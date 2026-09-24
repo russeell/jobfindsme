@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import hmac
 import json
 import re
@@ -47,7 +46,7 @@ from jobfindsme.search.desktop import (
 )
 from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
 from jobfindsme.search.matching_prompts import MatchingPromptService
-from jobfindsme.sources.desktop import DesktopSourceService, SourceGateError
+from jobfindsme.sources.desktop import DesktopSourceService
 
 
 class StrictResponse(BaseModel):
@@ -1226,9 +1225,11 @@ def create_app(
         # Older drafts could lose the year when "2020." was read as a list marker.
         if fact.fact_type is FactType.EDUCATION:
             original = " ".join(fact.evidence_snippet.split())
-            if (re.match(r"^\d{4}\.", original)
-                    and original.endswith(fact.value)
-                    and len(original) - len(fact.value) == 5):
+            if (
+                re.match(r"^\d{4}\.", original)
+                and original.endswith(fact.value)
+                and len(original) - len(fact.value) == 5
+            ):
                 return original
         return fact.value
 
@@ -1263,7 +1264,9 @@ def create_app(
         try:
             resolve_workspace(workspace_id)
         except LookupError as error:
-            raise HTTPException(status_code=404, detail="workspace not found") from error
+            raise HTTPException(
+                status_code=404, detail="workspace not found"
+            ) from error
         with core.database.connect() as connection:
             row = connection.execute(
                 "SELECT * FROM desktop_search_preferences WHERE workspace_id=?",
@@ -1282,10 +1285,20 @@ def create_app(
         try:
             resolve_workspace(request.workspace_id)
         except LookupError as error:
-            raise HTTPException(status_code=404, detail="workspace not found") from error
-        if request.salary_min_k is not None and request.salary_max_k is not None and request.salary_min_k > request.salary_max_k:
-            raise HTTPException(status_code=400, detail="最低期望薪资不能高于最高期望薪资")
-        cities = list(dict.fromkeys(city.strip() for city in request.cities if city.strip()))
+            raise HTTPException(
+                status_code=404, detail="workspace not found"
+            ) from error
+        if (
+            request.salary_min_k is not None
+            and request.salary_max_k is not None
+            and request.salary_min_k > request.salary_max_k
+        ):
+            raise HTTPException(
+                status_code=400, detail="最低期望薪资不能高于最高期望薪资"
+            )
+        cities = list(
+            dict.fromkeys(city.strip() for city in request.cities if city.strip())
+        )
         if any(len(city) > 80 for city in cities):
             raise HTTPException(status_code=400, detail="城市名称过长")
         with core.database.connect() as connection:
@@ -1296,7 +1309,14 @@ def create_app(
                 target_role=excluded.target_role,cities_json=excluded.cities_json,
                 salary_min_k=excluded.salary_min_k,salary_max_k=excluded.salary_max_k,
                 updated_at=excluded.updated_at""",
-                (request.workspace_id, request.target_role.strip(), json.dumps(cities, ensure_ascii=False), request.salary_min_k, request.salary_max_k, datetime.now(UTC).isoformat()),
+                (
+                    request.workspace_id,
+                    request.target_role.strip(),
+                    json.dumps(cities, ensure_ascii=False),
+                    request.salary_min_k,
+                    request.salary_max_k,
+                    datetime.now(UTC).isoformat(),
+                ),
             )
         return get_search_preferences(request.workspace_id)
 
@@ -1353,7 +1373,9 @@ def create_app(
         try:
             resolve_workspace(request.workspace_id)
         except LookupError as error:
-            raise HTTPException(status_code=404, detail="workspace not found") from error
+            raise HTTPException(
+                status_code=404, detail="workspace not found"
+            ) from error
         core.profiles.clear_current(workspace_id=request.workspace_id)
         return resume_state(request.workspace_id)
 
@@ -1482,11 +1504,7 @@ def create_app(
                 workspace_id=workspace_id, version_id=version_id
             )
         except ResumeEditorError as error:
-            code = (
-                409
-                if "current" in str(error)
-                else 404
-            )
+            code = 409 if "current" in str(error) else 404
             raise HTTPException(status_code=code, detail=str(error)) from error
         return {"hidden": True}
 
@@ -1855,11 +1873,17 @@ def create_app(
     )
     def create_research_report(request: ResearchRunRequest) -> dict:
         if request.connection_id is None and request.api_key:
-            raise HTTPException(status_code=400, detail="model credentials require a selected connection")
+            raise HTTPException(
+                status_code=400,
+                detail="model credentials require a selected connection",
+            )
         search_cancellation = CancellationToken() if request.request_id else None
         if request.connection_id is None and request.request_id and search_cancellation:
             with active_research_requests_lock:
-                active_research_requests[request.request_id] = (None, search_cancellation)
+                active_research_requests[request.request_id] = (
+                    None,
+                    search_cancellation,
+                )
         try:
             report = research.create_report(
                 workspace_id=request.workspace_id,
@@ -2017,7 +2041,9 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def create_scheduled_task(request: ScheduledTaskRequest) -> dict:
-        raise HTTPException(status_code=410, detail="定时检索已停用；请使用手动岗位检索。")
+        raise HTTPException(
+            status_code=410, detail="定时检索已停用；请使用手动岗位检索。"
+        )
 
     @app.get(
         "/v1/tasks",
@@ -2052,7 +2078,9 @@ def create_app(
         dependencies=[Depends(require_token)],
     )
     def resume_scheduled_task(task_id: str) -> dict:
-        raise HTTPException(status_code=410, detail="定时检索已停用；历史计划不能恢复。")
+        raise HTTPException(
+            status_code=410, detail="定时检索已停用；历史计划不能恢复。"
+        )
 
     @app.post(
         "/v1/tasks/run-due",

@@ -19,9 +19,7 @@ Clock = Callable[[], datetime]
 
 PERSONAL_FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
     "email": re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])"),
-    "phone": re.compile(
-        r"(?<!\d)(?:\+?86[- ]?)?1[3-9](?:[- ]?\d){9}(?!\d)"
-    ),
+    "phone": re.compile(r"(?<!\d)(?:\+?86[- ]?)?1[3-9](?:[- ]?\d){9}(?!\d)"),
     "id_number": re.compile(r"(?<!\d)(?:\d{15}|\d{17}[\dXx])(?![\dXx])"),
     "address": re.compile(
         r"(?<![\u4e00-\u9fff])(?:现居地|家庭住址|联系地址|住址|地址)[：:]\s*"
@@ -49,8 +47,10 @@ def create_analysis_copy(
 ) -> AnalysisCopy:
     """Create a transient model-facing copy without mutating stored content."""
 
-    requested = set(PERSONAL_FIELD_PATTERNS) if redacted_fields is None else set(
-        redacted_fields
+    requested = (
+        set(PERSONAL_FIELD_PATTERNS)
+        if redacted_fields is None
+        else set(redacted_fields)
     )
     unknown = requested - PERSONAL_FIELD_PATTERNS.keys()
     if unknown:
@@ -62,10 +62,7 @@ def create_analysis_copy(
         source_version_id=source_version_id,
         redacted_fields=tuple(sorted(requested)),
         text=result,
-        limitations=(
-            "脱敏使用结构化字段与常见文本格式规则；"
-            "发送前仍应检查预览。"
-        ),
+        limitations=("脱敏使用结构化字段与常见文本格式规则；发送前仍应检查预览。"),
     )
 
 

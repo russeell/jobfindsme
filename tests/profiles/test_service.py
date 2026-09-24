@@ -127,9 +127,14 @@ def test_two_education_entries_can_both_be_confirmed(tmp_path: Path) -> None:
     _, workspaces, service = make_service(tmp_path)
     workspace = workspaces.create()
     source = tmp_path / "two-educations.md"
-    source.write_text("教育经历\n2020.09-2024.06 示例大学 计算机科学 本科\n"
-                      "2024.09-2026.06 示例研究院 人工智能 硕士\n", encoding="utf-8")
-    profile = service.import_resume(workspace_id=workspace.workspace_id, source_path=source)
+    source.write_text(
+        "教育经历\n2020.09-2024.06 示例大学 计算机科学 本科\n"
+        "2024.09-2026.06 示例研究院 人工智能 硕士\n",
+        encoding="utf-8",
+    )
+    profile = service.import_resume(
+        workspace_id=workspace.workspace_id, source_path=source
+    )
     education = [fact for fact in profile.facts if fact.fact_type is FactType.EDUCATION]
     assert len(education) == 2
     assert education[0].value.startswith("2020.09-2024.06")
@@ -139,7 +144,9 @@ def test_two_education_entries_can_both_be_confirmed(tmp_path: Path) -> None:
         profile_id=profile.profile_id,
         accepted_fact_ids=[fact.fact_id for fact in education],
     )
-    assert [fact.value for fact in confirmed.facts] == [fact.value for fact in education]
+    assert [fact.value for fact in confirmed.facts] == [
+        fact.value for fact in education
+    ]
 
 
 def test_profile_is_isolated_by_workspace(tmp_path: Path) -> None:

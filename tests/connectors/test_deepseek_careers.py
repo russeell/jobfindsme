@@ -31,7 +31,10 @@ def test_shared_snapshot_cache_and_failure_backoff():
             type(self).reads += 1
             if url == self.home:
                 return '<script src="/static/main.123.js"></script>'
-            return 'JSON.parse(\'{"jobs":[],"total":0,"crawledAt":"2026-09-17T00:00:00Z"}\')'
+            return (
+                'JSON.parse(\'{"jobs":[],"total":0,'
+                '"crawledAt":"2026-09-17T00:00:00Z"}\')'
+            )
 
     policy = ConnectorPolicy(public_access=True, robots_allowed=True)
     assert Sample("Python", policy=policy).fetch_page() == ([], None)

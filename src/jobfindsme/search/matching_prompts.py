@@ -180,13 +180,19 @@ class MatchingPromptService:
         with self.database.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
-                "SELECT hidden_at FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
+                (
+                    "SELECT hidden_at FROM scoring_rule_versions "
+                    "WHERE workspace_id=? AND rule_version_id=?"
+                ),
                 (workspace_id, rule_id),
             ).fetchone()
             if row is None:
                 raise ValueError("规则版本不存在")
             active = db.execute(
-                "SELECT 1 FROM active_matching_rules WHERE workspace_id=? AND rule_version_id=?",
+                (
+                    "SELECT 1 FROM active_matching_rules "
+                    "WHERE workspace_id=? AND rule_version_id=?"
+                ),
                 (workspace_id, rule_id),
             ).fetchone()
             if active:
@@ -194,7 +200,10 @@ class MatchingPromptService:
             if row["hidden_at"] is not None:
                 return
             db.execute(
-                "UPDATE scoring_rule_versions SET hidden_at=? WHERE workspace_id=? AND rule_version_id=?",
+                (
+                    "UPDATE scoring_rule_versions SET hidden_at=? "
+                    "WHERE workspace_id=? AND rule_version_id=?"
+                ),
                 (datetime.now(UTC).isoformat(), workspace_id, rule_id),
             )
 
