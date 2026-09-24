@@ -509,7 +509,7 @@
     },
     {
       "id": "D12",
-      "title": "移除 MCP、迁移与桌面发行准备",
+      "title": "最终迁移与桌面发行准备",
       "depends_on": [
         "D10a",
         "D11a",
@@ -519,13 +519,11 @@
       ],
       "status": "pending",
       "scope": [
-        "MCP/Agent 分发移除",
-        "文档与依赖",
-        "数据库迁移",
-        "桌面打包与 CI"
+        "旧数据备份恢复与迁移复验",
+        "桌面安装包和 CI 复验",
+        "剩余真实来源能力声明"
       ],
       "acceptance": [
-        "桌面独立运行，不依赖 MCP、Agent 安装器或求职 skill",
         "旧数据备份恢复与迁移通过，核心评测保留",
         "本地 macOS 安装包主流程通过，其他系统按实测声明",
         "无真实简历、密钥、会话进入产物；线上发布另行执行"
@@ -1727,6 +1725,29 @@
         "桌面与 Python 功能及打包不受文档清理影响"
       ],
       "verification": "Python 483 passed、Node 83 passed、桌面与 wheel 构建通过、ruff/Skill/链接检查通过",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D61",
+      "title": "退役旧 CLI/MCP 与分发流程",
+      "depends_on": [
+        "D60"
+      ],
+      "status": "done",
+      "scope": [
+        "移除旧 CLI、MCP、安装器、Skill、旧发布流程及其专属测试",
+        "CI 改为桌面端、Python API 和当前检索评测",
+        "保留旧数据迁移和桌面打包所需发行名"
+      ],
+      "acceptance": [
+        "桌面检索、研究和简历功能测试通过",
+        "wheel 不含旧入口且包含桌面 API 与迁移",
+        "当前文档树无旧功能说明入口"
+      ],
+      "verification": "Python 370 passed、Node 83 passed、桌面构建、ruff 和干净 wheel 清单审计通过。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],

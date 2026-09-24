@@ -55,7 +55,7 @@ def _default_session_factory() -> _Session:
         from curl_cffi import requests as curl_requests
     except ImportError as error:
         raise PureHttpUnavailableError(
-            "curl_cffi is not installed; install agent-job-search[browser]"
+            "curl_cffi is not installed; install the optional browser dependencies"
         ) from error
     # Chrome TLS/JA3 fingerprint — plain requests/urllib are soft-blocked
     # by all three platforms even with a browser User-Agent.

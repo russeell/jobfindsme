@@ -225,8 +225,7 @@ class Database:
                             f"Migration {path.stem} is in an inconsistent state: "
                             f"tables {sorted(existing)} already exist, but "
                             f"tables {sorted(missing)} are missing. "
-                            "Restore from a backup or run 'agent-job-search delete' "
-                            f"to reset the local database."
+                            "Restore from a backup before restarting JobFindsMe."
                         )
 
                 self._execute_sql_safely(connection, sql)

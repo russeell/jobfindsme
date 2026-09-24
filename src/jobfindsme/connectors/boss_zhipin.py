@@ -64,10 +64,7 @@ class CdpSession(Protocol):
 
 def _browser_bridge_error(_port: int) -> str:
     """Return one host-neutral recovery action for every CDP-backed source."""
-    return (
-        "Agent Job Search 浏览器桥未连接。请运行 agent-job-search setup；"
-        "若仍失败，运行 agent-job-search doctor 查看诊断。"
-    )
+    return "专用浏览器未连接。请在 JobFindsMe 的岗位来源页面打开来源并检查登录状态。"
 
 
 class _CDPSession:
@@ -109,8 +106,7 @@ class _CDPSession:
             from websocket import create_connection
         except ImportError as exc:
             raise BossConnectorError(
-                'Browser-backed sources require the "agent-job-search[browser]" '
-                "optional dependencies."
+                "Browser-backed sources require the optional browser dependencies."
             ) from exc
 
         try:
@@ -473,8 +469,7 @@ def setup_chrome(platforms: tuple[str, ...] = ()) -> dict:
             "message": (
                 f"Chrome 已在运行（端口 {DEFAULT_CDP_PORT}）。\n"
                 "直接在弹出的窗口扫码登录 BOSS直聘即可；\n"
-                "如无窗口或需要重新登录，请关闭专用 Chrome 后再次运行 "
-                "agent-job-search setup。"
+                "如需重新登录，请在 JobFindsMe 的岗位来源页面打开来源。"
             ),
         }
 

@@ -13,11 +13,9 @@ __pycache__/
 dist/
 dist-electron/
 build/
-# Keep short verification notes in Git; store raw QA attachments locally.
-docs/desktop/evidence/*
-!docs/desktop/evidence/*.md
+# Store local QA attachments outside the tracked documentation tree.
+docs/desktop/evidence/
 docs/desktop/ui/evidence/
-evaluation/evidence/latest_four_source_search.*
 node_modules/
 *.egg-info/
 .jobfindsme/
@@ -36,4 +34,3 @@ evaluation/evidence/field_trial/
 evaluation/evidence/chinese_real_*.json
 evaluation/evidence/*_search_*.json
 evaluation/evidence/*_search_*.md
-build/
