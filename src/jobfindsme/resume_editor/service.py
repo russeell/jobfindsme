@@ -57,7 +57,7 @@ class ResumeEditorService:
         return [_version_from_row(row) for row in rows]
 
     def hide_version(self, *, workspace_id: str, version_id: str) -> None:
-        """Hide one historical version while retaining its immutable references."""
+        """Remove a historical list entry while retaining immutable references."""
         self.database.migrate()
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -66,21 +66,12 @@ class ResumeEditorService:
                 "WHERE workspace_id=? AND version_id=?",
                 (workspace_id, version_id),
             ).fetchone()
-            if row is None or row["hidden_at"] is not None:
+            if row is None:
                 raise ResumeEditorError("resume version not found")
             if row["is_current"]:
                 raise ResumeEditorError("current resume version cannot be hidden")
-            for table in (
-                "desktop_search_runs", "desktop_scheduled_tasks", "research_reports"
-            ):
-                if connection.execute(
-                    f"SELECT 1 FROM {table} WHERE workspace_id=? "
-                    "AND resume_version_id=? LIMIT 1",
-                    (workspace_id, version_id),
-                ).fetchone():
-                    raise ResumeEditorError(
-                        "referenced resume version cannot be hidden"
-                    )
+            if row["hidden_at"] is not None:
+                return
             connection.execute(
                 "UPDATE resume_versions SET hidden_at=? "
                 "WHERE workspace_id=? AND version_id=? AND is_current=0",

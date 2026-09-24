@@ -283,3 +283,9 @@ nav button .nav-label {font-size:13px;}
  .resume-history-main .button-row {justify-content:flex-start;}
  .source-audit-progress {flex-wrap:wrap;}
 }
+.simple-profile {max-width:960px;}
+.simple-profile .resume-current .heading-row {align-items:flex-start;}
+.profile-preference-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0;}
+.profile-preference-fields label {display:grid;gap:5px;min-width:0;}
+.profile-preference-fields input {width:100%;}
+@container(max-width:700px){.profile-preference-fields {grid-template-columns:1fr;}}

@@ -488,6 +488,18 @@ ipcMain.handle("desktop:analysis-preview", (_event, input) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.previewAnalysisCopy(input);
 });
+ipcMain.handle("desktop:clear-current-resume", (_event, workspaceId:string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.clearCurrentResume(workspaceId);
+});
+ipcMain.handle("desktop:get-search-preferences", (_event, workspaceId:string) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.getSearchPreferences(workspaceId);
+});
+ipcMain.handle("desktop:save-search-preferences", (_event, input:import("../shared/contracts").SearchPreferences) => {
+  if (!apiClient) throw new Error("desktop API is not ready");
+  return apiClient.saveSearchPreferences(input);
+});
 ipcMain.handle("desktop:list-resume-versions", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listResumeVersions(workspaceId);

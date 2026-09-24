@@ -169,6 +169,10 @@ export class DesktopApiClient {
     });
   }
 
+  clearCurrentResume(workspaceId:string):Promise<ResumeState> {return this.json("/v1/resumes/clear-current",{method:"POST",body:JSON.stringify({workspace_id:workspaceId})});}
+  getSearchPreferences(workspaceId:string):Promise<import("../../shared/contracts").SearchPreferences> {return this.json(`/v1/search-preferences?${new URLSearchParams({workspace_id:workspaceId})}`);}
+  saveSearchPreferences(input:import("../../shared/contracts").SearchPreferences):Promise<import("../../shared/contracts").SearchPreferences> {return this.json("/v1/search-preferences",{method:"PUT",body:JSON.stringify(input)});}
+
   listResumeVersions(workspaceId: string): Promise<ResumeVersion[]> {
     const query = new URLSearchParams({ workspace_id: workspaceId });
     return this.json(`/v1/resume-versions?${query}`);

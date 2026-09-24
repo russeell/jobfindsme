@@ -118,6 +118,63 @@ def test_resume_import_confirmation_version_and_analysis_preview(tmp_path) -> No
     assert "me@example.com" in keep_preview.json()["text"]
 
 
+def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) -> None:
+    database_path = tmp_path / "desktop.db"
+    client = TestClient(create_app(token="test-secret", database_path=database_path))
+    headers = {"Authorization": "Bearer test-secret"}
+    workspace_id = client.get("/v1/bootstrap", headers=headers).json()["workspaces"][0]["workspace_id"]
+    params = {"workspace_id": workspace_id}
+    empty = client.get("/v1/search-preferences", headers=headers, params=params)
+    assert empty.status_code == 200
+    assert empty.json()["target_role"] == ""
+    desired = {"workspace_id": workspace_id, "target_role": " AI 工程师 ",
+               "cities": ["上海", "上海", " 北京 "], "salary_min_k": 25,
+               "salary_max_k": 40}
+    saved = client.put("/v1/search-preferences", headers=headers, json=desired)
+    assert saved.status_code == 200
+    assert saved.json() == {"workspace_id": workspace_id, "target_role": "AI 工程师",
+                            "cities": ["上海", "北京"], "salary_min_k": 25,
+                            "salary_max_k": 40}
+    assert client.put("/v1/search-preferences", headers=headers,
+                      json={**desired, "salary_min_k": 50}).status_code == 400
+    assert client.get("/v1/search-preferences", headers=headers,
+                      params={"workspace_id": "other"}).status_code == 404
+
+    source = tmp_path / "resume.md"
+    source.write_text("# Skills\nPython\n# Projects\n合成项目", encoding="utf-8")
+    draft = client.post("/v1/resumes/import", headers=headers,
+                        json={"source_path": str(source)}).json()
+    confirmed = client.post(
+        f"/v1/resumes/{draft['profile_id']}/confirm", headers=headers,
+        json={"workspace_id": workspace_id,
+              "accepted_fact_ids": [fact["fact_id"] for fact in draft["facts"]]},
+    ).json()
+    version_id = confirmed["current_version_id"]
+    cleared = client.post("/v1/resumes/clear-current", headers=headers,
+                          json=params)
+    assert cleared.status_code == 200
+    assert cleared.json()["search_profile_state"] == "no_resume"
+    assert cleared.json()["current_version_id"] is None
+
+    restarted = TestClient(create_app(token="test-secret", database_path=database_path))
+    assert restarted.get("/v1/search-preferences", headers=headers,
+                         params=params).json() == saved.json()
+    assert restarted.get("/v1/resumes/state", headers=headers).json()["search_profile_state"] == "no_resume"
+    with Database(database_path).connect() as connection:
+        historical = connection.execute(
+            "SELECT version_id, is_current FROM resume_versions WHERE version_id=?",
+            (version_id,),
+        ).fetchone()
+    assert historical["version_id"] == version_id
+    assert historical["is_current"] == 0
+    preflight = restarted.post("/v1/search-preflight", headers=headers,
+                               json={"workspace_id": workspace_id, "intent": "数据工程师",
+                                     "source_ids": ["liepin"]})
+    assert preflight.status_code == 200
+    assert preflight.json()["resume_version_id"] is None
+    assert preflight.json()["keywords"] == ["数据工程师"]
+
+
 def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:
     app = create_app(token="test-secret", database_path=tmp_path / "desktop.db")
     client = TestClient(app)
@@ -190,7 +247,7 @@ def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:
     assert client.delete(
         f"/v1/resume-versions/{saved.json()['version_id']}",
         headers=headers, params=workspace_params,
-    ).status_code == 409
+    ).status_code == 200
     old_endpoint = f"/v1/resume-versions/{original['version_id']}"
     assert client.delete(
         old_endpoint, headers=headers, params={"workspace_id": "other"}
@@ -201,9 +258,7 @@ def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:
     visible = client.get(
         "/v1/resume-versions", headers=headers, params=workspace_params
     ).json()
-    assert {item["version_id"] for item in visible} == {
-        saved.json()["version_id"], current_id
-    }
+    assert {item["version_id"] for item in visible} == {current_id}
     hidden = ResumeEditorService(Database(tmp_path / "desktop.db")).get_version(
         workspace_id=draft["workspace_id"], version_id=original["version_id"]
     )

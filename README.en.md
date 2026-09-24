@@ -8,14 +8,15 @@ JobFindsMe is a local desktop workspace for job search, reputation research and 
 
 ![JobFindsMe desktop workspace with job results and details beside an embedded hiring website](docs/images/jobfindsme-workspace.png)
 
-*Actual desktop interface, D46. Listings and source status reflect the time of capture.*
+*Historical D46 interface. Its sidebar differs from the current build; listings and source status reflect the time of capture.*
 
 ## Find jobs with fewer open windows
 
-Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. An imported, confirmed resume can also inform search terms and matching.
+Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. A confirmed resume supplies evidence for role comparisons. Saved role, city and salary preferences feed the next search.
 
 - Select multiple sources, select all, or check their availability.
 - Read job details alongside the original page in the embedded browser.
+- See when the source does not provide a publication date, salary or complete job description; retrieval time is never presented as publication time.
 - Save roles and track read and application status.
 - Run searches manually when you want updated listings; historical plans and run records remain stored locally.
 
@@ -30,11 +31,11 @@ Open a role and choose company feedback, role information, or both:
 | **Company feedback** | Positive and negative public accounts, with supporting sources |
 | **Role information** | Responsibilities, workload, leave and employee benefits |
 
-Reports include source links and remain saved with the job for later reading. Historical reports can be deleted. Missing evidence is stated explicitly; the app does not invent findings or rate companies.
+Reports include source links and remain saved with the job for later reading. A new investigation saves another report while preserving earlier evidence. Missing evidence is stated explicitly; the app does not invent findings or rate companies.
 
 ## Keep your resume up to date
 
-Import **PDF, DOCX, Markdown or TXT**, review the extracted content, and save a version for search and matching. Preview and export your resume, and manage older versions. Current and referenced versions are protected from deletion.
+Import **PDF, DOCX, Markdown or TXT**, review skills and experience, then confirm them for search. Pending imports are not used. You can clear the current resume and continue searching by keyword; historical search and research snapshots remain intact.
 
 Scanned PDFs do not yet support OCR. Convert older DOC files to DOCX first.
 
@@ -72,7 +73,7 @@ The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpre
 
 - **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
 - **Scheduled searches are disabled.** Plans do not run or catch up automatically, and new plans cannot be created or resumed. Historical plans and run records remain stored locally.
-- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access; external model features send relevant requests to the configured provider.
+- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access. Ordinary job search does not automatically call a paid model.
 - **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
 
 ## For contributors

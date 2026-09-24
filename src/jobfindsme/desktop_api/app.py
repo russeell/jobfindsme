@@ -6,7 +6,7 @@ import json
 import threading
 from collections.abc import Callable
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
@@ -96,6 +96,18 @@ class DesktopSearchFilters(StrictResponse):
     source_names: list[str] = Field(default_factory=list, max_length=20)
     read: str = "any"
     unknown_policy: str = "include"
+
+
+class WorkspaceRequest(StrictResponse):
+    workspace_id: str
+
+
+class SearchPreferencesRequest(StrictResponse):
+    workspace_id: str
+    target_role: str = Field(default="", max_length=120)
+    cities: list[str] = Field(default_factory=list, max_length=20)
+    salary_min_k: int | None = Field(default=None, ge=0, le=1000)
+    salary_max_k: int | None = Field(default=None, ge=0, le=1000)
 
 
 class RefilterRequest(StrictResponse):
@@ -1234,6 +1246,48 @@ def create_app(
             ],
         )
 
+    @app.get("/v1/search-preferences", dependencies=[Depends(require_token)])
+    def get_search_preferences(workspace_id: str) -> dict:
+        try:
+            resolve_workspace(workspace_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="workspace not found") from error
+        with core.database.connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM desktop_search_preferences WHERE workspace_id=?",
+                (workspace_id,),
+            ).fetchone()
+        return {
+            "workspace_id": workspace_id,
+            "target_role": row["target_role"] if row else "",
+            "cities": json.loads(row["cities_json"]) if row else [],
+            "salary_min_k": row["salary_min_k"] if row else None,
+            "salary_max_k": row["salary_max_k"] if row else None,
+        }
+
+    @app.put("/v1/search-preferences", dependencies=[Depends(require_token)])
+    def save_search_preferences(request: SearchPreferencesRequest) -> dict:
+        try:
+            resolve_workspace(request.workspace_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="workspace not found") from error
+        if request.salary_min_k is not None and request.salary_max_k is not None and request.salary_min_k > request.salary_max_k:
+            raise HTTPException(status_code=400, detail="最低期望薪资不能高于最高期望薪资")
+        cities = list(dict.fromkeys(city.strip() for city in request.cities if city.strip()))
+        if any(len(city) > 80 for city in cities):
+            raise HTTPException(status_code=400, detail="城市名称过长")
+        with core.database.connect() as connection:
+            connection.execute(
+                """INSERT INTO desktop_search_preferences
+                (workspace_id,target_role,cities_json,salary_min_k,salary_max_k,updated_at)
+                VALUES (?,?,?,?,?,?) ON CONFLICT(workspace_id) DO UPDATE SET
+                target_role=excluded.target_role,cities_json=excluded.cities_json,
+                salary_min_k=excluded.salary_min_k,salary_max_k=excluded.salary_max_k,
+                updated_at=excluded.updated_at""",
+                (request.workspace_id, request.target_role.strip(), json.dumps(cities, ensure_ascii=False), request.salary_min_k, request.salary_max_k, datetime.now(UTC).isoformat()),
+            )
+        return get_search_preferences(request.workspace_id)
+
     @app.get(
         "/v1/resumes/state",
         response_model=ResumeStateResponse,
@@ -1281,6 +1335,15 @@ def create_app(
             active_draft=active_draft,
             capabilities=_resume_capabilities(),
         )
+
+    @app.post("/v1/resumes/clear-current", dependencies=[Depends(require_token)])
+    def clear_current_resume(request: WorkspaceRequest) -> ResumeStateResponse:
+        try:
+            resolve_workspace(request.workspace_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="workspace not found") from error
+        core.profiles.clear_current(workspace_id=request.workspace_id)
+        return resume_state(request.workspace_id)
 
     @app.post(
         "/v1/resumes/import",
@@ -1409,7 +1472,7 @@ def create_app(
         except ResumeEditorError as error:
             code = (
                 409
-                if any(word in str(error) for word in ("current", "referenced"))
+                if "current" in str(error)
                 else 404
             )
             raise HTTPException(status_code=code, detail=str(error)) from error
@@ -1965,10 +2028,6 @@ def create_app(
     )
     def resume_scheduled_task(task_id: str) -> dict:
         raise HTTPException(status_code=410, detail="定时检索已停用；历史计划不能恢复。")
-        try:
-            return scheduler.set_paused(task_id=task_id, paused=False)
-        except LookupError as error:
-            raise HTTPException(status_code=404, detail="task not found") from error
 
     @app.post(
         "/v1/tasks/run-due",

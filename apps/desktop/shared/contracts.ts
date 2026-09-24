@@ -71,6 +71,9 @@ export type DesktopBridge = {
   layoutSourceBrowser(bounds: SourceBrowserBounds | null): Promise<void>;
   sourceBrowserCommand(command: "back" | "forward" | "reload" | "state" | "zoom-in" | "zoom-out" | "zoom-reset" | "fit-width"): Promise<SourceBrowserState>;
   getResumeState(): Promise<ResumeState>;
+  clearCurrentResume(workspaceId:string):Promise<ResumeState>;
+  getSearchPreferences(workspaceId:string):Promise<SearchPreferences>;
+  saveSearchPreferences(input:SearchPreferences):Promise<SearchPreferences>;
   chooseAndImportResume(): Promise<ResumeDraft | undefined>;
   confirmResume(input: ResumeConfirmation): Promise<ResumeState>;
   abandonResume(workspaceId: string, profileId: string): Promise<ResumeState>;
@@ -182,7 +185,7 @@ export type SearchResultItem = {
     locations: string[]; salary_min_k: number | null; salary_max_k: number | null;
     experience_min_years: number | null; experience_max_years: number | null;
     recruitment_track: string; employment_type: string; apply_url: string;
-    source: { source_name: string; liveness: string; detail_level?:string };
+    source: { source_name: string; liveness: string; detail_level?:string; published_at?:string|null };
   };
   model_match?:{score:number|null;evidence:Array<{resume_quote:string;jd_quote:string}>;unknowns:string[]};
   local_score?:number;
@@ -252,6 +255,8 @@ export type ResumeDraft = {
   facts: ResumeFact[];
   workspace_id: string;
 };
+
+export type SearchPreferences = {workspace_id:string;target_role:string;cities:string[];salary_min_k:number|null;salary_max_k:number|null};
 
 export type ResumeState = {
   workspace_id: string | null;

@@ -4,7 +4,6 @@ import type {ResearchReport} from "../../shared/contracts";
 import {ResumePage} from "./resume/ResumePage";
 import {userError} from "../../shared/user-errors";
 import {JobActions} from "./search/JobActions";
-import { MatchingRulesPage, defaultWeights } from "./settings/MatchingRulesPage";
 import { Icon } from "./shared/Icon";
 import { modelPresets, protocolNames } from "./settings/model-presets";
 import { ResearchPage } from "./research/ResearchPage";
@@ -18,10 +17,10 @@ import buildInfo from "../../build-info.json";
 import type {
   BootstrapData, ModelConnection, ModelConnectionInput, SourceCheckResult,
   ModelProtocol, ServiceStatus,
-  SearchResultItem, TrackedJob, MatchingWeights,
+  SearchResultItem, TrackedJob,
 } from "../../shared/contracts";
 
-type Page = "discover" | "research" | "records" | "resume" | "scores" | "sources" | "models";
+type Page = "discover" | "research" | "records" | "resume" | "sources" | "models";
 
 const navGroups: Array<[string, Array<[string, Page | undefined]>]> = [
   ["开始", [
@@ -29,7 +28,7 @@ const navGroups: Array<[string, Array<[string, Page | undefined]>]> = [
     ["已看过", "records"],
   ]],
   ["设置与资料", [
-    ["我的简历", "resume"], ["匹配规则", "scores"],
+    ["我的简历", "resume"],
     ["岗位来源", "sources"], ["模型设置", "models"],
   ]],
 ];
@@ -46,8 +45,6 @@ export function App() {
   const [error, setError] = useState<string>();
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
-  const [weights, setWeights] = useState<MatchingWeights>(()=>{try {const w=JSON.parse(localStorage.getItem("jfm.matching.v2")||"null");return w && Object.keys(w).sort().join()===Object.keys(defaultWeights).sort().join() && Object.values(w).every(v=>Number.isInteger(v)&&Number(v)>=0) && Object.values(w).reduce<number>((a,v)=>a+Number(v),0)===100 ? w : defaultWeights;}catch{return defaultWeights;}});
-  useEffect(()=>{if(Object.values(weights).every(v=>Number.isInteger(v)&&v>=0)&&Object.values(weights).reduce((a,b)=>a+b,0)===100)localStorage.setItem("jfm.matching.v2",JSON.stringify(weights));},[weights]);
   useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }); }, [page]);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({ connected: false, message: "本地服务正在启动" });
   useEffect(() => {
@@ -87,7 +84,7 @@ export function App() {
       </div>)}
       <div className="local-status"><span className={!serviceStatus.connected ? "dot error" : "dot"} />{serviceStatus.connected ? "个人工作空间 · 本地优先" : serviceStatus.message}</div>
     </>}>
-  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} onResume={()=>setPage("resume")} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} weights={weights} onWeightsChange={setWeights} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "scores" && <MatchingRulesPage workspaceId={data?.workspaces[0]?.workspace_id} weights={weights} onApply={setWeights} />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 定时检索已停用 · {buildInfo.label}</footer></section>
+  <section className="main"><header className="topbar"><span>工作空间 / {navItems.find(([, target]) => target === page)?.[0]}</span><span className="pill">本地数据 · {data?.workspaces.length ?? 0} 个工作空间</span><BrowserToggle /></header><div className="content">{error && <div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);setPage("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}<div className="discovery-mount" hidden={page !== "discover"}><Discovery active={page === "discover"} onResearch={job=>{setResearchTarget(job);setPage("research");}} onResume={()=>setPage("resume")} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError} /></div><div hidden={page !== "research"}><ResearchPage onReports={setReports} active={page === "research"} data={data} target={researchTarget} onBack={()=>setPage("discover")} onError={setError}/></div>{page === "records" && <RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError} />}{page === "resume" && <ResumePage />}{page === "sources" && <SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError} />}{page === "models" && <ModelsPage onError={setError} />}</div><footer className="footer">本地优先 · 手动投递 · 定时检索已停用 · {buildInfo.label}</footer></section>
   </Workbench>;
 }
 

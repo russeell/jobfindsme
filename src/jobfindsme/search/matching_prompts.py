@@ -104,7 +104,7 @@ class MatchingPromptService:
             rows = db.execute(
                 (
                     "SELECT rule_version_id FROM scoring_rule_versions WHERE "
-                    "workspace_id=? ORDER BY created_at DESC"
+                    "workspace_id=? AND hidden_at IS NULL ORDER BY created_at DESC"
                 ),
                 (workspace_id,),
             ).fetchall()
@@ -176,10 +176,11 @@ class MatchingPromptService:
         return self.get(workspace_id, rule_id)
 
     def delete_version(self, workspace_id: str, rule_id: str) -> None:
-        """Remove an unused historical rule without changing active or frozen runs."""
+        """Hide a historical rule while retaining frozen search and task references."""
         with self.database.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
             row = db.execute(
-                "SELECT 1 FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
+                "SELECT hidden_at FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
                 (workspace_id, rule_id),
             ).fetchone()
             if row is None:
@@ -190,16 +191,11 @@ class MatchingPromptService:
             ).fetchone()
             if active:
                 raise ValueError("当前启用的规则不能删除")
-            for table in ("desktop_search_runs", "desktop_scheduled_tasks"):
-                reference = db.execute(
-                    f"SELECT 1 FROM {table} WHERE workspace_id=? AND rule_version_id=? LIMIT 1",
-                    (workspace_id, rule_id),
-                ).fetchone()
-                if reference:
-                    raise ValueError("该规则已被历史检索或任务引用，不能删除")
+            if row["hidden_at"] is not None:
+                return
             db.execute(
-                "DELETE FROM scoring_rule_versions WHERE workspace_id=? AND rule_version_id=?",
-                (workspace_id, rule_id),
+                "UPDATE scoring_rule_versions SET hidden_at=? WHERE workspace_id=? AND rule_version_id=?",
+                (datetime.now(UTC).isoformat(), workspace_id, rule_id),
             )
 
     def input_for_run(self, workspace_id, run_id):

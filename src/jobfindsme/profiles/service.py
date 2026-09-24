@@ -250,6 +250,20 @@ class ResumeProfileService:
             ).fetchone()
         return _version_from_row(row) if row is not None else None
 
+    def clear_current(self, *, workspace_id: str) -> None:
+        """Stop using the current resume without deleting historical snapshots."""
+        self.database.migrate()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                "UPDATE resume_versions SET is_current=0 WHERE workspace_id=? AND is_current=1",
+                (workspace_id,),
+            )
+            connection.execute(
+                "DELETE FROM active_resume_imports WHERE workspace_id=?",
+                (workspace_id,),
+            )
+
     def active_draft_profile_id(self, *, workspace_id: str) -> str | None:
         self.database.migrate()
         with self.database.connect() as connection:

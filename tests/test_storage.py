@@ -77,6 +77,8 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0030_research_job_context",
         "0031_resume_conversation",
         "0032_hidden_history",
+        "0033_hidden_matching_rules",
+        "0034_desktop_search_preferences",
     ]
     assert foreign_keys == 1
 
@@ -380,3 +382,21 @@ def test_database_directory_and_files_are_private_by_default(tmp_path) -> None:
     database_mode = stat.S_IMODE(database.path.stat().st_mode)
     assert directory_mode == 0o700
     assert database_mode == 0o600
+
+
+def test_hidden_rule_migration_preserves_existing_rule_and_search_reference(tmp_path) -> None:
+    from jobfindsme.workspaces import WorkspaceService
+
+    database = Database(tmp_path / "legacy-d48.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create().workspace_id
+    with database.connect() as connection:
+        connection.execute("INSERT INTO scoring_rule_versions(rule_version_id,workspace_id,name,weights_json,created_at) VALUES ('legacy-rule',?,?,?,?)", (workspace,"旧规则",'{"skills":35,"projects":30,"education":15,"experience":20}',"2026-09-23T00:00:00+00:00"))
+        connection.execute("INSERT INTO desktop_search_runs(run_id,workspace_id,rule_version_id,intent,filter_snapshot_json,ordered_job_ids_json,scores_json,created_at) VALUES ('legacy-run',?,?,'Python','{}','[]','{}','2026-09-23T00:00:00+00:00')", (workspace,"legacy-rule"))
+        connection.execute("DROP INDEX idx_scoring_rule_versions_visible")
+        connection.execute("ALTER TABLE scoring_rule_versions DROP COLUMN hidden_at")
+        connection.execute("DELETE FROM schema_migrations WHERE version='0033_hidden_matching_rules'")
+    assert database.migrate_with_backup()
+    with database.connect() as connection:
+        assert connection.execute("SELECT hidden_at FROM scoring_rule_versions WHERE rule_version_id='legacy-rule'").fetchone()[0] is None
+        assert connection.execute("SELECT rule_version_id FROM desktop_search_runs WHERE run_id='legacy-run'").fetchone()[0] == "legacy-rule"

@@ -282,30 +282,29 @@ def test_cancel_before_registration_and_no_resume_trial(tmp_path):
     assert trial.status_code == 400 and "尚未评分" in trial.text
 
 
-def test_matching_history_delete_guards_and_restart(tmp_path):
+def test_matching_history_hide_preserves_search_and_old_plan(tmp_path):
     db, ws, service, resume, jobs, conn, transport, matching = setup(tmp_path)
-    old = save(matching, ws, conn, "旧版本")
-    active = save(matching, ws, conn, "当前版本")
+    referenced = save(matching, ws, conn, "已引用规则")
+    active = save(matching, ws, conn, "当前规则")
     with pytest.raises(ValueError, match="当前"):
         matching.delete_version(ws, active["rule_version_id"])
     other = WorkspaceService(db).create().workspace_id
     with pytest.raises(ValueError, match="不存在"):
-        matching.delete_version(other, old["rule_version_id"])
-    matching.delete_version(ws, old["rule_version_id"])
-    with pytest.raises(ValueError, match="不属于"):
-        matching.get(ws, old["rule_version_id"])
-    unused = save(matching, ws, conn, "将被引用")
-    save(matching, ws, conn, "更新当前")
-    service.create_snapshot(workspace_id=ws, intent="Python", job_ids=[jobs[0].job_id], resume_version=resume, filters=DesktopJobFilters(), rule_version_id=unused["rule_version_id"])
-    with pytest.raises(ValueError, match="引用"):
-        matching.delete_version(ws, unused["rule_version_id"])
-    scheduled = save(matching, ws, conn, "历史计划规则")
-    save(matching, ws, conn, "新的当前规则")
-    LocalScheduler(db).create_task(workspace_id=ws, name="合成旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=scheduled["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
-    with pytest.raises(ValueError, match="引用"):
-        matching.delete_version(ws, scheduled["rule_version_id"])
+        matching.delete_version(other, referenced["rule_version_id"])
+    run_id = service.create_snapshot(workspace_id=ws, intent="Python", job_ids=[jobs[0].job_id], resume_version=resume, filters=DesktopJobFilters(), rule_version_id=referenced["rule_version_id"])
+    plan = LocalScheduler(db).create_task(workspace_id=ws, name="合成旧计划", intent="Python", source_ids=["liepin"], filters={}, resume_version_id=resume.version_id, rule_version_id=referenced["rule_version_id"], frequency="interval", timezone="Asia/Shanghai", interval_minutes=60)
+    matching.delete_version(ws, referenced["rule_version_id"])
+    matching.delete_version(ws, referenced["rule_version_id"])
     restarted = MatchingPromptService(db, service, matching.connections, matching.gateway)
-    assert restarted.get(ws, unused["rule_version_id"])["prompt"] == "将被引用"
+    visible = {item["rule_version_id"] for item in restarted.state(ws)["versions"]}
+    assert referenced["rule_version_id"] not in visible
+    assert active["rule_version_id"] in visible
+    assert restarted.get(ws, referenced["rule_version_id"])["prompt"] == "已引用规则"
+    assert service.page(workspace_id=ws, run_id=run_id, page=1, page_size=10)["rule_version_id"] == referenced["rule_version_id"]
+    assert LocalScheduler(db).get_task(plan["task_id"])["rule_version_id"] == referenced["rule_version_id"]
+    with db.connect() as sql:
+        assert sql.execute("SELECT hidden_at FROM scoring_rule_versions WHERE rule_version_id=?", (referenced["rule_version_id"],)).fetchone()[0]
+
 
 
 def test_matching_delete_api_returns_protected_error_and_removes_unused(tmp_path):
