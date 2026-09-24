@@ -7,7 +7,7 @@ name = "agent-job-search"
 version = "0.13.0"
 description = "Local-first job search middleware for AI agents — query, filter, rank, and track jobs across Chinese hiring platforms"
 readme = "README.md"
-license = "MIT"
+license = "PolyForm-Noncommercial-1.0.0"
 keywords = ["ai", "job-search", "recruitment", "mcp", "career", "resume", "china-jobs",
             "求职", "招聘", "AI求职", "BOSS直聘", "猎聘"]
 requires-python = ">=3.11"

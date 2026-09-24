@@ -1,87 +1,74 @@
 # JobFindsMe
 
-**Find a promising role. Learn more about the company before you apply.**
+**Find a promising job. Then find out whether it is right for you.**
 
-JobFindsMe is a local desktop workspace for job search, role research and resume maintenance. Browse results alongside the original hiring website, save interesting roles, and investigate the opportunities you want to pursue.
+JobFindsMe is a local-first desktop workspace for job search and role research. Search for openings, read the original hiring page alongside the result, and investigate the company and role with traceable public evidence. You make the decision.
 
-[中文](README.md) · [Developer documentation](docs/desktop/README.md)
+[中文](README.md) · [Get started](#get-started) · [Current status](docs/desktop/HANDOFF.md)
 
-![Current JobFindsMe research composer with a synthetic role](docs/images/jobfindsme-research.jpg)
+![JobFindsMe search: results and details on the left, original hiring website on the right](docs/images/jobfindsme-search.png)
 
-*Interface example using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
+*Desktop interface in an isolated QA profile. Listings, counts and source availability shown here may have changed.*
 
-## Find jobs with fewer open windows
+## From an opening to an informed choice
 
-Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. With a confirmed resume, you can leave the keyword blank: the app makes a bounded set of search terms from confirmed skills and experience and shows the terms it used. Set city and salary filters on the search page.
+1. **Find jobs.** Enter a role or skill. With a confirmed resume, you may also search with an empty input and let your experience suggest a bounded set of terms. Filter city, experience and sources on the results page.
+2. **Read the original.** Results, details and the hiring website sit side by side. Missing descriptions, salaries and publication dates are marked unknown; retrieval time is never passed off as publication time.
+3. **Research the role.** Check company business and listing information, positive and negative accounts, workload, benefits, role content and development clues. Reports link to evidence and show dates and scope. What cannot be verified remains unknown.
 
-- Select multiple sources, select all, or check their availability.
-- Read job details alongside the original page in the embedded browser.
-- See when the source does not provide a publication date, salary or complete job description; retrieval time is never presented as publication time.
-- Save roles and track read and application status.
-- Run searches manually when you want updated listings; historical plans and run records remain stored locally.
+Save interesting roles and keep read and application states separate. Applications happen on the hiring website; opening a page does not mark a job as applied.
 
-You submit applications yourself on the hiring website. Opening a link does not mark a job as applied.
+### What does role research look like?
 
-## Research the role before applying
+Start from a selected job, with or without a question. Reports organize company and role findings; follow-ups save new versions while earlier reports remain available. Official disclosures and personal accounts are kept distinct.
 
-Open a role and use the research composer. Company and role topics are selected by default. Start without typing, or add a question that enters a bounded public web search:
+![JobFindsMe role research report with sectioned company findings and linked evidence](docs/images/jobfindsme-research.jpg)
 
-| Direction | What to look for |
-| --- | --- |
-| **Company context** | Business and listing information, positive and negative accounts, workload and everyday benefits |
-| **Role content and development** | The saved job description, responsibilities and skills, considered alongside company business evidence |
-
-Reports keep source links, publication dates and scope. The History button reopens earlier versions. A follow-up searches for evidence related to the question and saves a new version; without direct evidence, the app says it cannot answer. Cancellation or failure leaves the report you were reading in place. Official disclosures are distinguished from personal accounts. Missing evidence remains unknown; development analysis does not promise promotion or rate companies.
-
-## Keep your resume up to date
-
-Import **PDF, DOCX, Markdown or TXT**, review skills and experience, then confirm them for search. Pending imports are not used. You can clear the current resume and continue searching by keyword; historical search and research snapshots remain intact.
-
-Scanned PDFs do not yet support OCR. Convert older DOC files to DOCX first.
-
-## Keep the original website close
-
-The embedded browser supports multiple tabs and retains app-specific login sessions. Websites may still require you to sign in again when sessions expire or verification is needed.
-
-When automated retrieval is unavailable, open the original site and continue browsing. A working webpage does not guarantee successful automated extraction.
-
-The source catalog currently includes **four hiring platforms and sixteen company career sites**. Availability varies; check the status shown in the app.
+*Report for a synthetic company in an isolated QA profile. Missing evidence does not become an invented conclusion.*
 
 ## Get started
 
-This project is currently a **macOS desktop development build**. To run from source, install Git, Python 3.11+ and Node.js/npm:
+This is currently a **macOS development build from source**, not a general-audience installer. Install Git, Python 3.11+ and Node.js/npm:
 
 ```bash
 git clone https://github.com/russeell/jobfindsme.git
 cd jobfindsme
-
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev,browser]"
-
 cd apps/desktop
 npm ci
 npm run build
 npm start
 ```
 
-Open **Settings → Job sources** from the bottom of the sidebar, choose sources, and sign in where needed. Enter a keyword on **Find jobs**; its small **Add resume / Resume** button opens resume maintenance without leaving the search. Open a result to read the original listing, save it or research its reputation.
+On first launch:
 
-The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpreter.
+- Choose sources under **Settings → Job sources**, sign in through the app browser where needed, and check each source's status.
+- Search with a keyword. A resume is optional; the small button beside the **Find jobs** title opens PDF, DOCX, Markdown and TXT import and review. Scanned PDFs do not yet support OCR.
+- Open a promising result, read the original page, then choose **Research role**.
 
-## Things to know
+The desktop uses the repository's `.venv/bin/python` by default. Set `JFM_PYTHON` to select another interpreter.
 
-- **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
-- **Scheduled searches are disabled.** Plans do not run or catch up automatically, and new plans cannot be created or resumed. Historical plans and run records remain stored locally.
-- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access. Ordinary job search and research do not automatically call a paid model. A free-form question is used as a public web search term; do not include private information.
-- **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
+## Important limits
 
-## For contributors
+- The catalog contains **four hiring platforms and sixteen company career sites**. A site opening in the browser does not mean automated search works. Login, listing, pagination and full-description capabilities are checked separately. Verification prompts, rate limits and website changes can interrupt retrieval; consult the app's source status.
+- **Scheduled search is disabled.** Historical plans and runs remain on your device. The app never submits applications automatically.
+- Jobs, resumes and reports are stored locally, while hiring sites and public evidence require network access. A free-form question may become a public search term; do not enter private information. Ordinary search and research do not automatically call a paid model.
+- Public accounts can be old, incomplete or contradictory. Reports help you check evidence; they do not score companies or promise career outcomes.
 
-The desktop uses **Electron, React and TypeScript**; local services and storage use **Python and SQLite**.
+See the [development handoff](docs/desktop/HANDOFF.md) for known gaps.
 
-[Directory map](docs/desktop/STRUCTURE.md) · [Architecture](docs/desktop/TECHNICAL.md) · [Development](docs/desktop/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md)
+## Development and contributions
 
-Existing CLI/MCP users can consult the [compatibility documentation](docs/legacy/README.en.md). Those interfaces are not required to use the desktop app.
+The desktop uses Electron, React and TypeScript; local services and storage use Python and SQLite. Main code lives in `apps/desktop/` and `src/jobfindsme/`, with tests in `apps/desktop/tests/` and `tests/`.
 
-[Security](SECURITY.md) · [MIT License](LICENSE)
+[Directory map](docs/desktop/STRUCTURE.md) · [Development notes](docs/desktop/README.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
+Older CLI/MCP entry points remain for compatibility; see the [legacy documentation](docs/legacy/README.en.md). They are not needed for desktop use.
+
+## License
+
+The current version uses [PolyForm Noncommercial 1.0.0](LICENSE): learning, personal use and other noncommercial uses are allowed under its terms, as are noncommercial modification and distribution. **Commercial use of this version requires separate permission.** This is a source-available noncommercial license, not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
+
+Earlier versions were published under [MIT](LICENSE-MIT-PRIOR). Rights already granted for those versions are not retroactively withdrawn. Contact the maintainers about licensing or commercial permission.

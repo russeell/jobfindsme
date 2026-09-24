@@ -10,7 +10,7 @@
   <a href="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml"><img src="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/MCP-stdio-111111" alt="MCP stdio">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20NC-orange" alt="PolyForm Noncommercial 1.0.0"></a>
   <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
 </p>
 
@@ -364,7 +364,7 @@ dead result or link? Please open a redacted
 
 ## ⚖️ Disclaimer
 
-- This is a free, open-source personal learning tool that helps you organise
+- The current version is a source-available, noncommercial personal learning tool that helps you organise
   job information you are **logged in and entitled to view**.
 - Automated access to recruiting platforms may trigger their risk controls.
   Any resulting account limitation or ban is the user's responsibility, not
@@ -378,4 +378,4 @@ dead result or link? Please open a redacted
 
 ## 📄 License
 
-[MIT](../../LICENSE)
+[PolyForm Noncommercial 1.0.0](../../LICENSE) · [earlier MIT license](../../LICENSE-MIT-PRIOR)

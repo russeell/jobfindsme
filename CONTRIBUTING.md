@@ -1,5 +1,12 @@
 # Contributing
 
+The current code is offered under [PolyForm Noncommercial 1.0.0](LICENSE).
+Contributions remain yours, but submitting a contribution for inclusion means
+you agree to offer that contribution under the same license. Earlier MIT-licensed
+versions and their contributions retain their existing grants; see
+[LICENSE-MIT-PRIOR](LICENSE-MIT-PRIOR). Please raise a licensing question before
+submitting code if you cannot grant these terms.
+
 Desktop development follows [DEVELOPMENT](docs/desktop/DEVELOPMENT.md), [tasks](docs/desktop/tasks.json) and the [directory manifest](docs/desktop/STRUCTURE.md). Run relevant Python tests, desktop type/build and Node checks. Preserve migrations, history and account isolation.
 
 ## Retained CLI/MCP Skill

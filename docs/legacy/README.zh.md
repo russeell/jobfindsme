@@ -10,7 +10,7 @@
   <a href="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml"><img src="https://github.com/russeell/agent-job-search/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/MCP-stdio-111111" alt="MCP stdio">
-  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
+  <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20NC-orange" alt="PolyForm Noncommercial 1.0.0"></a>
   <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
 </p>
 
@@ -317,7 +317,7 @@ ruff check . && ruff format --check .
 
 ## ⚖️ 免责声明
 
-- 本项目为免费开源的个人学习工具，帮助整理你**已登录、有权查看**的岗位信息；
+- 本项目当前版本为公开源码、仅限非商业用途的个人学习工具，帮助整理你**已登录、有权查看**的岗位信息；
 - 自动化访问招聘平台可能触发对方风控，由此产生的账号限制、封禁等后果由使用者
   自行承担，与作者无关；
 - 禁止用于商业转售、大规模爬取或绕过平台限制；
@@ -327,4 +327,4 @@ ruff check . && ruff format --check .
 
 ## 📄 License
 
-[MIT](../../LICENSE)
+[PolyForm Noncommercial 1.0.0](../../LICENSE) · [earlier MIT license](../../LICENSE-MIT-PRIOR)

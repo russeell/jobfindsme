@@ -1686,6 +1686,29 @@
         "docs/desktop/evidence/D58.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D59",
+      "title": "重写 README 并采用非商业源码许可",
+      "depends_on": [
+        "D58"
+      ],
+      "status": "done",
+      "scope": [
+        "面向读者重写中英文 README 并展示当前界面",
+        "当前版本采用 PolyForm Noncommercial 1.0.0",
+        "保留旧版 MIT 权利说明并同步打包元数据"
+      ],
+      "acceptance": [
+        "README 入口与图片可用、功能边界准确",
+        "官方许可原文完整，非商业与历史 MIT 权利清晰",
+        "构建产物包含两份许可且元数据一致"
+      ],
+      "verification": "Markdown 链接审计、官方许可证原文比对、wheel 构建和元数据检查、Skill 同步检查",
+      "evidence": [
+        "docs/desktop/evidence/D59.md"
+      ],
+      "blocker": null
     }
   ]
 }
