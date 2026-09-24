@@ -32,7 +32,8 @@ After each independently verified change, commit locally and sync its developmen
 branch to origin. Fetch before pushing; never force-push or overwrite remote work.
 Use pull requests for subsequent integration into main; this authorization does not
 authorize merging those future pull requests, publishing packages, or creating releases.
-The current repository synchronization to main is explicitly authorized. Exclude credentials, login profiles, private
+Direct main push was rejected by automatic approval review; sync the development
+branch and open a PR instead. Do not retry direct main integration without approval. Exclude credentials, login profiles, private
 resumes and generated build artifacts. This policy supersedes legacy Git rules.
 
 ## Current structure and compatibility
