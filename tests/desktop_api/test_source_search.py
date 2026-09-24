@@ -232,7 +232,7 @@ def test_source_search_api_applies_backend_gates_before_adapter(tmp_path) -> Non
         headers={"Authorization": "Bearer test-secret"},
         json={
             "workspace_id": workspace.workspace_id,
-            "intent": "AI 应用工程师",
+            "intent": "",
             "source_ids": ["boss", "liepin", "zhilian", "wuyou"],
         },
     )
@@ -241,6 +241,12 @@ def test_source_search_api_applies_backend_gates_before_adapter(tmp_path) -> Non
     payload = response.json()
     assert called == ["liepin"]
     assert payload["jobs"][0]["external_id"] == "job-1"
+    assert "Python" in " ".join(payload["keywords"])
+    assert payload["result_page"]["total"] == 1
+    with database.connect() as connection:
+        snapshot = connection.execute("SELECT intent FROM desktop_search_runs WHERE run_id=?",
+                                      (payload["result_page"]["run_id"],)).fetchone()
+    assert snapshot["intent"] == payload["keywords"][0]
     assert set(payload["blocked_sources"]) == {"boss", "zhilian", "wuyou"}
 
 

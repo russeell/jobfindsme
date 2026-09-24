@@ -393,7 +393,7 @@ export type ServiceStatus = {
 export type ResearchDirection = "role" | "workload" | "salary" | "leave" | "care";
 export type ResearchCorrectionInput = {workspace_id:string;evidence_id:string;kind:"wrong_entity"|"broken_link"|"wrong_team"|"other";note:string};
 export type ResearchEvidence = {
-  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"positive"|"negative"|null};
+  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|null;source_type?:"official_disclosure"|"personal_account"};
   evidence_id: string;
   url: string | null;
   platform: string;
@@ -413,7 +413,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
+  job_context?: {title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;

@@ -1,6 +1,6 @@
 # JobFindsMe 桌面端开发
 
-最新本地交付：[D48 界面修复包](/private/tmp/JobFindsMe-D48-UIFix.app)。来源、匹配规则、简历与口碑页面已简化；定时检索已停用，旧计划和执行记录保留在本机。详见 [D48 证据](evidence/D48.md)。普通包未启动，隔离预览已验收并退出；用户既有会话未覆盖。任务状态以 [tasks.json](tasks.json) 为准。
+当前进行 D50：简历页移除求职偏好、支持确认简历空关键词检索，并将口碑调查扩展为证据化岗位研究。上一独立交付是 [D49 应用包](/private/tmp/JobFindsMe-D49-Flow.app)，见 [D49 证据](evidence/D49.md)。定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
 
 | 文档 | 用途 |
 | --- | --- |

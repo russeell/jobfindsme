@@ -473,7 +473,7 @@ class ResearchRunRequest(StrictResponse):
         max_length=5,
     )
     source_ids: list[str] = Field(
-        default_factory=lambda: ["maimai", "offershow", "kanzhun"],
+        default_factory=lambda: ["official", "maimai", "kanzhun", "zhihu", "offershow"],
         max_length=8,
     )
     user_evidence: list[ResearchEvidenceInput] = Field(
@@ -946,7 +946,7 @@ def create_app(
             )
             run_id = desktop_jobs.create_snapshot(
                 workspace_id=request.workspace_id,
-                intent=request.intent,
+                intent=request.intent.strip() or preflight.keywords[0],
                 job_ids=snapshot_job_ids,
                 resume_version=current_resume,
                 filters=filters,

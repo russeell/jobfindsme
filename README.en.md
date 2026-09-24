@@ -2,7 +2,7 @@
 
 **Find a promising role. Learn more about the company before you apply.**
 
-JobFindsMe is a local desktop workspace for job search, reputation research and resume maintenance. Browse results alongside the original hiring website, save interesting roles, and investigate the opportunities you want to pursue.
+JobFindsMe is a local desktop workspace for job search, role research and resume maintenance. Browse results alongside the original hiring website, save interesting roles, and investigate the opportunities you want to pursue.
 
 [中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
@@ -12,7 +12,7 @@ JobFindsMe is a local desktop workspace for job search, reputation research and 
 
 ## Find jobs with fewer open windows
 
-Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. A confirmed resume supplies evidence for role comparisons. Saved role, city and salary preferences feed the next search.
+Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. With a confirmed resume, you can leave the keyword blank: the app makes a bounded set of search terms from confirmed skills and experience and shows the terms it used. Set city and salary filters on the search page.
 
 - Select multiple sources, select all, or check their availability.
 - Read job details alongside the original page in the embedded browser.
@@ -22,16 +22,16 @@ Search by role or skill, choose cities, salary ranges and experience requirement
 
 You submit applications yourself on the hiring website. Opening a link does not mark a job as applied.
 
-## Research before applying
+## Research the role before applying
 
-Open a role and choose company feedback, role information, or both:
+Open a role and choose company context, role content and development, or both:
 
 | Direction | What to look for |
 | --- | --- |
-| **Company feedback** | Positive and negative public accounts, with supporting sources |
-| **Role information** | Responsibilities, workload, leave and employee benefits |
+| **Company context** | Business and listing information, positive and negative accounts, workload and everyday benefits |
+| **Role content and development** | The saved job description, responsibilities and skills, considered alongside company business evidence |
 
-Reports include source links and remain saved with the job for later reading. A new investigation saves another report while preserving earlier evidence. Missing evidence is stated explicitly; the app does not invent findings or rate companies.
+Reports keep source links, publication dates and scope, and remain saved with the job for later reading. Updating the research saves a new report while preserving earlier evidence. Official disclosures are distinguished from personal accounts. Missing evidence remains unknown; development analysis does not promise promotion or rate companies.
 
 ## Keep your resume up to date
 

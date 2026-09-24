@@ -24,7 +24,7 @@ type Page = "discover" | "research" | "records" | "resume" | "sources" | "models
 
 const navGroups: Array<[string, Array<[string, Page | undefined]>]> = [
   ["开始", [
-    ["找工作", "discover"], ["口碑调查", "research"],
+    ["找工作", "discover"], ["岗位研究", "research"],
     ["已看过", "records"],
   ]],
   ["设置与资料", [

@@ -23,7 +23,7 @@ export function ResumePage(){
   async function importResume(){await run(async()=>{const value=await window.jobfindsme!.chooseAndImportResume();if(value){await reload();setMessage("请核对解析内容。确认前，新导入内容不会参与检索。");}});}
   async function confirm(){if(!draft)return;await run(async()=>{await window.jobfindsme!.confirmResume({workspace_id:draft.workspace_id,profile_id:draft.profile_id,accepted_fact_ids:[...accepted],corrections:Object.fromEntries([...accepted].map(id=>[id,corrections[id]??""]))});await reload();setMessage("简历已确认，下一次检索可使用其中的技能和经历。");});}
   async function abandon(){if(!draft)return;await run(async()=>{await window.jobfindsme!.abandonResume(draft.workspace_id,draft.profile_id);await reload();setMessage("本次导入已放弃。");});}
-  async function clearResume(){if(!state?.workspace_id)return;await run(async()=>{await window.jobfindsme!.clearCurrentResume(state.workspace_id!);await reload();setConfirmClear(false);setMessage("当前简历已清除；现在可不使用简历搜索。已有检索和调查快照保留。");});}
+  async function clearResume(){if(!state?.workspace_id)return;await run(async()=>{await window.jobfindsme!.clearCurrentResume(state.workspace_id!);await reload();setConfirmClear(false);setMessage("当前简历已清除；现在可不使用简历搜索。已有检索和研究快照保留。");});}
   return <div className="resume-page resume-maintenance simple-profile">
     <div className="heading-row resume-heading"><div><h1>我的简历</h1><p>上传并确认技能与经历后，可用于找岗位；城市、薪资等条件在找工作页设置。</p></div><button disabled={busy} onClick={()=>void importResume()}>{current?"替换简历":"上传简历"}</button></div>
     {error&&<p className="notice" role="alert">{error}</p>}{message&&<p className="note" role="status">{message}</p>}

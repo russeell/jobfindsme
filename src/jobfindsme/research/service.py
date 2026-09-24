@@ -29,11 +29,46 @@ from .job_input import canonical_job_url
 _TAG_RE = re.compile(r"<[^>]+>")
 
 _SUPPORTED_SOURCES = {
+    "official": ("官方公告", "cninfo.com.cn"),
     "maimai": ("脉脉", "maimai.cn"),
     "offershow": ("OfferShow", "offershow.cn"),
     "kanzhun": ("看准", "kanzhun.com"),
     "zhihu": ("知乎", "zhihu.com"),
 }
+_OFFICIAL_QUERIES = (
+    ("business", "主营业务 经营情况 年度报告", "cninfo.com.cn"),
+    ("listing", "上市公告 股票代码", "sse.com.cn"),
+    ("listing", "上市公告 股票代码", "szse.cn"),
+    ("listing", "上市公告 股票代码", "hkexnews.hk"),
+)
+_OFFICIAL_LABELS = {
+    "cninfo.com.cn": "巨潮资讯",
+    "sse.com.cn": "上海证券交易所",
+    "szse.cn": "深圳证券交易所",
+    "hkexnews.hk": "港交所披露易",
+}
+
+
+def _topic_queries(source_id: str, topics: tuple[str, ...], title: str, question: str):
+    if not topics:
+        return [(None, None, question or "工作强度 加班 工作时间", None)]
+    if source_id == "official":
+        return [
+            ("company", angle, terms, domain)
+            for angle, terms, domain in _OFFICIAL_QUERIES
+        ] if "company" in topics else []
+    queries = []
+    if "company" in topics:
+        queries.extend((
+            ("company", "positive", "员工评价 优点 正面 认可", None),
+            ("company", "negative", "员工评价 缺点 负面 吐槽", None),
+            ("company", "workload", "工作强度 加班 工作时间", None),
+            ("company", "benefits", "员工福利 日常福利 休假", None),
+        ))
+    if "job" in topics:
+        queries.append(("job", "role", f'"{title[:80]}" 工作内容 技能要求', None))
+        queries.append(("job", "development", f'"{title[:80]}" 岗位发展 业务方向', None))
+    return queries
 DIRECTIONS = {
     "role": "岗位情况",
     "workload": "工作强度",
@@ -102,7 +137,7 @@ class WebEvidenceSearch:
         candidates: list[EvidenceCandidate] = []
         statuses: dict[str, str] = {}
         topics = tuple((job_context or {}).get("research_topics") or ())
-        deadline = time.monotonic() + 30
+        deadline = time.monotonic() + 45
         for source_id in dict.fromkeys(source_ids):
             source = _SUPPORTED_SOURCES.get(source_id)
             if source is None:
@@ -110,34 +145,26 @@ class WebEvidenceSearch:
                 continue
             platform, domain = source
             question = str((job_context or {}).get("interest_question") or "").strip()
-            searches: list[tuple[str | None, str | None, str]] = []
-            if topics:
-                if "company" in topics:
-                    searches.extend([
-                        ("company", "positive", "员工评价 优点 正面 认可"),
-                        ("company", "negative", "员工评价 缺点 负面 吐槽"),
-                    ])
-                if "job" in topics:
-                    title = str((job_context or {}).get("title") or "")[:80]
-                    searches.append(
-                        ("job", None, f'"{title}" 工作内容 工作强度 假期 员工福利')
-                    )
-            else:
-                legacy_topic = question if question else " OR ".join(
-                    "工作强度 加班 工作时间" if key == "workload" else DIRECTIONS[key]
-                    for key in directions
-                )
-                searches.append((None, None, legacy_topic))
+            title = str((job_context or {}).get("title") or "")
+            searches = _topic_queries(source_id, topics, title, question)
+            if not searches:
+                continue
+            if len(source_ids) > 2 and source_id != "official" and topics:
+                # Spread angles across independent employee sites within the
+                # same bounded run, instead of exhausting the budget on one.
+                offset = tuple(source_ids).index(source_id)
+                searches = [entry for index, entry in enumerate(searches) if index % 2 == offset % 2]
             summaries = 0
             verified = 0
             failed = 0
-            for topic_kind, angle, topic_text in searches:
+            for topic_kind, angle, topic_text, query_domain in searches:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     failed += 1
                     break
-                terms = [f'"{company}"', topic_text, f"site:{domain}"]
-                if team:
+                expected_domain = query_domain or domain
+                terms = [f'"{company}"', topic_text, f"site:{expected_domain}"]
+                if team and source_id != "official":
                     terms.insert(1, f'"{team}"')
                 query = urllib.parse.urlencode({"q": " ".join(terms), "format": "rss"})
                 request = urllib.request.Request(
@@ -146,7 +173,7 @@ class WebEvidenceSearch:
                 )
                 try:
                     with urllib.request.urlopen(
-                        request, timeout=min(self.timeout_seconds, remaining)
+                        request, timeout=min(self.timeout_seconds, remaining, 4)
                     ) as response:
                         body = response.read(1_000_000)
                     root = ET.fromstring(body)
@@ -158,8 +185,8 @@ class WebEvidenceSearch:
                     url = (item.findtext("link") or "").strip()
                     parsed = urllib.parse.urlsplit(url)
                     if parsed.scheme not in {"http", "https"} or not (
-                        parsed.hostname == domain
-                        or (parsed.hostname or "").endswith(f".{domain}")
+                        parsed.hostname == expected_domain
+                        or (parsed.hostname or "").endswith(f".{expected_domain}")
                     ):
                         continue
                     description = html.unescape(
@@ -176,14 +203,14 @@ class WebEvidenceSearch:
                     summaries += 1
                     candidate = self._verify_original_page(
                         url=url,
-                        expected_domain=domain,
-                        platform=platform,
+                        expected_domain=expected_domain,
+                        platform=_OFFICIAL_LABELS.get(expected_domain, platform),
                         search_title=(item.findtext("title") or "").strip()[:300],
                         search_excerpt=description,
                         search_published_at=published,
                         company=company,
                         team=team,
-                        timeout_seconds=min(self.timeout_seconds, remaining),
+                        timeout_seconds=min(self.timeout_seconds, remaining, 4),
                     )
                     candidate = replace(candidate, topic=topic_kind, search_angle=angle)
                     candidates.append(candidate)
@@ -356,6 +383,10 @@ class ResearchService:
             "description": description,
             "interest_question": question or None,
             "research_topics": list(topics),
+            "research_angles": (
+                ["business", "listing", "positive", "negative", "workload", "benefits"]
+                if "company" in topics else []
+            ) + (["role", "development"] if "job" in topics else []),
             "url": job.apply_url,
             "team": query_team,
             "locations": list(job.locations),
@@ -399,6 +430,21 @@ class ResearchService:
         jd_facts, resume_observations, rewrites, interviews = self._guidance(
             job=job, resume=resume
         )
+        if "job" in topics:
+            skills = list(extract_skills(description))[:5]
+            business = [item for item in evidence if item["platform"] in _OFFICIAL_LABELS.values()
+                        and item["context"].get("search_angle") == "business"
+                        and item["verification_status"] == "independently_retrieved"]
+            job_context["development_analysis"] = {
+                "status": "limited" if skills and business else "unknown",
+                "text": (
+                    f"岗位 JD 提及 {'、'.join(skills)}；另有公司经营原文可核对业务方向。"
+                    "目前没有可核对的晋升路径或发展承诺。"
+                    if skills and business else
+                    "尚缺少同时可核对的岗位技能与公司经营证据，不能推断发展路径。"
+                ),
+                "basis_evidence_ids": [item["evidence_id"] for item in business[:2]],
+            }
         limitations = [
             f"{_SUPPORTED_SOURCES.get(source_id, (source_id, ''))[0]}：{state}"
             for source_id, state in source_statuses.items()
@@ -820,6 +866,8 @@ class ResearchService:
                 "region": item.region,
                 "research_topic": item.topic,
                 "search_angle": item.search_angle,
+                "source_type": "official_disclosure"
+                if item.platform in _OFFICIAL_LABELS.values() else "personal_account",
                 "company_match": "name_in_text"
                 if item.verification_level == "original_body_verified"
                 else "unknown",

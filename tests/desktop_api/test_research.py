@@ -707,16 +707,59 @@ def test_two_topic_research_queries_and_saved_groups(tmp_path, monkeypatch):
         topics=("company", "job"),
         directions=("role", "workload", "leave", "care"),
     )
-    assert len(queries) == 3
+    assert len(queries) == 6
     assert "优点 正面" in queries[0]
     assert "缺点 负面" in queries[1]
-    assert "工作内容 工作强度 假期 员工福利" in queries[2]
+    assert "工作强度" in queries[2]
+    assert "员工福利" in queries[3]
+    assert "工作内容 技能要求" in queries[4]
+    assert "岗位发展 业务方向" in queries[5]
     assert report["job_context"]["research_topics"] == ["company", "job"]
     assert service.get_report(
         workspace_id=workspace.workspace_id, report_id=report["report_id"]
     )["job_context"]["research_topics"] == ["company", "job"]
     assert any("正向检索未取得" in text for text in report["limitations"])
     assert any("负向检索未取得" in text for text in report["limitations"])
+
+
+def test_official_query_plan_and_evidence_based_development(tmp_path, monkeypatch):
+    import urllib.parse
+
+    queries = []
+
+    class EmptyRss:
+        def __enter__(self): return self
+        def __exit__(self, *_args): return None
+        def read(self, *_args): return b"<rss><channel></channel></rss>"
+
+    def capture(request, **_kwargs):
+        queries.append(urllib.parse.parse_qs(urllib.parse.urlsplit(request.full_url).query)["q"][0])
+        return EmptyRss()
+
+    monkeypatch.setattr("urllib.request.urlopen", capture)
+    workspace, job, service = setup_research(tmp_path, WebEvidenceSearch())
+    no_evidence = service.create_report(workspace_id=workspace.workspace_id,
+                                        job_id=job.job_id, source_ids=("official",),
+                                        topics=("company", "job"), directions=())
+    assert len(queries) == 4
+    assert any("主营业务" in query and "cninfo.com.cn" in query for query in queries)
+    assert any("上市公告" in query and "sse.com.cn" in query for query in queries)
+    assert no_evidence["job_context"]["development_analysis"]["status"] == "unknown"
+
+    service.evidence_search = FakeEvidenceSearch([
+        EvidenceCandidate(url="https://www.cninfo.com.cn/example", platform="巨潮资讯",
+                          title="经营报告", excerpt="示例公司主营业务公开原文",
+                          published_at="2026-01-01", verification_level="original_body_verified",
+                          topic="company", search_angle="business")],
+        {"official": "verified_original_body"})
+    report = service.create_report(workspace_id=workspace.workspace_id, job_id=job.job_id,
+                                   source_ids=("official",), topics=("company", "job"),
+                                   directions=())
+    analysis = report["job_context"]["development_analysis"]
+    assert analysis["status"] == "limited"
+    assert "Python" in analysis["text"]
+    assert analysis["basis_evidence_ids"] == [report["evidence"][0]["evidence_id"]]
+    assert report["evidence"][0]["context"]["source_type"] == "official_disclosure"
 
 
 def test_company_only_research_preserves_topic_on_evidence(tmp_path):
