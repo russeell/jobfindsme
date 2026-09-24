@@ -65,7 +65,7 @@ npm start
 
 [项目结构](docs/desktop/STRUCTURE.md) · [开发说明](docs/desktop/README.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md)
 
-旧 CLI/MCP 入口暂作兼容保留，说明见[历史文档](docs/legacy/README.zh.md)；桌面使用不需要它们。
+旧 CLI/MCP 入口暂作兼容保留，桌面使用不需要它们；旧版说明可从 Git 历史查阅。
 
 ## 许可
 

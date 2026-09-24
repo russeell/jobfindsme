@@ -1,38 +1,7 @@
 # Contributing
 
-The current code is offered under [PolyForm Noncommercial 1.0.0](LICENSE).
-Contributions remain yours, but submitting a contribution for inclusion means
-you agree to offer that contribution under the same license. Earlier MIT-licensed
-versions and their contributions retain their existing grants; see
-[LICENSE-MIT-PRIOR](LICENSE-MIT-PRIOR). Please raise a licensing question before
-submitting code if you cannot grant these terms.
+JobFindsMe currently focuses on the desktop experience: search for real jobs, read the original listing, and research a role with traceable evidence. See the [current status](docs/desktop/HANDOFF.md) and [module map](docs/desktop/STRUCTURE.md) before changing behavior.
 
-Desktop development follows [DEVELOPMENT](docs/desktop/DEVELOPMENT.md), [tasks](docs/desktop/tasks.json) and the [directory manifest](docs/desktop/STRUCTURE.md). Run relevant Python tests, desktop type/build and Node checks. Preserve migrations, history and account isolation.
+Keep changes within one feature, preserve database migrations and user data, and run checks relevant to the change. For desktop UI or browser work, use `npm run build` and the related tests in `apps/desktop/`. For Python changes, run the affected tests under `tests/`; full CI runs across supported hosts. Never claim that an opened website proves automatic job retrieval, and do not submit real applications during testing.
 
-## Retained CLI/MCP Skill
-
-`skills/agent-job-search/SKILL.md` is the only source of Agent behavior. Do not edit
-the packaged copy under `src/jobfindsme/resources/` directly and do not create
-host-specific Skill forks.
-
-```bash
-python scripts/sync_skill.py
-python scripts/sync_skill.py --check
-python -m pytest tests/plugins tests/evaluation/test_agent_behavior.py
-```
-
-Changes to tool routing, output preservation, source recovery, job-state
-updates, incremental search, or resume privacy need a RED baseline transcript
-and a GREEN Skill transcript. Fixtures are not live Agent evidence; release
-claims require redacted Codex, Claude, and Cursor runs.
-
-## Skill taxonomy
-
-Skills and aliases live in `src/jobfindsme/resources/taxonomy/skills.json`.
-
-1. Add a canonical skill and its real-world aliases.
-2. Do not reuse an alias owned by another skill.
-3. Run `python -m scripts.validate_taxonomy` and `python -m pytest tests/test_taxonomy.py`.
-4. Include one realistic resume or job-description example in the change description.
-
-The default matcher remains deterministic and requires no model API. Desktop model reranking is opt-in and separately validated.
+The current code is offered under [PolyForm Noncommercial 1.0.0](LICENSE). Contributions remain yours, but submitting one for inclusion means you agree to offer it under the same license. Earlier MIT-licensed versions retain their existing grants; see [LICENSE-MIT-PRIOR](LICENSE-MIT-PRIOR).

@@ -116,7 +116,6 @@ def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
     project = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     version = project["project"]["version"]
     script = (root / "scripts" / "install.sh").read_text(encoding="utf-8")
-    install_doc = (root / "docs/legacy/README.zh.md").read_text(encoding="utf-8")
 
     # Offline fallback pin must match the package version; the live path
     # resolves the latest release dynamically so releases need no script edit.
@@ -127,8 +126,6 @@ def test_fast_installer_matches_package_version_and_verifies_wheel() -> None:
     assert "ghproxy" not in script
     # The installer must put jobfindsme on PATH after installation.
     assert "$HOME/.local/bin" in script or "LAUNCHER" in script
-    # README manual install points at latest release instead of a pinned wheel.
-    assert "releases/latest" in install_doc
 
 
 @pytest.mark.parametrize("host", ["codex", "claude", "cursor"])

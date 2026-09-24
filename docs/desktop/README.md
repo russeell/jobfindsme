@@ -1,18 +1,14 @@
-# JobFindsMe 桌面端开发
+# 桌面端开发
 
-D55 正在最终原生复验：双教育经历分组核对、紧凑来源选择、自由研究提问与居中阅读列已实现，见 [D55 证据](evidence/D55.md)。来源会话延续修复 D57 已完成，见 [D57 证据](evidence/D57.md)。窗口可自由伸缩，不固定 1:1；定时检索继续停用，旧计划和执行记录保留。任务状态以 [tasks.json](tasks.json) 为准。
+JobFindsMe 当前产品是本地桌面工作台：找工作、阅读招聘原页、岗位研究；简历只辅助检索。项目状态见 [当前交接](HANDOFF.md)，模块边界见 [项目结构](STRUCTURE.md)，机器可读的未完成项见 [任务清单](tasks.json)。
 
-| 文档 | 用途 |
-| --- | --- |
-| [重构方案](REFACTOR.md) | 做什么、保留什么、何时移除旧代码 |
-| [技术方案](TECHNICAL.md) | 架构、目录、数据与实现约束 |
-| [项目管理方案](DEVELOPMENT.md) | 分阶段推进、适量验证、交接 |
-| [项目结构](STRUCTURE.md) | 当前 tree、职责边界和文档保留原则 |
-| [任务清单](tasks.json) | 后续管理 skill 的机器可读入口 |
+开发从仓库根目录安装 Python 依赖，再进入 `apps/desktop/` 安装 Node 依赖。常用检查：
 
-开发主目录：`/Users/russeell/Documents/开源项目开发/jobfindsme`。
-现有包名为 `agent-job-search`，Python 导入路径仍是 `jobfindsme`；最终品牌与发行入口在收尾统一。
-另一目录 `jobfindsme-web-prototype` 仅作参考，不合并其数据库或整套实现。
+```bash
+python -m pytest
+cd apps/desktop && npm ci && npm run build && npm test
+```
 
-优先级：来源真实可用 → 检索结果质量 → 证据可追溯的岗位研究；简历只辅助检索。
-各平台真实验证完成前，不对外宣称全部可用；下一任务按任务清单的依赖和状态选择。
+只按改动范围运行必要检查；打包和真实来源验证另行记录。任何来源都要区分“网页可打开”和“岗位列表、分页、完整 JD 可自动读取”。真实投递、付费模型调用以及用户会话数据不纳入自动验收。
+
+旧重构计划、逐任务截图和验收笔记保留在 [历史提交](https://github.com/russeell/jobfindsme/tree/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop) 中，不再占用当前产品文档目录。

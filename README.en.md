@@ -65,7 +65,7 @@ The desktop uses Electron, React and TypeScript; local services and storage use 
 
 [Directory map](docs/desktop/STRUCTURE.md) · [Development notes](docs/desktop/README.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Older CLI/MCP entry points remain for compatibility; see the [legacy documentation](docs/legacy/README.en.md). They are not needed for desktop use.
+Older CLI/MCP entry points remain for compatibility. They are not needed for desktop use; previous documentation remains in Git history.
 
 ## License
 

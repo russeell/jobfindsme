@@ -27,7 +27,7 @@
       ],
       "verification": "每来源一次有记录的人工验证；不提交真实申请。未获得登录条件的来源保留阻塞。",
       "evidence": [
-        "docs/desktop/evidence/D01.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D01.md"
       ],
       "blocker": "猎聘匿名生产路径已在真实 .app 验证 92 条、5 页，第二页稳定且原页显示完整 JD；登录后有界验证入口已实现。尚未由用户完成 BOSS/智联/前程无忧真实登录，因此三平台登录、列表、详情、字段、分页与投递页仍待真实验收。旧 127.0.0.1:9222 公共 CDP 桥不再作为桌面生产前置。"
     },
@@ -48,10 +48,10 @@
       ],
       "verification": "一次启动/退出冒烟；一个未授权调用集成检查；前端类型和构建检查。",
       "evidence": [
-        "docs/desktop/evidence/D02.md",
-        "docs/desktop/evidence/D02-review.md",
-        "docs/desktop/evidence/D02-review-resolution.md",
-        "docs/desktop/evidence/D02-fix-review-request.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-review.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-review-resolution.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-fix-review-request.md"
       ],
       "blocker": null
     },
@@ -75,10 +75,10 @@
       ],
       "verification": "复用格式样例，仅增加版本、解析失败和脱敏边界验证。",
       "evidence": [
-        "docs/desktop/evidence/D03.md",
-        "docs/desktop/evidence/D03-D08-review-request.md",
-        "docs/desktop/evidence/D03-D08-review.md",
-        "docs/desktop/evidence/D03-D08-review-resolution.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-request.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-resolution.md"
       ],
       "blocker": null
     },
@@ -103,7 +103,7 @@
       ],
       "verification": "离线会话/导航白名单/门禁契约测试；桌面类型和构建检查；不做真实登录。",
       "evidence": [
-        "docs/desktop/evidence/D04a.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04a.md"
       ],
       "blocker": null
     },
@@ -129,7 +129,7 @@
       ],
       "verification": "固定简历与假分页适配器验证隐私关键词、待确认阻断、后端门禁、预算和继续状态；现有连接器工厂契约检查。",
       "evidence": [
-        "docs/desktop/evidence/D04b.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04b.md"
       ],
       "blocker": null
     },
@@ -158,7 +158,7 @@
       ],
       "verification": "完成 D04a/D04b 后逐来源执行完整接入验收；只复测 D01 之后改变的真实路径。",
       "evidence": [
-        "docs/desktop/evidence/D38.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D38.md"
       ],
       "blocker": null
     },
@@ -182,7 +182,7 @@
       ],
       "verification": "相关排序/过滤单元用例；一个多页快照集成用例；桌面与窄屏人工检查。",
       "evidence": [
-        "docs/desktop/evidence/D05.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D05.md"
       ],
       "blocker": null
     },
@@ -206,7 +206,7 @@
       ],
       "verification": "一个状态转换集成用例；一次原页跳转人工冒烟，不实际投递。",
       "evidence": [
-        "docs/desktop/evidence/D06.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D06.md"
       ],
       "blocker": null
     },
@@ -229,7 +229,7 @@
       ],
       "verification": "代表性简历每种导出格式检查一次；复用解析测试，新增必要版本回退用例。",
       "evidence": [
-        "docs/desktop/evidence/D07.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D07.md"
       ],
       "blocker": null
     },
@@ -252,10 +252,10 @@
       ],
       "verification": "每协议最小契约样例；有配置时做一次短请求，否则保持该连接未验证。",
       "evidence": [
-        "docs/desktop/evidence/D08.md",
-        "docs/desktop/evidence/D03-D08-review-request.md",
-        "docs/desktop/evidence/D03-D08-review.md",
-        "docs/desktop/evidence/D03-D08-review-resolution.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D08.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-request.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-resolution.md"
       ],
       "blocker": null
     },
@@ -279,9 +279,9 @@
       ],
       "verification": "一个采纳/撤销流程和版本冲突用例；少量固定事实样例检查编造与隐私泄漏。",
       "evidence": [
-        "docs/desktop/evidence/D09.md",
-        "docs/desktop/evidence/D09-review-request.md",
-        "docs/desktop/evidence/D09-review.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09-review-request.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09-review.md"
       ],
       "blocker": null
     },
@@ -306,7 +306,7 @@
       ],
       "verification": "引用映射契约与少量有/无证据样例；一次已授权来源人工检查。",
       "evidence": [
-        "docs/desktop/evidence/D10.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10.md"
       ],
       "blocker": null
     },
@@ -330,7 +330,7 @@
       ],
       "verification": "可控时钟验证重入、补跑、时区；一次恢复运行人工冒烟，无需真实等待数小时。",
       "evidence": [
-        "docs/desktop/evidence/D11.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D11.md"
       ],
       "blocker": null
     },
@@ -356,7 +356,7 @@
       ],
       "verification": "固定动作与调用者边界的 Electron 单测；Python 分页契约与失效门禁集成样例；仅对匿名公开路径做一次必要实测。",
       "evidence": [
-        "docs/desktop/evidence/D04c.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04c.md"
       ],
       "blocker": null
     },
@@ -381,7 +381,7 @@
       ],
       "verification": "真实生产包匿名只读冒烟；固定桥、同源导航、能力汇总契约测试；不登录、不投递、不绕过风控。",
       "evidence": [
-        "docs/desktop/evidence/D04d.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04d.md"
       ],
       "blocker": null
     },
@@ -404,8 +404,8 @@
       ],
       "verification": "离线正文抓取样例覆盖跳转越域、公司不匹配、团队未知和日期缺失；模型载荷/结构边界样例。",
       "evidence": [
-        "docs/desktop/evidence/D10-D11-safety-review.md",
-        "docs/desktop/evidence/D10a.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10-D11-safety-review.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10a.md"
       ],
       "blocker": null
     },
@@ -428,8 +428,8 @@
       ],
       "verification": "隔离 SQLite 与可控时钟复现冻结规则差异、陈旧 running 恢复、双调度器竞争、通知失败重试和退出。",
       "evidence": [
-        "docs/desktop/evidence/D10-D11-safety-review.md",
-        "docs/desktop/evidence/D11a.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10-D11-safety-review.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D11a.md"
       ],
       "blocker": null
     },
@@ -453,7 +453,7 @@
       ],
       "verification": "打包配置检查与本地产物内容审计；隔离数据库的成功迁移和失败恢复样例。",
       "evidence": [
-        "docs/desktop/evidence/D12a.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12a.md"
       ],
       "blocker": null
     },
@@ -479,7 +479,7 @@
       ],
       "verification": "真实 .app 人工主流程；Electron 契约测试、生产构建、目录包及审计。",
       "evidence": [
-        "docs/desktop/evidence/D12b.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12b.md"
       ],
       "blocker": null
     },
@@ -503,7 +503,7 @@
       ],
       "verification": "受影响 renderer/main 类型检查与最小 Electron 测试；来源目录迁移针对性 Python 用例；不操作或重打包当前登录窗口。",
       "evidence": [
-        "docs/desktop/evidence/D12c.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12c.md"
       ],
       "blocker": null
     },
@@ -557,7 +557,7 @@
       ],
       "verification": "针对过滤、链接安全与布局边界测试；生产构建；隔离 Electron 实际视觉验证。",
       "evidence": [
-        "docs/desktop/evidence/D13.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D13.md"
       ],
       "blocker": null
     },
@@ -587,7 +587,7 @@
       ],
       "verification": "协议/无密钥边界与白名单契约；原生UI滚动与面板行为；隔离构建图标审计。",
       "evidence": [
-        "docs/desktop/evidence/D14.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D14.md"
       ],
       "blocker": null
     },
@@ -611,7 +611,7 @@
       ],
       "verification": "针对启动、来源边界及解析契约测试，隔离原生UI验证。",
       "evidence": [
-        "docs/desktop/evidence/D15.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D15.md"
       ],
       "blocker": null
     },
@@ -635,7 +635,7 @@
       ],
       "verification": "定向后端规则测试、类型构建和原生页面验证",
       "evidence": [
-        "docs/desktop/evidence/D16.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D16.md"
       ],
       "blocker": null
     },
@@ -663,7 +663,7 @@
       ],
       "verification": "安全边界与原生多view行为验证",
       "evidence": [
-        "docs/desktop/evidence/D17.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D17.md"
       ],
       "blocker": null
     },
@@ -688,7 +688,7 @@
       ],
       "verification": "复用定向测试，有界审查；不提交发布/真实投递/未授权付费调用",
       "evidence": [
-        "docs/desktop/evidence/D18.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D18.md"
       ],
       "blocker": null
     },
@@ -714,8 +714,8 @@
       ],
       "verification": "隔离预览包逐页观察、代表截图与受影响桌面检查",
       "evidence": [
-        "docs/desktop/evidence/D19.md",
-        "docs/desktop/evidence/D19-checklist.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D19.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D19-checklist.md"
       ],
       "blocker": null
     },
@@ -739,7 +739,7 @@
       ],
       "verification": "显式归档清单、移动前后内容/大小核对、文档链接检查；不运行无关测试。",
       "evidence": [
-        "docs/desktop/evidence/D20.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D20.md"
       ],
       "blocker": null
     },
@@ -761,7 +761,7 @@
       ],
       "verification": "受影响类型构建与隔离实际交互验收。",
       "evidence": [
-        "docs/desktop/evidence/D21.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D21.md"
       ],
       "blocker": null
     },
@@ -784,7 +784,7 @@
       ],
       "verification": "模拟协议的真实评分链路和快照集成测试、隔离UI验收。",
       "evidence": [
-        "docs/desktop/evidence/D22.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D22.md"
       ],
       "blocker": null
     },
@@ -808,7 +808,7 @@
       ],
       "verification": "定向策略/标签测试与隔离原生窗口实测",
       "evidence": [
-        "docs/desktop/evidence/D23.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D23.md"
       ],
       "blocker": null
     },
@@ -830,7 +830,7 @@
       ],
       "verification": "定向缩放测试及原生页面几何/截图",
       "evidence": [
-        "docs/desktop/evidence/D24.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D24.md"
       ],
       "blocker": null
     },
@@ -853,7 +853,7 @@
       ],
       "verification": "几何边界定向测试和隔离真实招聘页原生view验收，不重跑无关后端测试",
       "evidence": [
-        "docs/desktop/evidence/D25.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D25.md"
       ],
       "blocker": null
     },
@@ -876,7 +876,7 @@
       ],
       "verification": "类型检查/构建、包审计通过；UI10隔离窗口通过原生界面截图检查三个页面。",
       "evidence": [
-        "docs/desktop/evidence/D26.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D26.md"
       ],
       "blocker": null
     },
@@ -899,7 +899,7 @@
       ],
       "verification": "纯解析函数定向测试、隔离UI和真实搜索页导航",
       "evidence": [
-        "docs/desktop/evidence/D27.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D27.md"
       ],
       "blocker": null
     },
@@ -925,7 +925,7 @@
       ],
       "verification": "相关纯函数、标签导航单元与真实UI边界验收，最终独立包",
       "evidence": [
-        "docs/desktop/evidence/D28.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D28.md"
       ],
       "blocker": null
     },
@@ -949,7 +949,7 @@
       ],
       "verification": "受影响解析测试和隔离UI模式切换、目标URL及布局，不重复无变化外网",
       "evidence": [
-        "docs/desktop/evidence/D29.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D29.md"
       ],
       "blocker": null
     },
@@ -972,7 +972,7 @@
       ],
       "verification": "旧包有界复现与新包隔离Electron原生可见性/几何/滚动验证",
       "evidence": [
-        "docs/desktop/evidence/D30.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D30.md"
       ],
       "blocker": null
     },
@@ -997,7 +997,7 @@
       ],
       "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
       "evidence": [
-        "docs/desktop/evidence/D31a.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31a.md"
       ],
       "blocker": null
     },
@@ -1019,9 +1019,9 @@
       ],
       "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
       "evidence": [
-        "docs/desktop/evidence/D31a.md",
-        "docs/desktop/evidence/D31b.md",
-        "docs/desktop/evidence/D37.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31a.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31b.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D37.md"
       ],
       "blocker": null
     },
@@ -1046,7 +1046,7 @@
       ],
       "verification": "后端500/局部失败、筛选状态和保存定向测试及隔离Electron验收",
       "evidence": [
-        "docs/desktop/evidence/D32.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D32.md"
       ],
       "blocker": null
     },
@@ -1070,7 +1070,7 @@
       ],
       "verification": "来源与更正边界测试、隔离UI验收",
       "evidence": [
-        "docs/desktop/evidence/D33.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D33.md"
       ],
       "blocker": null
     },
@@ -1095,7 +1095,7 @@
       ],
       "verification": "离线真实桌面fixture与类型构建",
       "evidence": [
-        "docs/desktop/evidence/D34.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D34.md"
       ],
       "blocker": null
     },
@@ -1121,7 +1121,7 @@
       ],
       "verification": "fixture多轮服务/真实桌面交互、补丁版本及导出检查",
       "evidence": [
-        "docs/desktop/evidence/D35.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D35.md"
       ],
       "blocker": null
     },
@@ -1144,7 +1144,7 @@
       ],
       "verification": "离线契约和隔离桌面fixture；禁止重复真实平台请求",
       "evidence": [
-        "docs/desktop/evidence/D36.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D36.md"
       ],
       "blocker": null
     },
@@ -1168,7 +1168,7 @@
       ],
       "verification": "第一方入口核查、少量公开样本与离线契约；登录受限明确保留",
       "evidence": [
-        "docs/desktop/evidence/D37.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D37.md"
       ],
       "blocker": null
     },
@@ -1193,8 +1193,8 @@
       ],
       "verification": "按差异有界实测与定向契约验证，避免全量重测",
       "evidence": [
-        "docs/desktop/evidence/D38.md",
-        "docs/desktop/evidence/D41.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D38.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
       "blocker": "智联登录表单已在 D41 修复，仍需用户完成会话后验证列表/详情/网站续页；阿里详情资源加载失败。京东和前程无忧局部实测见 D38。"
     },
@@ -1215,7 +1215,7 @@
       ],
       "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
-        "docs/desktop/evidence/D41.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
       "blocker": null
     },
@@ -1236,7 +1236,7 @@
       ],
       "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
-        "docs/desktop/evidence/D41.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
       "blocker": null
     },
@@ -1259,7 +1259,7 @@
       ],
       "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
-        "docs/desktop/evidence/D41.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
       "blocker": null
     },
@@ -1280,7 +1280,7 @@
       ],
       "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
-        "docs/desktop/evidence/D42.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D42.md"
       ],
       "blocker": null
     },
@@ -1302,7 +1302,7 @@
       ],
       "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
-        "docs/desktop/evidence/D43.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D43.md"
       ],
       "blocker": null
     },
@@ -1323,7 +1323,7 @@
       ],
       "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
-        "docs/desktop/evidence/D44.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D44.md"
       ],
       "blocker": null
     },
@@ -1344,7 +1344,7 @@
       ],
       "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
-        "docs/desktop/evidence/D45.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D45.md"
       ],
       "blocker": null
     },
@@ -1372,8 +1372,8 @@
       ],
       "verification": "原生隔离预览 1162×768 与 854×768 合成内容交互/截图；Node 77/77、TypeScript 构建、预览及普通包审计。预览来源检查仅一源真实探测；完成后逐源 20/20。 补验生产 Discovery 非空合成快照12条与长JD：默认独立滚动、窄窗选择保留/弹层、原生无害网页打开返回与缩放恢复；仅补证据，未重包。",
       "evidence": [
-        "docs/desktop/ui/UI34-plan.md",
-        "docs/desktop/ui/UI34-evidence.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/ui/UI34-plan.md",
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/ui/UI34-evidence.md"
       ],
       "blocker": null
     },
@@ -1397,7 +1397,7 @@
       "verification": "39 个源码路径迁移；Python 470 项迁移回归经失败项补测覆盖，退役清单测试后保留469项；Node77项、TS构建、32迁移与资源比对、两包审计、隔离原生四页面加载/退出通过；不联网检索。",
       "evidence": [
         "docs/desktop/STRUCTURE.md",
-        "docs/desktop/evidence/D47.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D47.md"
       ],
       "blocker": null
     },
@@ -1426,7 +1426,7 @@
       ],
       "verification": "定向 Python/Node、TypeScript 构建、隔离新包与合成数据截图；不联网检索",
       "evidence": [
-        "docs/desktop/evidence/D48.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D48.md"
       ],
       "blocker": null
     },
@@ -1455,7 +1455,7 @@
       ],
       "verification": "定向迁移/API/搜索/研究回归，离线合成数据，原生默认与窄窗截图、独立打包审计",
       "evidence": [
-        "docs/desktop/evidence/D49.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D49.md"
       ],
       "blocker": null
     },
@@ -1481,7 +1481,7 @@
       ],
       "verification": "定向搜索和研究回归、类型构建、合成样本原生截图、独立包审计",
       "evidence": [
-        "docs/desktop/evidence/D50.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D50.md"
       ],
       "blocker": null
     },
@@ -1508,7 +1508,7 @@
       ],
       "verification": "研究 API/前端契约定向测试、原生默认与 820px 合成截图、包审计",
       "evidence": [
-        "docs/desktop/evidence/D51.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D51.md"
       ],
       "blocker": null
     },
@@ -1535,7 +1535,7 @@
       ],
       "verification": "定向类型构建、路由与输入框/简历弹层原生默认和窄窗检查、独立包审计",
       "evidence": [
-        "docs/desktop/evidence/D52.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D52.md"
       ],
       "blocker": null
     },
@@ -1561,7 +1561,7 @@
       ],
       "verification": "TypeScript 构建、输入拆分 2/2、原生默认/短窗/窄窗合成报告与错误路径、浏览器分栏恢复、普通及 QA 包审计；未进行真实登录或付费研究。",
       "evidence": [
-        "docs/desktop/evidence/D53.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D53.md"
       ],
       "blocker": null
     },
@@ -1587,7 +1587,7 @@
       ],
       "verification": "迁移备份和 API 定向测试、前端输入测试、TypeScript 与 Python 构建、隔离原生合成及独立包审计",
       "evidence": [
-        "docs/desktop/evidence/D54.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D54.md"
       ],
       "blocker": null
     },
@@ -1614,7 +1614,7 @@
       ],
       "verification": "合成双教育简历与来源选择边界、研究意图定向测试、桌面构建、隔离原生截图和包审计",
       "evidence": [
-        "docs/desktop/evidence/D55.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D55.md"
       ],
       "blocker": null
     },
@@ -1635,7 +1635,7 @@
       ],
       "verification": "移除2个旧字节码和26个空目录；Python入口导入与TypeScript检查通过。",
       "evidence": [
-        "docs/desktop/evidence/D56.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D56.md"
       ],
       "blocker": null
     },
@@ -1660,7 +1660,7 @@
       ],
       "verification": "TypeScript 构建、来源浏览器定向测试、隔离原生重启与包审计",
       "evidence": [
-        "docs/desktop/evidence/D57.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D57.md"
       ],
       "blocker": null
     },
@@ -1683,7 +1683,7 @@
       ],
       "verification": "桌面构建、Node 83/83、Python 测试、Skill 同步检查、文档链接与归档哈希审计",
       "evidence": [
-        "docs/desktop/evidence/D58.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D58.md"
       ],
       "blocker": null
     },
@@ -1706,7 +1706,29 @@
       ],
       "verification": "Markdown 链接审计、官方许可证原文比对、wheel 构建和元数据检查、Skill 同步检查",
       "evidence": [
-        "docs/desktop/evidence/D59.md"
+        "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D59.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D60",
+      "title": "收敛重构后文档树并保留历史证据链接",
+      "depends_on": [
+        "D59"
+      ],
+      "status": "done",
+      "scope": [
+        "移除旧重构方案、逐任务证据、原型与旧产品文档",
+        "保留当前状态、结构、任务清单和 README 图片",
+        "将任务证据链接改为固定历史提交"
+      ],
+      "acceptance": [
+        "当前文档无悬空本地链接",
+        "桌面与 Python 功能及打包不受文档清理影响"
+      ],
+      "verification": "Python 483 passed、Node 83 passed、桌面与 wheel 构建通过、ruff/Skill/链接检查通过",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
     }

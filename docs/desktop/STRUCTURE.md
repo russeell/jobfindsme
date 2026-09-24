@@ -1,30 +1,17 @@
 # 项目结构
 
-这份目录图只列日常需要定位的入口。源码、迁移、测试和兼容命令仍按各自职责保留；历史重构的逐文件迁移表可从 [D47 时的文档](https://github.com/russeell/jobfindsme/blob/1beb7dbe4c465ade47452ae706de487a3582b0eb/docs/desktop/STRUCTURE.md) 找回。
-
 ```text
-apps/desktop/
-  main/               Electron 启动、浏览器、来源采集、Python 通信与密钥
-  preload/            受限 IPC 桥接
-  renderer/src/       找工作、岗位研究、简历弹层、设置与通用界面
-  shared/             跨进程契约与纯函数
-  public/ scripts/ tests/
-src/jobfindsme/
-  search/ sources/    检索编排、来源目录和准入
-  research/           公开资料研究与报告
-  profiles/ resume_editor/   简历资料、解析、版本与导出
-  desktop_api/ contracts/ importing/ models/
-  connectors/ migrations/ resources/
-  scheduler/ mcp/     已停用的定时执行及现存兼容入口
-tests/                 Python 回归测试
-evaluation/            检索与匹配评测输入及工具
-docs/                  面向用户和开发者的说明
-scripts/               构建与检查工具
-skills/                现存 CLI Skill
+apps/desktop/       Electron 桌面端：窗口、持久浏览器会话、界面与 IPC 契约
+src/jobfindsme/      Python 本地服务：检索、来源、研究、简历与 SQLite 迁移
+tests/              Python 功能与兼容性测试
+evaluation/         当前 CI 使用的检索质量评测与样例
+scripts/            构建、安装与验证脚本
+docs/desktop/       当前开发状态、模块边界与任务清单
+docs/images/        README 使用的界面截图
 ```
 
-桌面 `main/browser` 管标签、导航和隔离会话，`main/sources` 管网页提取。Python `sources` 是来源目录与检索准入的权威位置，`search` 负责调度和统一结果；两端不各自维护一套岗位来源规则。`renderer/src/App.tsx` 和 `main/index.ts` 是组装入口，功能实现留在对应目录。
+桌面端 `main/browser` 管浏览器会话，`main/sources` 管页面提取，`main/backend` 管 Python 进程与通信，`main/security` 管系统密钥；`renderer/src` 管找工作、研究、简历和设置。`main/index.ts` 与 `renderer/src/App.tsx` 负责组装。
 
-`docs/desktop/evidence/` 只跟踪简短的任务验收记录。历史截图、日志、JSON 和一次性脚本不参与运行、测试或打包，已移出当前 GitHub 文件树；记录中需要复查的附件链接指向不可变的历史提交。本机副本存放在忽略的 `.development-archive/2026-09-25-github-document-cleanup/`，不随仓库分发。
+Python `sources/` 是来源目录和检索准入的权威位置，`search/` 负责编排与统一结果，`research/` 管有来源的报告，`profiles/` 与 `resume_editor/` 管简历数据，`desktop_api/` 提供本地接口。`migrations/` 必须保留，以读取已有用户数据。
 
-数据库迁移、CLI/MCP 兼容入口、构建配置、锁文件和现行测试不能仅凭目录名称或内部引用数删除。产品与实施状态以 [任务清单](tasks.json)、[交接](HANDOFF.md) 和 [开发流程](DEVELOPMENT.md) 为准。
+旧 CLI/MCP 入口与相关测试目前仍在代码中；它们属于尚未完成的兼容退役工作，而不是桌面主流程。只有确认外部入口、打包与 CI 的替代路径后才能删除。历史设计和验收文件可从 [重构前提交](https://github.com/russeell/jobfindsme/tree/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop) 查阅，不在当前树重复保存。

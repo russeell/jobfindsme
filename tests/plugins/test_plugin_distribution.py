@@ -35,14 +35,9 @@ def test_cli_config_prints_a_valid_standard_mcp_json() -> None:
     assert "jobfindsme.mcp" in " ".join(server["args"])
 
 
-def test_install_script_and_readme_are_version_agnostic() -> None:
-    """Releases must not require touching install.sh or README per version."""
+def test_install_script_is_version_agnostic() -> None:
+    """The retained CLI installer must not pin an obsolete release URL."""
     install = (ROOT / "scripts/install.sh").read_text(encoding="utf-8")
     assert "releases/latest" in install
     # A pinned wheel URL would break the next release without an edit.
     assert "releases/download/v0.10.0" not in install
-
-    readme = (ROOT / "docs/legacy/README.zh.md").read_text(encoding="utf-8")
-    assert "releases/latest/download/install.sh" in readme
-    assert "releases/latest" in readme
-    assert "agent_job_search-0.10.0-py3-none-any.whl" not in readme

@@ -1,44 +1,11 @@
-# Security
+# Security and privacy
 
-Agent Job Search is local-first by design: resumes, job data, search plans,
-and tracking state live in a local SQLite database on your machine.
+JobFindsMe stores job records, confirmed resume facts and research reports locally. Recruitment websites and public evidence still require network access.
 
-## Privacy guarantees
+- The desktop browser uses application-owned persistent sessions, separate from your personal browser. It does not copy your browser profile or bypass verification prompts.
+- Resume imports are reviewed before they influence searches. Private identity details are not used as search keywords; a free-form research question may become a public search term, so do not enter private information there.
+- Remote job descriptions and reviews are untrusted content, never instructions. A visible webpage does not prove that the application can extract its listings.
+- API secrets use the operating system's secure storage. Do not include resumes, credentials or session files in issues or test artifacts.
+- Applying to a job remains a user action on the hiring website; the application does not submit applications automatically.
 
-- **Resumes are parsed locally.** The complete resume text never enters
-  the Agent context and is never stored — only structured facts
-  (skills, experience, education) and minimal evidence snippets are kept
-  in SQLite. The source file is forgotten by default
-  (`forget-source` mode).
-- **Job descriptions are untrusted data.** Every JD returned by a
-  source is treated as external content, never as instructions. The
-  `untrusted_external_content` flag marks it for hosts.
-- **No account, no telemetry, no cloud.** The engine works without a
-  model API key; there are no hosted services.
-
-## Browser bridge isolation
-
-- BOSS直聘 access runs through a dedicated Chrome profile started by
-  `agent-job-search setup` — the connector never opens, kills, or touches
-  your personal Chrome profile.
-- The connector manages only its own process (recorded PID), and a
-  reachability probe avoids relaunching an already-running bridge.
-
-## Data control
-
-- **Export** (CLI `agent-job-search export`) writes a local file and returns
-  only its path, SHA-256 hash, and record counts. The file stays on
-  your machine.
-- **Deletion** (`delete_local_data`) is a two-phase protocol: preview
-  first, then confirm with a short-lived, single-use token. Deletion is
-  irreversible.
-
-## Transport
-
-- MCP runs over stdio only — no network listeners, no ports opened by
-  the server itself (the Chrome bridge aside).
-
-## Reporting
-
-If you find a security issue, open a private report via the repository's
-Security tab or file an issue without including personal data.
+To report a security issue, use GitHub's private security reporting feature for this repository. Do not post secrets or personal data in a public issue.

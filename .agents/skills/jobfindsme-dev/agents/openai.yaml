@@ -1,4 +1,4 @@
 interface:
   display_name: "JobFindsMe 开发管理"
-  short_description: "沿用既定界面与方案逐步开发，按风险验收并在必要时独立审查"
-  default_prompt: "使用 $jobfindsme-dev 继续开发 JobFindsMe，恢复当前任务，完成实现与必要验证后更新进度；不设置人工 review 关卡。"
+  short_description: "维护桌面产品，核对当前任务并验证实际功能"
+  default_prompt: "使用 $jobfindsme-dev 继续开发 JobFindsMe，读取当前状态，完成一项可验收的修复并更新交接。"
