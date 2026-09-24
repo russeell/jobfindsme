@@ -17,6 +17,7 @@ import type {
   ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
   PromptPatchDecision, PromptSessionInput, PromptTurnInput, SourceSearchInput,
   BrowserSourcePage, ResearchRunInput, ScheduledTaskInput, SourceSearchPreflight, SourceCapability,
+  ResearchChatInput,
 } from "../shared/contracts";
 
 const packageInfo=JSON.parse(readFileSync(path.join(app.getAppPath(),"package.json"),"utf8"));
@@ -66,6 +67,9 @@ const sourceAutoCheckPending=new Set<string>();
 let researchController: AbortController | undefined;
 let researchRequestId: string | undefined;
 let researchWorkspaceId: string | undefined;
+let chatController: AbortController | undefined;
+let chatSearchRequestId: string | undefined;
+let chatWorkspaceId: string | undefined;
 let isQuitting = false;
 
 function shutdownAndExit(): Promise<void> {
@@ -724,6 +728,32 @@ ipcMain.handle("desktop:cancel-research", async () => {
   );
   researchController?.abort();
   return cancelled;
+});
+ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");
+  if(chatController)throw Error("已有对话正在生成，请先取消。");
+  if(!input||typeof input.workspace_id!=="string"||typeof input.connection_id!=="string"||typeof input.question!=="string"||input.question.length>700||!input.question.trim()||typeof input.research!=="boolean"||!Array.isArray(input.history)||input.history.length>20||input.history.some(item=>!item||!["user","assistant"].includes(item.role)||typeof item.text!=="string"||item.text.length>4000))throw Error("invalid research chat input");
+  const workspaces=(await apiClient.bootstrap()).workspaces;
+  if(!workspaces.some(item=>item.workspace_id===input.workspace_id))throw Error("workspace unavailable");
+  const connection=await apiClient.modelConnection(input.connection_id);
+  const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
+  const controller=new AbortController();chatController=controller;chatWorkspaceId=input.workspace_id;
+  const timeout=setTimeout(()=>controller.abort(),90_000);
+  try{
+    const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
+    return await runPiResearchAgent({workspaceId:input.workspace_id,question:input.question,research:input.research,jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
+      async(runInput,signal)=>{
+        const requestId=`pi-research-${randomUUID()}`;chatSearchRequestId=requestId;
+        try{return await apiClient!.createResearchReport(runInput,requestId,"",signal);}
+        finally{if(chatSearchRequestId===requestId)chatSearchRequestId=undefined;}
+      },
+      delta=>{if(!controller.signal.aborted)event.sender.send("desktop:research-chat-delta",delta);},controller.signal);
+  }finally{clearTimeout(timeout);if(chatController===controller){chatController=undefined;chatWorkspaceId=undefined;chatSearchRequestId=undefined;}}
+});
+ipcMain.handle("desktop:cancel-research-chat",async(event)=>{
+  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
+  chatController?.abort();
+  if(apiClient&&chatSearchRequestId&&chatWorkspaceId){try{await apiClient.cancelResearch(chatSearchRequestId,chatWorkspaceId);}catch{}}
 });
 ipcMain.handle("desktop:list-scheduled-tasks", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");

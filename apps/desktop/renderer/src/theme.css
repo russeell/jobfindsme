@@ -376,6 +376,19 @@ nav button .nav-label {font-size:13px;}
 .research-composer textarea:focus-visible {outline:0;}
 .research-composer-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;}
 .research-composer .button-row {gap:5px;flex-wrap:nowrap;}
+.model-advanced {border-top:1px solid var(--line);padding-top:10px;color:var(--text-muted);font-size:12px;}
+.model-advanced summary {cursor:pointer;margin-bottom:8px;}
+.model-advanced label {margin-top:8px;}
+.research-chat-messages {display:grid;gap:14px;margin:14px 0 24px;}
+.research-chat-turn {max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65;}
+.research-chat-turn.user {margin-left:auto;max-width:88%;padding:10px 14px;border-radius:11px;background:var(--surface-soft);}
+.research-chat-turn.assistant {padding:4px 0;}
+.research-chat-turn strong {font-size:11px;color:var(--text-muted);}
+.research-chat-turn p {margin:5px 0 0;}
+.research-composer-options {display:flex;align-items:center;gap:8px;min-width:0;}
+.research-composer-options label {display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;color:var(--text-muted);}
+.research-composer-options input {width:13px;height:13px;min-height:0;}
+.research-composer-options select {max-width:190px;min-width:0;font-size:11px;padding:3px 5px;}
 .research-reading .evidence-source button {padding:0;border:0;background:transparent;text-decoration:underline;font-size:12px;min-height:0;}
 @container(max-width:720px){.research-reading-column,.research-composer,.research-inline-status {width:calc(100% - 24px)}.research-composer {padding:8px 10px}.research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto}}
 

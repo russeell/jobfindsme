@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D55",
+  "current_task": "D63",
   "tasks": [
     {
       "id": "D01",
@@ -29,7 +29,7 @@
       "evidence": [
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D01.md"
       ],
-      "blocker": "猎聘匿名生产路径已在真实 .app 验证 92 条、5 页，第二页稳定且原页显示完整 JD；登录后有界验证入口已实现。尚未由用户完成 BOSS/智联/前程无忧真实登录，因此三平台登录、列表、详情、字段、分页与投递页仍待真实验收。旧 127.0.0.1:9222 公共 CDP 桥不再作为桌面生产前置。"
+      "blocker": "猎聘匿名生产路径已在真实 .app 验证 92 条、5 页；本轮前程无忧在隔离桌面版读取 2 页、40 条，列表/字段/续页可用，完整详情仍部分可用。BOSS 与智联本轮要求重新登录，列表、详情、字段、分页及投递页仍待真实会话验收。旧 127.0.0.1:9222 公共 CDP 桥不再作为桌面生产前置。"
     },
     {
       "id": "D02",
@@ -1194,7 +1194,7 @@
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D38.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
-      "blocker": "智联登录表单已在 D41 修复，仍需用户完成会话后验证列表/详情/网站续页；阿里详情资源加载失败。京东和前程无忧局部实测见 D38。"
+      "blocker": "智联登录表单已在 D41 修复，仍需用户完成会话后验证列表/详情/网站续页；阿里详情资源加载失败。本轮京东列表、详情、字段可用，前程无忧列表、字段、续页可用但完整详情部分可用。"
     },
     {
       "id": "D39",
@@ -1748,6 +1748,52 @@
         "当前文档树无旧功能说明入口"
       ],
       "verification": "Python 370 passed、Node 83 passed、桌面构建、ruff 和干净 wheel 清单审计通过。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D62",
+      "title": "Pi 岗位研究对话与模型设置收敛",
+      "depends_on": [
+        "D61"
+      ],
+      "status": "done",
+      "scope": [
+        "固定官方 Pi agent core / pi-ai 版本并保留 MIT 原文",
+        "研究页支持普通对话、受限证据工具、流式取消和工作区历史",
+        "模型设置简化为预设、密钥或本地地址、模型、保存并测试"
+      ],
+      "acceptance": [
+        "密钥只在 Electron 主进程安全存储使用",
+        "原有结构化研究报告可继续读取",
+        "独立测试包启动，约 860px 和默认宽度可用"
+      ],
+      "verification": "Node 83 passed、Python 370 passed、类型与构建通过；本地合成 OpenAI 流式协议和工具循环通过；独立 .app 中模型测试、普通对话与历史恢复通过。真实付费模型未调用。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D63",
+      "title": "二十来源逐项实测和适配收尾",
+      "depends_on": [
+        "D61"
+      ],
+      "status": "in_progress",
+      "scope": [
+        "四个平台和十六家官网分别验证列表、网站续页、完整 JD 与字段",
+        "修复可自主修复的来源适配和检查状态",
+        "保留风控、登录及资源失败的真实阻塞"
+      ],
+      "acceptance": [
+        "每一来源有本轮实测证据或明确未测原因",
+        "不把首页可打开、历史状态或检查预算跳过计为成功",
+        "平台验证和限流时停源，继续其他独立来源"
+      ],
+      "verification": "本轮在隔离桌面版逐项触发 20 个来源：16 个返回可检索状态，2 个要求重新登录，滴滴与阶跃星辰连续两次失败；详见 HANDOFF。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],

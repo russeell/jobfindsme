@@ -100,6 +100,9 @@ export type DesktopBridge = {
   hideResearchReport(workspaceId:string,reportId:string):Promise<void>;
   createResearchReport(input: ResearchRunInput): Promise<ResearchReport>;
   cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
+  runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
+  cancelResearchChat():Promise<void>;
+  onResearchChatDelta(listener:(delta:string)=>void):()=>void;
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]>;
   createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask>;
   setScheduledTaskPaused(taskId: string, paused: boolean): Promise<ScheduledTask>;
@@ -363,6 +366,10 @@ export type PromptTurnInput = {
 };
 
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
+
+export type ResearchChatTurn = {role:"user"|"assistant";text:string};
+export type ResearchChatInput = {workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatResult = {text:string;report?:ResearchReport};
 
 export type ModelConnectionInput = {
   connection_id?: string;

@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["main/**/*.ts", "preload/**/*.ts", "shared/**/*.ts"]
+  "include": ["main/**/*.ts", "main/**/*.mts", "preload/**/*.ts", "shared/**/*.ts"]
 }

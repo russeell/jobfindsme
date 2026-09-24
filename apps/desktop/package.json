@@ -15,10 +15,13 @@
     "clean:electron": "node -e \"require('node:fs').rmSync('dist-electron', {recursive:true, force:true})\""
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "0.87.1",
+    "@earendil-works/pi-ai": "0.87.1",
     "@vitejs/plugin-react": "latest",
     "electron": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "typebox": "1.3.27",
     "vite": "latest"
   },
   "devDependencies": {

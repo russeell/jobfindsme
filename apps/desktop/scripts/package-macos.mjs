@@ -14,6 +14,8 @@ const buildInfo=JSON.parse(readFileSync(path.join(desktopRoot,"build-info.json")
 const previewUserData=process.env.JFM_PACKAGE_PREVIEW_USER_DATA || "jobfindsme-preview-D55-reading-column";
 if(!/^jobfindsme-preview-[a-zA-Z0-9_-]+$/.test(previewUserData))throw Error("invalid preview user data profile");
 const displayName=previewBuild?`JobFindsMe ${buildInfo.label} 测试版`:(process.env.JFM_PACKAGE_DISPLAY_NAME || "JobFindsMe");
+const bundleId=process.env.JFM_PACKAGE_BUNDLE_ID || (previewBuild?"com.jobfindsme.desktop.preview.d19":"com.jobfindsme.desktop");
+if(!/^com\.jobfindsme\.desktop(?:\.[a-z0-9-]+)+$/.test(bundleId))throw Error("invalid bundle id");
 const output = process.env.JFM_PACKAGE_OUTPUT || path.join(desktopRoot, "release/mac-unpacked/JobFindsMe.app");
 
 if (!existsSync(electronApp)) throw new Error("Electron.app is missing; run npm install first");
@@ -44,6 +46,16 @@ const appRoot = path.join(resources, "app");
 mkdirSync(appRoot, { recursive: true });
 cpSync(path.join(desktopRoot, "dist"), path.join(appRoot, "dist"), { recursive: true });
 cpSync(path.join(desktopRoot, "dist-electron"), path.join(appRoot, "dist-electron"), { recursive: true });
+// Pi is loaded from the Electron main process at runtime. Keep its exact npm
+// dependency tree in the app; omit build-only packages and Electron's second app.
+const modulesRoot=path.join(desktopRoot,"node_modules");
+const excluded=new Set([".bin",".cache","@types","@vitejs","electron","typescript","vite"]);
+cpSync(modulesRoot,path.join(appRoot,"node_modules"),{recursive:true,verbatimSymlinks:true,filter:source=>{
+  const relative=path.relative(modulesRoot,source);
+  return !relative||(!excluded.has(relative.split(path.sep)[0])&&!/\.(?:md|txt|map)$/i.test(relative)&&!/(?:^|\/)(?:test|tests|docs)(?:\/|$)/i.test(relative));
+}});
+mkdirSync(path.join(resources,"third-party"),{recursive:true});
+cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
   JSON.stringify({ name: "jobfindsme-desktop", version: "0.1.0", jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, main: "dist-electron/main/index.js" }),
@@ -58,7 +70,7 @@ for (const [key, value] of [
   ["CFBundleDisplayName", displayName],
   ["CFBundleName", displayName],
   ["CFBundleExecutable", "JobFindsMe"],
-  ["CFBundleIdentifier", previewBuild?"com.jobfindsme.desktop.preview.d19":"com.jobfindsme.desktop"],
+  ["CFBundleIdentifier", bundleId],
 ]) {
   execFileSync("/usr/bin/plutil", ["-replace", key, "-string", value, plist]);
 }
