@@ -26,8 +26,13 @@ Use targeted risk-based checks; do not repeat full suites for each small edit.
 Git policy (user authorization, 2026-09-21): establish a verified local baseline,
 then commit each independent fix after its relevant checks pass. Work on
 `codex/desktop-refactor`; preserve existing history and user changes. Record
-verification and known limitations in desktop evidence. Never automatically
-push, publish, or create a release. Exclude credentials, login profiles, private
+verification and known limitations in desktop evidence.
+2026-09-25: the user authorizes GitHub-based development and repository updates.
+After each independently verified change, commit locally and sync its development
+branch to origin. Fetch before pushing; never force-push or overwrite remote work.
+Use pull requests for subsequent integration into main; this authorization does not
+authorize merging those future pull requests, publishing packages, or creating releases.
+The current repository synchronization to main is explicitly authorized. Exclude credentials, login profiles, private
 resumes and generated build artifacts. This policy supersedes legacy Git rules.
 
 ## Current structure and compatibility
