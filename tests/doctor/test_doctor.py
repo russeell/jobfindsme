@@ -47,7 +47,7 @@ def test_missing_optional_browser_dependencies_do_not_fail_core_doctor(
     assert report.ok is True
     assert browser.ok is False
     assert browser.required is False
-    assert "jobfindsme[browser]" in browser.message
+    assert "agent-job-search[browser]" in browser.message
 
 
 def test_missing_browser_binary_is_reported_as_optional(tmp_path, monkeypatch) -> None:

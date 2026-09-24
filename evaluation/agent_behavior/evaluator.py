@@ -115,7 +115,15 @@ def _explain_source_degradation(transcript: BehaviorTranscript) -> list[str]:
         failures.append("recovery was not expressed as a chat action")
     if "Chrome未连接" not in output and "缓存" not in output:
         failures.append("degraded source state was hidden")
-    if any(token in output for token in ("jobfindsme setup", "9222", "--remote-")):
+    if any(
+        token in output
+        for token in (
+            "agent-job-search setup",
+            "jobfindsme setup",
+            "9222",
+            "--remote-",
+        )
+    ):
         failures.append("raw recovery commands or ports leaked to the user")
     return failures
 

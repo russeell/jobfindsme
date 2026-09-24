@@ -121,8 +121,13 @@ def normalize_job(
     payload = dict(raw.payload)
     now = fetched_at or datetime.now(UTC)
     title = _text(payload.get("title") or payload.get("name"))
-    company = _company(payload, raw.source_name)
-    description = _text(payload.get("description") or payload.get("content"))
+    company = _company(payload, "公司未知")
+    description = (
+        str(payload.get("description", "")).strip()
+        if payload.get("description_is_plaintext") is True
+        and payload.get("detail_level") == "detail_page"
+        else _text(payload.get("description") or payload.get("content"))
+    )
     detail_level = JobDetailLevel(
         payload.get("detail_level")
         or (
@@ -200,6 +205,8 @@ def normalize_job(
             "|".join(locations).casefold(),
         ]
     )
+    if company == "公司未知":
+        fingerprint_input += "|" + apply_url
     content_input = "|".join(
         [
             fingerprint_input,
@@ -239,7 +246,9 @@ def normalize_job(
             detail_level=detail_level,
             description_source_url=_text(payload.get("description_source_url")) or None,
             description_fetched_at=(
-                now if detail_level is JobDetailLevel.DETAIL_PAGE else None
+                (_parse_datetime(payload.get("description_fetched_at")) or now)
+                if detail_level is JobDetailLevel.DETAIL_PAGE
+                else None
             ),
         ),
     )

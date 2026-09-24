@@ -271,8 +271,8 @@ def test_windows_browser_candidates_cover_user_local_chrome_and_edge() -> None:
 def test_browser_bridge_error_exposes_only_product_recovery_actions() -> None:
     message = _browser_bridge_error(9222)
 
-    assert "jobfindsme setup" in message
-    assert "jobfindsme doctor" in message
+    assert "agent-job-search setup" in message
+    assert "agent-job-search doctor" in message
     assert "remote-debugging-port" not in message
     assert "zhipin.com" not in message
 

@@ -87,16 +87,16 @@ def test_agent_completes_first_use_without_internal_ids(tmp_path) -> None:
 
     history = call(registry, "get_jobs", limit=10)
     matches = history["jobs"]
-    companies = {item.company for item in matches}
+    companies = {item["company"] for item in matches}
     assert companies == {"甲公司", "乙公司"}
-    summary = matches[0].model_dump()
+    summary = matches[0]
     assert "description" not in summary
     assert summary["untrusted_external_content"] is True
 
     call(
         registry,
         "update_job_state",
-        job_id=matches[0].job_id,
+        job_id=matches[0]["job_id"],
         state="saved",
     )
     export_path = tmp_path / "export.json"
@@ -196,7 +196,7 @@ def test_search_text_is_complete_and_stable_for_agent_hosts(tmp_path) -> None:
     assert structured["summary"] == rendered
     assert len(structured["jobs"]) == 1
     history_companies = {
-        item.company for item in call(registry, "get_jobs", limit=10)["jobs"]
+        item["company"] for item in call(registry, "get_jobs", limit=10)["jobs"]
     }
     assert history_companies == {"甲公司", "乙公司"}
     assert "乙公司" not in rendered

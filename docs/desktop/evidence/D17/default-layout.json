@@ -1,0 +1,102 @@
+{
+  "renderer": {
+    "state": {
+      "url": "https://jobs.bytedance.com/",
+      "canGoBack": false,
+      "canGoForward": false,
+      "loading": false,
+      "activeTabId": "tab-4",
+      "notice": "",
+      "tabs": [
+        {
+          "id": "tab-1",
+          "sourceId": "company_01",
+          "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+          "title": "岗位详情 | 腾讯招聘",
+          "loading": false
+        },
+        {
+          "id": "tab-2",
+          "sourceId": "company_01",
+          "url": "https://careers.tencent.com/jobdesc.html?postId=2034114862627581952",
+          "title": "岗位详情 | 腾讯招聘",
+          "loading": false
+        },
+        {
+          "id": "tab-4",
+          "sourceId": "company_02",
+          "url": "https://jobs.bytedance.com/",
+          "title": "字节跳动招聘官网｜字节跳动社招",
+          "loading": false
+        }
+      ]
+    },
+    "size": [
+      1240,
+      788
+    ],
+    "layout": [
+      {
+        "s": ".work-content",
+        "rect": {
+          "x": 219.046875,
+          "y": 0,
+          "width": 360.015625,
+          "height": 788,
+          "top": 0,
+          "right": 579.0625,
+          "bottom": 788,
+          "left": 219.046875
+        }
+      },
+      {
+        "s": ".browser-panel",
+        "rect": {
+          "x": 579.0625,
+          "y": 0,
+          "width": 660.9375,
+          "height": 788,
+          "top": 0,
+          "right": 1240,
+          "bottom": 788,
+          "left": 579.0625
+        }
+      },
+      {
+        "s": ".native-browser-slot",
+        "rect": {
+          "x": 580.0625,
+          "y": 136,
+          "width": 659.9375,
+          "height": 652,
+          "top": 136,
+          "right": 1240,
+          "bottom": 788,
+          "left": 580.0625
+        }
+      }
+    ]
+  },
+  "native": [
+    {
+      "bounds": {
+        "x": 1100,
+        "y": 310,
+        "width": 1240,
+        "height": 820
+      },
+      "views": [
+        {
+          "url": "https://jobs.bytedance.com/",
+          "visible": true,
+          "bounds": {
+            "x": 580,
+            "y": 136,
+            "width": 660,
+            "height": 652
+          }
+        }
+      ]
+    }
+  ]
+}

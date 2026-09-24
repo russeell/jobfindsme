@@ -1,0 +1,382 @@
+{
+  "profile": "/private/tmp/jfm-d34-fixture-1789812102988",
+  "fixture": {
+    "authenticated": false,
+    "loginRequired": false,
+    "blocked": null,
+    "readable": true,
+    "empty": false,
+    "ended": false,
+    "jobs": [
+      {
+        "title": "Python 岗位 1",
+        "company": "样例公司 1",
+        "location": "上海",
+        "salary": "",
+        "url": "https://www.zhipin.com/job_detail/1.html"
+      },
+      {
+        "title": "Python 岗位 3",
+        "company": "",
+        "location": "",
+        "salary": "",
+        "url": "https://www.zhipin.com/job_detail/3.html"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "stage": "initial",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 183,
+        "scroll": 183
+      }
+    },
+    {
+      "stage": "in progress",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 217,
+        "scroll": 217
+      }
+    },
+    {
+      "stage": "partial",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 217,
+        "scroll": 217
+      }
+    },
+    {
+      "stage": "partial expanded",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 299,
+        "scroll": 299
+      }
+    },
+    {
+      "stage": "success",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 217,
+        "scroll": 217
+      }
+    },
+    {
+      "stage": "failed preserved",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 217,
+        "scroll": 217
+      }
+    },
+    {
+      "stage": "width 1240",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 217,
+        "scroll": 217
+      }
+    },
+    {
+      "stage": "width 860",
+      "checks": [
+        {
+          "label": "城市不限⌄",
+          "visible": true
+        },
+        {
+          "label": "求职类型⌄",
+          "visible": true
+        },
+        {
+          "label": "薪资待遇⌄",
+          "visible": true
+        },
+        {
+          "label": "工作经验⌄",
+          "visible": true
+        },
+        {
+          "label": "用工类型⌄",
+          "visible": true
+        },
+        {
+          "label": "全部已选来源⌄",
+          "visible": true
+        },
+        {
+          "label": "更多⌄",
+          "visible": true
+        },
+        {
+          "label": "清空筛选",
+          "visible": true
+        }
+      ],
+      "geometry": {
+        "client": 253,
+        "scroll": 253
+      }
+    }
+  ],
+  "boss": {
+    "company": "真实字段样例公司 3",
+    "title": "Python 高级工程师 3",
+    "locations": [
+      "上海"
+    ],
+    "salary_min_k": 25
+  },
+  "corrections": [
+    {
+      "correction_id": "correction_cb6637960dca41e3b41ccf287d8d77de",
+      "evidence_id": "fixture1",
+      "kind": "wrong_team",
+      "note": "本机样例更正：团队不匹配",
+      "created_at": "2026-09-19T10:01:59.503643+00:00"
+    }
+  ],
+  "requests": [
+    "https://www.zhipin.com/web/user/",
+    "https://www.zhipin.com/web/geek/jobs",
+    "https://www.zhipin.com/job_detail/1.html",
+    "https://www.zhipin.com/job_detail/2.html",
+    "https://www.zhipin.com/job_detail/3.html"
+  ],
+  "network": "All BOSS HTTPS intercepted; no public research network; no models; only synthetic data"
+}

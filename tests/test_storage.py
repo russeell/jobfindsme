@@ -58,8 +58,93 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0011_search_job_impressions",
         "0012_monitor_schedule_cron",
         "0013_search_plan_salary_policy",
+        "0014_resume_versions",
+        "0015_model_connections",
+        "0016_stage_b_review_fixes",
+        "0017_resume_edit_sessions",
+        "0018_desktop_source_capabilities",
+        "0019_desktop_search_snapshots",
+        "0020_independent_job_tracking",
+        "0021_research",
+        "0022_desktop_scheduler",
+        "0023_tencent_careers_capability",
+        "0024_liepin_evidence_copy",
+        "0025_model_auth_mode",
+        "0026_matching_prompts",
+        "0027_search_candidates",
+        "0028_research_context",
+        "0029_research_optional_resume",
+        "0030_research_job_context",
+        "0031_resume_conversation",
+        "0032_hidden_history",
+        "0033_hidden_matching_rules",
+        "0034_desktop_search_preferences",
+        "0035_company_research",
     ]
     assert foreign_keys == 1
+
+
+def test_migration_backup_restores_database_after_failure(
+    tmp_path, monkeypatch
+) -> None:
+    database = Database(tmp_path / "jobfindsme.db")
+    database.migrate()
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO workspaces (workspace_id, name, created_at) "
+            "VALUES ('kept', '保留数据', '2026-09-18T00:00:00+00:00')"
+        )
+        connection.execute(
+            "DELETE FROM schema_migrations "
+            "WHERE version = '0023_tencent_careers_capability'"
+        )
+
+    def broken_migrate():
+        with database.connect() as connection:
+            connection.execute("DELETE FROM workspaces")
+        raise RuntimeError("fixture migration failed")
+
+    monkeypatch.setattr(database, "migrate", broken_migrate)
+    with pytest.raises(RuntimeError, match="fixture migration failed"):
+        database.migrate_with_backup()
+
+    backup = tmp_path / "jobfindsme.db.pre-migration.bak"
+    assert backup.exists()
+    assert stat.S_IMODE(backup.stat().st_mode) == 0o600
+    with database.connect() as connection:
+        row = connection.execute(
+            "SELECT name FROM workspaces WHERE workspace_id = 'kept'"
+        ).fetchone()
+    assert row["name"] == "保留数据"
+
+
+def test_liepin_evidence_copy_migration_updates_legacy_catalog(tmp_path) -> None:
+    database = Database(tmp_path / "jobfindsme.db")
+    database.migrate()
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO desktop_source_capabilities ("
+            "source_id, source_type, name, login_required, session_status, "
+            "list_status, detail_status, fields_status, pagination_status, "
+            "enabled, last_verified_at, notes) VALUES ("
+            "'liepin', 'platform', '猎聘', 0, 'anonymous', 'verified', "
+            "'unverified', 'partial', 'unverified', 1, "
+            "'2026-09-18T00:00:00+00:00', "
+            "'匿名 HTTP 列表曾实测 42 条；完整 JD 与分页待验证') "
+            "ON CONFLICT(source_id) DO UPDATE SET notes=excluded.notes"
+        )
+        connection.execute(
+            "DELETE FROM schema_migrations WHERE version = '0024_liepin_evidence_copy'"
+        )
+
+    database.migrate()
+
+    with database.connect() as connection:
+        row = connection.execute(
+            "SELECT notes FROM desktop_source_capabilities WHERE source_id = 'liepin'"
+        ).fetchone()
+    assert "生产 .app 快照 92 条" in row["notes"]
+    assert "桌面快照页数不代表来源全量分页" in row["notes"]
 
 
 def test_reconcile_when_tables_already_exist(tmp_path) -> None:
@@ -297,3 +382,58 @@ def test_database_directory_and_files_are_private_by_default(tmp_path) -> None:
     database_mode = stat.S_IMODE(database.path.stat().st_mode)
     assert directory_mode == 0o700
     assert database_mode == 0o600
+
+
+def test_hidden_rule_migration_preserves_existing_rule_and_search_reference(
+    tmp_path,
+) -> None:
+    from jobfindsme.workspaces import WorkspaceService
+
+    database = Database(tmp_path / "legacy-d48.db")
+    database.migrate()
+    workspace = WorkspaceService(database).create().workspace_id
+    with database.connect() as connection:
+        connection.execute(
+            (
+                "INSERT INTO scoring_rule_versions"
+                "(rule_version_id,workspace_id,name,weights_json,created_at) "
+                "VALUES ('legacy-rule',?,?,?,?)"
+            ),
+            (
+                workspace,
+                "旧规则",
+                '{"skills":35,"projects":30,"education":15,"experience":20}',
+                "2026-09-23T00:00:00+00:00",
+            ),
+        )
+        connection.execute(
+            (
+                "INSERT INTO desktop_search_runs"
+                "(run_id,workspace_id,rule_version_id,intent,filter_snapshot_json,"
+                "ordered_job_ids_json,scores_json,created_at) "
+                "VALUES ('legacy-run',?,?,'Python','{}','[]','{}',"
+                "'2026-09-23T00:00:00+00:00')"
+            ),
+            (workspace, "legacy-rule"),
+        )
+        connection.execute("DROP INDEX idx_scoring_rule_versions_visible")
+        connection.execute("ALTER TABLE scoring_rule_versions DROP COLUMN hidden_at")
+        connection.execute(
+            "DELETE FROM schema_migrations WHERE version='0033_hidden_matching_rules'"
+        )
+    assert database.migrate_with_backup()
+    with database.connect() as connection:
+        assert (
+            connection.execute(
+                "SELECT hidden_at FROM scoring_rule_versions "
+                "WHERE rule_version_id='legacy-rule'"
+            ).fetchone()[0]
+            is None
+        )
+        assert (
+            connection.execute(
+                "SELECT rule_version_id FROM desktop_search_runs "
+                "WHERE run_id='legacy-run'"
+            ).fetchone()[0]
+            == "legacy-rule"
+        )

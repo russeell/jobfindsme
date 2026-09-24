@@ -297,17 +297,17 @@ def test_job_list_bounds_context_and_omits_full_jd(tmp_path) -> None:
 
     # List mode must stay compact — full JD text lives behind an explicit
     # get_jobs({"job_id": ...}) call, never in the summaries.
-    assert len(summaries[0].description_excerpt) <= 400
-    assert "description" not in summaries[0].model_dump()
-    assert summaries[0].untrusted_external_content is True
-    assert summaries[0].recruitment_track == "social"
-    assert summaries[0].employment_type == "full_time"
+    assert len(summaries[0]["description_excerpt"]) <= 400
+    assert "description" not in summaries[0]
+    assert summaries[0]["untrusted_external_content"] is True
+    assert summaries[0]["recruitment_track"] == "social"
+    assert summaries[0]["employment_type"] == "full_time"
     assert page["count"] == 1
     assert page["offset"] == 0
     assert page["limit"] == 1
     assert page["next_offset"] == 1
     assert (
-        page["jobs"][0].apply_url
+        page["jobs"][0]["apply_url"]
         in registry.call("get_jobs", {"limit": 1})["content"][0]["text"]
     )
 
@@ -997,9 +997,11 @@ def test_get_jobs_still_works_normally(tmp_path) -> None:
     assert sc["count"] == 1
     assert len(sc["jobs"]) == 1
     job = sc["jobs"][0]
-    assert job.title == "AI应用工程师"
-    assert job.company == "示例科技"
-    assert job.apply_url == "https://example.com/jobs/1"
+    # get_jobs is validated per call like every other tool, so callers get
+    # JSON-safe dicts rather than raw Pydantic instances.
+    assert job["title"] == "AI应用工程师"
+    assert job["company"] == "示例科技"
+    assert job["apply_url"] == "https://example.com/jobs/1"
     assert "投递链接：https://example.com/jobs/1" in result["content"][0]["text"]
 
 

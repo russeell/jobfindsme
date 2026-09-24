@@ -1,0 +1,265 @@
+{
+  "samples": [
+    {
+      "name": "website homepage, no engine",
+      "state": {
+        "url": "https://careers.tencent.com/",
+        "canGoBack": false,
+        "canGoForward": false,
+        "loading": false,
+        "zoom": 1,
+        "fitting": false,
+        "activeTabId": "tab-1",
+        "notice": "",
+        "tabs": [
+          {
+            "id": "tab-1",
+            "sourceId": "company_01",
+            "url": "https://careers.tencent.com/",
+            "title": "首页 | 腾讯招聘",
+            "loading": false
+          }
+        ]
+      },
+      "native": {
+        "visible": true,
+        "bounds": {
+          "x": 851,
+          "y": 96,
+          "width": 649,
+          "height": 854
+        },
+        "url": "https://careers.tencent.com/",
+        "loading": false,
+        "title": "首页 | 腾讯招聘"
+      }
+    },
+    {
+      "name": "Google actual network status after three seconds",
+      "state": {
+        "url": "https://www.google.com/sorry/index",
+        "canGoBack": false,
+        "canGoForward": false,
+        "loading": true,
+        "zoom": 1,
+        "fitting": false,
+        "activeTabId": "tab-2",
+        "notice": "",
+        "tabs": [
+          {
+            "id": "tab-1",
+            "sourceId": "company_01",
+            "url": "https://careers.tencent.com/",
+            "title": "首页 | 腾讯招聘",
+            "loading": false
+          },
+          {
+            "id": "tab-2",
+            "sourceId": "web",
+            "url": "https://www.google.com/sorry/index",
+            "title": "https://www.google.com/search?q=site%3Acareers.tencent.com+AI+%E5%B7%A5%E7%A8%8B%E5%B8%88+C%2B%2B+%26+%E8%BF%9C%E7%A8%8B&sei=Mgyuat3ULPfThbIPl5_lgQU",
+            "loading": true
+          }
+        ]
+      },
+      "native": {
+        "visible": true,
+        "bounds": {
+          "x": 851,
+          "y": 96,
+          "width": 649,
+          "height": 854
+        },
+        "url": "https://www.google.com/sorry/index",
+        "loading": true,
+        "title": "https://www.google.com/search?q=site%3Acareers.tencent.com+AI+%E5%B7%A5%E7%A8%8B%E5%B8%88+C%2B%2B+%26+%E8%BF%9C%E7%A8%8B&sei=Mgyuat3ULPfThbIPl5_lgQU"
+      }
+    },
+    {
+      "name": "top keyword uses Bing despite saved Google",
+      "state": {
+        "url": "https://cn.bing.com/search?q=%E8%85%BE%E8%AE%AF%E6%8B%9B%E8%81%98",
+        "canGoBack": true,
+        "canGoForward": false,
+        "loading": false,
+        "zoom": 1,
+        "fitting": false,
+        "activeTabId": "tab-2",
+        "notice": "",
+        "tabs": [
+          {
+            "id": "tab-1",
+            "sourceId": "company_01",
+            "url": "https://careers.tencent.com/",
+            "title": "首页 | 腾讯招聘",
+            "loading": false
+          },
+          {
+            "id": "tab-2",
+            "sourceId": "web",
+            "url": "https://cn.bing.com/search?q=%E8%85%BE%E8%AE%AF%E6%8B%9B%E8%81%98",
+            "title": "腾讯招聘 - 搜索",
+            "loading": false
+          }
+        ]
+      },
+      "native": {
+        "visible": true,
+        "bounds": {
+          "x": 851,
+          "y": 96,
+          "width": 649,
+          "height": 854
+        },
+        "url": "https://cn.bing.com/search?q=%E8%85%BE%E8%AE%AF%E6%8B%9B%E8%81%98",
+        "loading": false,
+        "title": "腾讯招聘 - 搜索"
+      }
+    },
+    {
+      "name": "top bare domain same tab",
+      "state": {
+        "url": "https://example.com/",
+        "canGoBack": true,
+        "canGoForward": false,
+        "loading": false,
+        "zoom": 1,
+        "fitting": false,
+        "activeTabId": "tab-2",
+        "notice": "",
+        "tabs": [
+          {
+            "id": "tab-1",
+            "sourceId": "company_01",
+            "url": "https://careers.tencent.com/",
+            "title": "首页 | 腾讯招聘",
+            "loading": false
+          },
+          {
+            "id": "tab-2",
+            "sourceId": "web",
+            "url": "https://example.com/",
+            "title": "Example Domain",
+            "loading": false
+          }
+        ]
+      },
+      "native": {
+        "visible": true,
+        "bounds": {
+          "x": 851,
+          "y": 96,
+          "width": 649,
+          "height": 854
+        },
+        "url": "https://example.com/",
+        "loading": false,
+        "title": "Example Domain"
+      }
+    },
+    {
+      "name": "new-tab omnibox opens one target",
+      "state": {
+        "url": "https://example.org/",
+        "canGoBack": false,
+        "canGoForward": false,
+        "loading": true,
+        "zoom": 1,
+        "fitting": false,
+        "activeTabId": "tab-3",
+        "notice": "",
+        "tabs": [
+          {
+            "id": "tab-1",
+            "sourceId": "company_01",
+            "url": "https://careers.tencent.com/",
+            "title": "首页 | 腾讯招聘",
+            "loading": false
+          },
+          {
+            "id": "tab-2",
+            "sourceId": "web",
+            "url": "https://example.com/",
+            "title": "Example Domain",
+            "loading": false
+          },
+          {
+            "id": "tab-3",
+            "sourceId": "web",
+            "url": "https://example.org/",
+            "title": "example.org",
+            "loading": true
+          }
+        ]
+      },
+      "native": {
+        "visible": true,
+        "bounds": {
+          "x": 851,
+          "y": 96,
+          "width": 649,
+          "height": 854
+        },
+        "url": "",
+        "loading": true,
+        "title": ""
+      }
+    }
+  ],
+  "requests": [
+    {
+      "channel": "desktop:open-job-original",
+      "args": [
+        "company_01",
+        "https://careers.tencent.com/",
+        {
+          "x": 851,
+          "y": 95.75,
+          "width": 649,
+          "height": 854.25
+        }
+      ]
+    },
+    {
+      "channel": "desktop:open-job-original",
+      "args": [
+        "web",
+        "https://www.google.com/search?q=site%3Acareers.tencent.com+AI+%E5%B7%A5%E7%A8%8B%E5%B8%88+C%2B%2B+%26+%E8%BF%9C%E7%A8%8B",
+        {
+          "x": 851,
+          "y": 95.75,
+          "width": 649,
+          "height": 854.25
+        }
+      ]
+    },
+    {
+      "channel": "desktop:navigate-browser-tab",
+      "args": [
+        "tab-2",
+        "https://www.bing.com/search?q=%E8%85%BE%E8%AE%AF%E6%8B%9B%E8%81%98"
+      ]
+    },
+    {
+      "channel": "desktop:navigate-browser-tab",
+      "args": [
+        "tab-2",
+        "https://example.com/"
+      ]
+    },
+    {
+      "channel": "desktop:open-job-original",
+      "args": [
+        "web",
+        "https://example.org/",
+        {
+          "x": 851,
+          "y": 95.75,
+          "width": 649,
+          "height": 854.25
+        }
+      ]
+    }
+  ],
+  "nativeBefore": 3
+}

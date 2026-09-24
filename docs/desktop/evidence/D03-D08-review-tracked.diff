@@ -1,0 +1,273 @@
+diff --git a/pyproject.toml b/pyproject.toml
+index 83254a1..87dfea8 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -23,8 +23,10 @@ classifiers = [
+ ]
+ dependencies = [
+   "certifi>=2024.8.30",
++  "fastapi>=0.116,<0.120",
+   "pydantic>=2.10,<3",
+   "pypdf>=5,<7",
++  "uvicorn>=0.35,<1",
+ ]
+ 
+ [project.optional-dependencies]
+@@ -34,6 +36,7 @@ browser = [
+   "curl_cffi>=0.7,<1",
+ ]
+ dev = [
++  "httpx>=0.27,<1",
+   "pytest>=8,<10",
+   "ruff>=0.12,<1",
+ ]
+diff --git a/src/jobfindsme/privacy.py b/src/jobfindsme/privacy.py
+index 0af0afa..b88fef2 100644
+--- a/src/jobfindsme/privacy.py
++++ b/src/jobfindsme/privacy.py
+@@ -2,6 +2,7 @@ from __future__ import annotations
+ 
+ import hashlib
+ import json
++import re
+ import secrets
+ from collections.abc import Callable
+ from datetime import UTC, datetime, timedelta
+@@ -16,6 +17,46 @@ from jobfindsme.storage import Database
+ 
+ Clock = Callable[[], datetime]
+ 
++PERSONAL_FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
++    "email": re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])"),
++    "phone": re.compile(r"(?<!\d)(?:\+?86[- ]?)?1[3-9]\d{9}(?!\d)"),
++    "id_number": re.compile(r"(?<!\d)\d{17}[\dXx](?!\d)"),
++    "address": re.compile(
++        r"(?:现居地|住址|地址)[：:]?\s*[^\n,;，；]{3,60}", re.IGNORECASE
++    ),
++    "name": re.compile(r"(?:姓名|名字)[：:]?\s*[\u4e00-\u9fff·]{2,20}"),
++}
++
++
++class AnalysisCopy(StrictModel):
++    source_version_id: str
++    redacted_fields: tuple[str, ...]
++    text: str
++
++
++def create_analysis_copy(
++    *,
++    source_version_id: str,
++    text: str,
++    redacted_fields: set[str] | None = None,
++) -> AnalysisCopy:
++    """Create a transient model-facing copy without mutating stored content."""
++
++    requested = set(PERSONAL_FIELD_PATTERNS) if redacted_fields is None else set(
++        redacted_fields
++    )
++    unknown = requested - PERSONAL_FIELD_PATTERNS.keys()
++    if unknown:
++        raise ValueError(f"unknown personal fields: {sorted(unknown)}")
++    result = text
++    for field in sorted(requested):
++        result = PERSONAL_FIELD_PATTERNS[field].sub(f"[已过滤:{field}]", result)
++    return AnalysisCopy(
++        source_version_id=source_version_id,
++        redacted_fields=tuple(sorted(requested)),
++        text=result,
++    )
++
+ 
+ class DeletionPreview(StrictModel):
+     workspace_id: str
+diff --git a/src/jobfindsme/profiles/models.py b/src/jobfindsme/profiles/models.py
+index 6993c8b..1feb79a 100644
+--- a/src/jobfindsme/profiles/models.py
++++ b/src/jobfindsme/profiles/models.py
+@@ -70,3 +70,15 @@ class ProfileSummary(StrictModel):
+     profile_id: str
+     workspace_id: str
+     facts: tuple[ProfileFact, ...]
++
++
++class ResumeVersion(StrictModel):
++    version_id: str
++    workspace_id: str
++    profile_id: str
++    source_document_id: str
++    parent_version_id: str | None = None
++    version_number: int = Field(gt=0)
++    content: dict[str, tuple[str, ...]]
++    is_current: bool
++    created_at: datetime
+diff --git a/src/jobfindsme/profiles/service.py b/src/jobfindsme/profiles/service.py
+index fb7373d..92c5c87 100644
+--- a/src/jobfindsme/profiles/service.py
++++ b/src/jobfindsme/profiles/service.py
+@@ -1,11 +1,12 @@
+ from __future__ import annotations
+ 
+ import hashlib
++import json
+ import os
+ from collections.abc import Mapping, Sequence
+ from datetime import UTC, datetime
+ from pathlib import Path
+-from uuid import NAMESPACE_URL, uuid5
++from uuid import NAMESPACE_URL, uuid4, uuid5
+ 
+ from jobfindsme.context import ActiveContextService
+ from jobfindsme.profiles.models import (
+@@ -16,6 +17,7 @@ from jobfindsme.profiles.models import (
+     ProfileStatus,
+     ProfileSummary,
+     ResumeImportMode,
++    ResumeVersion,
+     SourceDocument,
+ )
+ from jobfindsme.profiles.parser import DeterministicResumeParser, ResumeTextExtractor
+@@ -177,6 +179,7 @@ class ResumeProfileService:
+         }
+ 
+         confirmed_at = datetime.now(UTC)
++        confirmed_values: list[tuple[FactType, str]] = []
+         with self.database.connect() as connection:
+             for fact in profile.facts:
+                 status = (
+@@ -188,6 +191,8 @@ class ResumeProfileService:
+                     fact.fact_id,
+                     fact.value,
+                 )
++                if status is FactStatus.CONFIRMED:
++                    confirmed_values.append((fact.fact_type, current_value))
+                 connection.execute(
+                     """
+                     UPDATE profile_facts
+@@ -210,11 +215,105 @@ class ResumeProfileService:
+                 """,
+                 (confirmed_at.isoformat(), profile_id, workspace_id),
+             )
++            self._create_version(
++                connection=connection,
++                profile=profile,
++                facts=confirmed_values,
++            )
+         return self.confirmed_summary(
+             workspace_id=workspace_id,
+             profile_id=profile_id,
+         )
+ 
++    def current_version(self, *, workspace_id: str) -> ResumeVersion | None:
++        self.database.migrate()
++        with self.database.connect() as connection:
++            row = connection.execute(
++                """
++                SELECT * FROM resume_versions
++                WHERE workspace_id = ? AND is_current = 1
++                LIMIT 1
++                """,
++                (workspace_id,),
++            ).fetchone()
++        return _version_from_row(row) if row is not None else None
++
++    def list_versions(self, *, workspace_id: str) -> list[ResumeVersion]:
++        self.database.migrate()
++        with self.database.connect() as connection:
++            rows = connection.execute(
++                """
++                SELECT * FROM resume_versions
++                WHERE workspace_id = ?
++                ORDER BY version_number DESC
++                """,
++                (workspace_id,),
++            ).fetchall()
++        return [_version_from_row(row) for row in rows]
++
++    def _create_version(
++        self,
++        *,
++        connection,
++        profile: CandidateProfile,
++        facts: list[tuple[FactType, str]],
++    ) -> None:
++        content: dict[str, list[str]] = {
++            "basic_information": [],
++            "education": [],
++            "experience": [],
++            "projects": [],
++            "skills": [],
++        }
++        section_by_type = {
++            FactType.EDUCATION: "education",
++            FactType.EXPERIENCE: "experience",
++            FactType.PROJECT: "projects",
++            FactType.SKILL: "skills",
++        }
++        for fact_type, value in facts:
++            content[section_by_type[fact_type]].append(value)
++
++        now = datetime.now(UTC)
++        current = connection.execute(
++            """
++            SELECT version_id, version_number FROM resume_versions
++            WHERE workspace_id = ? AND is_current = 1
++            """,
++            (profile.workspace_id,),
++        ).fetchone()
++        next_number = connection.execute(
++            """
++            SELECT COALESCE(MAX(version_number), 0) + 1
++            FROM resume_versions WHERE workspace_id = ?
++            """,
++            (profile.workspace_id,),
++        ).fetchone()[0]
++        if current is not None:
++            connection.execute(
++                "UPDATE resume_versions SET is_current = 0 WHERE version_id = ?",
++                (current["version_id"],),
++            )
++        connection.execute(
++            """
++            INSERT INTO resume_versions (
++                version_id, workspace_id, profile_id, source_document_id,
++                parent_version_id, version_number, content_json,
++                is_current, created_at
++            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
++            """,
++            (
++                f"resume_version_{uuid4().hex}",
++                profile.workspace_id,
++                profile.profile_id,
++                profile.document_id,
++                current["version_id"] if current is not None else None,
++                next_number,
++                json.dumps(content, ensure_ascii=False),
++                now.isoformat(),
++            ),
++        )
++
+     def confirmed_summary(
+         self,
+         *,
+@@ -460,6 +559,21 @@ def _normalize_correction(value: str) -> str:
+     return normalized
+ 
+ 
++def _version_from_row(row) -> ResumeVersion:
++    content = json.loads(row["content_json"])
++    return ResumeVersion(
++        version_id=row["version_id"],
++        workspace_id=row["workspace_id"],
++        profile_id=row["profile_id"],
++        source_document_id=row["source_document_id"],
++        parent_version_id=row["parent_version_id"],
++        version_number=row["version_number"],
++        content={key: tuple(values) for key, values in content.items()},
++        is_current=bool(row["is_current"]),
++        created_at=datetime.fromisoformat(row["created_at"]),
++    )
++
++
+ class ProfileUseCase:
+     def __init__(
+         self,

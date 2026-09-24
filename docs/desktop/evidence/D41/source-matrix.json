@@ -1,0 +1,229 @@
+{
+  "checked_at": "2026-09-20T00:00:00+08:00",
+  "method": "D37 bounded first-party samples, D38 bounded follow-up, D41 isolated desktop audit. No 2026-09-23 all-source sweep.",
+  "limits": "Counts are dated bounded samples, not current vacancies. Zhilian login form is visible in UI29, but account session and search are unverified. Unknown fields remain unknown.",
+  "sources": [
+    {
+      "id": "boss",
+      "name": "BOSS直聘",
+      "status": "session_verified",
+      "list": "15 jobs / 2 desktop batches",
+      "detail": "full JD observed",
+      "pagination": "partial",
+      "next": "reuse the user's existing login; do not seed login state globally",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "liepin",
+      "name": "猎聘",
+      "status": "enabled_partial",
+      "list": "92 jobs / 5 desktop result pages",
+      "detail": "full JD visible on official page; list carries summary",
+      "pagination": "partial",
+      "next": "retain bounded anonymous adapter",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "zhilian",
+      "name": "智联招聘",
+      "status": "login_form_verified_session_unverified",
+      "list": "not verified",
+      "detail": "not verified",
+      "pagination": "not verified",
+      "next": "UI29 cold-start source action opens the observed passport login URL with phone and SMS fields. After the user logs in, run one bounded search; do not treat the form as authentication.",
+      "evidence_as_of": "2026-09-23 native UI29",
+      "live_reverified_on_2026_09_23": false,
+      "login_form_reverified_on_2026_09_23": true
+    },
+    {
+      "id": "wuyou",
+      "name": "前程无忧",
+      "status": "authenticated_list_observed_search_unverified",
+      "list": "D38 existing session displayed real cards and pagination controls; bounded automatic extraction still unverified",
+      "detail": "not verified",
+      "pagination": "controls observed; continuation not verified",
+      "next": "After active user session, run bounded list extraction and then verify detail and website next page.",
+      "evidence_as_of": "2026-09-20 D38",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_01",
+      "name": "腾讯",
+      "status": "enabled_partial",
+      "list": "58 jobs / 3 bounded API pages",
+      "detail": "official detail supported",
+      "pagination": "verified",
+      "next": "salary stays unknown when absent",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_02",
+      "name": "字节跳动",
+      "status": "enabled_partial",
+      "list": "2 verified links",
+      "detail": "520 chars",
+      "pagination": "not verified",
+      "next": "expand list coverage only after another bounded observation",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_03",
+      "name": "阿里巴巴",
+      "status": "list_partial_detail_blocked",
+      "list": "211 visible cards; D38 observed click-through links",
+      "detail": "resource load failed",
+      "pagination": "22 pages visible; continuation not verified",
+      "next": "Retry official detail resource without guessing IDs; leave full JD unverified.",
+      "evidence_as_of": "2026-09-20 D38",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_04",
+      "name": "美团",
+      "status": "enabled_partial",
+      "list": "10 jobs / 2 DOM batches",
+      "detail": "915 chars",
+      "pagination": "partial",
+      "next": "retain click-based bounded collector",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_05",
+      "name": "百度",
+      "status": "enabled_partial",
+      "list": "5 verified links",
+      "detail": "350 chars",
+      "pagination": "not verified",
+      "next": "retain click-based bounded collector",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_06",
+      "name": "京东",
+      "status": "enabled_partial",
+      "list": "17 Beijing engineering jobs / 2 bounded website pages",
+      "detail": "457-character full JD at observed official URL",
+      "pagination": "2 pages observed; total coverage unknown",
+      "next": "Keep HTTPS official route and partial coverage label.",
+      "evidence_as_of": "2026-09-20 D38",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_07",
+      "name": "网易",
+      "status": "enabled_partial",
+      "list": "1 verified click-through",
+      "detail": "918 chars",
+      "pagination": "not verified",
+      "next": "retain honest one-link coverage",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_08",
+      "name": "快手",
+      "status": "enabled_partial",
+      "list": "1 verified click-through",
+      "detail": "987 chars",
+      "pagination": "not verified",
+      "next": "preserve hash job identity",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_09",
+      "name": "小米",
+      "status": "enabled_partial",
+      "list": "9 verified links",
+      "detail": "315 chars via observed first-party ATS endpoint",
+      "pagination": "not verified",
+      "next": "retain tenant-bound endpoint parser",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_10",
+      "name": "滴滴",
+      "status": "enabled_partial",
+      "list": "6 verified links",
+      "detail": "557 chars",
+      "pagination": "not verified",
+      "next": "retain click-based bounded collector",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_11",
+      "name": "拼多多",
+      "status": "enabled_partial",
+      "list": "18 verified links",
+      "detail": "400 chars",
+      "pagination": "partial",
+      "next": "unknown salary/location fields remain unknown",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_12",
+      "name": "DeepSeek",
+      "status": "enabled_partial",
+      "list": "34-job official snapshot; 15 matched engineering keyword",
+      "detail": "full JD in snapshot",
+      "pagination": "not applicable to snapshot",
+      "next": "surface snapshot timestamp and cache failures",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_13",
+      "name": "MiniMax",
+      "status": "enabled_partial",
+      "list": "10 verified links",
+      "detail": "598 chars via observed first-party ATS endpoint",
+      "pagination": "not verified",
+      "next": "retain tenant-bound endpoint parser",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_14",
+      "name": "智谱",
+      "status": "enabled_partial",
+      "list": "42 jobs / 2 DOM pages",
+      "detail": "678 chars",
+      "pagination": "partial",
+      "next": "retain exact Moka tenant scope",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_15",
+      "name": "月之暗面",
+      "status": "enabled_partial",
+      "list": "39 jobs / 2 DOM pages",
+      "detail": "824 chars",
+      "pagination": "partial",
+      "next": "retain hash job identity and exact tenant scope",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    },
+    {
+      "id": "company_16",
+      "name": "阶跃星辰",
+      "status": "enabled_partial",
+      "list": "60 jobs / 2 DOM pages",
+      "detail": "688 chars",
+      "pagination": "partial",
+      "next": "retain exact Moka tenant scope",
+      "evidence_as_of": "2026-09-20",
+      "live_reverified_on_2026_09_23": false
+    }
+  ],
+  "audited_at": "2026-09-23T00:00:00+08:00"
+}

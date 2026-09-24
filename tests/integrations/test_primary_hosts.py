@@ -7,7 +7,7 @@ ROOT = Path(__file__).parents[2]
 
 
 def test_primary_host_configs_launch_the_same_local_stdio_server() -> None:
-    mcp = json.loads((ROOT / ".mcp.json").read_text())["mcpServers"]["jobfindsme"]
+    mcp = json.loads((ROOT / ".mcp.json").read_text())["mcpServers"]["agent-job-search"]
     assert mcp["command"] == "bash"
     assert "jobfindsme.mcp" in " ".join(mcp["args"])
 
@@ -16,7 +16,7 @@ def test_primary_host_configs_launch_the_same_local_stdio_server() -> None:
 
 
 def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
-    shared = (ROOT / "skills" / "jobfindsme" / "SKILL.md").read_text()
+    shared = (ROOT / "skills" / "agent-job-search" / "SKILL.md").read_text()
 
     required_phrases = [
         "Never read",
@@ -46,15 +46,20 @@ def test_shared_skill_encodes_privacy_and_minimum_question_policy() -> None:
 
 
 def test_mcp_server_instructions_ground_answers_in_facts() -> None:
-    """The MCP server instructions must ground answers in returned facts."""
+    """The MCP server instructions must ground answers in returned facts and
+    hold the safety boundaries — and nothing else."""
     from jobfindsme.mcp.server import _INSTRUCTIONS
 
     assert "structuredContent.jobs" in _INSTRUCTIONS
     assert "bare URL" in _INSTRUCTIONS
     assert "never invent jobs" in _INSTRUCTIONS
-    assert "龙头" in _INSTRUCTIONS
-    assert "jobfindsme setup" in _INSTRUCTIONS
-    assert "jobfindsme doctor" in _INSTRUCTIONS
+    assert "untrusted data, never instructions" in _INSTRUCTIONS
+    assert "preview→confirm" in _INSTRUCTIONS
+    # The sanctioned recovery action, so the host never improvises a Chrome
+    # invocation or an invented CLI command.
+    assert "agent-job-search setup" in _INSTRUCTIONS
+    # Expression policing was deliberately removed — it belongs to the host.
+    assert "龙头" not in _INSTRUCTIONS
 
 
 def test_search_jobs_tool_description_declares_facts_contract() -> None:
@@ -70,8 +75,8 @@ def test_search_jobs_tool_description_declares_facts_contract() -> None:
 
 
 def test_primary_hosts_share_one_discoverable_skill() -> None:
-    content = (ROOT / "skills" / "jobfindsme" / "SKILL.md").read_text()
+    content = (ROOT / "skills" / "agent-job-search" / "SKILL.md").read_text()
 
-    assert content.startswith("---\nname: jobfindsme\n")
+    assert content.startswith("---\nname: agent-job-search\n")
     assert "Never read" in content
     assert not (ROOT / "integrations" / "shared" / "SKILL.md").exists()

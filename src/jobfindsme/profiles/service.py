@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid4, uuid5
 
 from jobfindsme.context import ActiveContextService
 from jobfindsme.profiles.models import (
@@ -16,6 +17,7 @@ from jobfindsme.profiles.models import (
     ProfileStatus,
     ProfileSummary,
     ResumeImportMode,
+    ResumeVersion,
     SourceDocument,
 )
 from jobfindsme.profiles.parser import DeterministicResumeParser, ResumeTextExtractor
@@ -73,6 +75,11 @@ class ResumeProfileService:
             document_id=document_id,
         )
         if existing is not None:
+            if existing.status is ProfileStatus.DRAFT:
+                self._set_active_draft(
+                    workspace_id=workspace_id,
+                    profile_id=existing.profile_id,
+                )
             return existing
 
         parsed = self.parser.parse(extracted.text)
@@ -177,6 +184,7 @@ class ResumeProfileService:
         }
 
         confirmed_at = datetime.now(UTC)
+        confirmed_values: list[tuple[FactType, str]] = []
         with self.database.connect() as connection:
             for fact in profile.facts:
                 status = (
@@ -188,6 +196,8 @@ class ResumeProfileService:
                     fact.fact_id,
                     fact.value,
                 )
+                if status is FactStatus.CONFIRMED:
+                    confirmed_values.append((fact.fact_type, current_value))
                 connection.execute(
                     """
                     UPDATE profile_facts
@@ -210,9 +220,170 @@ class ResumeProfileService:
                 """,
                 (confirmed_at.isoformat(), profile_id, workspace_id),
             )
+            self._create_version(
+                connection=connection,
+                profile=profile,
+                facts=confirmed_values,
+            )
+            connection.execute(
+                """
+                DELETE FROM active_resume_imports
+                WHERE workspace_id = ? AND profile_id = ?
+                """,
+                (workspace_id, profile_id),
+            )
         return self.confirmed_summary(
             workspace_id=workspace_id,
             profile_id=profile_id,
+        )
+
+    def current_version(self, *, workspace_id: str) -> ResumeVersion | None:
+        self.database.migrate()
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM resume_versions
+                WHERE workspace_id = ? AND is_current = 1
+                LIMIT 1
+                """,
+                (workspace_id,),
+            ).fetchone()
+        return _version_from_row(row) if row is not None else None
+
+    def clear_current(self, *, workspace_id: str) -> None:
+        """Stop using the current resume without deleting historical snapshots."""
+        self.database.migrate()
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                (
+                    "UPDATE resume_versions SET is_current=0 "
+                    "WHERE workspace_id=? AND is_current=1"
+                ),
+                (workspace_id,),
+            )
+            connection.execute(
+                "DELETE FROM active_resume_imports WHERE workspace_id=?",
+                (workspace_id,),
+            )
+
+    def active_draft_profile_id(self, *, workspace_id: str) -> str | None:
+        self.database.migrate()
+        with self.database.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT profile_id FROM active_resume_imports
+                WHERE workspace_id = ?
+                """,
+                (workspace_id,),
+            ).fetchone()
+        return row["profile_id"] if row is not None else None
+
+    def abandon_active_draft(
+        self,
+        *,
+        workspace_id: str,
+        profile_id: str,
+    ) -> None:
+        with self.database.connect() as connection:
+            deleted = connection.execute(
+                """
+                DELETE FROM active_resume_imports
+                WHERE workspace_id = ? AND profile_id = ?
+                """,
+                (workspace_id, profile_id),
+            ).rowcount
+        if not deleted:
+            raise ProfileNotFoundError(profile_id)
+
+    def _set_active_draft(self, *, workspace_id: str, profile_id: str) -> None:
+        with self.database.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO active_resume_imports (
+                    workspace_id, profile_id, updated_at
+                ) VALUES (?, ?, ?)
+                ON CONFLICT(workspace_id) DO UPDATE SET
+                    profile_id = excluded.profile_id,
+                    updated_at = excluded.updated_at
+                """,
+                (workspace_id, profile_id, datetime.now(UTC).isoformat()),
+            )
+
+    def list_versions(self, *, workspace_id: str) -> list[ResumeVersion]:
+        self.database.migrate()
+        with self.database.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM resume_versions
+                WHERE workspace_id = ?
+                ORDER BY version_number DESC
+                """,
+                (workspace_id,),
+            ).fetchall()
+        return [_version_from_row(row) for row in rows]
+
+    def _create_version(
+        self,
+        *,
+        connection,
+        profile: CandidateProfile,
+        facts: list[tuple[FactType, str]],
+    ) -> None:
+        content: dict[str, list[str]] = {
+            "basic_information": [],
+            "education": [],
+            "experience": [],
+            "projects": [],
+            "skills": [],
+        }
+        section_by_type = {
+            FactType.EDUCATION: "education",
+            FactType.EXPERIENCE: "experience",
+            FactType.PROJECT: "projects",
+            FactType.SKILL: "skills",
+        }
+        for fact_type, value in facts:
+            content[section_by_type[fact_type]].append(value)
+
+        now = datetime.now(UTC)
+        current = connection.execute(
+            """
+            SELECT version_id, version_number FROM resume_versions
+            WHERE workspace_id = ? AND is_current = 1
+            """,
+            (profile.workspace_id,),
+        ).fetchone()
+        next_number = connection.execute(
+            """
+            SELECT COALESCE(MAX(version_number), 0) + 1
+            FROM resume_versions WHERE workspace_id = ?
+            """,
+            (profile.workspace_id,),
+        ).fetchone()[0]
+        if current is not None:
+            connection.execute(
+                "UPDATE resume_versions SET is_current = 0 WHERE version_id = ?",
+                (current["version_id"],),
+            )
+        connection.execute(
+            """
+            INSERT INTO resume_versions (
+                version_id, workspace_id, profile_id, source_document_id,
+                parent_version_id, version_number, content_json,
+                is_current, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+            """,
+            (
+                f"resume_version_{uuid4().hex}",
+                profile.workspace_id,
+                profile.profile_id,
+                profile.document_id,
+                current["version_id"] if current is not None else None,
+                next_number,
+                json.dumps(content, ensure_ascii=False),
+                now.isoformat(),
+            ),
         )
 
     def confirmed_summary(
@@ -430,6 +601,21 @@ class ResumeProfileService:
                         fact.status.value,
                     ),
                 )
+            connection.execute(
+                """
+                INSERT INTO active_resume_imports (
+                    workspace_id, profile_id, updated_at
+                ) VALUES (?, ?, ?)
+                ON CONFLICT(workspace_id) DO UPDATE SET
+                    profile_id = excluded.profile_id,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    profile.workspace_id,
+                    profile.profile_id,
+                    profile.created_at.isoformat(),
+                ),
+            )
 
     def _write_managed_copy(
         self,
@@ -458,6 +644,21 @@ def _normalize_correction(value: str) -> str:
     if len(normalized) > 2000:
         raise ProfileError("corrected fact is too long")
     return normalized
+
+
+def _version_from_row(row) -> ResumeVersion:
+    content = json.loads(row["content_json"])
+    return ResumeVersion(
+        version_id=row["version_id"],
+        workspace_id=row["workspace_id"],
+        profile_id=row["profile_id"],
+        source_document_id=row["source_document_id"],
+        parent_version_id=row["parent_version_id"],
+        version_number=row["version_number"],
+        content={key: tuple(values) for key, values in content.items()},
+        is_current=bool(row["is_current"]),
+        created_at=datetime.fromisoformat(row["created_at"]),
+    )
 
 
 class ProfileUseCase:

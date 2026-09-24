@@ -1,0 +1,5 @@
+PASS website action hides engines, no ambiguous keyword search
+GOOGLE STATUS https://www.google.com/sorry/index true no load error reported
+PASS edit survives poll/loading, Escape and blur restore URL
+PASS top keyword/direct domain reuse native tab and history
+PASS D28 real UI modes, Google target, range, top Bing/direct/safety, edit cancellation/history, non-overlap

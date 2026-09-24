@@ -1,8 +1,8 @@
-# jobfindsme product and engineering specification
+# Agent Job Search product and engineering specification
 
 ## 1. Product goal
 
-`jobfindsme` is a local-first job discovery and tracking MCP Server. It helps
+Agent Job Search is a local-first job discovery and tracking MCP Server. It helps
 an existing AI Agent search BOSS直聘、猎聘、智联招聘 and 前程无忧, remove repeats, enforce user
 constraints, preserve job state, and return compact evidence with direct apply
 links.
@@ -48,7 +48,7 @@ count and raw records are not product outcomes.
 - requiring a model API key for core behavior.
 
 Scheduling, notification delivery, and conversation belong to the host Agent.
-`jobfindsme` owns facts, state, hard constraints, deterministic ordering, and
+Agent Job Search owns facts, state, hard constraints, deterministic ordering, and
 the stable base result. The host may add an explanation but cannot invent or
 silently reorder evidence.
 
@@ -56,9 +56,9 @@ silently reorder evidence.
 
 ```text
 Host Agent
-  -> jobfindsme Skill
+  -> Agent Job Search Skill
   -> stdio MCP adapter
-  -> jobfindsme core
+  -> Agent Job Search core
        -> profile and search-plan services
        -> SearchOrchestrator
             -> source connectors
@@ -68,7 +68,7 @@ Host Agent
        -> state and privacy services
   -> local SQLite
 
-CLI -> the same jobfindsme core
+CLI -> the same Agent Job Search core
 ```
 
 Dependency direction is one way:
@@ -138,7 +138,9 @@ facts only and never invents jobs, salary, links, scores, or reasons.
 
 ## 6. MCP contract
 
-The server name and all public product identifiers use lowercase `jobfindsme`.
+The display name is `Agent Job Search`; public machine identifiers use
+lowercase `agent-job-search`. The legacy `jobfindsme` command and Python
+namespace remain temporary compatibility aliases.
 The MCP surface contains five focused tools:
 
 1. `setup` — profile snapshot import and preferences configuration
@@ -183,7 +185,7 @@ salary in thousands of CNY. Bonus months such as `18-30K·15薪` do not turn an
 structured salary fields are reconciled conservatively.
 An empty incremental result is a successful radar outcome when unchanged jobs
 were suppressed; it must not be renamed as duplicate detection or trigger an
-automatic full refresh. If MCP is unavailable, the host may run `jobfindsme
+automatic full refresh. If MCP is unavailable, the host may run `agent-job-search
 doctor` for diagnosis, but must not invent a CLI search workflow or expose
 workspace and plan identifiers.
 
@@ -269,4 +271,4 @@ in the active feature rather than accumulating separate research documents.
 - [mcp-jobs](https://github.com/mergedao/mcp-jobs)
 
 References inform design; local privacy, platform access, Chinese job fields,
-and repeatable evidence decide what `jobfindsme` actually adopts.
+and repeatable evidence decide what Agent Job Search actually adopts.

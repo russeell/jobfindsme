@@ -169,7 +169,7 @@ SECTION_PATTERNS: tuple[tuple[re.Pattern[str], FactType | None], ...] = (
     ),
     (
         re.compile(
-            r"^(?:专业技能|技能清单|技术栈|个人信息|基本信息|求职意向|"
+            r"^(?:技能|专业技能|技能清单|技术栈|个人信息|基本信息|求职意向|"
             r"个人优势|自我评价|证书|获奖经历|skills?)$",
             re.I,
         ),
@@ -203,7 +203,7 @@ class _Line:
 class DeterministicResumeParser:
     """Extract reviewable facts without treating every PDF line as a project."""
 
-    version = "deterministic-resume-v3"
+    version = "deterministic-resume-v4"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)
@@ -257,6 +257,18 @@ class DeterministicResumeParser:
             current.clear()
 
         for line in lines:
+            inline = re.match(r"^([^：:]{2,24})[：:]\s*(\S.*)$", line.text)
+            if inline:
+                inline_type = _section_heading(inline.group(1))
+                if inline_type is not _NOT_A_HEADING:
+                    flush()
+                    current_type = inline_type
+                    if inline_type is not None:
+                        value = inline.group(2)
+                        current.append(
+                            _Line(value, line.start + inline.start(2), line.end)
+                        )
+                    continue
             heading = _section_heading(line.text)
             if heading is not _NOT_A_HEADING:
                 flush()
@@ -310,7 +322,7 @@ def _split_entries(lines: list[_Line]) -> list[list[_Line]]:
 
 def _normalize_block(lines: list[_Line]) -> str:
     parts = [
-        re.sub(r"^(?:[-*•·+]|\d+[.)、])\s*", "", line.text).strip() for line in lines
+        re.sub(r"^(?:[-*•·+]\s*|\d+[.)、]\s+)", "", line.text).strip() for line in lines
     ]
     return " ".join(part for part in parts if part)
 

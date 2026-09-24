@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -15,6 +16,54 @@ from jobfindsme.contracts import ExportReceipt, StrictModel
 from jobfindsme.storage import Database
 
 Clock = Callable[[], datetime]
+
+PERSONAL_FIELD_PATTERNS: dict[str, re.Pattern[str]] = {
+    "email": re.compile(r"(?<![\w.+-])[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w.-])"),
+    "phone": re.compile(r"(?<!\d)(?:\+?86[- ]?)?1[3-9](?:[- ]?\d){9}(?!\d)"),
+    "id_number": re.compile(r"(?<!\d)(?:\d{15}|\d{17}[\dXx])(?![\dXx])"),
+    "address": re.compile(
+        r"(?<![\u4e00-\u9fff])(?:现居地|家庭住址|联系地址|住址|地址)[：:]\s*"
+        r"[^\n,;，；\"}]{3,80}",
+        re.IGNORECASE,
+    ),
+    "name": re.compile(
+        r"(?<![\u4e00-\u9fff])(?:姓名|名字)[：:]\s*[\u4e00-\u9fff·]{2,20}",
+    ),
+}
+
+
+class AnalysisCopy(StrictModel):
+    source_version_id: str
+    redacted_fields: tuple[str, ...]
+    text: str
+    limitations: str
+
+
+def create_analysis_copy(
+    *,
+    source_version_id: str,
+    text: str,
+    redacted_fields: set[str] | None = None,
+) -> AnalysisCopy:
+    """Create a transient model-facing copy without mutating stored content."""
+
+    requested = (
+        set(PERSONAL_FIELD_PATTERNS)
+        if redacted_fields is None
+        else set(redacted_fields)
+    )
+    unknown = requested - PERSONAL_FIELD_PATTERNS.keys()
+    if unknown:
+        raise ValueError(f"unknown personal fields: {sorted(unknown)}")
+    result = text
+    for field in sorted(requested):
+        result = PERSONAL_FIELD_PATTERNS[field].sub(f"[已过滤:{field}]", result)
+    return AnalysisCopy(
+        source_version_id=source_version_id,
+        redacted_fields=tuple(sorted(requested)),
+        text=result,
+        limitations=("脱敏使用结构化字段与常见文本格式规则；发送前仍应检查预览。"),
+    )
 
 
 class DeletionPreview(StrictModel):
@@ -102,7 +151,7 @@ class PrivacyService:
         directory = self.database.path.parent / "exports"
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         destination = directory / (
-            f"jobfindsme-{workspace_id}-{exported_at:%Y%m%dT%H%M%S%fZ}.json"
+            f"agent-job-search-{workspace_id}-{exported_at:%Y%m%dT%H%M%S%fZ}.json"
         )
         content = (
             json.dumps(payload, ensure_ascii=False, indent=2, default=str) + "\n"

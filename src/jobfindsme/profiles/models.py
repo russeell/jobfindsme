@@ -70,3 +70,15 @@ class ProfileSummary(StrictModel):
     profile_id: str
     workspace_id: str
     facts: tuple[ProfileFact, ...]
+
+
+class ResumeVersion(StrictModel):
+    version_id: str
+    workspace_id: str
+    profile_id: str
+    source_document_id: str
+    parent_version_id: str | None = None
+    version_number: int = Field(gt=0)
+    content: dict[str, tuple[str, ...]]
+    is_current: bool
+    created_at: datetime

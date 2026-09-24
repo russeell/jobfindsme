@@ -1,381 +1,87 @@
-<div align="center">
+# JobFindsMe
 
-# jobfindsme · AI Job Search Radar
+**Find a promising role. Learn more about the company before you apply.**
 
-**AI browses jobs for you. You only review the ones worth applying to.**
+JobFindsMe is a local desktop workspace for job search, role research and resume maintenance. Browse results alongside the original hiring website, save interesting roles, and investigate the opportunities you want to pursue.
 
-<p>
-  <a href="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml"><img src="https://github.com/russeell/jobfindsme/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB" alt="Python 3.11+">
-  <img src="https://img.shields.io/badge/MCP-stdio-111111" alt="MCP stdio">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License MIT"></a>
-  <img src="https://img.shields.io/badge/stars-welcome-yellow" alt="Stars welcome">
-</p>
+[中文](README.md) · [Developer documentation](docs/desktop/README.md)
 
-[中文](README.md) · [Architecture](docs/architecture.md) · [Sources report](evaluation/evidence/latest_four_source_search.md)
+![Current JobFindsMe research composer with a synthetic role](docs/desktop/evidence/D52/composer-start-focused-default.jpg)
 
-</div>
+*Current D52 interface using a synthetic role in an isolated QA profile. It is not a real listing or company review.*
 
----
+## Find jobs with fewer open windows
 
-> Install a local job-search MCP server for Claude Code, Codex, Cursor, and any
-> MCP-capable agent. **jobfindsme browses, filters, and remembers; your Agent
-> understands the request and talks with you.**
+Search by role or skill, choose cities, salary ranges and experience requirements, and select the hiring platforms and company websites you want to search. With a confirmed resume, you can leave the keyword blank: the app makes a bounded set of search terms from confirmed skills and experience and shows the terms it used. Set city and salary filters on the search page.
 
----
+- Select multiple sources, select all, or check their availability.
+- Read job details alongside the original page in the embedded browser.
+- See when the source does not provide a publication date, salary or complete job description; retrieval time is never presented as publication time.
+- Save roles and track read and application status.
+- Run searches manually when you want updated listings; historical plans and run records remain stored locally.
 
-## Why
+You submit applications yourself on the hiring website. Opening a link does not mark a job as applied.
 
-The annoying part of a daily job search is not "knowing how to search". It is
-this repeated grunt work:
+## Research the role before applying
 
-| Problem | What jobfindsme does |
-|---|---|
-| Switching between platforms | Searches four sources in one call; a failing source is reported explicitly while others still run |
-| Floods of irrelevant results | Hard-filters role, city, salary, social/campus track, full-time/internship, then ranks |
-| Seeing the same jobs again | Remembers what you saw, applied to, and ignored locally — only reports changes |
-| Unexplained recommendations | With a resume, each job ships with a match score, evidence, gaps, and a direct apply link; without one, no score is invented |
-| API-key / account setup | No model API key needed; everything lives in a local SQLite database |
+Open a role and use the research composer. Company and role topics are selected by default. Start without typing, or add a question that enters a bounded public web search:
 
-One sentence to start:
+| Direction | What to look for |
+| --- | --- |
+| **Company context** | Business and listing information, positive and negative accounts, workload and everyday benefits |
+| **Role content and development** | The saved job description, responsibilities and skills, considered alongside company business evidence |
 
-```text
-Use jobfindsme with my local resume at ~/Documents/resume.pdf to find
-AI application engineer roles in Shanghai, 20K+, experienced hiring, full-time.
-```
+Reports keep source links, publication dates and scope. The History button reopens earlier versions. A follow-up searches for evidence related to the question and saves a new version; without direct evidence, the app says it cannot answer. Cancellation or failure leaves the report you were reading in place. Official disclosures are distinguished from personal accounts. Missing evidence remains unknown; development analysis does not promise promotion or rate companies.
 
----
+## Keep your resume up to date
 
-## 🚀 Quick start
+Import **PDF, DOCX, Markdown or TXT**, review skills and experience, then confirm them for search. Pending imports are not used. You can clear the current resume and continue searching by keyword; historical search and research snapshots remain intact.
 
-### Option 1: just ask your Agent (recommended)
+Scanned PDFs do not yet support OCR. Convert older DOC files to DOCX first.
 
-In Claude Code, Codex, Cursor, or any agent, paste this whole sentence:
+## Keep the original website close
 
-```text
-Install jobfindsme by following the README at https://github.com/russeell/jobfindsme
-```
+The embedded browser supports multiple tabs and retains app-specific login sessions. Websites may still require you to sign in again when sessions expire or verification is needed.
 
-The agent reads this README, installs the local runtime
-(`curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash`),
-wires the MCP config, and asks you to restart. First install takes a few
-minutes; if the agent cannot reach the network, use Option 2.
-`install.sh` is published as a release asset, so this fixed URL always serves
-the newest script (no CDN cache lag). CN fallback:
-`https://cdn.jsdelivr.net/gh/russeell/jobfindsme@main/scripts/install.sh`
-(jsdelivr cache may lag up to 12h after a push).
+When automated retrieval is unavailable, open the original site and continue browsing. A working webpage does not guarantee successful automated extraction.
 
-Once installed, just say what you need:
+The source catalog currently includes **four hiring platforms and sixteen company career sites**. Availability varies; check the status shown in the app.
 
-```text
-Use my local resume at ~/Documents/resume.pdf to find AI application
-engineer roles in Shanghai, 20K+.
-```
+## Get started
 
-### Option 2: manual (about 1 minute)
-
-Install the local runtime once (Python 3.11+):
+This project is currently a **macOS desktop development build**. To run from source, install Git, Python 3.11+ and Node.js/npm:
 
 ```bash
-curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
+git clone https://github.com/russeell/jobfindsme.git
+cd jobfindsme
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev,browser]"
+
+cd apps/desktop
+npm ci
+npm run build
+npm start
 ```
 
-Wire the MCP config to your Agent, then restart it:
+Open **Settings → Job sources** from the bottom of the sidebar, choose sources, and sign in where needed. Enter a keyword on **Find jobs**; its small **Add resume / Resume** button opens resume maintenance without leaving the search. Open a result to read the original listing, save it or research its reputation.
 
-```bash
-jobfindsme connect             # auto-detect the current Agent (recommended)
-jobfindsme connect claude      # Claude Code
-jobfindsme connect codex       # Codex
-jobfindsme connect cursor      # Cursor
-```
+The app defaults to `.venv/bin/python`. Set `JFM_PYTHON` to use another interpreter.
 
-Other MCP clients: `jobfindsme config` prints the standard JSON to paste, or
-`jobfindsme connect --path <file>` writes it directly. The `.mcp.json` at the
-repo root is the same standard config.
+## Things to know
 
-Self-check, then start:
+- **Source support is still evolving.** Zhilian's authenticated retrieval has outstanding verification work, and Alibaba job details have known access issues. See the [current status](docs/desktop/HANDOFF.md).
+- **Scheduled searches are disabled.** Plans do not run or catch up automatically, and new plans cannot be created or resumed. Historical plans and run records remain stored locally.
+- **Local storage is not fully offline operation.** Records, resumes and reports are stored locally. Website searches need network access. Ordinary job search and research do not automatically call a paid model. A free-form question is used as a public web search term; do not include private information.
+- **Public accounts are not established facts.** JobFindsMe organizes public information and links without guaranteeing its truth, completeness or representativeness. It does not rate or recommend companies or jobs. Consider the team, role, date and original context.
 
-```bash
-jobfindsme doctor
-```
+## For contributors
 
-The full resume is parsed by the local Core. Pass only its path to `setup` —
-the agent must never read the whole file into the conversation.
+The desktop uses **Electron, React and TypeScript**; local services and storage use **Python and SQLite**.
 
-BOSS直聘 needs a login: tell your agent "帮我登录 BOSS直聘" / "log in to BOSS".
-It opens a dedicated Chrome window; scan the QR code once and keep the window
-running. Skip this and the other sources still work.
+[Directory map](docs/desktop/STRUCTURE.md) · [Architecture](docs/desktop/TECHNICAL.md) · [Development](docs/desktop/DEVELOPMENT.md) · [Contributing](CONTRIBUTING.md)
 
-### Native plugins (Codex / Claude Code)
+Existing CLI/MCP users can consult the [compatibility documentation](docs/legacy/README.en.md). Those interfaces are not required to use the desktop app.
 
-One command installs the Skill + MCP config (the installer prints these at the end):
-
-```bash
-codex plugin marketplace add russeell/jobfindsme --ref main
-codex plugin add jobfindsme@jobfindsme
-```
-
-```bash
-claude plugin marketplace add russeell/jobfindsme
-claude plugin install jobfindsme@jobfindsme
-```
-
-### Works with
-
-Claude Code · Codex · Cursor · any MCP-compatible client — one standard MCP
-config + one Skill serves them all.
-
----
-
-## ✨ Capabilities
-
-| Capability | What it means |
-|---|---|
-| One-sentence search | Agent calls the local MCP server; search config and results come back automatically |
-| Four sources | BOSS直聘, 猎聘, 智联招聘, 前程无忧; failures are labeled, never hidden |
-| Resume matching | Local PDF/MD/TXT parsing; ranks by skills, experience, education signals |
-| Fact-grounded output | Server returns bounded structured facts + a compact three-layer summary; the agent organizes the final wording |
-| Incremental radar | Detects new, changed, reopened, closed jobs — no repeat recommendations |
-| State memory | Save, applied, ignored; applied jobs are never re-suggested |
-| Local-first | No model API key; resume and state stay in local SQLite |
-
-### Evidence, not claims
-
-| Release gate | Current result |
-|---|---:|
-| Python tests | 334 passing |
-| Clean install + Cursor setup | 12 seconds |
-| Agent behavior contract | 0/9 without the Skill, 9/9 with it |
-| Wheel smoke test | CLI, SQLite migrations, and all 5 MCP tools pass end to end |
-
-Live availability changes with platform controls and local login state.
-jobfindsme never presents cache or a blocked response as fresh data; every
-search returns per-source diagnostics. See the latest
-[four-source search report](evaluation/evidence/latest_four_source_search.md).
-
----
-
-## 💬 Use
-
-Copy and adjust:
-
-```text
-# Find jobs
-Use jobfindsme with ~/Documents/resume.pdf to find Beijing large-model
-application engineer roles, 30K+, experienced hiring.
-
-# Scheduled push
-With a scheduled-task Agent, push only new jobs to me every morning at 9.
-
-# History
-Which jobs have I seen? Which have I applied to?
-
-# New only
-Keep finding jobs — only ones I haven't seen.
-
-# Live only
-Search again using live results only; do not use cache.
-
-# Change conditions
-Switch city to Shenzhen, salary floor to 25K, and search again.
-
-# Manage state
-Mark job #2 as applied; ignore all staffing-agency companies.
-```
-
----
-
-## 📦 Results
-
-The Server decides job facts, filtering, ranking, evidence, and apply links; the
-agent builds the final answer from those facts. Each result returns bounded
-structured facts (`structuredContent.jobs`) plus a compact three-layer summary
-(search summary / recommended jobs / status and next actions). Headings are not
-a verbatim protocol; the Agent may adapt wording and layout but must not change
-facts, evidence, risks, source status, or links:
-
-```text
-AI应用工程师（Agent开发）｜示例科技｜上海｜社招｜正式｜25-40K
-条件状态：已确认项通过；未确认项见下方
-证据匹配：86/100（高）；证据覆盖：90%（均非录用概率）
-技能：RAG、Agent、MCP ｜ 经验：1-3年 ｜ 学历：本科
-
-投递链接：https://example.com/jobs/123
-
-推荐理由：简历技能命中：RAG、Agent、MCP；综合匹配度为 92%；薪资信息明确。
-需要注意：JD 要求 Kubernetes，简历中未找到直接证据
-```
-
-Each recommendation should preserve the **fact line, direct apply link, and
-reason**. With a resume, the Server also returns a deterministic score and
-evidence; without one, it only applies explicit constraints and does not invent
-an evidence score and evidence coverage. Hard constraints are pass/conflict/
-unknown and are not points. The 0–100 score uses observable role, skill,
-experience, education, and liveness evidence; sparse JDs remain low-coverage.
-Without a resume, no score is fabricated. Missing track, employment type,
-experience, or salary remains unknown rather than being guessed.
-The summary separates fully verified jobs from candidates with unknown hard
-constraints. An explicit no-cache request is enforced inside Core before
-matching; the Agent does not remove cached jobs after the fact.
-
----
-
-## 🌐 Sources
-
-Four source paths are maintained — **BOSS直聘**, **猎聘 (Liepin)**,
-**智联招聘**, and **前程无忧**. The project prioritizes reliable, useful
-results over an inflated connector count and never claims complete coverage.
-
-| Source | Method | Speed | Browser needed? |
-|---|---|---|---|
-| **BOSS直聘** | authorized local Chrome session, time-labeled cache fallback | login-dependent | yes |
-| **猎聘** | public Web JSON listing, bounded detail enrichment | usually sub-second | no for listings |
-| **智联招聘** | rendered cards from the public search page in local Chrome | usually 2-4s | yes, no login required |
-| **前程无忧** | public Web JSON requested from its local-Chrome page context | usually 2-5s | yes, no login required |
-
-智联's legacy JSON endpoint can return a risk-controlled empty envelope while
-the public page still contains jobs. 51job validates the browser execution
-environment around its JSON endpoint. The maintained paths therefore reuse
-the isolated Chrome started by `jobfindsme setup`: rendered public cards for
-智联 and a same-origin page request for 51job. No CAPTCHA is bypassed and the
-personal Chrome profile is not read. Failures remain explicit and isolated.
-
-Connectors are pluggable; US/EU sources (Indeed, LinkedIn Jobs, …) are the
-next frontier on the [roadmap](#-roadmap).
-
----
-
-## ⚙️ How it works
-
-```text
-Agent (Claude / GPT / Qwen / WorkBuddy — interaction and follow-up talk)
-  → MCP Server (local stdio)
-  → Local Core
-      → pure HTTP (猎聘)
-      → local Chrome CDP (BOSS login; 智联 public page; 51job public-page API)
-      → live mode: bounded concurrent refresh; one failing source never blocks others
-  → normalize → cross-source dedup → hard filter (city/salary/track/type)
-  → signal extraction + weighted coarse rank (skills/experience/education/liveness/salary)
-  → incremental radar (new / changed / reopened / closed)
-  → Server returns bounded facts + a compact three-layer summary; the agent composes
-    the answer from the facts (never inventing or dropping apply URLs)
-```
-
-The MCP Server owns hard filtering, structured signal extraction,
-deterministic ranking, and the factual baseline. The agent owns natural
-language; deeper comparison happens only when you ask, using the returned
-evidence — never inventing facts or rewriting apply URLs.
-
-Resume profile, preferences, jobs, and tracking state live in local SQLite. Core needs no
-model API.
-
----
-
-## 🔒 Privacy & safety
-
-- jobfindsme does not require the full resume to be sent to the Agent; with the built-in Skill, the Agent passes only the local path to Core;
-- job descriptions are untrusted external data, never instructions;
-- exports write to local files; deletion uses a preview + confirmation-token protocol;
-- no auto-apply, no CAPTCHA bypass, no claim of full market coverage.
-
----
-
-## 🔧 Install & maintenance
-
-**Update**: re-run the installer; the database migrates automatically and
-history/state are kept:
-
-```bash
-curl -fsSL https://github.com/russeell/jobfindsme/releases/latest/download/install.sh | bash
-```
-
-**Manual install** (when the script is unavailable): create a venv and install
-the wheel from the [latest release](https://github.com/russeell/jobfindsme/releases/latest)
-(`jobfindsme-X.Y.Z-py3-none-any.whl`):
-
-```bash
-python3 -m venv ~/.jobfindsme/runtime
-~/.jobfindsme/runtime/bin/python -m pip install --upgrade \
-  "jobfindsme[browser] @ <latest wheel URL from releases/latest>"
-```
-
-**Uninstall**: `jobfindsme uninstall <host>` removes only the agent config,
-never your data. To wipe everything, export first, then `rm -rf ~/.jobfindsme`.
-
----
-
-## ❓ FAQ
-
-**Q: Do all platforms need a login?**
-Only BOSS (scan once; the local login state is reused). 猎聘 works over pure
-HTTP with no browser.
-
-**Q: Will my account get banned?**
-This is low-frequency, human-paced reading — no bulk crawling, no auto-action.
-Automated access is a gray area in platform terms, so account limits are
-possible; use it personally at your own risk.
-
-**Q: Why zero results / one platform is empty?**
-Run `jobfindsme doctor`. BOSS checks the local Chrome and login state; 猎聘
-checks the HTTP path. Degraded or failed sources are labeled explicitly —
-never silently presented as "no jobs".
-
-**Q: Is my resume uploaded?**
-jobfindsme parses it locally into structured facts. With the built-in Skill, the
-Agent passes only the local path; the full resume does not need to enter the
-Agent context. `jobfindsme export` / `delete_local_data` export and clear data
-on demand.
-
-**Q: What's the difference from just asking an AI to search?**
-A generic agent has no platform access, no cross-day dedup or state memory,
-and no stable PDF-to-facts parsing. jobfindsme makes those three things a
-deterministic local service; the agent only talks.
-
-**Q: Install taking more than 5 minutes?**
-Stop it, keep the last output, and file an Issue. Do not let the agent clone
-the repo, install dev dependencies, or download a whole browser to "fix" it.
-
----
-
-## 🛣️ Roadmap
-
-Direction, not commitments:
-
-1. Stabilize the four Chinese sources (real-world availability over connector count);
-2. Pluggable US/EU connectors (Indeed, LinkedIn Jobs, …) with the same gates;
-3. Follow-up reminders (3/7/14 days after applying) and job-health signals
-   (ghost-job detection) as local, deterministic features;
-4. Scheduling/notification stays with the host agent — never auto-apply.
-
----
-
-## 🛠 Development
-
-```bash
-python -m pip install -e ".[dev]"
-python -m pytest
-ruff check . && ruff format --check .
-```
-
-Architecture, source gates, and the evaluation loop: [architecture](docs/architecture.md),
-[connectors](docs/connectors.md), [evaluation](docs/evaluation.md); the full
-engineering spec lives in `docs/internal/project_spec.md`. Report mis-ranked,
-duplicated, or dead links via a sanitized
-[Issue](https://github.com/russeell/jobfindsme/issues).
-
----
-
-## ⚖️ Disclaimer
-
-- Free, open-source personal tooling that organizes job info you are already
-  logged in and entitled to see;
-- automated access may trigger platform risk controls; account limits are the
-  user's own responsibility;
-- no commercial resale, bulk crawling, or CAPTCHA bypass;
-- platform pages change; a source may break — report it via Issue.
-
----
-
-## 📄 License
-
-[MIT](LICENSE)
+[Security](SECURITY.md) · [MIT License](LICENSE)

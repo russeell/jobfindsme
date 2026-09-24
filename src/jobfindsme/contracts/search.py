@@ -127,6 +127,20 @@ class SearchRefreshMode(StrEnum):
     CACHE = "cache"
 
 
+class ResponseMode(StrEnum):
+    """How much server-rendered prose accompanies the bounded facts.
+
+    SUMMARY keeps the compact three-layer Chinese summary — the conversational
+    default, and what the canonical Skill is validated against.  FACTS returns
+    the same ``structuredContent.jobs`` with no recommendations, advice, or
+    next-step suggestions, so a programmatic caller renders its own output
+    instead of relaying server-authored prose.
+    """
+
+    SUMMARY = "summary"
+    FACTS = "facts"
+
+
 class SearchRunDiagnostics(StrictModel):
     """Machine-generated timings and counts for one end-to-end search."""
 

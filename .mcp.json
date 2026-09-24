@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "jobfindsme": {
+    "agent-job-search": {
       "command": "bash",
       "args": [
         "-lc",
-        "exec \"${JOBFINDSME_PYTHON:-$HOME/.jobfindsme/runtime/bin/python}\" -m jobfindsme.mcp"
+        "exec \"${AGENT_JOB_SEARCH_PYTHON:-$HOME/.agent-job-search/runtime/bin/python}\" -m jobfindsme.mcp"
       ]
     }
   }

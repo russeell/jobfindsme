@@ -13,7 +13,7 @@ page, not an authoritative full snapshot:
 ## BOSS直聘 (Chrome CDP)
 
 - Requires a user-authorized local Chrome session started by
-  `jobfindsme setup` (dedicated profile, port 9222).
+  `agent-job-search setup` (dedicated profile, port 9222).
 - The connector never touches the user's personal Chrome profile;
   it only manages its own process (PID file, reachability probe).
 - Search results are fetched by injecting `resources/connectors/boss_fetch.js`
@@ -21,7 +21,7 @@ page, not an authoritative full snapshot:
   listing fields plus what the card exposes; the JD body is not guaranteed
   to be complete, so matching also relies on title/card signals.
 - A 401/403 response is reported as `authentication_required` — the
-  recovery action is `jobfindsme setup` and re-login.
+  recovery action is `agent-job-search setup` and re-login.
 
 ## 猎聘 (pure HTTP)
 
@@ -43,7 +43,7 @@ page, not an authoritative full snapshot:
   browser execution environment. The connector first navigates to the real
   public search page, then performs the same-origin JSON request with the
   current public parameters (`api_key`, timestamp, source, and scene).
-- Both use the isolated, user-authorized Chrome started by `jobfindsme setup`.
+- Both use the isolated Chrome started by `agent-job-search setup`.
   They do not require login in the normal public flow, bypass CAPTCHAs, or read
   the user's personal Chrome profile.
 - Empty or challenged responses are failures, never silently interpreted as

@@ -3,7 +3,7 @@
 Run a real search, dump the result to CSV, then manually sample the same
 query on BOSS直聘 / 猎聘 (top 30-50) and mark:
 
-    平台有，jobfindsme 没抓到        -> coverage gap
+    平台有，Agent Job Search 没抓到  -> coverage gap
     抓到了，但被 filter 错杀         -> filter gap
     留下来了，但 rank 太低           -> ranking gap
 

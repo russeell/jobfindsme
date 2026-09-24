@@ -164,3 +164,28 @@ def test_liepin_flag_not_one_is_blocked() -> None:
         LiepinPureHttpConnector(
             "Python", policy=_policy(), session_factory=lambda: session
         ).fetch()
+
+
+def test_liepin_exposes_real_page_number_and_continuation() -> None:
+    payload = _liepin_cards()
+    template = payload["data"]["data"]["jobCardList"][0]
+    payload["data"]["data"]["jobCardList"] = [
+        {
+            "job": {**template["job"], "jobId": str(index), "title": f"岗位 {index}"},
+            "comp": template["comp"],
+        }
+        for index in range(40)
+    ]
+    session = FakeSession(
+        get_responses=[FakeResponse(text="landing")],
+        post_responses=[FakeResponse(json_data=payload)],
+        set_cookies_on_get={"XSRF-TOKEN": "t"},
+    )
+    records, next_page = LiepinPureHttpConnector(
+        "Python", policy=_policy(), session_factory=lambda: session
+    ).fetch_page(3)
+
+    assert len(records) == 40
+    assert next_page == 4
+    form = session.post_calls[0]["json"]["data"]["mainSearchPcConditionForm"]
+    assert form["currentPage"] == 3

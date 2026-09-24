@@ -1,4 +1,9 @@
 .DS_Store
+.development-archive/
+apps/desktop/release/
+apps/desktop/runtime/python/
+build/jobfindsme-api/
+dist/jobfindsme-api/
 .venv/
 __pycache__/
 *.py[cod]
@@ -6,9 +11,15 @@ __pycache__/
 .ruff_cache/
 .coverage
 dist/
+dist-electron/
 build/
+node_modules/
 *.egg-info/
 .jobfindsme/
+.env
+.env.*
+!.env.example
+!.env.sample
 uv.lock
 
 # Generated evaluation outputs — regenerated on demand, not committed

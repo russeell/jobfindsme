@@ -21,6 +21,25 @@ def test_self_update_selects_prebuilt_release_wheel() -> None:
     assert url == "https://example.com/jobfindsme.whl"
 
 
+def test_self_update_prefers_renamed_release_wheel() -> None:
+    url = _select_release_wheel(
+        {
+            "assets": [
+                {
+                    "name": "jobfindsme-0.13.0-py3-none-any.whl",
+                    "browser_download_url": "https://example.com/legacy.whl",
+                },
+                {
+                    "name": "agent_job_search-0.13.0-py3-none-any.whl",
+                    "browser_download_url": "https://example.com/current.whl",
+                },
+            ]
+        }
+    )
+
+    assert url == "https://example.com/current.whl"
+
+
 def test_fetch_latest_release_uses_certifi_ssl_context(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -50,7 +69,7 @@ def test_fetch_latest_release_uses_certifi_ssl_context(monkeypatch) -> None:
     assert captured["context"].verify_mode == ssl.CERT_REQUIRED
     assert (
         captured["request"].full_url
-        == "https://api.github.com/repos/russeell/jobfindsme/releases/latest"
+        == "https://api.github.com/repos/russeell/agent-job-search/releases/latest"
     )
 
 

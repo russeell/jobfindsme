@@ -1,0 +1,92 @@
+{
+  "samples": [
+    {
+      "mode": "website",
+      "width": 1240,
+      "box": {
+        "x": 680.5,
+        "y": 131.75,
+        "width": 470,
+        "height": 220.875
+      }
+    },
+    {
+      "mode": "website",
+      "width": 860,
+      "box": {
+        "x": 293.5,
+        "y": 173.75,
+        "width": 470,
+        "height": 220.875
+      }
+    },
+    {
+      "mode": "search",
+      "width": 1240,
+      "box": {
+        "x": 680.5,
+        "y": 131.75,
+        "width": 470,
+        "height": 250.75
+      },
+      "engine": {
+        "x": 700.5,
+        "y": 326.5,
+        "width": 160,
+        "height": 36
+      },
+      "button": {
+        "x": 1034.5,
+        "y": 324.5,
+        "width": 96,
+        "height": 38
+      }
+    },
+    {
+      "mode": "search",
+      "width": 860,
+      "box": {
+        "x": 293.5,
+        "y": 173.75,
+        "width": 470,
+        "height": 250.75
+      },
+      "engine": {
+        "x": 313.5,
+        "y": 368.5,
+        "width": 160,
+        "height": 36
+      },
+      "button": {
+        "x": 647.5,
+        "y": 366.5,
+        "width": 96,
+        "height": 38
+      }
+    }
+  ],
+  "requests": [
+    {
+      "sourceId": "company_01",
+      "url": "https://careers.tencent.com/"
+    },
+    {
+      "sourceId": "web",
+      "url": "https://www.google.com/search?q=AI+%E5%B7%A5%E7%A8%8B%E5%B8%88+C%2B%2B+%26+%E8%BF%9C%E7%A8%8B"
+    },
+    {
+      "sourceId": "company_01",
+      "url": "https://careers.tencent.com/"
+    },
+    {
+      "sourceId": "web",
+      "url": "https://www.bing.com/search?q=%E8%85%BE%E8%AE%AF%E6%8B%9B%E8%81%98"
+    },
+    {
+      "sourceId": "web",
+      "url": "https://example.com/"
+    }
+  ],
+  "scopeFixture": "legacy-like localStorage keys plus a live selected Tencent website; neither adds site: to search",
+  "network": "open IPC captured for deterministic UI checks; no external pages requested"
+}

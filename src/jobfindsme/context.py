@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from jobfindsme.contracts import SearchPlan, Workspace
-from jobfindsme.search_plans import SearchPlanService
+from jobfindsme.search.plans import SearchPlanService
 from jobfindsme.storage import Database
 from jobfindsme.workspaces import WorkspaceService
 
@@ -42,7 +42,9 @@ class ActiveContextService:
                 pass
 
         existing = self.workspaces.list()
-        workspace = existing[0] if existing else self.workspaces.create("jobfindsme")
+        workspace = (
+            existing[0] if existing else self.workspaces.create("Agent Job Search")
+        )
         self.activate(workspace_id=workspace.workspace_id)
         return workspace
 

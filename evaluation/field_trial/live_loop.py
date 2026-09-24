@@ -23,6 +23,7 @@ from evaluation.datasets.labels import (
     write_daily_template,
 )
 from jobfindsme.app import jobfindsmecore
+from jobfindsme.branding import data_root, database_path
 from jobfindsme.contracts import (
     EmploymentType,
     RecruitmentTrack,
@@ -97,7 +98,7 @@ def run_live_search_loop(
         refresh_mode=SearchRefreshMode.FULL,
         limit=limit,
     )
-    from jobfindsme.matching import score_signals
+    from jobfindsme.search.matching import score_signals
 
     # The server owns deterministic JobMatch scores. Report the
     # deterministic signal score so averages have operational meaning.
@@ -216,7 +217,7 @@ def main() -> int:
     parser.add_argument(
         "--db",
         type=Path,
-        default=Path("~/.jobfindsme/data/jobfindsme.db").expanduser(),
+        default=database_path(),
     )
     parser.add_argument("--agent-host", default="manual")
     parser.add_argument("--limit", type=int, default=10)
@@ -233,7 +234,8 @@ def main() -> int:
         limit=args.limit,
     )
     output = args.output or (
-        Path("~/.jobfindsme/reports").expanduser()
+        data_root()
+        / "reports"
         / f"{report.generated_at:%Y%m%dT%H%M%SZ}-{report.run_id}.json"
     )
     write_loop_report(output, report)

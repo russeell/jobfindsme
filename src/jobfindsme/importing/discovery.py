@@ -20,7 +20,7 @@ from jobfindsme.contracts import (
 from jobfindsme.importing.parsers import parse_csv, parse_json
 from jobfindsme.importing.repository import JobRepository
 from jobfindsme.importing.service import ImportSummary, JobImportService
-from jobfindsme.source_subscriptions import SourceSubscriptionService
+from jobfindsme.sources.subscriptions import SourceSubscriptionService
 
 _log = logging.getLogger(__name__)
 

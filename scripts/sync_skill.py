@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CANONICAL = ROOT / "skills" / "jobfindsme" / "SKILL.md"
-PACKAGED = ROOT / "src" / "jobfindsme" / "resources" / "jobfindsme" / "SKILL.md"
+CANONICAL = ROOT / "skills" / "agent-job-search" / "SKILL.md"
+PACKAGED = ROOT / "src" / "jobfindsme" / "resources" / "agent_job_search" / "SKILL.md"
 
 
 def sync(*, check: bool) -> bool:
@@ -27,7 +27,7 @@ def main() -> int:
     if sync(check=args.check):
         return 0
     print(
-        "packaged SKILL.md differs from skills/jobfindsme/SKILL.md; "
+        "packaged SKILL.md differs from skills/agent-job-search/SKILL.md; "
         "run python3 scripts/sync_skill.py",
         file=sys.stderr,
     )
