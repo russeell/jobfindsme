@@ -1,4 +1,37 @@
-# D47 目录归组与有限清理
+# 项目目录与职责
+
+## 当前目录（2026-09-25）
+
+```text
+apps/desktop/
+├── main/                  # index.ts + backend/browser/security/sources
+├── renderer/src/
+│   ├── search/            # 找工作、筛选和岗位操作
+│   ├── research/          # 岗位研究、证据与报告
+│   ├── resume/            # 找工作页内的简历维护弹窗
+│   ├── settings/          # 模型预设（设置布局目前在 App.tsx）
+│   ├── shared/            # 通用组件和浏览器工作区
+│   └── App.tsx            # 页面组装；main.tsx、styles.css、theme.css 同级
+├── shared/                # IPC 契约与跨进程共用纯函数
+├── preload/               # 受限桥接
+└── public/ scripts/ tests/
+src/jobfindsme/
+├── desktop_api/           # 本地 API
+├── search/ sources/ connectors/
+├── research/ profiles/ resume_editor/
+├── contracts/ importing/ models/
+├── migrations/ resources/
+├── scheduler/ mcp/ presentation/  # 历史兼容与现有外部入口
+└── storage.py privacy.py workspaces.py app.py cli.py ...
+tests/ evaluation/ scripts/
+docs/desktop/ images/ internal/ legacy/
+skills/ .agents/ .github/
+```
+
+同一业务代码留在已有功能目录；App.tsx/main/index.ts 不借清理拆分。
+`doctor.py`、`installer.py` 是有效模块，同名空目录已移除。
+停用功能的历史数据读取与仍生效的 CLI/CI 依赖不按文件名直接删除。
+此次磁盘残留清单与验证见 [D56](evidence/D56.md)。D47 以下内容为历史迁移记录。
 
 ## 范围与验收
 
