@@ -26,3 +26,13 @@ test('IPC question contract accepts 300, 301 and 700 characters but rejects 701'
  for(const size of [300,301,700])assert.equal(validResearchChatInput({...base,question:'问'.repeat(size)}),true);
  assert.equal(validResearchChatInput({...base,question:'问'.repeat(701)}),false);
 });
+
+test('more than 200 short saved turns remain complete while IPC receives the latest 200',()=>{
+ const full=Array.from({length:220},(_,index)=>({role:index%2?'assistant':'user',text:`turn ${index}`}));
+ const model=modelHistoryWithinBudget(full);
+ assert.equal(full.length,220);
+ assert.equal(model.length,200);
+ assert.deepEqual(model[0],full[20]);
+ const input={request_id:'request-1234',session_id:'session-1234',workspace_id:'workspace-1',connection_id:'model-1',question:'继续追问',research:false,history:model};
+ assert.equal(validResearchChatInput(input),true);
+});

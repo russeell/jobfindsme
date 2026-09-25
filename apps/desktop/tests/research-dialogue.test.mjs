@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 
 test('explicit company needs no link, while ambiguous research asks in the conversation',()=>{
@@ -72,4 +73,21 @@ test('A and B history selection binds the next turn to the selected session',()=
  assert.equal(chosen.decision.kind,'research');assert.equal(chosen.decision.company,'B公司');assert.equal(chosen.activeJobId,'job-b');assert.equal(chosen.current?.id,'b');
  const switched=resolveResearchSession('A公司的经营如何？',b,undefined,{});
  assert.equal(switched.newSubject,true);assert.equal(switched.current,undefined);assert.equal(switched.activeJobId,undefined);
+});
+
+test('toStored fixture preserves a long answer and migration verifies the backend readback',async()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../../../tests/fixtures/research_chat_to_stored.json',import.meta.url),'utf8'));
+ const local={id:fixture.id,title:'示例公司研究',updatedAt:'2026-09-25T00:00:00Z',turns:fixture.turns,reportIds:fixture.report_ids,subjectCompany:fixture.subject_company,subjectTitle:fixture.subject_title,jobId:fixture.job_id,researchMode:fixture.research_mode};
+ assert.deepEqual(JSON.parse(JSON.stringify(toStoredResearchChat('workspace-fixture',local))),fixture);
+ assert(local.turns[1].text.length>8000);
+ const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
+ assert.equal(saveResearchChats('workspace-fixture',[local]),true);
+ const saved=[];
+ const save=async item=>{saved.push(item);};
+ const list=async()=>saved.map(item=>({...item,updated_at:'2026-09-26T00:00:00Z'}));
+ const migrated=await migrateResearchChats('workspace-fixture',[local],[],save,list);
+ assert.equal(migrated[0].turns[1].text,local.turns[1].text);
+ await assert.rejects(migrateResearchChats('workspace-fixture',[local],[],save,async()=>[{...saved.at(-1),turns:[saved.at(-1).turns[0]],updated_at:'2026-09-26T00:00:00Z'}]),/读回不一致/);
+ assert.equal(local.turns[1].text.length,fixture.turns[1].text.length);
+ assert.equal(loadResearchChats('workspace-fixture')[0].turns[1].text,local.turns[1].text);
 });

@@ -4,6 +4,7 @@ import type {ResearchChatTurn} from "./contracts";
 export function modelHistoryWithinBudget(history:ResearchChatTurn[],maxChars=20000):ResearchChatTurn[]{
   const selected:ResearchChatTurn[]=[];let used=0;
   for(let index=history.length-1;index>=0;index--){
+    if(selected.length>=200)break;
     const turn=history[index],text=turn.text.slice(-8000),remaining=maxChars-used;
     if(remaining<=0)break;
     if(text.length>remaining){if(!selected.length)selected.unshift({...turn,text:text.slice(-remaining)});break;}

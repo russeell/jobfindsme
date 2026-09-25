@@ -98,7 +98,12 @@ class ResearchAgentStore:
     def save_conversation(self, workspace_id: str, item: dict) -> dict:
         conversation_id = str(item["id"])
         turns = item.get("turns") or []
-        if not conversation_id or len(conversation_id) > 100 or len(turns) > 200:
+        if (
+            not conversation_id
+            or len(conversation_id) > 100
+            or not isinstance(turns, list)
+            or len(turns) > 1000
+        ):
             raise ValueError("invalid conversation")
         if item.get("draft") and len(str(item["draft"])) > 700:
             raise ValueError("conversation draft exceeds 700 characters")
@@ -106,10 +111,13 @@ class ResearchAgentStore:
             not isinstance(turn, dict)
             or turn.get("role") not in {"user", "assistant"}
             or not isinstance(turn.get("text"), str)
-            or len(turn["text"]) > 8000
+            or len(turn["text"]) > 100000
             for turn in turns
         ):
             raise ValueError("invalid conversation turn")
+        turns_json = json.dumps(turns, ensure_ascii=False)
+        if len(turns_json.encode("utf-8")) > 16_000_000:
+            raise ValueError("conversation exceeds 16 MB storage limit")
         context = {
             "company": str(item.get("subject_company") or "")[:300],
             "title": str(item.get("subject_title") or "")[:300],
@@ -143,7 +151,7 @@ class ResearchAgentStore:
                     workspace_id,
                     str(item.get("subject_key") or "")[:300],
                     json.dumps(context, ensure_ascii=False),
-                    json.dumps(turns, ensure_ascii=False),
+                    turns_json,
                     json.dumps(reports),
                     str(item["draft"]) if item.get("draft") else None,
                     json.dumps(item["pending"], ensure_ascii=False)

@@ -1,4 +1,6 @@
+import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -84,6 +86,63 @@ def test_long_conversation_and_binding_round_trip_without_truncation(tmp_path):
         store.save_conversation(
             workspace, {"id": "too-long", "turns": [], "draft": "问" * 701}
         )
+
+
+def test_frontend_stored_payload_round_trips_220_turns_via_api_after_restart(tmp_path):
+    fixture = json.loads(
+        (
+            Path(__file__).parents[1] / "fixtures" / "research_chat_to_stored.json"
+        ).read_text(encoding="utf-8")
+    )
+    store, workspace = setup_store(tmp_path)
+    turns = []
+    for index in range(110):
+        turns.append({"role": "user", "text": f"第{index}轮：示例公司研发如何？"})
+        turns.append(
+            {
+                "role": "assistant",
+                "text": f"第{index}轮：" + fixture["turns"][1]["text"],
+            }
+        )
+    payload = {**fixture, "workspace_id": workspace, "turns": turns}
+    client = TestClient(
+        create_app(token="test-secret", database_path=store.database.path)
+    )
+    response = client.put(
+        "/v1/research-agent/conversations",
+        headers={"Authorization": "Bearer test-secret"},
+        json=payload,
+    )
+    assert response.status_code == 200, response.text
+    assert len(turns) > 200
+    assert all(len(turns[index]["text"]) > 8000 for index in range(1, 30, 2))
+    reopened = TestClient(
+        create_app(token="test-secret", database_path=store.database.path)
+    )
+    listed = reopened.get(
+        "/v1/research-agent/conversations",
+        headers={"Authorization": "Bearer test-secret"},
+        params={"workspace_id": workspace},
+    )
+    assert listed.status_code == 200
+    saved = listed.json()[0]
+    assert saved["turns"] == turns
+    assert saved["job_id"] == fixture["job_id"]
+    assert saved["subject_company"] == fixture["subject_company"]
+    assert saved["research_mode"] is True
+
+
+def test_conversation_storage_rejects_oversize_payload_without_truncation(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    with pytest.raises(ValueError, match="16 MB"):
+        store.save_conversation(
+            workspace,
+            {
+                "id": "oversize",
+                "turns": [{"role": "assistant", "text": "x" * 95000}] * 175,
+            },
+        )
+    assert store.list_conversations(workspace) == []
 
 
 def test_research_question_boundary_is_700_across_python_request_and_report(tmp_path):

@@ -47,3 +47,34 @@ export function mergeResearchChats(local:SavedResearchChat[],remote:SavedResearc
   for(const chat of local){const stored=byId.get(chat.id);if(!stored||chat.turns.length>stored.turns.length||chat.turns.length===stored.turns.length&&chat.updatedAt>stored.updatedAt)byId.set(chat.id,chat);}
   return [...byId.values()].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,50);
 }
+
+export async function migrateResearchChats(
+  workspaceId:string,
+  local:SavedResearchChat[],
+  remote:SavedResearchChat[],
+  save:(item:Record<string,unknown>)=>Promise<unknown>,
+  list:()=>Promise<Array<Record<string,unknown>>>,
+):Promise<SavedResearchChat[]>{
+  const selected=mergeResearchChats(local,remote);
+  const remoteById=new Map(remote.map(chat=>[chat.id,chat]));
+  const pending=selected.filter(chat=>{
+    const stored=remoteById.get(chat.id);
+    return !stored||chat.turns.length>stored.turns.length||
+      chat.turns.length===stored.turns.length&&chat.updatedAt>stored.updatedAt;
+  });
+  if(!pending.length)return selected;
+  for(const chat of pending)await save(toStoredResearchChat(workspaceId,chat));
+  const verified=(await list()).map(fromStoredResearchChat);
+  for(const chat of pending){
+    const saved=verified.find(item=>item.id===chat.id);
+    if(!saved||JSON.stringify(saved.turns)!==JSON.stringify(chat.turns)||
+      (saved.jobId||undefined)!==(chat.jobId||undefined)||
+      (saved.subjectCompany||undefined)!==(chat.subjectCompany||undefined)||
+      (saved.subjectTitle||undefined)!==(chat.subjectTitle||undefined)||
+      Boolean(saved.researchMode)!==Boolean(chat.researchMode)||
+      saved.draft!==chat.draft||JSON.stringify(saved.reportIds)!==JSON.stringify(chat.reportIds)){
+      throw Error(`对话 ${chat.title} 写入后读回不一致`);
+    }
+  }
+  return mergeResearchChats(local,verified);
+}
