@@ -1,29 +1,38 @@
+<p align="center">
+  <img src="docs/images/logo.svg" width="80" height="80" alt="JobFindsMe logo">
+</p>
+<h1 align="center">JobFindsMe</h1>
+<p align="center"><strong>找岗位，读原文，做研究。</strong></p>
+<p align="center">检索 4 个招聘平台 + 16 家公司官网，带着简历找机会，带着证据做判断。</p>
+
+<p align="center">
+  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=27272a" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27272a?style=flat-square" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple_Silicon-27272a?style=flat-square" alt="macOS Apple Silicon">
+</p>
+
 <div align="center">
 
-# JobFindsMe
-
-**少切几个招聘网站，多了解一个好机会。**
-
-在一个桌面应用里，检索 **4 个招聘平台 + 16 家公司官网**，结合简历筛选岗位，继续研究公司与职位。
-
-[下载安装](https://github.com/russeell/jobfindsme/releases/latest) · [支持的来源](#支持的来源) · [开始使用](#开始使用) · [English](README.en.md)
-
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/russeell/jobfindsme)](https://github.com/russeell/jobfindsme/releases)
+[下载 macOS 版](https://github.com/russeell/jobfindsme/releases/latest) · [支持来源](#支持的来源) · [快速上手](#开始使用) · [English](README.en.md)
 
 </div>
 
-![JobFindsMe：岗位列表、职位详情与招聘原页并排查看](docs/images/jobfindsme-search.png)
+<br>
 
-*界面示例使用隔离测试数据。*
+<p align="center">
+  <img src="docs/images/jobfindsme-search.png" width="100%" alt="JobFindsMe — job search and details">
+</p>
+<p align="center"><sub>实际应用截图 · 隔离版本中的一次检索，岗位数量与来源状态仅代表截图时的结果。</sub></p>
 
-## 用它做什么
+## 从找到机会，到了解机会
 
-- **集中找岗位。** 输入岗位、技能或方向，选择来源与城市，在同一处查看结果，不用来回切换网站。
-- **带着简历找。** 导入并确认简历，让经历参与检索和匹配；也可以不上传简历，直接搜索。
-- **边看岗位，边看原文。** 职位详情与招聘原页并排显示，薪资、职责和要求回到原页面核对。
-- **聊清楚一家公司。** 输入公司名、岗位链接或具体问题，研究助手检索公开资料、读取原文，把回答和引用放在一起。
-- **留住看过的机会。** 收藏岗位、记录已读和投递状态，重开历史对话，继续之前的研究。
+<table>
+<tr>
+<td width="33%" valign="top"><h3>01 · 找到岗位</h3><p>按岗位、技能和城市检索多个招聘来源。也可以导入并确认简历，让经历参与匹配。</p></td>
+<td width="33%" valign="top"><h3>02 · 了解机会</h3><p>打开招聘原页，继续追问公司与职位。研究回答保留引用，没查到的信息明确说明。</p></td>
+<td width="33%" valign="top"><h3>03 · 留下进展</h3><p>收藏感兴趣的岗位，记录已读与投递状态。重开历史对话，接着上次的问题往下聊。</p></td>
+</tr>
+</table>
 
 ## 支持的来源
 
@@ -73,9 +82,10 @@
 >
 > 刚才的结论有哪些原文支持？还有哪些信息没有查到？
 
-![JobFindsMe：研究报告与来源引用](docs/images/jobfindsme-research.jpg)
-
-*合成报告示例。实际回答取决于可读取的来源与所选模型；没有证据的部分会说明未知。*
+<p align="center">
+  <img src="docs/images/jobfindsme-research.png" width="100%" alt="JobFindsMe — research conversation">
+</p>
+<p align="center"><sub>一个输入框，从公司、问题或岗位链接开始。选择模型后，即可发起对话。</sub></p>
 
 ## 数据与模型
 
@@ -83,7 +93,8 @@
 
 支持导入 PDF、DOCX、Markdown 和 TXT 简历，扫描 PDF 暂不支持 OCR。应用不会自动投递，定时检索目前停用。研究报告保留来源与引用，帮助你核对信息；来源可能过时，引用也不等于结论一定正确。
 
-## 从源码运行
+<details>
+<summary><strong>开发者 · 从源码运行</strong></summary>
 
 需要 Python 3.11+、Node.js/npm 和 Git。当前桌面开发流程以 macOS 为主。
 
@@ -100,6 +111,8 @@ npm start
 ```
 
 默认使用仓库内的 `.venv/bin/python`，其他解释器可通过 `JFM_PYTHON` 指定。
+
+</details>
 
 ## 参与开发
 

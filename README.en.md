@@ -1,29 +1,38 @@
+<p align="center">
+  <img src="docs/images/logo.svg" width="80" height="80" alt="JobFindsMe logo">
+</p>
+<h1 align="center">JobFindsMe</h1>
+<p align="center"><strong>Your job search, in one workspace.</strong></p>
+<p align="center">Search 4 recruiting platforms and 16 company career sites. Bring your resume. Keep the evidence.</p>
+
+<p align="center">
+  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=27272a" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27272a?style=flat-square" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/macOS-Apple_Silicon-27272a?style=flat-square" alt="macOS Apple Silicon">
+</p>
+
 <div align="center">
 
-# JobFindsMe
-
-**Spend less time switching job sites. Get to know your next opportunity.**
-
-Search **4 recruiting platforms + 16 company career sites**, find roles with your resume, and research companies in one desktop app.
-
-[Download](https://github.com/russeell/jobfindsme/releases/latest) · [Sources](#supported-sources) · [Get started](#get-started) · [简体中文](README.md)
-
-[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/russeell/jobfindsme)](https://github.com/russeell/jobfindsme/releases)
+[Download for macOS](https://github.com/russeell/jobfindsme/releases/latest) · [Sources](#supported-sources) · [Get started](#get-started) · [简体中文](README.md)
 
 </div>
 
-![Job results, details and original listings side by side](docs/images/jobfindsme-search.png)
+<br>
 
-*Interface example with isolated test data.*
+<p align="center">
+  <img src="docs/images/jobfindsme-search.png" width="100%" alt="JobFindsMe — job search and details">
+</p>
+<p align="center"><sub>Actual interface in an isolated build. Results and source availability reflect that session.</sub></p>
 
-## What you can do
+## From finding a role to understanding it
 
-- **Search in one place.** Choose sources, enter a role or skill, and filter by city without switching between websites.
-- **Use your resume.** Import and confirm your experience to inform searches and matching, or search without a resume.
-- **Read the original listing.** Keep the job description and recruiting page side by side to check responsibilities, requirements and pay.
-- **Research a company.** Ask a question or provide a job link. The assistant reads public material and brings answers and citations together.
-- **Keep your progress.** Save jobs, track read and application status, and reopen previous research conversations.
+<table>
+<tr>
+<td width="33%" valign="top"><h3>01 · Find</h3><p>Search by role, skill and city across recruiting platforms and company sites. Optionally use your confirmed resume to inform matching.</p></td>
+<td width="33%" valign="top"><h3>02 · Understand</h3><p>Read the original listing, ask about the company and follow research citations. Missing information stays unknown.</p></td>
+<td width="33%" valign="top"><h3>03 · Keep</h3><p>Save interesting roles, track read and application status, and return to earlier conversations without starting over.</p></td>
+</tr>
+</table>
 
 ## Supported sources
 
@@ -73,9 +82,10 @@ Try questions such as:
 >
 > Which sources support the previous answer, and what is still unknown?
 
-![Research report with source references](docs/images/jobfindsme-research.jpg)
-
-*Synthetic report example. Actual answers depend on readable sources and your chosen model; unsupported information is marked as unknown.*
+<p align="center">
+  <img src="docs/images/jobfindsme-research.png" width="100%" alt="JobFindsMe — research conversation">
+</p>
+<p align="center"><sub>Start a conversation with a company, a question or a job link. Select a model before sending.</sub></p>
 
 ## Data and models
 
@@ -83,7 +93,8 @@ Jobs, resumes, conversations and reports are stored locally. Model keys use syst
 
 Resume import supports PDF, DOCX, Markdown and TXT. Scanned PDFs do not have OCR support yet. The app does not submit applications automatically, and scheduled searches are currently disabled. Research keeps references for you to inspect; sources can be outdated, and a citation alone does not establish that a conclusion is correct.
 
-## Run from source
+<details>
+<summary><strong>Developers · Run from source</strong></summary>
 
 Requires Python 3.11+, Node.js/npm and Git. The current desktop development workflow primarily targets macOS.
 
@@ -100,6 +111,8 @@ npm start
 ```
 
 The app uses `.venv/bin/python` by default. Set `JFM_PYTHON` to use another interpreter.
+
+</details>
 
 ## Contribute
 
