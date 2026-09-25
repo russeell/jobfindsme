@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const desktopRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const projectRoot = path.resolve(desktopRoot, "../..");
-const electronApp = path.join(desktopRoot, "node_modules/electron/dist/Electron.app");
+const electronApp = process.env.JFM_ELECTRON_APP || path.join(desktopRoot, "node_modules/electron/dist/Electron.app");
 const pythonRuntime = path.join(desktopRoot, "runtime/python/jobfindsme-api");
 const previewBuild=process.env.JFM_PACKAGE_PREVIEW === "1";
 const buildInfo=JSON.parse(readFileSync(path.join(desktopRoot,"build-info.json"),"utf8"));
@@ -15,7 +15,7 @@ const previewUserData=process.env.JFM_PACKAGE_PREVIEW_USER_DATA || "jobfindsme-p
 if(!/^jobfindsme-preview-[a-zA-Z0-9_-]+$/.test(previewUserData))throw Error("invalid preview user data profile");
 const displayName=previewBuild?`JobFindsMe ${buildInfo.label} 测试版`:(process.env.JFM_PACKAGE_DISPLAY_NAME || "JobFindsMe");
 const bundleId=process.env.JFM_PACKAGE_BUNDLE_ID || (previewBuild?"com.jobfindsme.desktop.preview.d19":"com.jobfindsme.desktop");
-if(!/^com\.jobfindsme\.desktop(?:\.[a-z0-9-]+)+$/.test(bundleId))throw Error("invalid bundle id");
+if(!/^com\.jobfindsme\.desktop(?:\.[a-z0-9-]+)*$/.test(bundleId))throw Error("invalid bundle id");
 const output = process.env.JFM_PACKAGE_OUTPUT || path.join(desktopRoot, "release/mac-unpacked/JobFindsMe.app");
 const qaWidth=Number(process.env.JFM_QA_WINDOW_WIDTH||0),qaHeight=Number(process.env.JFM_QA_WINDOW_HEIGHT||0);
 const qaUserData=process.env.JFM_QA_USER_DATA,qaCaptures=process.env.JFM_QA_CAPTURE_DIR;
@@ -62,7 +62,7 @@ mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
-  JSON.stringify({ name: "jobfindsme-desktop", version: "0.1.0", jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, qa, main: "dist-electron/main/index.js" }),
+  JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, qa, main: "dist-electron/main/index.js" }),
 );
 mkdirSync(path.join(resources, "python"), { recursive: true });
 cpSync(pythonRuntime, path.join(resources, "python/jobfindsme-api"), { recursive:true, verbatimSymlinks:true });
