@@ -30,6 +30,8 @@ from jobfindsme.profiles.models import FactType, ResumeImportMode
 from jobfindsme.profiles.parser import ResumeExtractionError
 from jobfindsme.profiles.service import ProfileError, ProfileNotFoundError
 from jobfindsme.research import ResearchError, ResearchService
+from jobfindsme.research.agent_store import ResearchAgentStore
+from jobfindsme.research.agent_sources import discover_sources, read_original_page
 from jobfindsme.resume_editor import (
     PromptResumeEditor,
     PromptResumeError,
@@ -580,6 +582,7 @@ def create_app(
         core.profiles,
         research_evidence_search_override,
     )
+    research_agent_store = ResearchAgentStore(core.database)
     scheduler = LocalScheduler(core.database, clock=scheduler_clock_override)
     source_executor = BudgetedSourceExecutor()
     source_adapter_factory = source_adapter_factory_override or (
@@ -1865,6 +1868,66 @@ def create_app(
             raise HTTPException(status_code=404, detail="job not found") from error
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.get("/v1/research-agent/evidence", dependencies=[Depends(require_token)])
+    def find_agent_evidence(workspace_id: str, company: str) -> list[dict]:
+        try:
+            return research_agent_store.find_evidence(workspace_id, company)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.post("/v1/research-agent/search", dependencies=[Depends(require_token)])
+    def search_agent_sources(request: dict) -> list[dict]:
+        try:
+            research_agent_store.list_conversations(str(request["workspace_id"]))
+            return discover_sources(str(request["company"]), str(request.get("question") or ""), str(request["site"]))
+        except (KeyError, ValueError, LookupError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.post("/v1/research-agent/read-page", dependencies=[Depends(require_token)])
+    def read_agent_page(request: dict) -> dict:
+        try:
+            research_agent_store.list_conversations(str(request["workspace_id"]))
+            return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]))
+        except (KeyError, ValueError, LookupError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.get("/v1/research-agent/conversations", dependencies=[Depends(require_token)])
+    def list_agent_conversations(workspace_id: str) -> list[dict]:
+        try:
+            return research_agent_store.list_conversations(workspace_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.put("/v1/research-agent/conversations", dependencies=[Depends(require_token)])
+    def save_agent_conversation(request: dict) -> dict:
+        try:
+            return research_agent_store.save_conversation(str(request["workspace_id"]), request)
+        except (KeyError, ValueError, LookupError, PermissionError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.put("/v1/research-agent/executions", dependencies=[Depends(require_token)])
+    def save_agent_execution(request: dict) -> dict:
+        try:
+            return research_agent_store.save_execution(str(request["workspace_id"]), request)
+        except (KeyError, ValueError, LookupError, PermissionError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.post("/v1/research-agent/reports", dependencies=[Depends(require_token)])
+    def save_agent_report(request: dict) -> dict | None:
+        try:
+            workspace_id = str(request["workspace_id"])
+            report_id = research_agent_store.save_report(workspace_id, request)
+            return research.get_report(workspace_id=workspace_id, report_id=report_id) if report_id else None
+        except (KeyError, ValueError, LookupError, PermissionError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.get("/v1/research-agent/jobs/{job_id}", dependencies=[Depends(require_token)])
+    def read_agent_job(job_id: str, workspace_id: str) -> dict:
+        try:
+            return research.jobs.get(workspace_id=workspace_id, job_id=job_id).model_dump(mode="json")
+        except (LookupError, AttributeError) as error:
+            raise HTTPException(status_code=404, detail="job not found in workspace") from error
 
     @app.post(
         "/v1/research-runs",

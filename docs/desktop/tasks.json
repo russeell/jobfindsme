@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D63",
+  "current_task": "D64",
   "tasks": [
     {
       "id": "D01",
@@ -1797,6 +1797,17 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
+      "blocker": null
+    },
+    {
+      "id": "D64",
+      "title": "单循环研究 Agent 与证据报告验收",
+      "depends_on": ["D62"],
+      "status": "in_progress",
+      "scope": ["单对话输入与上下文澄清", "受限来源工具与预算", "可追溯证据及结构化陈述", "对话/执行/报告隔离持久化", "原生布局和回归"],
+      "acceptance": ["明确对象无需链接，歧义只在对话中追问", "证据足够可复用，新增实质证据才更新报告", "关键陈述须通过证据支持检查，失败与取消保留既有报告", "默认及窄窗原生界面可用"],
+      "verification": "合成模型和固定网页测试、相关 Python/Node 回归、隔离桌面测试包原生截图。",
+      "evidence": ["docs/desktop/HANDOFF.md"],
       "blocker": null
     }
   ]

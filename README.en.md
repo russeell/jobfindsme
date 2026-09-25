@@ -20,7 +20,7 @@ Save interesting roles and keep read and application states separate. Applicatio
 
 ### What does role research look like?
 
-Start from a selected job, with or without a question. Reports organize company and role findings; follow-ups save new versions while earlier reports remain available. Official disclosures and personal accounts are kept distinct.
+Ask about a company directly, start from a selected job with its original description, or paste a job link. Ambiguity is resolved in the conversation. After you select and test a model, the research Agent can reuse evidence, discover sources and read original pages. It saves a new report version only when it finds substantively new verifiable material. Official disclosures and personal accounts are kept distinct.
 
 ![JobFindsMe role research report with sectioned company findings and linked evidence](docs/images/jobfindsme-research.jpg)
 
@@ -54,7 +54,7 @@ The desktop uses the repository's `.venv/bin/python` by default. Set `JFM_PYTHON
 
 - The catalog contains **four hiring platforms and sixteen company career sites**. A site opening in the browser does not mean automated search works. Login, listing, pagination and full-description capabilities are checked separately. Verification prompts, rate limits and website changes can interrupt retrieval; consult the app's source status.
 - **Scheduled search is disabled.** Historical plans and runs remain on your device. The app never submits applications automatically.
-- Jobs, resumes and reports are stored locally, while hiring sites and public evidence require network access. A free-form question may become a public search term; do not enter private information. Ordinary search and research do not automatically call a paid model.
+- Jobs, resumes, conversations and reports are stored locally, while hiring sites and public evidence require network access. Chat and research use the model you select in Settings and may incur provider charges; this isolated QA round made no paid model calls. A free-form question may become a public search term; do not enter private information.
 - Public accounts can be old, incomplete or contradictory. Reports help you check evidence; they do not score companies or promise career outcomes.
 
 See the [development handoff](docs/desktop/HANDOFF.md) for known gaps.

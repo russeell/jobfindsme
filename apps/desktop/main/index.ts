@@ -11,6 +11,7 @@ import { PythonService, type ServiceStatus } from "./backend/python-service";
 import { SecureSecretStore } from "./security/secure-secret-store";
 import { SourceBrowserManager } from "./browser/source-browser";
 import {runSourceCheckQueue} from "./sources/source-check-queue";
+import {readIsolatedResearchPage} from "./research/browser-page";
 import {browserSiteNames} from "../shared/browser-search";
 import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "../shared/source-browser-policy";
 import type {
@@ -70,6 +71,7 @@ let researchWorkspaceId: string | undefined;
 let chatController: AbortController | undefined;
 let chatSearchRequestId: string | undefined;
 let chatWorkspaceId: string | undefined;
+let chatRequestId: string | undefined;
 let isQuitting = false;
 
 function shutdownAndExit(): Promise<void> {
@@ -408,10 +410,12 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   if(sourceCheckController)throw Error('全部来源检查进行中，请结束后再单独重试');
   if(!requiresElectronSourceSearch(sourceId)){
     let pages:BrowserSourcePage[];
-    if(["liepin","company_01","company_12"].includes(sourceId)){
-      try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
-      catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
-    }else pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];
+    try{
+      if(["liepin","company_01","company_12"].includes(sourceId)){
+        try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
+        catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
+      }else pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];
+    }catch(error){throw Error(`source_contract_error:${String(error).slice(0,250)}`);}
     const first=pages.flatMap(p=>p.records)[0];
     if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
     if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
@@ -734,26 +738,42 @@ ipcMain.handle("desktop:cancel-research", async () => {
 ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");
   if(chatController)throw Error("已有对话正在生成，请先取消。");
-  if(!input||typeof input.workspace_id!=="string"||typeof input.connection_id!=="string"||typeof input.question!=="string"||input.question.length>700||!input.question.trim()||typeof input.research!=="boolean"||!Array.isArray(input.history)||input.history.length>20||input.history.some(item=>!item||!["user","assistant"].includes(item.role)||typeof item.text!=="string"||item.text.length>4000))throw Error("invalid research chat input");
-  const workspaces=(await apiClient.bootstrap()).workspaces;
-  if(!workspaces.some(item=>item.workspace_id===input.workspace_id))throw Error("workspace unavailable");
-  const connection=await apiClient.modelConnection(input.connection_id);
-  const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
-  const controller=new AbortController();chatController=controller;chatWorkspaceId=input.workspace_id;
+  if(!input||typeof input.request_id!=="string"||!/^[-a-zA-Z0-9]{8,80}$/.test(input.request_id)||typeof input.workspace_id!=="string"||typeof input.connection_id!=="string"||typeof input.question!=="string"||input.question.length>700||!input.question.trim()||typeof input.research!=="boolean"||!Array.isArray(input.history)||input.history.length>20||input.history.some(item=>!item||!["user","assistant"].includes(item.role)||typeof item.text!=="string"||item.text.length>4000))throw Error("invalid research chat input");
+  const controller=new AbortController();chatController=controller;chatWorkspaceId=input.workspace_id;chatRequestId=input.request_id;
   const timeout=setTimeout(()=>controller.abort(),90_000);
   try{
+    const workspaces=(await apiClient.bootstrap()).workspaces;
+    if(controller.signal.aborted)throw Error("cancelled");
+    if(!workspaces.some(item=>item.workspace_id===input.workspace_id))throw Error("workspace unavailable");
+    const connection=await apiClient.modelConnection(input.connection_id);
+    if(controller.signal.aborted)throw Error("cancelled");
+    const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
-    return await runPiResearchAgent({workspaceId:input.workspace_id,question:input.question,research:input.research,jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
-      async(runInput,signal)=>{
-        const requestId=`pi-research-${randomUUID()}`;chatSearchRequestId=requestId;
-        try{return await apiClient!.createResearchReport(runInput,requestId,"",signal);}
-        finally{if(chatSearchRequestId===requestId)chatSearchRequestId=undefined;}
+    if(controller.signal.aborted)throw Error("cancelled");
+    return await runPiResearchAgent({workspaceId:input.workspace_id,requestId:input.request_id,question:input.question,research:input.research,jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
+      {
+        findEvidence:company=>apiClient!.findAgentEvidence(input.workspace_id,company),
+        searchWeb:(company,question,site,signal)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,question,site},signal),
+        readPage:(company,site,url,signal)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url},signal),
+        readJob:jobId=>apiClient!.readAgentJob(input.workspace_id,jobId),
+        readBrowserPage:(company,site,url,signal)=>readIsolatedResearchPage(company,site,url,signal),
+        saveExecution:state=>apiClient!.saveAgentExecution(state),
+        saveReport:state=>apiClient!.saveAgentReport(state),
       },
-      delta=>{if(!controller.signal.aborted)event.sender.send("desktop:research-chat-delta",delta);},controller.signal);
-  }finally{clearTimeout(timeout);if(chatController===controller){chatController=undefined;chatWorkspaceId=undefined;chatSearchRequestId=undefined;}}
+      delta=>{if(!controller.signal.aborted)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,workspace_id:input.workspace_id,delta});},controller.signal);
+  }finally{clearTimeout(timeout);if(chatController===controller){chatController=undefined;chatWorkspaceId=undefined;chatSearchRequestId=undefined;chatRequestId=undefined;}}
 });
-ipcMain.handle("desktop:cancel-research-chat",async(event)=>{
+ipcMain.handle("desktop:list-research-chats",async(event,workspaceId:string)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
+  return apiClient.listAgentConversations(workspaceId);
+});
+ipcMain.handle("desktop:save-research-chat",async(event,input:Record<string,unknown>)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient||!input||typeof input.workspace_id!=="string")throw Error("research unavailable");
+  await apiClient.saveAgentConversation(input);
+});
+ipcMain.handle("desktop:cancel-research-chat",async(event,requestId:string)=>{
   if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
+  if(!requestId||requestId!==chatRequestId)return;
   chatController?.abort();
   if(apiClient&&chatSearchRequestId&&chatWorkspaceId){try{await apiClient.cancelResearch(chatSearchRequestId,chatWorkspaceId);}catch{}}
 });

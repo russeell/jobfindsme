@@ -326,7 +326,7 @@ export class SourceBrowserManager {
       for(let wait=0;wait<12&&!raw.jobs.length&&!raw.entry&&!raw.blocked;wait++){check();await new Promise(r=>setTimeout(r,250));raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));}
       for(let hop=0;hop<2&&!raw.jobs.length&&raw.entry&&!raw.blocked;hop++){
         if(!isAllowedSourceUrl(sourceId,raw.entry)||raw.entry===view.webContents.getURL())break;
-        check();await bounded(view.webContents.loadURL(raw.entry));raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+        check();const entry=raw.entry;try{await bounded(view.webContents.loadURL(entry));}catch(error){if(!await confirmAllowedNavigationAfterAbort(sourceId,entry,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;}raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
       }
       if(!raw.jobs.length&&['company_01','company_03'].includes(sourceId)){
         await bounded(view.webContents.executeJavaScript(careerEntryClickScript(sourceId)));

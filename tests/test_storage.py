@@ -79,7 +79,8 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0032_hidden_history",
         "0033_hidden_matching_rules",
         "0034_desktop_search_preferences",
-        "0035_company_research",
+            "0035_company_research",
+            "0036_research_agent",
     ]
     assert foreign_keys == 1
 

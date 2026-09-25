@@ -99,10 +99,12 @@ export type DesktopBridge = {
   listResearchReports(workspaceId: string): Promise<ResearchReport[]>;
   hideResearchReport(workspaceId:string,reportId:string):Promise<void>;
   createResearchReport(input: ResearchRunInput): Promise<ResearchReport>;
+  listResearchChats(workspaceId:string):Promise<Array<Record<string,unknown>>>;
+  saveResearchChat(input:Record<string,unknown>):Promise<void>;
   cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
   runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
-  cancelResearchChat():Promise<void>;
-  onResearchChatDelta(listener:(delta:string)=>void):()=>void;
+  cancelResearchChat(requestId:string):Promise<void>;
+  onResearchChatDelta(listener:(event:ResearchChatDelta)=>void):()=>void;
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]>;
   createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask>;
   setScheduledTaskPaused(taskId: string, paused: boolean): Promise<ScheduledTask>;
@@ -368,7 +370,8 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatTurn = {role:"user"|"assistant";text:string};
-export type ResearchChatInput = {workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatInput = {request_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatDelta = {request_id:string;workspace_id:string;delta:string};
 export type ResearchChatResult = {text:string;report?:ResearchReport};
 
 export type ModelConnectionInput = {
@@ -420,7 +423,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean};
+  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{quote:string;evidence_ids:string[];category:string;scope:string}>};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;

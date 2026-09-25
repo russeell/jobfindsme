@@ -8,6 +8,8 @@ datas += copy_metadata("agent-job-search")
 hiddenimports = collect_submodules("uvicorn")
 hiddenimports += ["h11"]
 project_root = Path(SPECPATH).parent
+datas += [(str(path), "jobfindsme/migrations") for path in
+          (project_root / "src/jobfindsme/migrations").glob("*.sql")]
 
 analysis = Analysis(
     [str(project_root / "src/jobfindsme/desktop_api/__main__.py")],

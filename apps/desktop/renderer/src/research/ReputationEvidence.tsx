@@ -27,6 +27,7 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
   const hasNegative=companyEntries.some(item=>item.context?.search_angle==="negative");
   const showCompanySection=topics.includes("company")&&!!entries.length&&(!!companyEntries.length||!questionEntries.length);
   const limitations=[...new Set(report?.limitations||[])];
+  const agentClaims=report?.job_context?.agent_claims;
   async function save(){
     if(!report||!editing)return;
     setBusy(true);setMessage("");
@@ -48,6 +49,12 @@ export function ReputationEvidence({report,workspaceId,onReport,onSource}:{repor
       {editing===item.evidence_id&&<form className="correction-form" onSubmit={event=>{event.preventDefault();void save();}}><p>更正只保存在本机，原陈述仍保留。</p><label>更正类型<select value={kind} onChange={event=>setKind(event.target.value as ResearchCorrectionInput["kind"])}>{Object.entries(correctionKinds).map(([key,value])=><option value={key} key={key}>{value}</option>)}</select></label><label>补充说明（可选）<textarea value={note} maxLength={1000} onChange={event=>setNote(event.target.value)}/></label><div className="button-row"><button type="submit" disabled={busy}>{busy?"保存中…":"保存更正"}</button><button type="button" disabled={busy} onClick={()=>setEditing(undefined)}>取消</button></div></form>}
     </article>;
   }
+  if(agentClaims)return <div className="research-reading"><p className="research-overview">{report?.job_context?.agent_summary||`已保存 ${entries.length} 条原始资料。`}</p>
+    {!!report?.job_context?.interest_question&&<h2>{report.job_context.interest_question}</h2>}
+    <section className="research-reading-section"><h2>原文支持的陈述</h2>{agentClaims.length?agentClaims.map((claim,index)=><article className="research-angle" key={index}><h3>{({business:"经营",listing:"上市",positive:"正面反馈",negative:"负面反馈",workload:"工作强度",benefits:"福利",role:"岗位职责",development:"发展"} as Record<string,string>)[claim.category]||"研究材料"}</h3><blockquote>{claim.quote}</blockquote><p className="note">适用范围：{claim.scope}</p>{claim.evidence_ids.map(id=>{const source=entries.find(item=>item.evidence_id===id);return source?<div key={id}>{card(source)}</div>:null;})}</article>):<p className="research-unknown">暂无能由原文直接支持的结论。</p>}</section>
+    {!!limitations.length&&<details className="research-diagnostics"><summary>限制与未知信息</summary><ul>{limitations.map((item,index)=><li key={index}>{item}</li>)}</ul></details>}
+    {message&&<p role="status">{message}</p>}
+  </div>;
   return <div className="research-reading">
     <p className="research-overview">{entries.length?`已保存 ${entries.length} 条可追溯材料；结论仍需结合来源和适用范围。`:
       "暂无可核对的公开原文，相关结论保持未知。"}</p>

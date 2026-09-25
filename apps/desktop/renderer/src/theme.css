@@ -357,7 +357,8 @@ nav button .nav-label {font-size:13px;}
 .research-history-panel .research-history-row small {white-space:normal;line-height:1.5;}
 .research-empty-note {font-size:13px;color:var(--text-muted);line-height:1.7;}
 .research-inline-status {flex-shrink:0;width:min(800px,calc(100% - 40px));margin:0 auto;padding:4px 7px;font-size:11px;line-height:1.4;color:var(--text-muted);max-height:42px;overflow:auto;}
-.research-company-supplement {display:grid;gap:6px;max-width:360px;margin:14px 0;font-size:12px;}
+.research-context-line {font-size:11px;color:var(--text-muted);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.research-context-line button {border:0;background:transparent;padding:0 2px;color:var(--text-muted);text-decoration:underline;min-height:0;font-size:11px;}
 .research-candidate {display:flex;align-items:center;gap:8px;min-width:0;font-size:12px;padding-top:4px;border-top:1px solid var(--line);}
 .research-candidate strong,.research-candidate span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .research-candidate span {flex:1;color:var(--text-muted);}
@@ -367,12 +368,7 @@ nav button .nav-label {font-size:13px;}
 .research-question-result>p {font-size:13px;line-height:1.7;margin:0 0 12px;color:var(--text-muted);}
 .research-composer {display:flex;flex-direction:column;gap:5px;width:min(800px,calc(100% - 40px));min-height:0;flex-shrink:0;border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin:6px auto 0;background:var(--surface-soft);}
 .research-composer:focus-within {border-color:#737373;box-shadow:0 0 0 2px #73737335;}
-.research-composer-context {display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:11px;}
-.research-composer-context strong {white-space:nowrap;}
-.research-composer-context span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:var(--text-muted);}
 .research-composer textarea {display:block;flex:none;width:100%;height:52px;min-height:42px;max-height:min(112px,18vh);overflow:auto;border:0;border-radius:0;background:transparent;padding:3px 0;resize:none;font-size:13px;line-height:1.55;}
-.research-clarify {display:flex;align-items:center;gap:8px;font-size:11px;}
-.research-clarify input {min-width:0;flex:1;padding:5px 7px;}
 .research-composer textarea:focus-visible {outline:0;}
 .research-composer-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;}
 .research-composer .button-row {gap:5px;flex-wrap:nowrap;}
@@ -385,10 +381,8 @@ nav button .nav-label {font-size:13px;}
 .research-chat-turn.assistant {padding:4px 0;}
 .research-chat-turn strong {font-size:11px;color:var(--text-muted);}
 .research-chat-turn p {margin:5px 0 0;}
-.research-composer-options {display:flex;align-items:center;gap:8px;min-width:0;}
-.research-composer-options label {display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;color:var(--text-muted);}
-.research-composer-options input {width:13px;height:13px;min-height:0;}
-.research-composer-options select {max-width:190px;min-width:0;font-size:11px;padding:3px 5px;}
+.research-chat-failure {font-size:11px;color:var(--text-muted);}
+.research-composer-actions>select {max-width:240px;min-width:0;font-size:11px;padding:4px 6px;}
 .research-reading .evidence-source button {padding:0;border:0;background:transparent;text-decoration:underline;font-size:12px;min-height:0;}
 @container(max-width:720px){.research-reading-column,.research-composer,.research-inline-status {width:calc(100% - 24px)}.research-composer {padding:8px 10px}.research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto}}
 
