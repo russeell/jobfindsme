@@ -91,6 +91,90 @@ test('empty official discovery can replan through public web and cite the read o
  }finally{server.close();}
 });
 
+test('repeated discovery queries and URLs do not spend another search or read',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司 研发'},turn):turn===3?tool('search_web',{site:'web',question:'  示例公司   研发  '},turn):turn===4?tool('read_page',{site:'web',url:source.url},turn):turn===5?tool('read_page',{site:'web',url:source.url+'#duplicate'},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let searches=0,reads=0;const executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async()=>{searches++;return [{url:source.url,site:'web',title:'原页',status:'search_hint_only'}];},readPage:async()=>{reads++;return source;},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_dedupe',question:'全面研究示例公司研发',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(searches,1);assert.equal(reads,1);assert(executions.at(-1).actions.some(item=>item.status==='duplicate_query'));assert(executions.at(-1).actions.some(item=>item.status==='duplicate_url'));}
+ finally{server.close();}
+});
+
+test('two searches with no new URLs stop further discovery without claiming an outage',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'cninfo',question:'示例公司 经营'},turn):turn===3?tool('search_web',{site:'web',question:'示例公司 经营'},turn):turn===4?tool('search_web',{site:'zhihu',question:'示例公司 经营'},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let searches=0;const executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async()=>{searches++;return [];},readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_no_new',question:'全面研究示例公司的经营与岗位发展',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(searches,2);assert(executions.at(-1).actions.some(item=>item.status==='no_new_information'));assert.equal(executions.at(-1).status,'no_results');assert(executions.at(-1).budgets.model_turns<=4);assert.match(result.text,/没有新增/);}
+ finally{server.close();}
+});
+
+test('identical original text at another URL is retained only once',async()=>{
+ const second={...source,url:'https://second.example.org/research'};
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司 研发'},turn):turn===3?tool('read_page',{site:'web',url:source.url},turn):turn===4?tool('read_page',{site:'web',url:second.url},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[{url:source.url,site:'web',title:'一',status:'search_hint_only'},{url:second.url,site:'web',title:'二',status:'search_hint_only'}],readPage:async(_company,_site,url)=>url===source.url?source:{...second,evidence_id:'ev_second',status:'read_original'},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_same_text',question:'全面研究示例公司研发',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(executions.at(-1).evidence.length,1);assert(executions.at(-1).actions.some(item=>item.status==='duplicate_content'));}
+ finally{server.close();}
+});
+
+test('duplicate search candidates differ from a genuine empty result',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司 研发'},turn):turn===3?tool('search_web',{site:'web',question:'示例公司 研发团队'},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[{url:source.url,site:'web',title:'同一原页',status:'search_hint_only'}],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_candidates',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  const searches=executions.at(-1).actions.filter(item=>item.tool==='search_web');assert.deepEqual(searches.map(item=>item.status),['candidates','no_new_information']);}
+ finally{server.close();}
+});
+
+test('same excerpt with a different publication scope remains separate evidence',async()=>{
+ const other={...source,evidence_id:'ev_other',url:'https://another.example.org/2025/report',published_at:'2025-01-01',context:{...source.context,region:'北京'}};
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const executions=[];
+ const tools={findEvidence:async()=>[source,other],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_scope',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(executions.at(-1).evidence.length,2);}
+ finally{server.close();}
+});
+
+test('cached company evidence covers one direction while Pi reads a new job direction',async()=>{
+ const role={...source,url:'https://careers.example.org/jobs/research',platform:'公司招聘页',excerpt:'示例公司招聘研发工程师，岗位地点为上海。',context:{source_type:'public_web',research_topic:'role'},status:'read_original'};
+ role.evidence_id='ev_'+createHash('sha256').update(`${role.url}\0${role.excerpt}`).digest('hex').slice(0,24);
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司 研发岗位'},turn):turn===3?tool('read_page',{site:'web',url:role.url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'},{statement:'示例公司招聘研发工程师',quote:'示例公司招聘研发工程师',evidence_ids:[role.evidence_id],category:'role',scope:'团队、地区或法律主体未核实'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const searches=[],reports=[];
+ const tools={findEvidence:async()=>[source],searchWeb:async(_company,query)=>{searches.push(query);return [{url:role.url,site:'web',title:'岗位',status:'search_hint_only'}];},readPage:async()=>role,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async state=>{reports.push(state);return {...state,report_id:'mixed_1'};}};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_mixed',question:'全面研究示例公司经营与研发岗位',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(searches,['示例公司 研发岗位']);assert.equal(reports[0].claims.length,2);assert.equal(result.report.report_id,'mixed_1');}
+ finally{server.close();}
+});
+
+test('sufficient cached evidence lets Pi finish without another search',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let searched=false;
+ const tools={findEvidence:async()=>[source],searchWeb:async()=>{searched=true;return [];},readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async state=>({...state,report_id:'cached_1'})};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_cached',question:'示例公司的研发团队如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(searched,false);assert.equal(result.report.report_id,'cached_1');}
+ finally{server.close();}
+});
+
+test('repeating the cached-evidence tool returns the cached rows',async()=>{
+ let turn=0,finds=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn<=2?tool('find_evidence',{},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const executions=[];
+ const tools={findEvidence:async()=>{finds++;return [source];},searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async state=>({...state,report_id:'cached_again'})};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_cached_again',question:'示例公司的研发团队如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(finds,1);assert.equal(executions.at(-1).evidence.length,1);assert.equal(result.report.report_id,'cached_again');}
+ finally{server.close();}
+});
+
 test('discovery provider error is recorded separately from no results',async()=>{
  let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'cninfo',question:'研发'},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -101,13 +185,14 @@ test('discovery provider error is recorded separately from no results',async()=>
  }finally{server.close();}
 });
 test('search outage stops the shared provider while a known original remains readable',async()=>{
+ const official={...source,context:{source_type:'official_disclosure',research_topic:'company'},platform:'官方披露'};
  let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
   const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'cninfo',question:'经营'},turn):turn===3?tool('search_web',{site:'web',question:'经营 改写'},turn):turn===4?tool('read_page',{site:'web',url:source.url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  let searches=0,reads=0;const executions=[];
- const tools={findEvidence:async()=>[source],searchWeb:async()=>{searches++;throw Error('mock provider outage');},readPage:async()=>{reads++;return source;},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>executions.push(state),saveReport:async()=>({report_id:'known_1'})};
+ const tools={findEvidence:async()=>[official],searchWeb:async()=>{searches++;throw Error('mock provider outage');},readPage:async()=>{reads++;return official;},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>executions.push(state),saveReport:async()=>({report_id:'known_1'})};
  try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_direct_after_outage',question:'示例公司经营情况',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
-  assert.equal(searches,1);assert.equal(reads,1);assert.equal(result.report.report_id,'known_1');assert(executions.at(-1).actions.some(item=>item.tool==='read_page'&&item.origin==='known_url'));
+  assert.equal(searches,1);assert.equal(reads,1);assert.equal(result.report.report_id,'known_1');assert(executions.at(-1).actions.some(item=>item.tool==='read_page'&&item.origin==='known_url'));assert(executions.at(-1).actions.some(item=>item.tool==='find_evidence'&&item.official_known_urls===1));
  }finally{server.close();}
 });
 test('a blocked public host does not block another discovered host',async()=>{
