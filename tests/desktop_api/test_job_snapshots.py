@@ -84,6 +84,55 @@ def test_snapshot_pagination_is_stable_without_duplicates_or_gaps(tmp_path) -> N
     assert [item["job"]["job_id"] for item in repeated["items"]] == ids[:20]
 
 
+def test_updated_job_does_not_replace_old_search_snapshot_jd(tmp_path) -> None:
+    _database, workspace, jobs, service = _services(tmp_path)
+    original = _job(1, description="Python FastAPI 原始岗位职责")
+    jobs.upsert(workspace.workspace_id, original)
+    old_run = service.create_snapshot(
+        workspace_id=workspace.workspace_id,
+        intent="Python",
+        job_ids=[original.job_id],
+        resume_version=None,
+        filters=DesktopJobFilters(),
+    )
+    updated = _job(1, description="Python FastAPI 更新后岗位职责与更多具体要求" * 3)
+    jobs.upsert(workspace.workspace_id, updated)
+    assert (
+        jobs.get(
+            workspace_id=workspace.workspace_id, job_id=original.job_id
+        ).content_hash
+        == updated.content_hash
+    )
+    old = service.page(
+        workspace_id=workspace.workspace_id, run_id=old_run, page=1, page_size=10
+    )["items"][0]
+    assert old["job"]["description"] == original.description
+    assert old["job"]["content_hash"] == original.content_hash
+    assert old["snapshot_status"] == "exact"
+    new_run = service.create_snapshot(
+        workspace_id=workspace.workspace_id,
+        intent="Python",
+        job_ids=[original.job_id],
+        resume_version=None,
+        filters=DesktopJobFilters(),
+    )
+    new = service.page(
+        workspace_id=workspace.workspace_id, run_id=new_run, page=1, page_size=10
+    )["items"][0]
+    assert new["job"]["description"] == updated.description
+
+    with service.database.connect() as connection:
+        connection.execute(
+            "UPDATE desktop_search_runs SET job_snapshot_refs_json='{}' WHERE run_id=?",
+            (old_run,),
+        )
+    unknown = service.page(
+        workspace_id=workspace.workspace_id, run_id=old_run, page=1, page_size=10
+    )["items"][0]
+    assert unknown["snapshot_status"] == "unknown"
+    assert unknown["score"] is None
+
+
 def test_unknown_policy_weight_validation_and_resume_ranking(tmp_path) -> None:
     database, workspace, jobs, service = _services(tmp_path)
     profiles = ResumeProfileService(database)

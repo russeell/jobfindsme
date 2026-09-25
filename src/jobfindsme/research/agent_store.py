@@ -98,8 +98,10 @@ class ResearchAgentStore:
     def save_conversation(self, workspace_id: str, item: dict) -> dict:
         conversation_id = str(item["id"])
         turns = item.get("turns") or []
-        if not conversation_id or len(conversation_id) > 100 or len(turns) > 40:
+        if not conversation_id or len(conversation_id) > 100 or len(turns) > 200:
             raise ValueError("invalid conversation")
+        if item.get("draft") and len(str(item["draft"])) > 700:
+            raise ValueError("conversation draft exceeds 700 characters")
         if any(
             not isinstance(turn, dict)
             or turn.get("role") not in {"user", "assistant"}
@@ -111,6 +113,8 @@ class ResearchAgentStore:
         context = {
             "company": str(item.get("subject_company") or "")[:300],
             "title": str(item.get("subject_title") or "")[:300],
+            "job_id": str(item.get("job_id") or "")[:100],
+            "research_mode": bool(item.get("research_mode")),
             "failure": str(item.get("failure") or "")[:500],
         }
         reports = [str(value) for value in (item.get("report_ids") or [])[:30]]
@@ -141,7 +145,7 @@ class ResearchAgentStore:
                     json.dumps(context, ensure_ascii=False),
                     json.dumps(turns, ensure_ascii=False),
                     json.dumps(reports),
-                    str(item["draft"])[:700] if item.get("draft") else None,
+                    str(item["draft"]) if item.get("draft") else None,
                     json.dumps(item["pending"], ensure_ascii=False)
                     if item.get("pending")
                     else None,
@@ -164,6 +168,8 @@ class ResearchAgentStore:
                 "subject_key": row["subject_key"],
                 "subject_company": json.loads(row["context_json"]).get("company"),
                 "subject_title": json.loads(row["context_json"]).get("title"),
+                "job_id": json.loads(row["context_json"]).get("job_id"),
+                "research_mode": json.loads(row["context_json"]).get("research_mode"),
                 "failure": json.loads(row["context_json"]).get("failure"),
                 "turns": json.loads(row["turns_json"]),
                 "report_ids": json.loads(row["report_ids_json"]),
@@ -188,6 +194,11 @@ class ResearchAgentStore:
         failures = item.get("failures") or []
         if len(actions) > 60 or len(evidence) > 24 or len(failures) > 30:
             raise ValueError("research execution exceeds storage bounds")
+        context = item.get("context") or {}
+        if not isinstance(context, dict) or len(
+            json.dumps(context, ensure_ascii=False)
+        ) > 16000:
+            raise ValueError("research execution context exceeds storage bounds")
         now = _now()
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -208,12 +219,12 @@ class ResearchAgentStore:
                 """INSERT INTO research_executions
                    (execution_id,workspace_id,conversation_id,subject_key,status,
                     budgets_json,actions_json,evidence_json,failures_json,report_id,
-                    started_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    started_at,updated_at,context_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(execution_id) DO UPDATE SET
                     status=excluded.status,budgets_json=excluded.budgets_json,
                     actions_json=excluded.actions_json,evidence_json=excluded.evidence_json,
                     failures_json=excluded.failures_json,report_id=excluded.report_id,
-                    updated_at=excluded.updated_at""",
+                    updated_at=excluded.updated_at,context_json=excluded.context_json""",
                 (
                     execution_id,
                     workspace_id,
@@ -227,6 +238,7 @@ class ResearchAgentStore:
                     report_id,
                     existing["started_at"] if existing else now,
                     now,
+                    json.dumps(context, ensure_ascii=False),
                 ),
             )
         return {**item, "updated_at": now}
@@ -282,9 +294,16 @@ class ResearchAgentStore:
     def save_report(self, workspace_id: str, item: dict) -> str | None:
         """Commit a checked Agent result only when it adds original evidence."""
         company = str(item.get("company") or "").strip()
+        question = str(item.get("question") or "")
         evidence = item.get("evidence") or []
         claims = item.get("claims") or []
-        if not company or len(company) > 100 or not isinstance(evidence, list) or len(evidence) > 24:
+        if (
+            not company
+            or len(company) > 100
+            or len(question) > 700
+            or not isinstance(evidence, list)
+            or len(evidence) > 24
+        ):
             raise ValueError("invalid Agent report")
         if not isinstance(claims, list) or len(claims) > 30:
             raise ValueError("invalid claims")
@@ -348,7 +367,7 @@ class ResearchAgentStore:
                        "description": (job_snapshot or {}).get("description") or "",
                        "url": (job_snapshot or {}).get("apply_url") or "",
                        "job_snapshot": job_snapshot,
-                       "interest_question": str(item.get("question") or "")[:700],
+                       "interest_question": question,
                        "agent_summary": str(item.get("summary") or "")[:2000],
                        "agent_claims": [{**claim, "evidence_ids": [f"{report_id}_{value}" for value in claim["evidence_ids"]]} for claim in checked_claims],
                        "agent_fingerprint": evidence_fingerprint,

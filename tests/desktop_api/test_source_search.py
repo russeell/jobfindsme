@@ -6,11 +6,13 @@ from fastapi.testclient import TestClient
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
 from jobfindsme.desktop_api.app import create_app
+from jobfindsme.desktop_api.source_search_runs import source_run_outcome
 from jobfindsme.profiles.service import ResumeProfileService
 from jobfindsme.search.desktop import (
     BudgetedSourceExecutor,
     DesktopSearchService,
     SearchPreflightError,
+    SourceExecutionResult,
     SourcePage,
     build_search_keywords,
     connector_adapter_for,
@@ -190,6 +192,28 @@ def test_budgeted_executor_reports_continuation_without_claiming_full_coverage()
     assert result.can_continue is True
     assert result.next_cursor == "3"
     assert result.stop_reason == "page_budget"
+
+
+def test_source_run_does_not_call_invalid_rows_partial_success() -> None:
+    result = SourceExecutionResult(
+        records=(),
+        pages_fetched=1,
+        elapsed_seconds=1,
+        coverage_status="partial",
+        can_continue=False,
+        next_cursor=None,
+        stop_reason="source_contract_error",
+    )
+    outcome = source_run_outcome(
+        result,
+        collection=None,
+        browser_error="risk_control:verification required",
+        normalization_errors=1,
+        valid_count=0,
+    )
+    assert outcome.status == "failed"
+    assert outcome.coverage_status == "failed"
+    assert outcome.stop_reason == "risk_control"
 
 
 def test_production_connector_factory_reuses_liepin_without_legacy_cdp() -> None:
@@ -659,3 +683,66 @@ def test_public_page_bridge_force_refresh_bypasses_success_cache(tmp_path):
     for request in (body, body, {**body, "force_refresh": True}):
         assert client.post(endpoint, json=request, headers=headers).status_code == 200
     assert calls == [None, None]
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "cancelled:stop",
+        "login_required:expired",
+        "risk_control:captcha",
+        "source_contract_error:page 2",
+    ],
+)
+def test_source_search_keeps_valid_first_page_after_later_failure(tmp_path, failure):
+    database, workspace, _profiles = _confirmed_resume(tmp_path)
+    client = TestClient(create_app(token="test-secret", database_path=database.path))
+    response = client.post(
+        "/v1/source-searches",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "workspace_id": workspace.workspace_id,
+            "intent": "Python",
+            "source_ids": ["liepin"],
+            "browser_errors": {"liepin": failure},
+            "browser_pages": {
+                "liepin": [
+                    {
+                        "records": [
+                            {
+                                "external_id": "good",
+                                "source_name": "猎聘",
+                                "source_url": "https://www.liepin.com/",
+                                "payload": {
+                                    "title": "Python",
+                                    "company": "样例",
+                                    "description": "Python",
+                                    "url": "https://www.liepin.com/job/good.shtml",
+                                },
+                            },
+                            {
+                                "external_id": "bad",
+                                "source_name": "猎聘",
+                                "source_url": "https://www.liepin.com/",
+                                "payload": {
+                                    "title": "",
+                                    "company": "样例",
+                                    "description": "",
+                                    "url": "https://www.liepin.com/job/bad.shtml",
+                                },
+                            },
+                        ],
+                        "next_cursor": "2",
+                    }
+                ]
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert [job["external_id"] for job in payload["jobs"]] == ["good"]
+    run = payload["source_runs"][0]
+    assert run["status"] == "partial"
+    assert run["pages_fetched"] == 1
+    assert run["error"] == failure
+    assert run["can_continue"] is False

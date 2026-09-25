@@ -237,7 +237,9 @@ class MatchingPromptService:
 
         resume_text = safe(text)[:8000]
         ids = json.loads(row["ordered_job_ids_json"])[: rule["candidate_limit"]]
-        jobs = [self.jobs.jobs.get(workspace_id=workspace_id, job_id=j) for j in ids]
+        jobs = [self.jobs.snapshot_job(workspace_id, row, j) for j in ids]
+        if any(job is None for job in jobs):
+            raise ValueError("历史岗位内容版本无法恢复，不能用当前 JD 重排旧检索")
         candidates = [
             {
                 "job_id": j.job_id,
@@ -346,8 +348,9 @@ class MatchingPromptService:
                     "INSERT INTO desktop_search_runs(run_id,workspace_id,"
                     "resume_version_id,rule_version_id,intent,"
                     "filter_snapshot_json,ordered_job_ids_json,scores_json,"
-                    "created_at,rerank_json,candidate_job_ids_json) "
-                    "VALUES(?,?,?,?,?,?,?,?,?,?,?)"
+                    "created_at,rerank_json,candidate_job_ids_json,"
+                    "job_snapshot_refs_json) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)"
                 ),
                 (
                     derived,
@@ -361,6 +364,7 @@ class MatchingPromptService:
                     datetime.now(UTC).isoformat(),
                     json.dumps(meta),
                     row["candidate_job_ids_json"],
+                    row["job_snapshot_refs_json"],
                 ),
             )
         return {

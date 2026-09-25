@@ -395,8 +395,8 @@ class ResearchService:
         directions = tuple(dict.fromkeys(directions))
         topics = tuple(dict.fromkeys(topics))
         question = " ".join((interest_question or "").split())
-        if len(question) > 300:
-            raise ResearchError("兴趣问题最多 300 字。")
+        if len(question) > 700:
+            raise ResearchError("兴趣问题最多 700 字。")
         if (
             (not directions and not question and not topics)
             or any(key not in DIRECTIONS for key in directions)

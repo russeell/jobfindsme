@@ -136,8 +136,9 @@ class DesktopJobService:
                 INSERT INTO desktop_search_runs (
                     run_id, workspace_id, resume_version_id, rule_version_id,
                     intent, filter_snapshot_json, ordered_job_ids_json,
-                    scores_json, created_at, candidate_job_ids_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    scores_json, created_at, candidate_job_ids_json,
+                    job_snapshot_refs_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     run_id,
@@ -150,6 +151,7 @@ class DesktopJobService:
                     json.dumps(score_payload, ensure_ascii=False, sort_keys=True),
                     now,
                     json.dumps([job.job_id for job in unique_jobs]),
+                    json.dumps({job.job_id: job.content_hash for job in unique_jobs}),
                 ),
             )
         return run_id
@@ -213,11 +215,19 @@ class DesktopJobService:
         states = self.tracking_states(workspace_id, selected_ids)
         items = []
         for job_id in selected_ids:
-            job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
+            job = self.snapshot_job(workspace_id, row, job_id)
+            exact = job is not None
+            if job is None:
+                job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
             items.append(
                 {
                     "job": job.model_dump(mode="json"),
-                    **scores[job_id],
+                    **(
+                        scores[job_id]
+                        if exact
+                        else {"score": None, "components": {}, "coverage": 0}
+                    ),
+                    "snapshot_status": "exact" if exact else "unknown",
                     "tracking": asdict(states.get(job_id, JobTrackingState())),
                 }
             )
@@ -233,6 +243,24 @@ class DesktopJobService:
             "items": items,
             "rerank": json.loads(row["rerank_json"]) if row["rerank_json"] else None,
         }
+
+    def snapshot_job(
+        self, workspace_id: str, run: dict, job_id: str
+    ) -> JobPosting | None:
+        """Resolve the exact JD used for scoring."""
+        refs = json.loads(run["job_snapshot_refs_json"] or "{}")
+        content_hash = refs.get(job_id)
+        if not content_hash:
+            return None
+        with self.database.connect() as connection:
+            version = connection.execute(
+                "SELECT payload_json FROM job_versions "
+                "WHERE workspace_id=? AND job_id=? AND content_hash=?",
+                (workspace_id, job_id, content_hash),
+            ).fetchone()
+        return (
+            JobPosting.model_validate_json(version["payload_json"]) if version else None
+        )
 
     def set_tracking(
         self,

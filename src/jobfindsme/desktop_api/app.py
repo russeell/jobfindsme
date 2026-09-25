@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from jobfindsme.app import jobfindsmecore
 from jobfindsme.connectors import RawJobRecord
 from jobfindsme.contracts import SourceKind
+from jobfindsme.desktop_api.source_search_runs import source_run_outcome
 from jobfindsme.importing.normalizer import normalize_job
 from jobfindsme.models import (
     CancellationToken,
@@ -30,8 +31,8 @@ from jobfindsme.profiles.models import FactType, ResumeImportMode
 from jobfindsme.profiles.parser import ResumeExtractionError
 from jobfindsme.profiles.service import ProfileError, ProfileNotFoundError
 from jobfindsme.research import ResearchError, ResearchService
-from jobfindsme.research.agent_store import ResearchAgentStore
 from jobfindsme.research.agent_sources import discover_sources, read_original_page
+from jobfindsme.research.agent_store import ResearchAgentStore
 from jobfindsme.resume_editor import (
     PromptResumeEditor,
     PromptResumeError,
@@ -464,7 +465,7 @@ class ResearchRunRequest(StrictResponse):
     context_company: str | None = Field(default=None, max_length=300)
     context_title: str | None = Field(default=None, max_length=300)
     context_description: str | None = Field(default=None, max_length=30000)
-    interest_question: str | None = Field(default=None, max_length=300)
+    interest_question: str | None = Field(default=None, max_length=700)
     topics: list[Literal["company", "job"]] = Field(default_factory=list, max_length=2)
     workspace_id: str
     job_id: str | None = None
@@ -799,7 +800,7 @@ def create_app(
         runs: list[SourceSearchRunResponse] = []
         for source_id in preflight.allowed_source_ids:
             browser_error = request.browser_errors.get(source_id)
-            if browser_error:
+            if browser_error and not request.browser_pages.get(source_id):
                 runs.append(
                     SourceSearchRunResponse(
                         source_id=source_id,
@@ -830,9 +831,13 @@ def create_app(
                                     )
                                     for item in page.records
                                 ),
-                                next_cursor=page.next_cursor,
+                                next_cursor=(
+                                    None
+                                    if browser_error and index == len(serialized) - 1
+                                    else page.next_cursor
+                                ),
                             )
-                            for page in serialized
+                            for index, page in enumerate(serialized)
                         ]
                     )
                     if serialized is not None
@@ -861,6 +866,7 @@ def create_app(
                 )
                 continue
             normalization_errors = 0
+            valid_count = 0
             for record in result.records[:100]:
                 try:
                     normalized = normalize_job(record)
@@ -869,6 +875,7 @@ def create_app(
                     normalization_errors += 1
                     continue
                 snapshot_job_ids.append(normalized.job_id)
+                valid_count += 1
                 jobs.append(
                     SourceSearchJobResponse(
                         source_id=source_id,
@@ -881,47 +888,28 @@ def create_app(
             runs.append(
                 SourceSearchRunResponse(
                     source_id=source_id,
-                    status="partial"
-                    if normalization_errors
-                    else (
-                        (
-                            "success"
-                            if collection.complete
-                            else "partial"
-                            if result.records
-                            else "failed"
-                        )
-                        if collection
-                        else "success"
-                    ),
-                    pages_fetched=collection.batches
-                    if collection
-                    else result.pages_fetched,
-                    elapsed_seconds=collection.elapsed_seconds
-                    if collection
-                    else result.elapsed_seconds,
-                    coverage_status="partial"
-                    if normalization_errors
-                    else (
-                        ("complete" if collection.complete else "partial")
-                        if collection
-                        else result.coverage_status
-                    ),
-                    can_continue=bool(collection.cursor)
-                    if collection
-                    else result.can_continue,
-                    next_cursor=collection.cursor if collection else result.next_cursor,
-                    stop_reason="invalid_records"
-                    if normalization_errors
-                    else (collection.stop_reason if collection else result.stop_reason),
+                    **source_run_outcome(
+                        result,
+                        collection=collection,
+                        browser_error=browser_error,
+                        normalization_errors=normalization_errors,
+                        valid_count=valid_count,
+                    ).response_fields(),
                 )
             )
             # Save already-read rows before disabling the source, so risk/cancellation
             # never discards partial results and future requests still respect the gate.
-            if collection and collection.failure:
+            failure = (
+                "login_required"
+                if browser_error and browser_error.startswith("login_required:")
+                else "risk_control"
+                if browser_error and browser_error.startswith("risk_control:")
+                else None
+            )
+            if (collection and collection.failure) or failure:
                 desktop_sources.record_runtime_failure(
                     source_id=source_id,
-                    failure=collection.failure,
+                    failure=failure or collection.failure,
                     notes="平台要求重新登录或验证；已保留本次读取的岗位。",
                 )
         try:

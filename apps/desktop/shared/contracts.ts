@@ -194,7 +194,8 @@ export type SearchResultItem = {
   };
   model_match?:{score:number|null;evidence:Array<{resume_quote:string;jd_quote:string}>;unknowns:string[]};
   local_score?:number;
-  score: number;
+  score: number|null;
+  snapshot_status?:"exact"|"unknown";
   components: Record<string, number>;
   details?: ScoreDetails;
   scoring_version?: string;
@@ -370,8 +371,8 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatTurn = {role:"user"|"assistant";text:string};
-export type ResearchChatInput = {request_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
-export type ResearchChatDelta = {request_id:string;workspace_id:string;delta:string};
+export type ResearchChatInput = {request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta:string};
 export type ResearchChatResult = {text:string;report?:ResearchReport};
 
 export type ModelConnectionInput = {

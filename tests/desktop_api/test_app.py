@@ -652,7 +652,7 @@ def test_desktop_api_process_starts_and_stops_cleanly(tmp_path) -> None:
         port = reservation.getsockname()[1]
 
     token = "process-test-secret"
-    env = {**os.environ, "JFM_DESKTOP_TOKEN": token}
+    env = {**os.environ, "JFM_DESKTOP_TOKEN": token, "PYTHONUTF8": "1"}
     process = subprocess.Popen(
         [
             sys.executable,
@@ -667,6 +667,8 @@ def test_desktop_api_process_starts_and_stops_cleanly(tmp_path) -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     try:
         deadline = time.monotonic() + 8
@@ -692,6 +694,5 @@ def test_desktop_api_process_starts_and_stops_cleanly(tmp_path) -> None:
         process.terminate()
         process.wait(timeout=5)
 
-    # Electron uses SIGTERM for shutdown; uvicorn may either handle it or the
-    # OS may report the terminating signal when the probe races its handler.
-    assert process.returncode in {0, -15}
+    # Windows TerminateProcess reports 1; POSIX reports SIGTERM or a clean exit.
+    assert process.returncode in ({0, 1} if os.name == "nt" else {0, -15})

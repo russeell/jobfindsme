@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from jobfindsme.desktop_api import create_app
+from jobfindsme.desktop_api.app import ResearchRunRequest
 from jobfindsme.research import agent_sources
 from jobfindsme.research.agent_store import ResearchAgentStore
 from jobfindsme.storage import Database
@@ -48,6 +49,57 @@ def test_conversation_execution_and_report_are_workspace_scoped(tmp_path):
     with store.database.connect() as connection:
         saved = connection.execute("SELECT job_context_json FROM research_reports WHERE report_id=?", (report_id,)).fetchone()
     assert report_id in saved["job_context_json"]
+
+
+def test_long_conversation_and_binding_round_trip_without_truncation(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    turns = [
+        {
+            "role": "user" if index % 2 == 0 else "assistant",
+            "text": f"第{index}轮" + "回答" * 1000,
+        }
+        for index in range(30)
+    ]
+    turns.append({"role": "assistant", "text": "最终回答" + "结论" * 2000})
+    store.save_conversation(
+        workspace,
+        {
+            "id": "long-chat",
+            "job_id": "job-a",
+            "subject_company": "A公司",
+            "subject_title": "A岗位",
+            "research_mode": True,
+            "turns": turns,
+        },
+    )
+    saved = store.list_conversations(workspace)[0]
+    assert saved["turns"] == turns
+    assert (
+        saved["job_id"],
+        saved["subject_company"],
+        saved["subject_title"],
+        saved["research_mode"],
+    ) == ("job-a", "A公司", "A岗位", True)
+    with pytest.raises(ValueError, match="700"):
+        store.save_conversation(workspace, {"id": "too-long", "turns": [], "draft": "问" * 701})
+
+
+def test_research_question_boundary_is_700_across_python_request_and_report(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    for size in (300, 301, 700):
+        request = ResearchRunRequest.model_validate(
+            {"workspace_id": workspace, "interest_question": "问" * size}
+        )
+        assert len(request.interest_question) == size
+    with pytest.raises(ValueError):
+        ResearchRunRequest.model_validate(
+            {"workspace_id": workspace, "interest_question": "问" * 701}
+        )
+    with pytest.raises(ValueError, match="invalid Agent report"):
+        store.save_report(
+            workspace,
+            {"company": "示例公司", "question": "问" * 701, "evidence": [evidence()]},
+        )
 
 
 def test_new_supported_conclusion_versions_without_new_page(tmp_path):

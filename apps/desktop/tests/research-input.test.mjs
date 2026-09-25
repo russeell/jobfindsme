@@ -13,3 +13,12 @@ test("模糊和多个链接不允许落到当前岗位研究",()=>{
   assert.match(splitResearchInput("zhipin.com/job_detail/abc.html 这个岗位如何？").error,/https:\/\//);
   assert.match(splitResearchInput("https://a.example/job https://b.example/job").error,/一个岗位链接/);
 });
+
+test('question limit is 700 characters with an explicit 701 error, including link input',()=>{
+ for(const size of [300,301,700]){
+  assert.equal(splitResearchInput('问'.repeat(size)).question.length,size);
+  assert.equal(splitResearchInput(`https://www.zhipin.com/job_detail/abc.html ${'问'.repeat(size)}`).question.length,size);
+ }
+ assert.match(splitResearchInput('问'.repeat(701)).error,/700/);
+ assert.match(splitResearchInput(`https://www.zhipin.com/job_detail/abc.html ${'问'.repeat(701)}`).error,/700/);
+});
