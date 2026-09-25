@@ -245,7 +245,21 @@ test('no-evidence answer states what was attempted and offers a next step',()=>{
  assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'entity_mismatch'}],[]),/主体/);
  assert.match(explainResearchGap(0,[{tool:'find_evidence'},{tool:'read_page',status:'no_text_layer'}],[]),/没有可提取的文字层/);
  assert.match(explainResearchGap(1,[{tool:'find_evidence'}],[]),/不足以支持|没有足够依据/);
- assert.match(explainResearchGap(0,[],[]),/找工作/);
+ assert.match(explainResearchGap(0,[],[],'想找工作'),/找工作/);
+ const businessGap=explainResearchGap(0,[{tool:'search_web',status:'no_results'}],[],'腾讯经营与披露情况');
+ assert.match(businessGap,/财报年份或报告期/);assert.doesNotMatch(businessGap,/找工作/);
+});
+
+test('official index candidate from hkex search is read as official web original',async()=>{
+ const official={...source,url:'https://static.www.tencent.com/uploads/2026/03/18/example.pdf',platform:'腾讯投资者关系',company:'腾讯',excerpt:'腾讯控股有限公司公布二零二五年度业绩。',context:{source_type:'official_disclosure',research_topic:'company',page:1}};
+ official.evidence_id='ev_'+createHash('sha256').update(`${official.url}\0${official.excerpt}`).digest('hex').slice(0,24);
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'hkex',question:'腾讯 经营 披露'},turn):turn===3?tool('read_page',{site:'web',url:official.url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'腾讯控股有限公司公布二零二五年度业绩',quote:'腾讯控股有限公司公布二零二五年度业绩',evidence_ids:[official.evidence_id],category:'business',scope:'腾讯控股有限公司二零二五年度'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const reads=[],executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[{url:official.url,site:'web',title:'业绩新闻',source_type:'official_disclosure',provider:'official_index',status:'search_hint_only'}],readPage:async(_company,site,url)=>{reads.push({site,url});return official;},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async item=>executions.push(item),saveReport:async()=>({report_id:'official_1'})};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_official',question:'腾讯经营与披露情况',company:'腾讯',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(reads,[{site:'web',url:official.url}]);assert.equal(executions.at(-1).actions.find(item=>item.tool==='search_web').provider,'official_index');assert.equal(result.report.report_id,'official_1');assert.match(result.text,/腾讯控股有限公司公布/);
+ }finally{server.close();}
 });
 
 test('ordinary follow-up stays a conversation without research tools or report',async()=>{

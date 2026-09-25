@@ -174,7 +174,7 @@ def test_search_endpoint_keeps_original_question_separate_from_query(
     monkeypatch.setattr(
         app_module,
         "discover_sources",
-        lambda company, query, site: seen.append((company, query, site)) or [],
+        lambda company, query, site, *, original_question: seen.append((company, query, site, original_question)) or [],
     )
     client = TestClient(
         create_app(token="test-secret", database_path=store.database.path)
@@ -193,7 +193,8 @@ def test_search_endpoint_keeps_original_question_separate_from_query(
         )
         assert response.status_code == 200
     assert len(seen) == 3
-    assert [len(query) for _, query, _ in seen] == [300, 301, 700]
+    assert [len(query) for _, query, _, _ in seen] == [300, 301, 700]
+    assert [len(original) for _, _, _, original in seen] == [300, 301, 700]
     response = client.post(
         "/v1/research-agent/search",
         headers={"Authorization": "Bearer test-secret"},
@@ -376,14 +377,14 @@ def test_research_endpoints_pass_remaining_time_to_source_reader(tmp_path, monke
     app_module = importlib.import_module("jobfindsme.desktop_api.app")
     store, workspace = setup_store(tmp_path)
     seen = []
-    monkeypatch.setattr(app_module, "discover_sources", lambda company, query, site, *, timeout: seen.append(("search", timeout)) or [])
+    monkeypatch.setattr(app_module, "discover_sources", lambda company, query, site, *, timeout, original_question: seen.append(("search", timeout, original_question)) or [])
     monkeypatch.setattr(app_module, "read_original_page", lambda url, company, site, *, timeout: seen.append(("read", timeout)) or {"status": "read_failed", "url": url})
     client = TestClient(create_app(token="test-secret", database_path=store.database.path))
     headers = {"Authorization": "Bearer test-secret"}
     search = client.post("/v1/research-agent/search", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "original_question": "经营", "search_query": "经营", "site": "web", "timeout_ms": 750})
     read = client.post("/v1/research-agent/read-page", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "site": "web", "url": "https://example.org/a", "timeout_ms": 325})
     assert search.status_code == read.status_code == 200
-    assert seen == [("search", 0.75), ("read", 0.325)]
+    assert seen == [("search", 0.75, "经营"), ("read", 0.325)]
 
 
 def test_search_service_error_execution_persists_without_report(tmp_path):
@@ -434,13 +435,147 @@ def test_search_uses_verified_tls_and_no_ambient_proxy(monkeypatch):
         def read(self, _size): return b"<rss><channel></channel></rss>"
         def __enter__(self): return self
         def __exit__(self, *_args): pass
+
     def build(*items):
         handlers.extend(items)
         return SimpleNamespace(open=lambda *_args, **_kwargs: Response())
+
     monkeypatch.setattr(agent_sources.urllib.request, "build_opener", build)
     assert agent_sources.discover_sources("示例公司", "经营", "web") == []
-    assert any(isinstance(item, ProxyHandler) and item.proxies == {} for item in handlers)
-    assert any(isinstance(item, HTTPSHandler) and item._context.verify_mode for item in handlers)
+    assert any(
+        isinstance(item, ProxyHandler) and item.proxies == {} for item in handlers
+    )
+    assert any(
+        isinstance(item, HTTPSHandler) and item._context.verify_mode
+        for item in handlers
+    )
+
+
+def test_tencent_official_index_discovery_uses_listed_pdf_and_requested_period(
+    monkeypatch,
+):
+    from email.message import Message
+
+    html_body = """
+    <h2 class="text-white">腾讯公布二零二六年第二季业绩</h2>
+    <a href="https://www.tencent.com/wp-content/uploads/2026/08/new.pdf">业绩新闻</a>
+    <h3>腾讯公布二零二五年年度业绩</h3>
+    <a href="https://static.www.tencent.com/uploads/2026/03/annual.pdf">业绩新闻</a>
+    <h3>腾讯公布二零二四年年度业绩</h3>
+    <a href="https://static.www.tencent.com/uploads/2025/03/old.pdf">业绩新闻</a>
+    """.encode()
+
+    class Response:
+        headers = Message()
+        headers.add_header("Content-Type", "text/html; charset=utf-8")
+
+        def geturl(self):
+            return agent_sources._TENCENT_RESULTS
+
+        def read(self, size):
+            return html_body[:size]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+    monkeypatch.setattr(
+        agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        agent_sources,
+        "_research_opener",
+        lambda **_kwargs: SimpleNamespace(open=lambda *_args, **_kwargs: Response()),
+    )
+    rows = agent_sources.discover_sources("腾讯", "经营与披露 2024", "hkex")
+    assert len(rows) == 1 and rows[0]["url"].endswith("/old.pdf")
+    assert rows[0]["site"] == "web" and rows[0]["provider"] == "official_index"
+    assert rows[0]["source_type"] == "official_disclosure"
+    latest = agent_sources.discover_sources("腾讯", "经营与披露", "hkex")
+    assert latest[0]["url"].endswith("/new.pdf")
+    user_latest = agent_sources.discover_sources(
+        "腾讯", "腾讯 2024 年报", "hkex", original_question="研究腾讯的经营与披露"
+    )
+    assert user_latest[0]["url"].endswith("/new.pdf")
+
+
+def test_tencent_official_pdf_report_is_saved_but_other_official_web_claim_is_rejected(
+    tmp_path, monkeypatch
+):
+    store, workspace = setup_store(tmp_path)
+    monkeypatch.setattr(
+        agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None
+    )
+    from jobfindsme.research import agent_store
+
+    monkeypatch.setattr(
+        agent_store, "validate_public_http_url", lambda *_args, **_kwargs: None
+    )
+    row = evidence(
+        "https://static.www.tencent.com/uploads/2026/03/18/annual.pdf",
+        "腾讯公布二零二五年度业绩。",
+    )
+    row["company"] = "腾讯"
+    row["context"]["source_type"] = "official_disclosure"
+    claim = {
+        "statement": "腾讯公布二零二五年度业绩",
+        "quote": "腾讯公布二零二五年度业绩",
+        "evidence_ids": [row["evidence_id"]],
+        "category": "business",
+        "scope": "二零二五年度业绩",
+    }
+    report = {
+        "company": "腾讯",
+        "question": "腾讯经营与披露",
+        "evidence": [row],
+        "claims": [claim],
+    }
+    assert store.save_report(workspace, report)
+    bad = {
+        **row,
+        "url": "https://other.example/uploads/2026/03/18/annual.pdf",
+        "evidence_id": "ev_bad",
+    }
+    with pytest.raises(ValueError, match="outside permitted"):
+        store.save_report(
+            workspace,
+            {
+                **report,
+                "evidence": [bad],
+                "claims": [{**claim, "evidence_ids": ["ev_bad"]}],
+            },
+        )
+
+
+def test_official_index_and_search_share_one_timeout_and_do_not_retry_rate_limit(
+    monkeypatch,
+):
+    from urllib.error import HTTPError
+
+    monkeypatch.setattr(
+        agent_sources,
+        "_research_opener",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            AssertionError("unexpected Bing retry")
+        ),
+    )
+    monkeypatch.setattr(
+        agent_sources,
+        "_tencent_disclosures",
+        lambda *_args: (_ for _ in ()).throw(
+            HTTPError("https://www.tencent.com/", 429, "limited", {}, None)
+        ),
+    )
+    with pytest.raises(HTTPError) as limited:
+        agent_sources.discover_sources("腾讯", "经营与披露", "hkex")
+    assert limited.value.code == 429
+    monkeypatch.setattr(agent_sources, "_tencent_disclosures", lambda *_args: [])
+    ticks = iter([0.0, 0.0, 4.1])
+    monkeypatch.setattr(agent_sources.time, "monotonic", lambda: next(ticks))
+    with pytest.raises(TimeoutError, match="time budget"):
+        agent_sources.discover_sources("腾讯", "经营与披露", "hkex")
 
 
 def test_search_endpoint_reports_safe_provider_failure_instead_of_local_service_error(tmp_path, monkeypatch):

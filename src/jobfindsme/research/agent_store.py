@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from jobfindsme.storage import Database
 from jobfindsme.connectors.http import validate_public_http_url
-from .agent_sources import SITES
+from .agent_sources import SITES, is_tencent_disclosure_url
 from .service import _host_matches
 
 
@@ -324,11 +324,24 @@ class ResearchAgentStore:
             return None
         for row in verified:
             parsed = urlsplit(row["url"])
-            fixed_host = any(_host_matches(parsed.hostname, domain) for domain, _, _ in SITES.values() if domain)
+            fixed_host = any(
+                _host_matches(parsed.hostname, domain)
+                for domain, _, _ in SITES.values()
+                if domain
+            )
             if not fixed_host:
-                if (row.get("context") or {}).get("source_type") != "public_web":
-                    raise ValueError("evidence URL is outside permitted research sources")
-                validate_public_http_url(row["url"], resolve_dns=True, require_https=True)
+                source_type = (row.get("context") or {}).get("source_type")
+                official_tencent = (
+                    source_type == "official_disclosure"
+                    and is_tencent_disclosure_url(row["url"], company)
+                )
+                if source_type != "public_web" and not official_tencent:
+                    raise ValueError(
+                        "evidence URL is outside permitted research sources"
+                    )
+                validate_public_http_url(
+                    row["url"], resolve_dns=True, require_https=True
+                )
         ids = {str(row.get("evidence_id")) for row in verified}
         if len(ids) != len(verified):
             raise ValueError("duplicate evidence ids")

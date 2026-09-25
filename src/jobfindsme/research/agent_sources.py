@@ -6,11 +6,13 @@ import hashlib
 import html
 import re
 import ssl
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 from io import BytesIO
 
 from pypdf import PdfReader
@@ -39,6 +41,121 @@ SITES = {
     "web": ("", "公开网页", "public_web"),
 }
 
+_TENCENT_RESULTS = "https://www.tencent.com/zh-cn/investors/results/"
+_TENCENT_HOSTS = frozenset({"www.tencent.com", "static.www.tencent.com"})
+
+
+def is_tencent_disclosure_url(url: str, company: str) -> bool:
+    if company.strip() not in {"腾讯", "腾讯控股", "腾讯控股有限公司"}:
+        return False
+    parsed = urllib.parse.urlsplit(url)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname not in _TENCENT_HOSTS
+        or parsed.port not in (None, 443)
+        or parsed.username
+        or parsed.password
+    ):
+        return False
+    return parsed.path == "/zh-cn/investors/results/" or (
+        parsed.path.lower().endswith(".pdf")
+        and (
+            parsed.path.startswith("/uploads/")
+            or parsed.path.startswith("/wp-content/uploads/")
+        )
+    )
+
+
+class _TencentResultsParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.heading = ""
+        self._in_heading = False
+        self._link = ""
+        self._link_text = ""
+        self.results: list[tuple[str, str]] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "h3" or (
+            tag == "h2" and "text-white" in dict(attrs).get("class", "").split()
+        ):
+            self._in_heading = True
+            self.heading = ""
+        elif tag == "a":
+            self._link = dict(attrs).get("href", "")
+            self._link_text = ""
+
+    def handle_data(self, data):
+        if self._in_heading:
+            self.heading += data
+        if self._link:
+            self._link_text += data
+
+    def handle_endtag(self, tag):
+        if tag in {"h2", "h3"}:
+            self._in_heading = False
+        elif tag == "a":
+            if "业绩新闻" in self._link_text and "业绩" in self.heading:
+                self.results.append((self._link, self.heading.strip()))
+            self._link = ""
+
+
+def _tencent_disclosures(company: str, question: str, timeout: float) -> list[dict]:
+    if company.strip() not in {"腾讯", "腾讯控股", "腾讯控股有限公司"}:
+        return []
+    _source_url(_TENCENT_RESULTS, "web")
+    request = urllib.request.Request(
+        _TENCENT_RESULTS, headers={"User-Agent": "JobFindsMe/desktop-research"}
+    )
+    with _research_opener(search=False).open(
+        request, timeout=max(0.1, min(timeout, 4))
+    ) as response:
+        if (
+            response.geturl() != _TENCENT_RESULTS
+            or response.headers.get_content_type() != "text/html"
+        ):
+            return []
+        body = response.read(250_001)
+    if len(body) > 250_000:
+        return []
+    parser = _TencentResultsParser()
+    parser.feed(body.decode("utf-8", errors="replace"))
+    year = re.search(r"20\d{2}", question)
+    year_chinese = (
+        ""
+        if not year
+        else "二零" + "".join("零一二三四五六七八九"[int(d)] for d in year.group()[2:])
+    )
+    hits = []
+    for url, heading in parser.results[:100]:
+        host = urllib.parse.urlsplit(url).hostname
+        if host not in _TENCENT_HOSTS or not urllib.parse.urlsplit(
+            url
+        ).path.lower().endswith(".pdf"):
+            continue
+        if year and year.group() not in heading and year_chinese not in heading:
+            continue
+        try:
+            _source_url(url, "web")
+        except (ValueError, OSError):
+            continue
+        hits.append(
+            {
+                "url": url,
+                "title": heading[:300],
+                "summary_hint": "腾讯官方投资者关系业绩新闻原文",
+                "search_published_at": None,
+                "site": "web",
+                "platform": "腾讯投资者关系",
+                "source_type": "official_disclosure",
+                "provider": "official_index",
+                "status": "search_hint_only",
+            }
+        )
+        if len(hits) >= 3:
+            break
+    return hits
+
 
 class BingRedirectHandler(SafeRedirectHandler):
     """Permit Bing's regional RSS redirect without opening arbitrary hosts."""
@@ -46,7 +163,11 @@ class BingRedirectHandler(SafeRedirectHandler):
     _HOSTS = frozenset({"www.bing.com", "cn.bing.com"})
 
     def __init__(self, *, max_redirects: int, require_https: bool) -> None:
-        super().__init__(max_redirects=max_redirects, require_https=require_https, same_host_only=False)
+        super().__init__(
+            max_redirects=max_redirects,
+            require_https=require_https,
+            same_host_only=False,
+        )
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         original_host = urllib.parse.urlsplit(req.full_url).hostname
@@ -77,9 +198,26 @@ def _source_url(value: str, site: str) -> str:
     return value
 
 
-def discover_sources(company: str, question: str, site: str, *, timeout: float = 4) -> list[dict]:
+def discover_sources(
+    company: str, question: str, site: str, *, timeout: float = 4, original_question: str | None = None
+) -> list[dict]:
     if site not in SITES or not company.strip() or len(company) > 100 or not question.strip() or len(question) > 700:
         raise ValueError("invalid research discovery")
+    deadline = time.monotonic() + max(0.1, min(timeout, 4))
+    if site in {"hkex", "web"} and re.search(r"经营|业绩|财报|年报|披露|收入|利润|results|report|revenue", question, re.I):
+        try:
+            official = _tencent_disclosures(company, original_question or question, max(0.1, deadline - time.monotonic()))
+        except urllib.error.HTTPError as error:
+            if error.code in {403, 429}:
+                raise
+            official = []
+        except (OSError, TimeoutError, ValueError, ET.ParseError):
+            official = []
+        if official:
+            return official
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("research discovery time budget exhausted")
     domain, label, source_type = SITES[site]
     query = urllib.parse.urlencode(
         {"q": f'"{company.strip()}" {question.strip()}' + (f" site:{domain}" if domain else ""), "format": "rss"}
@@ -90,7 +228,7 @@ def discover_sources(company: str, question: str, site: str, *, timeout: float =
     )
     validate_public_http_url("https://www.bing.com", resolve_dns=True, require_https=True)
     opener = _research_opener(search=True)
-    with opener.open(request, timeout=max(0.1, min(timeout, 4))) as response:
+    with opener.open(request, timeout=max(0.1, remaining)) as response:
         body = response.read(1_000_000)
     root = ET.fromstring(body)
     hits = []
@@ -135,6 +273,8 @@ def read_original_page(
     if not company.strip() or len(company) > 100:
         raise ValueError("company is required")
     domain, label, source_type = SITES[site]
+    if site == "web" and is_tencent_disclosure_url(url, company):
+        label, source_type = "腾讯投资者关系", "official_disclosure"
     opener = opener or _research_opener(search=False)
     request = urllib.request.Request(url, headers={"User-Agent": "JobFindsMe/desktop-research"})
     retrieved_at = datetime.now(UTC).isoformat()

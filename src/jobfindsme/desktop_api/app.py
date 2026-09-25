@@ -1881,19 +1881,46 @@ def create_app(
                 raise ValueError("research search query exceeds 700 characters")
             timeout_ms = request.get("timeout_ms")
             if timeout_ms is None:
-                return discover_sources(str(request["company"]), search_query, str(request["site"]))
-            if not isinstance(timeout_ms, (int, float)) or isinstance(timeout_ms, bool) or not 100 <= timeout_ms <= 4000:
+                return discover_sources(
+                    str(request["company"]),
+                    search_query,
+                    str(request["site"]),
+                    original_question=original_question,
+                )
+            if (
+                not isinstance(timeout_ms, (int, float))
+                or isinstance(timeout_ms, bool)
+                or not 100 <= timeout_ms <= 4000
+            ):
                 raise ValueError("invalid research request timeout")
-            return discover_sources(str(request["company"]), search_query, str(request["site"]), timeout=timeout_ms / 1000)
+            return discover_sources(
+                str(request["company"]),
+                search_query,
+                str(request["site"]),
+                timeout=timeout_ms / 1000,
+                original_question=original_question,
+            )
         except UnsafeSourceError as error:
-            raise HTTPException(status_code=502, detail="公开检索服务跳转被安全策略拦截") from error
+            raise HTTPException(
+                status_code=502, detail="公开检索服务跳转被安全策略拦截"
+            ) from error
         except urllib.error.HTTPError as error:
-            raise HTTPException(status_code=502, detail=f"公开检索服务返回 HTTP {error.code}") from error
+            raise HTTPException(
+                status_code=502, detail=f"公开检索服务返回 HTTP {error.code}"
+            ) from error
         except urllib.error.URLError as error:
-            detail = "公开检索服务 TLS 证书校验失败" if isinstance(error.reason, ssl.SSLError) else "公开检索服务连接失败"
+            detail = (
+                "公开检索服务 TLS 证书校验失败"
+                if isinstance(error.reason, ssl.SSLError)
+                else "公开检索服务连接失败"
+            )
             raise HTTPException(status_code=502, detail=detail) from error
         except (TimeoutError, ET.ParseError) as error:
-            detail = "公开检索服务响应超时" if isinstance(error, TimeoutError) else "公开检索服务返回了无法解析的结果"
+            detail = (
+                "公开检索服务响应超时"
+                if isinstance(error, TimeoutError)
+                else "公开检索服务返回了无法解析的结果"
+            )
             raise HTTPException(status_code=502, detail=detail) from error
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
