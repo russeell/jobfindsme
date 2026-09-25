@@ -276,6 +276,72 @@ def test_original_read_only_counts_anchored_html(monkeypatch):
     assert result["published_at"] is None
 
 
+def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch):
+    import io
+    from reportlab.pdfgen import canvas
+
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    output = io.BytesIO()
+    pdf = canvas.Canvas(output)
+    pdf.drawString(30, 700, "Other company annual filing")
+    pdf.showPage()
+    pdf.drawString(30, 700, "ExampleCorp reported revenue for 2025. ExampleCorp disclosed its research team and operations in this filing.")
+    pdf.save()
+    body = output.getvalue()
+
+    class Response:
+        headers = SimpleNamespace(get_content_type=lambda: "application/pdf", get_content_charset=lambda: None)
+        def geturl(self): return "https://www.cninfo.com.cn/report.pdf"
+        def read(self, amount): return body[:amount]
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+
+    opener = SimpleNamespace(open=lambda *_args, **_kwargs: Response())
+    found = agent_sources.read_original_page("https://www.cninfo.com.cn/report.pdf", "ExampleCorp", "cninfo", opener=opener)
+    assert found["status"] == "read_original"
+    assert found["context"]["page"] == 2
+    assert found["context"]["content_type"] == "application/pdf"
+    assert "ExampleCorp" in found["excerpt"]
+    missing = agent_sources.read_original_page("https://www.cninfo.com.cn/report.pdf", "UnrelatedCo", "cninfo", opener=opener)
+    assert missing["status"] == "entity_mismatch"
+
+
+def test_pdf_reader_rejects_large_or_unreadable_document(monkeypatch):
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    class Response:
+        headers = SimpleNamespace(get_content_type=lambda: "application/pdf", get_content_charset=lambda: None)
+        def __init__(self, body): self.body = body
+        def geturl(self): return "https://www.cninfo.com.cn/report.pdf"
+        def read(self, amount): return self.body[:amount]
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+    opener = lambda body: SimpleNamespace(open=lambda *_args, **_kwargs: Response(body))
+    large = agent_sources.read_original_page("https://www.cninfo.com.cn/report.pdf", "ExampleCorp", "cninfo", opener=opener(b"x" * 2_000_001))
+    assert large["status"] == "unsupported_source"
+    broken = agent_sources.read_original_page("https://www.cninfo.com.cn/report.pdf", "ExampleCorp", "cninfo", opener=opener(b"%PDF-invalid"))
+    assert broken["status"] == "read_failed"
+
+
+def test_rate_limit_has_distinct_read_status(monkeypatch):
+    import urllib.error
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    def reject(*_args, **_kwargs):
+        raise urllib.error.HTTPError("https://www.zhihu.com/p/1", 429, "Too Many Requests", {}, None)
+    result = agent_sources.read_original_page("https://www.zhihu.com/p/1", "示例公司", "zhihu", opener=SimpleNamespace(open=reject))
+    assert result["status"] == "rate_limited"
+
+
+def test_old_job_evidence_is_not_reused_as_current_listing():
+    from jobfindsme.research.agent_store import _fresh
+
+    now = datetime.now(UTC)
+    old = {"retrieved_at": (now - timedelta(days=2)).isoformat(),
+           "context": {"research_topic": "job", "source_type": "public_web"}}
+    recent = {**old, "retrieved_at": (now - timedelta(hours=2)).isoformat()}
+    assert not _fresh(old, at=now)
+    assert _fresh(recent, at=now)
+
+
 def test_agent_endpoints_require_auth_and_do_not_cross_workspace(tmp_path):
     client = TestClient(create_app(token="secret", database_path=tmp_path / "api.db"))
     assert client.get("/v1/research-agent/conversations?workspace_id=x").status_code == 401

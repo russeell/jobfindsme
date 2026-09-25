@@ -10,12 +10,12 @@ import {modelHistoryWithinBudget} from "../../../shared/research-chat-ipc";
 import {useOriginalBrowser} from "../shared/Workbench";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
-import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={onReports(value:ResearchReport[]):void;active:boolean;data?:BootstrapData;target?:Job;onBack():void;onError(message?:string):void};
+type Props={onReports(value:ResearchReport[]):void;active:boolean;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
-export function ResearchPage({active,data,target,onBack,onError,onReports}:Props){
+export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const [job,setJob]=useState<Job|undefined>(target);
   const [report,setReport]=useState<ResearchReport>();
@@ -82,11 +82,17 @@ export function ResearchPage({active,data,target,onBack,onError,onReports}:Props
     const id=current?.id||crypto.randomUUID();
     const at=new Date().toISOString();
     const started=beginChat(current,id,value,at);
-    if(decision.kind!=="clarify"&&!modelId){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
+    if(decision.kind!=="clarify"&&decision.kind!=="job_search"&&!modelId){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
     setChatId(id);
     if(decision.kind==="clarify"){
       const clarified={...finishChat(started.chat,decision.reply,undefined,at),pendingResearch:decision.pending};
       setChats(items=>[clarified,...items.filter(item=>item.id!==id)]);setQuestion("");setMessage("");return;
+    }
+    if(decision.kind==="job_search"){
+      const guided=finishJobSearchChat(started.chat,decision.reply,decision.query,decision.pending,at);
+      if(decision.company)setContextCompany(decision.company);
+      setChats(items=>[{...guided,subjectCompany:decision.company||current?.subjectCompany},...items.filter(item=>item.id!==id)]);
+      setQuestion("");setMessage("");return;
     }
     if(decision.kind==="research"){
       if(newSubject)setJob(undefined);
@@ -141,24 +147,23 @@ export function ResearchPage({active,data,target,onBack,onError,onReports}:Props
   function selectHistoryReport(item:ResearchReport){openSaved(item);closeHistory(false);requestAnimationFrame(()=>scrollRef.current?.focus());}
   return <div className="research-page research-workbench">
     {active&&topbarTarget&&createPortal(<div className="button-row" aria-label="研究操作">
-      {showingReport?<button onClick={()=>{setMode("start");setMessage("");}}>← 研究首页</button>:<button onClick={onBack}>← 找工作</button>}
       <button disabled={chatBusy} onClick={()=>{closeHistory(false);scrollRef.current?.scrollTo({top:0});setChatId(null);setJob(undefined);setContextCompany("");setContextTitle("");setQuestion("");setCandidate(undefined);setReport(undefined);setMode("start");setStreaming("");setMessage("");inputRef.current?.focus();}}>新对话</button>
       <button ref={historyButtonRef} aria-expanded={historyOpen} aria-controls="research-history-panel" onClick={()=>historyOpen?closeHistory():setHistoryOpen(true)}>历史{history.length+chats.length?` · ${history.length+chats.length}`:""}</button>
-      {(showingReport||job)&&<details className="research-more"><summary>更多</summary><div className="research-more-menu"><button onClick={onBack}>返回找工作</button>{job&&<button onClick={()=>openOriginal(job.apply_url)}>岗位原页 ↗</button>}</div></details>}
+      {job&&<button onClick={()=>openOriginal(job.apply_url)}>岗位原页 ↗</button>}
     </div>,topbarTarget)}
     <div ref={scrollRef} className={`research-scroll-region${centeredEmpty?" research-empty-state":""}`} role="region" aria-label="研究报告正文" tabIndex={0}><div className="research-reading-column">
       {(!activeChat||showingReport)&&<header className="research-header"><div><h1>{showingReport?(job?.title||report?.job_context?.company||"公司研究"):"想了解哪家公司或岗位？"}</h1><p>{showingReport?`${job?job.company+" · ":"公司研究 · "}${report&&new Date(report.created_at).toLocaleString()} · ${report&&reportStatus(report)}`:job?`${job.company} · ${job.title}`:"直接输入公司问题；岗位链接是可选资料。"}</p></div></header>}
       {activeChat&&<section className="research-chat-messages" aria-label="对话内容">
-        {activeChat.subjectCompany&&<p className="research-empty-note">当前对话：{activeChat.subjectCompany}{activeChat.subjectTitle?` · ${activeChat.subjectTitle}`:""}</p>}
+        {activeChat.subjectCompany&&<p className="research-subject-caption">{activeChat.subjectCompany}{activeChat.subjectTitle?` · ${activeChat.subjectTitle}`:""}</p>}
         {activeChat.turns.map((item,index)=>{
           const attached=chatReportIds.get(index);
           const attachedReport=attached?reportsById.get(attached):undefined;
-          return <article className={`research-chat-turn ${item.role}`} key={`${activeChat.id}-${index}`}>
-            <strong>{item.role==="user"?"你":"研究助手"}</strong>
+          return <article className={`research-chat-turn ${item.role}`} aria-label={item.role==="user"?"你":"研究助手"} key={`${activeChat.id}-${index}`}>
             {attachedReport?<ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})}/>:<p>{item.text}</p>}
+            {item.searchQuery&&<button type="button" className="research-search-action" onClick={()=>onSearchJobs(item.searchQuery!)}>去找工作 · {item.searchQuery}</button>}
           </article>;
         })}
-        {chatBusy&&<article className="research-chat-turn assistant" aria-live="polite"><strong>研究助手</strong><p>{streaming||"正在处理…"}</p></article>}
+        {chatBusy&&<article className="research-chat-turn assistant" aria-label="研究助手" aria-live="polite"><p>{streaming||"正在处理…"}</p></article>}
         {activeChat.failure&&!chatBusy&&<p className="research-chat-failure" role="status">{activeChat.failure} · 输入框已保留提问，可重试。</p>}
       </section>}
       {!activeChat&&showingReport&&report&&<ReputationEvidence report={report} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})}/>}
@@ -174,7 +179,7 @@ export function ResearchPage({active,data,target,onBack,onError,onReports}:Props
     </aside>}
     {message&&<p className="research-inline-status" role="status">{message}</p>}
     <form className="research-composer" aria-label="研究输入框" onSubmit={event=>{event.preventDefault();submitInput();}}>
-      <textarea ref={inputRef} rows={2} aria-label="岗位链接与研究问题" value={question} maxLength={2200} disabled={!!busy||chatBusy} onChange={event=>{setQuestion(event.target.value);setCandidate(undefined);setMessage("");}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();submitInput();}}} placeholder={job?"继续问这个岗位或公司，也可贴链接":"自由对话、研究公司，或粘贴岗位链接"}/>
+      <textarea ref={inputRef} rows={1} aria-label="岗位链接与研究问题" value={question} maxLength={2200} disabled={!!busy||chatBusy} onChange={event=>{setQuestion(event.target.value);setCandidate(undefined);setMessage("");}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();submitInput();}}} placeholder={job?"继续问这个岗位或公司，也可贴链接":"问岗位、公司，或粘贴岗位链接"}/>
       {candidate&&<div className="research-candidate"><strong>{candidate.company} · {candidate.title}</strong><span title={candidate.description}>{candidate.description?candidate.description.slice(0,120):"岗位原文不完整"}</span><button type="button" disabled={!!busy} onClick={()=>void confirmCandidate()}>确认岗位</button></div>}
       <div className="research-composer-actions"><select aria-label="当前使用模型" value={modelId||""} onChange={event=>{const value=event.target.value;setModelId(value||null);if(value)setCurrentModel(workspaceId,value);}}><option value="">选择模型</option>{connections.filter(item=>item.status==="verified").map(item=><option key={item.connection_id} value={item.connection_id}>{item.provider} · {item.model_id}</option>)}</select><div className="button-row">{chatBusy&&<button type="button" onClick={()=>void cancelChat()}>停止</button>}<button type="submit" className="primary-button" disabled={!!busy||chatBusy||!!candidate}>{busy==="link"?"读取中…":chatBusy?"处理中…":"发送 ↑"}</button></div></div>
     </form>

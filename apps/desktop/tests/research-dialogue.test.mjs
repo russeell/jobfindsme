@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
@@ -14,6 +14,25 @@ test('explicit company needs no link, while ambiguous research asks in the conve
  const answered=decideResearchRequest('腾讯',{hasJob:false,pending:unclear.pending});
  assert.equal(answered.kind,'research');assert.equal(answered.company,'腾讯');assert.equal(answered.question,'这家公司福利怎么样？');
  assert.equal(decideResearchRequest('你好',{hasJob:false}).kind,'chat');
+});
+
+test('agent role exploration keeps its intent when a company is added and uses the existing job search',()=>{
+ assert.equal(decideResearchRequest('你是谁',{hasJob:false}).kind,'chat');
+ const first=decideResearchRequest('想了解agent相关岗位',{hasJob:false});
+ assert.equal(first.kind,'job_search');assert.equal(first.query,'Agent');
+ assert.match(first.reply,/选择来源后再发起检索/);
+ const chat=finishJobSearchChat(beginChat(undefined,'c1','想了解agent相关岗位','2026-01-01').chat,first.reply,first.query,first.pending,'2026-01-01');
+ const restored=fromStoredResearchChat({...toStoredResearchChat('w1',chat),updated_at:'2026-01-01'});
+ assert.equal(restored.pendingResearch.kind,'job_search');assert.equal(restored.turns[1].searchQuery,'Agent');
+ const next=resolveResearchSession('minimax',restored,undefined,{}).decision;
+ assert.equal(next.kind,'job_search');assert.equal(next.query,'minimax Agent');
+ assert.match(next.reply,/没有|再发起检索/);
+ const resumed=finishJobSearchChat(beginChat(restored,'c1','minimax','2026-01-02').chat,next.reply,next.query,next.pending,'2026-01-02');
+ assert.equal(resumed.turns[0].text,'想了解agent相关岗位');
+ assert.equal(resumed.turns[2].text,'minimax');
+ assert.equal(resumed.turns[3].searchQuery,'minimax Agent');
+ assert.equal(resumed.pendingResearch,undefined);
+ assert.deepEqual(modelHistoryWithinBudget(resumed.turns)[3],{role:'assistant',text:next.reply});
 });
 
 test('job context resolves a follow-up and an explicit new subject replaces that context',()=>{

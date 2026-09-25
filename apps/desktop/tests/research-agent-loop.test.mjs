@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import {createHash} from 'node:crypto';
-import {modelHistoryWithinBudget,runPiResearchAgent} from '../dist-electron/main/research/pi-research-agent.mjs';
+import {explainResearchGap,modelHistoryWithinBudget,runPiResearchAgent} from '../dist-electron/main/research/pi-research-agent.mjs';
 
 function sse(response,delta,reason){
  response.write(`data: ${JSON.stringify({id:'chatcmpl-mock',object:'chat.completion.chunk',created:1,model:'mock',choices:[{index:0,delta,finish_reason:null}]})}\n\n`);
@@ -51,6 +51,32 @@ test('Pi uses bounded tools and saves only a verified quote',async()=>{
   assert.equal(executions.at(-1).status,'complete');assert.equal(deltas.join(''),result.text);
  }finally{server.close();}
 });
+test('empty official discovery can replan through public web and cite the read original',async()=>{
+ let turn=0;const webSource={...source,url:'https://example.org/company/story',platform:'公开网页',context:{source_type:'public_web',research_topic:'company'}};
+ webSource.evidence_id='ev_'+createHash('sha256').update(`${webSource.url}\0${webSource.excerpt}`).digest('hex').slice(0,24);
+ const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'cninfo',question:'研发团队 官方披露'},turn):turn===3?tool('search_web',{site:'web',question:'研发团队 公开资料'},turn):turn===4?tool('read_page',{site:'web',url:webSource.url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[webSource.evidence_id],category:'business',scope:'上海'}]})};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const searches=[],executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async(_company,query,site)=>{searches.push({query,site});return site==='cninfo'?[]:[{url:webSource.url,site:'web',title:'原页',status:'search_hint_only'}];},readPage:async()=>webSource,readJob:async()=>null,readBrowserPage:async()=>{throw Error('public web browser fallback is disallowed');},saveExecution:async state=>executions.push(state),saveReport:async()=>({report_id:'report_web'})};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_fallback',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(searches.map(item=>item.site),['cninfo','web']);assert.notEqual(searches[0].query,searches[1].query);
+  assert.equal(executions.at(-1).status,'complete');assert.equal(executions.at(-1).budgets.searches,2);assert(executions.at(-1).budgets.model_turns<=7);assert(executions.at(-1).budgets.seconds<75);assert.equal(result.report.report_id,'report_web');
+ }finally{server.close();}
+});
+
+test('discovery provider error is recorded separately from no results',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'cninfo',question:'研发'},turn):{role:'assistant',content:JSON.stringify({claims:[]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const executions=[];const tools={findEvidence:async()=>[],searchWeb:async()=>{throw Error('mock search outage');},readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_search_error',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(executions.at(-1).status,'search_service_error');assert.equal(executions.at(-1).actions.at(-1).status,'search_service_error');
+  assert.match(result.text,/不能把它当作没有结果/);
+ }finally{server.close();}
+});
 
 test('a fabricated final claim is dropped and no report is saved',async()=>{
  let turn=0;const server=http.createServer((_request,response)=>{
@@ -64,8 +90,17 @@ test('a fabricated final claim is dropped and no report is saved',async()=>{
  const tools={findEvidence:async()=>[],searchWeb:async()=>[],readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>executions.push(state),saveReport:async()=>{saved++;return null;}};
  try{
   const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_abcdefgh',question:'公司上市吗',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
-  assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/没有生成事实性结论/);assert.equal(executions.at(-1).status,'complete');
+  assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/只检查了已保存的材料/);assert.match(result.text,/没有发起网页检索/);assert.equal(executions.at(-1).status,'unsupported_claim');
  }finally{server.close();}
+});
+
+test('no-evidence answer states what was attempted and offers a next step',()=>{
+ assert.match(explainResearchGap(0,[{tool:'find_evidence'}],[]),/没有发起网页检索/);
+ assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'read_failed'}],['read failed']),/原页读取失败/);
+ assert.match(explainResearchGap(0,[{tool:'search_web',status:'search_service_error'}],['outage']),/检索服务未能完成/);
+ assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'entity_mismatch'}],[]),/主体/);
+ assert.match(explainResearchGap(1,[{tool:'find_evidence'}],[]),/不足以支持|没有足够依据/);
+ assert.match(explainResearchGap(0,[],[]),/找工作/);
 });
 
 test('ordinary follow-up stays a conversation without research tools or report',async()=>{

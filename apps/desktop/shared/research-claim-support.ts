@@ -2,7 +2,7 @@ import type {ResearchEvidence} from "./contracts.js";
 
 export type SupportedResearchClaim={
   statement:string;quote:string;evidence_ids:string[];category:string;scope:string;
-  source_type:"official_disclosure"|"personal_account"|"mixed";
+  source_type:"official_disclosure"|"personal_account"|"public_web"|"mixed";
   support_level:"direct"|"qualified";
 };
 const categories=new Set(["business","listing","positive","negative","workload","benefits","role","development"]);
@@ -38,5 +38,5 @@ export function checkResearchClaim(input:unknown,evidence:Map<string,ResearchEvi
   const proposedScope=String(value.scope||"").trim();
   const scope=proposedScope.length>=2&&proposedScope.length<=60&&quote.includes(proposedScope)?proposedScope:"团队、地区或法律主体未核实";
   const sourceType=row.context?.source_type;
-  return {statement,quote,evidence_ids:ids,category:String(value.category),scope,source_type:sourceType==="official_disclosure"?"official_disclosure":"personal_account",support_level:direct?"direct":"qualified"};
+  return {statement,quote,evidence_ids:ids,category:String(value.category),scope,source_type:sourceType==="official_disclosure"?"official_disclosure":sourceType==="public_web"?"public_web":"personal_account",support_level:direct?"direct":"qualified"};
 }

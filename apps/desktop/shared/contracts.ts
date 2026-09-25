@@ -370,7 +370,7 @@ export type PromptTurnInput = {
 
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
-export type ResearchChatTurn = {role:"user"|"assistant";text:string;reportId?:string};
+export type ResearchChatTurn = {role:"user"|"assistant";text:string;reportId?:string;searchQuery?:string};
 export type ResearchChatInput = {request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta:string};
 export type ResearchChatResult = {text:string;report?:ResearchReport};
@@ -404,7 +404,7 @@ export type ServiceStatus = {
 export type ResearchDirection = "role" | "workload" | "salary" | "leave" | "care";
 export type ResearchCorrectionInput = {workspace_id:string;evidence_id:string;kind:"wrong_entity"|"broken_link"|"wrong_team"|"other";note:string};
 export type ResearchEvidence = {
-  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|"question"|null;source_type?:"official_disclosure"|"personal_account"};
+  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|"question"|null;source_type?:"official_disclosure"|"personal_account"|"public_web";content_type?:string;page?:number|null};
   evidence_id: string;
   url: string | null;
   platform: string;
@@ -424,7 +424,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{statement?:string;quote:string;evidence_ids:string[];category:string;scope:string;source_type?:"official_disclosure"|"personal_account"|"mixed";support_level?:"direct"|"qualified"}>};
+  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{statement?:string;quote:string;evidence_ids:string[];category:string;scope:string;source_type?:"official_disclosure"|"personal_account"|"public_web"|"mixed";support_level?:"direct"|"qualified"}>};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;

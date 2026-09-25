@@ -369,24 +369,27 @@ nav button .nav-label {font-size:13px;}
 .research-question-result {width:100%;max-width:none;border-bottom:1px solid var(--line);padding:0 0 12px;margin:0 0 22px;}
 .research-question-result h2 {font-size:17px;line-height:1.5;margin:5px 0 9px;overflow-wrap:anywhere;}
 .research-question-result>p {font-size:13px;line-height:1.7;margin:0 0 12px;color:var(--text-muted);}
-.research-composer {display:flex;flex-direction:column;gap:5px;width:min(800px,calc(100% - 40px));min-height:0;flex-shrink:0;border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin:6px auto 0;background:var(--surface-soft);}
+.research-composer {display:flex;flex-direction:column;gap:3px;width:min(800px,calc(100% - 40px));min-height:0;flex-shrink:0;border:1px solid var(--line);border-radius:12px;padding:7px 11px;margin:4px auto 0;background:var(--surface-soft);}
 .research-composer:focus-within {border-color:#737373;box-shadow:0 0 0 2px #73737335;}
-.research-composer textarea {display:block;flex:none;width:100%;height:52px;min-height:42px;max-height:min(112px,18vh);overflow:auto;border:0;border-radius:0;background:transparent;padding:3px 0;resize:none;font-size:13px;line-height:1.55;}
+.research-composer textarea {display:block;flex:none;width:100%;height:42px;min-height:40px;max-height:min(108px,18vh);overflow:auto;border:0;border-radius:0;background:transparent;padding:3px 0;resize:none;font-size:15px;line-height:1.55;}
 .research-composer textarea:focus-visible {outline:0;}
-.research-composer-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;}
+.research-composer-actions {display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
 .research-composer .button-row {gap:5px;flex-wrap:nowrap;}
 .model-advanced {border-top:1px solid var(--line);padding-top:10px;color:var(--text-muted);font-size:12px;}
 .model-advanced summary {cursor:pointer;margin-bottom:8px;}
 .model-advanced label {margin-top:8px;}
-.research-chat-messages {display:grid;gap:14px;margin:14px 0 24px;}
-.research-chat-turn {max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65;}
-.research-chat-turn.user {margin-left:auto;max-width:88%;padding:10px 14px;border-radius:11px;background:var(--surface-soft);}
-.research-chat-turn.assistant {padding:4px 0;}
+.research-chat-messages {display:flex;flex-direction:column;gap:26px;margin:12px 0 28px;}
+.research-subject-caption {align-self:flex-start;margin:0 0 2px;color:var(--text-muted);font-size:12px;line-height:1.5;}
+.research-chat-messages>article.research-chat-turn {border:0;padding:0;max-width:100%;overflow-wrap:anywhere;font-size:15px;line-height:1.7;}
+.research-chat-turn.user {align-self:flex-end;max-width:min(72%,560px)!important;padding:10px 14px!important;border-radius:13px;background:var(--surface-soft);}
+.research-chat-turn.assistant {align-self:stretch;}
 .research-chat-turn.assistant>.research-reading {display:block;}
-.research-chat-turn strong {font-size:11px;color:var(--text-muted);}
-.research-chat-turn p {margin:5px 0 0;}
+.research-chat-messages>.research-chat-turn>p {margin:0;color:var(--text);font-size:15px;line-height:1.72;white-space:pre-wrap;}
+.research-chat-turn.assistant>p {max-width:76ch;}
+.research-search-action {margin-top:12px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px;}
+.research-search-action:hover {background:var(--surface-hover);}
 .research-chat-failure {font-size:11px;color:var(--text-muted);}
-.research-composer-actions>select {max-width:240px;min-width:0;font-size:11px;padding:4px 6px;}
+.research-composer-actions>select {max-width:180px;min-width:0;padding:4px 6px;border-color:transparent;background:transparent;color:var(--text-muted);font-size:11px;text-overflow:ellipsis;}
 .research-reading .evidence-source button {padding:0;border:0;background:transparent;text-decoration:underline;font-size:12px;min-height:0;}
 @container(max-width:720px){.research-reading-column,.research-composer,.research-inline-status {width:calc(100% - 24px)}.research-composer {padding:8px 10px}.research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto}}
 

@@ -10,6 +10,7 @@ from uuid import uuid4
 from datetime import UTC, datetime, timedelta
 
 from jobfindsme.storage import Database
+from jobfindsme.connectors.http import validate_public_http_url
 from .agent_sources import SITES
 from .service import _host_matches
 
@@ -81,7 +82,7 @@ def _claim_basis(claim: dict, evidence: dict, company: str) -> dict:
     source_type = (evidence.get("context") or {}).get("source_type")
     return {"statement": statement, "quote": quote, "evidence_ids": claim["evidence_ids"],
             "category": claim["category"], "scope": scope,
-            "source_type": "official_disclosure" if source_type == "official_disclosure" else "personal_account",
+            "source_type": source_type if source_type in {"official_disclosure", "personal_account", "public_web"} else "public_web",
             "support_level": "direct" if direct else "qualified"}
 
 
@@ -194,7 +195,7 @@ class ResearchAgentStore:
         execution_id = str(item["id"])
         status = item.get("status")
         if not execution_id or len(execution_id) > 100 or status not in {
-            "running", "complete", "failed", "cancelled"
+            "running", "complete", "failed", "cancelled", "no_results", "search_service_error", "read_failed", "entity_mismatch", "unsupported_claim"
         }:
             raise ValueError("invalid research execution")
         actions = item.get("actions") or []
@@ -323,8 +324,11 @@ class ResearchAgentStore:
             return None
         for row in verified:
             parsed = urlsplit(row["url"])
-            if not any(_host_matches(parsed.hostname, domain) for domain, _, _ in SITES.values()):
-                raise ValueError("evidence URL is outside permitted research sources")
+            fixed_host = any(_host_matches(parsed.hostname, domain) for domain, _, _ in SITES.values() if domain)
+            if not fixed_host:
+                if (row.get("context") or {}).get("source_type") != "public_web":
+                    raise ValueError("evidence URL is outside permitted research sources")
+                validate_public_http_url(row["url"], resolve_dns=True, require_https=True)
         ids = {str(row.get("evidence_id")) for row in verified}
         if len(ids) != len(verified):
             raise ValueError("duplicate evidence ids")

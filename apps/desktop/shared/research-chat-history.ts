@@ -17,6 +17,11 @@ export function finishChat(chat:SavedResearchChat,text:string,reportId:string|un
   return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text,...(reportId?{reportId}:{})}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
 }
 
+export function finishJobSearchChat(chat:SavedResearchChat,text:string,query:string,pending:PendingResearch|undefined,at:string):SavedResearchChat{
+  const finished=finishChat(chat,text,undefined,at);
+  return {...finished,turns:[...finished.turns.slice(0,-1),{role:"assistant",text,searchQuery:query}],pendingResearch:pending};
+}
+
 export function reportIdsByTurn(chat:SavedResearchChat,reports:Array<{report_id:string;job_context?:{interest_question?:string|null}}>):Map<number,string>{
   const available=new Map(reports.filter(item=>chat.reportIds.includes(item.report_id)).map(item=>[item.report_id,item]));
   const assigned=new Map<number,string>();

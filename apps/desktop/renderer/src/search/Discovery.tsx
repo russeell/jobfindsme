@@ -13,11 +13,12 @@ import {ResumePage} from "../resume/ResumePage";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 
-export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[]; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
+export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports,suggestedIntent }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[];suggestedIntent?:{query:string;nonce:number}; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
   const sources = useMemo(() => data?.sources ?? [], [data]);
   const enabled = selectedSearchSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
   const [intent, setIntent] = useState("");
+  useEffect(()=>{if(suggestedIntent)setIntent(suggestedIntent.query);},[suggestedIntent?.nonce]);
   const [searching, setSearching] = useState(false);
   const [searchError,setSearchError]=useState<ReturnType<typeof userError>>();
   const [collection,setCollection]=useState<SourceCollectionProgress>();

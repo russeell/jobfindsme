@@ -1,9 +1,10 @@
 import {researchScopeFromQuestion} from "./research-scope";
 
-export type PendingResearch={question:string;missing:"company"|"role";company?:string};
+export type PendingResearch={question:string;missing:"company"|"role";company?:string}|{kind:"job_search";question:string;keyword:string};
 export type ResearchDecision=
   | {kind:"chat"}
   | {kind:"clarify";reply:string;pending:PendingResearch}
+  | {kind:"job_search";reply:string;query:string;company?:string;pending?:PendingResearch}
   | {kind:"research";question:string;company:string;title?:string};
 
 const researchCue=/(?:研究|查(?:一下|资料)?|调查|公开资料|公司|企业|岗位|职位|职责|招聘|JD|经营|上市|口碑|评价|员工|工作强度|加班|福利|待遇|薪资|发展|靠谱吗|怎么样)/iu;
@@ -17,20 +18,39 @@ function namedCompany(value:string):string|undefined{
   return explicit&&!unknown.test(explicit)?explicit:undefined;
 }
 
+function jobKeyword(value:string):string|undefined{
+  if(!/(?:岗位|职位|工作机会)/u.test(value)||/(?:职责|福利|发展|工作强度|薪资|待遇)/u.test(value)||/^(?:研究|调查)/u.test(value))return;
+  const before=value.split(/(?:相关的?|方向的?)?(?:岗位|职位|工作机会)/u)[0]
+    ?.replace(/^(?:我)?(?:想|希望)?(?:了解|找|看看|搜索|查找)?\s*/u,"").trim();
+  if(!before||before.length>40||/(?:公司|企业|这个|这份|该|此)/u.test(before))return;
+  return /^agent$/iu.test(before)?"Agent":before;
+}
+
+function optionalCompany(value:string):string|undefined{
+  const name=value.replace(/^公司(?:全称)?(?:是|[:：])?\s*/u,"").trim();
+  return bareName.test(name)&&!unknown.test(name)&&!/(?:你|我|谁|什么|怎么|如何|想|了解|找|岗位|职位|搜索|继续)/u.test(name)?name:undefined;
+}
+
 export function decideResearchRequest(value:string,context:{company?:string;title?:string;hasJob:boolean;pending?:PendingResearch}):ResearchDecision{
   const question=value.trim();
   const pending=context.pending;
-  if(pending){
+  if(pending&&"kind" in pending){
+      const company=optionalCompany(question);
+      if(company){const query=`${company} ${pending.keyword}`;return {kind:"job_search",company,query,reply:`明白，你想看 ${company} 的 ${pending.keyword} 相关岗位。可以用下方入口把“${query}”填进找工作；选择来源后再发起检索。`};}
+  }else if(pending){
     if(pending.missing==="company"){
       const company=(namedCompany(question)||question.replace(/^(?:公司(?:全称)?是|是)\s*/u,"").trim());
       if(!bareName.test(company)||unknown.test(company))return {kind:"clarify",reply:"请直接说公司全称，或提出新的问题。",pending};
       if(/(?:这个|这家|该公司|某公司)/u.test(company))return {kind:"clarify",reply:"还需要可核对的公司全称。",pending};
       return {kind:"research",question:pending.question,company,title:context.title};
+    }else{
+      const title=question.replace(/^(?:岗位|职位)(?:名称)?(?:是|[:：])\s*/u,"").trim();
+      if(!bareName.test(title)||unknown.test(title))return {kind:"clarify",reply:"请直接说岗位名称，或提出新的问题。",pending};
+      return {kind:"research",question:pending.question,company:pending.company!,title};
     }
-    const title=question.replace(/^(?:岗位|职位)(?:名称)?(?:是|[:：])\s*/u,"").trim();
-    if(!bareName.test(title)||unknown.test(title))return {kind:"clarify",reply:"请直接说岗位名称，或提出新的问题。",pending};
-    return {kind:"research",question:pending.question,company:pending.company!,title};
   }
+  const keyword=!context.company&&!context.hasJob?jobKeyword(question):undefined;
+  if(keyword)return {kind:"job_search",query:keyword,reply:`可以从 ${keyword} 相关岗位开始。下方入口会把“${keyword}”填进找工作；选择来源后再发起检索。有目标公司也可以直接告诉我。`,pending:{kind:"job_search",question,keyword}};
   if(!researchCue.test(question))return {kind:"chat"};
   const scope=researchScopeFromQuestion(question);
   const explicitCompany=namedCompany(question);
