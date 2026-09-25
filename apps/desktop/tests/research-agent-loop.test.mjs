@@ -18,6 +18,20 @@ test('model context budget leaves the full 15 round history intact',()=>{
  assert.equal(full.length,30);assert(model.length<full.length);assert.equal(model.at(-1).text,full.at(-1).text);
  assert(model.reduce((sum,turn)=>sum+turn.text.length,0)<=12000);
 });
+test('search tool passes the full 700 character question and a separate search query',async()=>{
+ const question='问'.repeat(700);let turn=0;const seen=[];
+ const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'zhihu',question},turn):{role:'assistant',content:JSON.stringify({claims:[],limitations:['无原页']})};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async(_company,searchQuery,_site,originalQuestion)=>{seen.push({searchQuery,originalQuestion});return [];},readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async()=>{},saveReport:async()=>null};
+ try{
+  await runPiResearchAgent({workspaceId:'w1',requestId:'req_700chars',question,company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(seen,[{searchQuery:question,originalQuestion:question}]);
+ }finally{server.close();}
+});
 test('Pi uses bounded tools and saves only a verified quote',async()=>{
  let turn=0;const server=http.createServer((_request,response)=>{
   response.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
@@ -27,7 +41,7 @@ test('Pi uses bounded tools and saves only a verified quote',async()=>{
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const port=server.address().port,actions=[],executions=[],reports=[];
- const tools={findEvidence:async()=>{actions.push('find');return [];},searchWeb:async(_company,question)=>{actions.push('search');assert.match(question,/示例公司研发如何/);assert.match(question,/研发/);return [{url:source.url,site:'zhihu',title:'原页',status:'search_hint_only'}];},readPage:async()=>{actions.push('read');return source;},readJob:async()=>{throw Error('unexpected job read');},readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>{executions.push(state);},saveReport:async state=>{reports.push(state);return {...state,report_id:'report_1'};}};
+ const tools={findEvidence:async()=>{actions.push('find');return [];},searchWeb:async(_company,searchQuery,_site,originalQuestion)=>{actions.push('search');assert.equal(searchQuery,'研发');assert.equal(originalQuestion,'示例公司研发如何');return [{url:source.url,site:'zhihu',title:'原页',status:'search_hint_only'}];},readPage:async()=>{actions.push('read');return source;},readJob:async()=>{throw Error('unexpected job read');},readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>{executions.push(state);},saveReport:async state=>{reports.push(state);return {...state,report_id:'report_1'};}};
  try{
   const deltas=[];
   const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_12345678',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,value=>deltas.push(value),new AbortController().signal);

@@ -6,6 +6,7 @@ import {isAllowedSourceUrl,isSourceBrowserId,sourceBrowserSpecs} from "../../../
 import {userError} from "../../../shared/user-errors";
 import {splitResearchInput} from "../../../shared/research-input";
 import {resolveResearchSession} from "../../../shared/research-session";
+import {modelHistoryWithinBudget} from "../../../shared/research-chat-ipc";
 import {useOriginalBrowser} from "../shared/Workbench";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
@@ -94,7 +95,7 @@ export function ResearchPage({active,data,target,onBack,onError,onReports}:Props
     setChats(items=>[startedChat,...items.filter(item=>item.id!==id)]);
     setQuestion("");streamingRef.current="";setStreaming("");setMessage("");setChatBusy(true);
     try{
-      const result=await window.jobfindsme!.runResearchChat({request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:decision.kind==="research"?decision.question:value,research:decision.kind==="research",job_id:sameJob?activeJobId:undefined,company:decision.kind==="research"?decision.company:undefined,title:decision.kind==="research"?decision.title:undefined,history:started.history});
+      const result=await window.jobfindsme!.runResearchChat({request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:decision.kind==="research"?decision.question:value,research:decision.kind==="research",job_id:sameJob?activeJobId:undefined,company:decision.kind==="research"?decision.company:undefined,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
       if(requestRef.current?.id!==requestId||workspaceRef.current!==workspaceId)return;
       setChats(items=>items.map(item=>item.id===id?finishChat(item,result.text,result.report?.report_id,new Date().toISOString()):item));
       if(result.report){const values=await window.jobfindsme!.listResearchReports(workspaceId);if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){keepReports(values);lastOpened.current=result.report.report_id;setReport(result.report);setMode("report");}}

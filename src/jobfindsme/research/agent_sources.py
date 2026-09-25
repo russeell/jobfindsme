@@ -45,7 +45,7 @@ def _source_url(value: str, site: str) -> str:
 
 
 def discover_sources(company: str, question: str, site: str, *, timeout: float = 4) -> list[dict]:
-    if site not in SITES or not company.strip() or len(company) > 100 or len(question) > 200:
+    if site not in SITES or not company.strip() or len(company) > 100 or not question.strip() or len(question) > 700:
         raise ValueError("invalid research discovery")
     domain, label, source_type = SITES[site]
     query = urllib.parse.urlencode(

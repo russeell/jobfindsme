@@ -81,7 +81,9 @@ def test_long_conversation_and_binding_round_trip_without_truncation(tmp_path):
         saved["research_mode"],
     ) == ("job-a", "A公司", "A岗位", True)
     with pytest.raises(ValueError, match="700"):
-        store.save_conversation(workspace, {"id": "too-long", "turns": [], "draft": "问" * 701})
+        store.save_conversation(
+            workspace, {"id": "too-long", "turns": [], "draft": "问" * 701}
+        )
 
 
 def test_research_question_boundary_is_700_across_python_request_and_report(tmp_path):
@@ -100,6 +102,65 @@ def test_research_question_boundary_is_700_across_python_request_and_report(tmp_
             workspace,
             {"company": "示例公司", "question": "问" * 701, "evidence": [evidence()]},
         )
+
+
+def test_search_endpoint_keeps_original_question_separate_from_query(
+    tmp_path, monkeypatch
+):
+    import importlib
+
+    app_module = importlib.import_module("jobfindsme.desktop_api.app")
+    store, workspace = setup_store(tmp_path)
+    seen = []
+    monkeypatch.setattr(
+        app_module,
+        "discover_sources",
+        lambda company, query, site: seen.append((company, query, site)) or [],
+    )
+    client = TestClient(
+        create_app(token="test-secret", database_path=store.database.path)
+    )
+    for size in (300, 301, 700):
+        response = client.post(
+            "/v1/research-agent/search",
+            headers={"Authorization": "Bearer test-secret"},
+            json={
+                "workspace_id": workspace,
+                "company": "示例公司",
+                "original_question": "问" * size,
+                "search_query": "查" * size,
+                "site": "zhihu",
+            },
+        )
+        assert response.status_code == 200
+    assert len(seen) == 3
+    assert [len(query) for _, query, _ in seen] == [300, 301, 700]
+    response = client.post(
+        "/v1/research-agent/search",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "workspace_id": workspace,
+            "company": "示例公司",
+            "original_question": "问" * 701,
+            "search_query": "研发团队",
+            "site": "zhihu",
+        },
+    )
+    assert response.status_code == 400
+    assert len(seen) == 3
+    response = client.post(
+        "/v1/research-agent/search",
+        headers={"Authorization": "Bearer test-secret"},
+        json={
+            "workspace_id": workspace,
+            "company": "示例公司",
+            "original_question": "问" * 700,
+            "search_query": "查" * 701,
+            "site": "zhihu",
+        },
+    )
+    assert response.status_code == 400
+    assert len(seen) == 3
 
 
 def test_new_supported_conclusion_versions_without_new_page(tmp_path):

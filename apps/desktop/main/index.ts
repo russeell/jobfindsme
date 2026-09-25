@@ -14,6 +14,7 @@ import {runSourceCheckQueue} from "./sources/source-check-queue";
 import {collectBrowserSourcePages} from "./sources/source-search-coordinator";
 import {readIsolatedResearchPage} from "./research/browser-page";
 import {ResearchRunController} from "./research/run-controller";
+import {validResearchChatInput} from "../shared/research-chat-ipc";
 import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, type SourceBrowserBounds } from "../shared/source-browser-policy";
 import type {
   ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
@@ -76,6 +77,7 @@ let isQuitting = false;
 
 function shutdownAndExit(): Promise<void> {
   if (shutdownPromise) return shutdownPromise;
+  chatRuns.cancelCurrent();
   apiClient = undefined;
   serviceStatus = { connected: false, message: "本地服务正在退出" };
   isQuitting = true;
@@ -660,7 +662,7 @@ ipcMain.handle("desktop:cancel-research", async () => {
 });
 ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");
-  if(!input||typeof input.request_id!=="string"||!/^[-a-zA-Z0-9]{8,80}$/.test(input.request_id)||typeof input.session_id!=="string"||!/^[-a-zA-Z0-9]{8,100}$/.test(input.session_id)||typeof input.workspace_id!=="string"||typeof input.connection_id!=="string"||typeof input.question!=="string"||input.question.length>700||!input.question.trim()||typeof input.research!=="boolean"||!Array.isArray(input.history)||input.history.length>200||input.history.some(item=>!item||!["user","assistant"].includes(item.role)||typeof item.text!=="string"||item.text.length>8000))throw Error("invalid research chat input");
+  if(!validResearchChatInput(input))throw Error("invalid research chat input");
   const run=chatRuns.begin({runId:input.request_id,sessionId:input.session_id,workspaceId:input.workspace_id},90_000);
   try{
     const workspaces=(await apiClient.bootstrap()).workspaces;
@@ -673,10 +675,10 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     if(run.signal.aborted)throw Error("cancelled");
     return await runPiResearchAgent({workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,research:input.research,jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
       {
-        findEvidence:company=>apiClient!.findAgentEvidence(input.workspace_id,company),
-        searchWeb:(company,question,site,signal)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,question,site},signal),
+        findEvidence:(company,signal)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal),
+        searchWeb:(company,searchQuery,site,originalQuestion,signal)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,original_question:originalQuestion,search_query:searchQuery,site},signal),
         readPage:(company,site,url,signal)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url},signal),
-        readJob:jobId=>apiClient!.readAgentJob(input.workspace_id,jobId),
+        readJob:(jobId,signal)=>apiClient!.readAgentJob(input.workspace_id,jobId,signal),
         readBrowserPage:(company,site,url,signal)=>readIsolatedResearchPage(company,site,url,signal),
         saveExecution:state=>apiClient!.saveAgentExecution(state),
         saveReport:state=>apiClient!.saveAgentReport(state),

@@ -13,3 +13,13 @@ test('run registers synchronously, rejects concurrency and permits immediate ret
  runs.finish(b);assert.equal(runs.current,undefined);
  assert.equal(runs.cancel('run-b'),false);
 });
+
+test('shutdown cancels the active run and aborts its backend signal',()=>{
+ const runs=new ResearchRunController();
+ const active=runs.begin({runId:'run-exit',sessionId:'session-a',workspaceId:'workspace-a'},90_000);
+ let aborted=false;active.signal.addEventListener('abort',()=>{aborted=true;});
+ assert.equal(runs.cancelCurrent(),true);
+ assert.equal(aborted,true);
+ assert.equal(runs.current,undefined);
+ assert.equal(runs.cancelCurrent(),false);
+});

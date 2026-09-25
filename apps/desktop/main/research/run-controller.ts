@@ -18,6 +18,9 @@ export class ResearchRunController{
     run.controller.abort();
     return true;
   }
+  cancelCurrent():boolean{
+    return this.active?this.cancel(this.active.runId):false;
+  }
   finish(run:ResearchRun):void{
     if(this.active!==run)return;
     clearTimeout(this.active.timer);

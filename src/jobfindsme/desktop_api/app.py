@@ -1868,7 +1868,13 @@ def create_app(
     def search_agent_sources(request: dict) -> list[dict]:
         try:
             research_agent_store.list_conversations(str(request["workspace_id"]))
-            return discover_sources(str(request["company"]), str(request.get("question") or ""), str(request["site"]))
+            original_question = str(request["original_question"])
+            search_query = str(request["search_query"])
+            if not original_question.strip() or len(original_question) > 700:
+                raise ValueError("original research question exceeds 700 characters")
+            if not search_query.strip() or len(search_query) > 700:
+                raise ValueError("research search query exceeds 700 characters")
+            return discover_sources(str(request["company"]), search_query, str(request["site"]))
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 

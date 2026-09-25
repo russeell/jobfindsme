@@ -339,17 +339,17 @@ export class DesktopApiClient {
     });
   }
 
-  findAgentEvidence(workspaceId:string,company:string):Promise<import("../../shared/contracts").ResearchEvidence[]> {
-    return this.json(`/v1/research-agent/evidence?${new URLSearchParams({workspace_id:workspaceId,company})}`);
+  findAgentEvidence(workspaceId:string,company:string,signal?:AbortSignal):Promise<import("../../shared/contracts").ResearchEvidence[]> {
+    return this.json(`/v1/research-agent/evidence?${new URLSearchParams({workspace_id:workspaceId,company})}`,{signal});
   }
-  searchAgentSources(input:{workspace_id:string;company:string;question:string;site:string},signal?:AbortSignal):Promise<Array<{url:string;site:string;title:string;status:string}>> {
+  searchAgentSources(input:{workspace_id:string;company:string;original_question:string;search_query:string;site:string},signal?:AbortSignal):Promise<Array<{url:string;site:string;title:string;status:string}>> {
     return this.json("/v1/research-agent/search",{method:"POST",body:JSON.stringify(input),signal},8000);
   }
   readAgentPage(input:{workspace_id:string;company:string;site:string;url:string},signal?:AbortSignal):Promise<import("../../shared/contracts").ResearchEvidence & {status:string}> {
     return this.json("/v1/research-agent/read-page",{method:"POST",body:JSON.stringify(input),signal},8000);
   }
-  readAgentJob(workspaceId:string,jobId:string):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
-    return this.json(`/v1/research-agent/jobs/${encodeURIComponent(jobId)}?${new URLSearchParams({workspace_id:workspaceId})}`);
+  readAgentJob(workspaceId:string,jobId:string,signal?:AbortSignal):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
+    return this.json(`/v1/research-agent/jobs/${encodeURIComponent(jobId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{signal});
   }
   saveAgentExecution(input:Record<string,unknown>):Promise<unknown> {
     return this.json("/v1/research-agent/executions",{method:"PUT",body:JSON.stringify(input)});
