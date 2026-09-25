@@ -320,7 +320,8 @@ ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
   try{
     const sources=(await apiClient.bootstrap()).sources;
     const results=await runSourceCheckQueue({sources,signal:controller.signal,probe:probeSourceForBulk,
-      maxLiveProbes:previewBuild?1:undefined,
+      // Only automated QA is capped; an isolated user profile is not a test run.
+      maxLiveProbes:qa?1:undefined,
       onProgress:(result,done,total)=>mainWindow?.webContents.send("desktop:source-check-progress",{runId,result,done,total})});
     mainWindow?.webContents.send("desktop:source-status-changed");
     return results;
