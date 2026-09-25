@@ -1,5 +1,5 @@
 import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
@@ -24,9 +24,11 @@ import type {
 const packageInfo=JSON.parse(readFileSync(path.join(app.getAppPath(),"package.json"),"utf8"));
 const buildLabel=String(packageInfo.build || "development");
 const previewBuild=packageInfo.jobfindsmePreview===true;
+const qa=previewBuild&&packageInfo.qa&&typeof packageInfo.qa==="object"?packageInfo.qa as {width:number;height:number;userData:string;captures:string}:undefined;
 if(previewBuild){
   const profile = typeof packageInfo.previewUserData === "string" && /^jobfindsme-preview-[a-zA-Z0-9_-]+$/.test(packageInfo.previewUserData) ? packageInfo.previewUserData : `jobfindsme-preview-${buildLabel.split("-")[0]}`;
   if(!app.commandLine.hasSwitch("user-data-dir"))app.setPath("userData",path.join(app.getPath("appData"),profile));
+  if(qa&&path.isAbsolute(qa.userData)){mkdirSync(qa.userData,{recursive:true,mode:0o700});app.setPath("userData",qa.userData);}
   app.setName(`JobFindsMe ${buildLabel.split("-")[0]} 测试版`);
 }
 const isolatedProfile=previewBuild || app.commandLine.hasSwitch("user-data-dir");
@@ -92,8 +94,8 @@ function shutdownAndExit(): Promise<void> {
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     title:`JobFindsMe · ${buildLabel}${isolatedProfile?" · 隔离测试":""}`,
-    width: 1240,
-    height: 820,
+    width: qa?.width??1240,
+    height: qa?.height??820,
     minWidth: 760,
     minHeight: 600,
     backgroundColor: "#ffffff",
@@ -105,6 +107,16 @@ async function createWindow(): Promise<void> {
       sandbox: true,
     },
   });
+
+  if(qa&&path.isAbsolute(qa.captures)){
+    let captureNumber=0;
+    mainWindow.webContents.on("before-input-event",(event,input)=>{
+      if(input.type!=="keyDown"||input.key!=="F12"||!mainWindow)return;
+      event.preventDefault();
+      const destination=path.join(qa.captures,`native-${String(++captureNumber).padStart(2,"0")}-${qa.width}x${qa.height}.png`);
+      void mainWindow.webContents.capturePage().then(image=>{mkdirSync(qa.captures,{recursive:true,mode:0o700});writeFileSync(destination,image.toPNG());}).catch(error=>console.error("QA capture failed",error));
+    });
+  }
 
   mainWindow.on("page-title-updated",event=>event.preventDefault());
   mainWindow.webContents.setWindowOpenHandler(({ url: value }) => {

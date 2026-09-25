@@ -50,6 +50,37 @@ def test_conversation_execution_and_report_are_workspace_scoped(tmp_path):
     assert report_id in saved["job_context_json"]
 
 
+def test_new_supported_conclusion_versions_without_new_page(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    base = {"company": "示例公司", "question": "研发方向", "evidence": [evidence()],
+            "claims": [{"statement": "示例公司在上海设立研发团队", "quote": "示例公司在上海设立了研发团队",
+                        "evidence_ids": ["ev_test"], "category": "business", "scope": "上海"}]}
+    first = store.save_report(workspace, base)
+    assert first and store.save_report(workspace, base) is None
+    changed = {**base, "question": "产品方向", "claims": [{"statement": "示例公司在上海设立了研发团队，并公开介绍了产品方向",
+              "quote": "示例公司在上海设立了研发团队，并公开介绍了产品方向",
+              "evidence_ids": ["ev_test"], "category": "development", "scope": "团队、地区或法律主体未核实"}]}
+    second = store.save_report(workspace, changed)
+    assert second and second != first and store.save_report(workspace, changed) is None
+
+
+@pytest.mark.parametrize("statement,quote,scope", [
+    ("另一家公司在上海设立研发团队", "示例公司在上海设立了研发团队", "上海"),
+    ("示例公司未在上海设立研发团队", "示例公司在上海设立了研发团队", "上海"),
+    ("示例公司目前在上海设立研发团队", "示例公司在上海设立了研发团队", "上海"),
+    ("示例公司在全国设立研发团队", "示例公司在上海设立了研发团队", "全国"),
+    ("示例公司已上市", "示例公司计划上市", "团队、地区或法律主体未核实"),
+])
+def test_unsupported_entity_negation_time_scope_and_listing_are_rejected(tmp_path, statement, quote, scope):
+    store, workspace = setup_store(tmp_path)
+    source = evidence(text="示例公司在上海设立了研发团队，并公开介绍了产品方向。示例公司计划上市。")
+    report = {"company": "示例公司", "evidence": [source], "claims": [
+        {"statement": statement, "quote": quote, "evidence_ids": ["ev_test"], "category": "business", "scope": scope}
+    ]}
+    with pytest.raises(ValueError):
+        store.save_report(workspace, report)
+
+
 def test_source_url_blocks_wrong_host_and_private_address(monkeypatch):
     monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda url, **kwargs: (_ for _ in ()).throw(ValueError("private")) if "private" in url else None)
     with pytest.raises(ValueError):

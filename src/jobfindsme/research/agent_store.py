@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import re
 from urllib.parse import urlsplit
 from uuid import uuid4
 from datetime import UTC, datetime, timedelta
@@ -27,6 +28,61 @@ def _fresh(item: dict, *, at: datetime) -> bool:
         return at - retrieved <= timedelta(days=days)
     except (KeyError, TypeError, ValueError):
         return False
+
+
+_CATEGORIES = {"business", "listing", "positive", "negative", "workload", "benefits", "role", "development"}
+_REGIONS = ("上海", "北京", "深圳", "广州", "杭州", "成都", "全国", "全球", "海外", "中国", "美国", "欧洲", "华东", "华南", "华北")
+
+
+def _normalized(value: str) -> str:
+    return "".join(char for char in value.casefold() if char.isalnum())
+
+
+def _negative(value: str) -> bool:
+    return bool(re.search(r"尚未|未曾|未|没有|无|不|否认", value))
+
+
+def _listing_status(value: str) -> str:
+    if re.search(r"(?:已|完成|成功)上市", value):
+        return "listed"
+    if re.search(r"(?:拟|计划|筹备|申请)上市", value):
+        return "planned"
+    if re.search(r"(?:未|尚未)上市", value):
+        return "not_listed"
+    return ""
+
+
+def _claim_basis(claim: dict, evidence: dict, company: str) -> dict:
+    quote = str(claim.get("quote") or "").strip()
+    statement = str(claim.get("statement") or quote).strip()
+    body = str(evidence.get("excerpt") or "")
+    if not (8 <= len(quote) <= 360 and 8 <= len(statement) <= 180):
+        raise ValueError("invalid claim length")
+    if quote not in body or company not in quote or company not in statement:
+        raise ValueError("claim entity or quote is unsupported")
+    if claim.get("category") not in _CATEGORIES:
+        raise ValueError("invalid claim category")
+    if _negative(statement) != _negative(quote) or re.search(r"目前|现在|当前|至今|如今|仍然|仍在|现已", statement):
+        raise ValueError("claim polarity or current-time scope is unsupported")
+    if _listing_status(statement) and _listing_status(statement) != _listing_status(quote):
+        raise ValueError("claim listing status is unsupported")
+    numbers = re.findall(r"\d+(?:\.\d+)?%?|[一二三四五六七八九十百千万]+(?:年|月|日|人|倍|%)", statement)
+    if any(number not in quote for number in numbers) or any(region in statement and region not in quote for region in _REGIONS):
+        raise ValueError("claim number or region is unsupported")
+    direct = _normalized(statement) in _normalized(quote)
+    if not direct:
+        a, b = _normalized(statement), _normalized(quote)
+        grams = {a[i:i + 2] for i in range(len(a) - 1)}
+        if not grams or sum(part in b for part in grams) / len(grams) < 0.85:
+            raise ValueError("claim wording is insufficiently supported")
+    scope = str(claim.get("scope") or "团队、地区或法律主体未核实")
+    if scope != "团队、地区或法律主体未核实" and scope not in quote:
+        raise ValueError("claim scope is not present in cited original")
+    source_type = (evidence.get("context") or {}).get("source_type")
+    return {"statement": statement, "quote": quote, "evidence_ids": claim["evidence_ids"],
+            "category": claim["category"], "scope": scope,
+            "source_type": "official_disclosure" if source_type == "official_disclosure" else "personal_account",
+            "support_level": "direct" if direct else "qualified"}
 
 
 class ResearchAgentStore:
@@ -245,17 +301,20 @@ class ResearchAgentStore:
         ids = {str(row.get("evidence_id")) for row in verified}
         if len(ids) != len(verified):
             raise ValueError("duplicate evidence ids")
+        by_id = {row["evidence_id"]: row for row in verified}
+        checked_claims = []
         for claim in claims:
-            if not isinstance(claim, dict) or not set(claim.get("evidence_ids") or []).issubset(ids):
+            if not isinstance(claim, dict) or len(claim.get("evidence_ids") or []) != 1 or not set(claim.get("evidence_ids") or []).issubset(ids):
                 raise ValueError("claim references unknown evidence")
-            quote = str(claim.get("quote") or "")
-            if len(quote) < 8 or any(quote not in str(row.get("excerpt") or "") for row in verified if row["evidence_id"] in claim.get("evidence_ids", [])):
-                raise ValueError("claim quote is not present in cited original")
-            scope = str(claim.get("scope") or "")
-            if scope and scope != "团队、地区或法律主体未核实" and any(scope not in str(row.get("excerpt") or "") for row in verified if row["evidence_id"] in claim.get("evidence_ids", [])):
-                raise ValueError("claim scope is not present in cited original")
-        fingerprint = hashlib.sha256(json.dumps(sorted(
+            checked_claims.append(_claim_basis(claim, by_id[claim["evidence_ids"][0]], company))
+        if not checked_claims:
+            return None
+        evidence_fingerprint = hashlib.sha256(json.dumps(sorted(
             (row["url"], row.get("excerpt", "")) for row in verified
+        ), ensure_ascii=False).encode()).hexdigest()
+        claim_fingerprint = hashlib.sha256(json.dumps(sorted(
+            (_normalized(claim["statement"]), claim["category"], by_id[claim["evidence_ids"][0]]["url"])
+            for claim in checked_claims
         ), ensure_ascii=False).encode()).hexdigest()
         now = _now()
         report_id = f"research_{uuid4().hex}"
@@ -270,20 +329,19 @@ class ResearchAgentStore:
                 raise ValueError("job belongs to another workspace")
             job_snapshot = json.loads(job_row["payload_json"]) if job_row else None
             previous = connection.execute(
-                "SELECT job_context_json FROM research_reports WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50",
+                "SELECT job_id,job_context_json FROM research_reports WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50",
                 (workspace_id,),
             ).fetchall()
             same = [json.loads(row["job_context_json"]) for row in previous
-                    if json.loads(row["job_context_json"]).get("company", "").casefold() == company.casefold()]
-            if any(row.get("agent_fingerprint") == fingerprint for row in same):
-                return None
+                    if row["job_id"] == job_id and json.loads(row["job_context_json"]).get("company", "").casefold() == company.casefold()]
             existing_material = set()
             for row in connection.execute(
                 "SELECT e.url,e.excerpt FROM research_evidence e JOIN research_reports r ON e.report_id=r.report_id WHERE r.workspace_id=? AND json_extract(r.job_context_json,'$.company')=?",
                 (workspace_id, company),
             ):
                 existing_material.add((row["url"], row["excerpt"]))
-            if not any((row["url"], row.get("excerpt", "")) not in existing_material for row in verified):
+            has_new_evidence = any((row["url"], row.get("excerpt", "")) not in existing_material for row in verified)
+            if not has_new_evidence and same and same[0].get("agent_claim_fingerprint") == claim_fingerprint:
                 return None
             context = {"scope": "job" if job_id else "company", "company": company,
                        "title": str(item.get("title") or (job_snapshot or {}).get("title") or "")[:300],
@@ -292,8 +350,9 @@ class ResearchAgentStore:
                        "job_snapshot": job_snapshot,
                        "interest_question": str(item.get("question") or "")[:700],
                        "agent_summary": str(item.get("summary") or "")[:2000],
-                       "agent_claims": [{**claim, "evidence_ids": [f"{report_id}_{value}" for value in claim.get("evidence_ids", [])]} for claim in claims],
-                       "agent_fingerprint": fingerprint,
+                       "agent_claims": [{**claim, "evidence_ids": [f"{report_id}_{value}" for value in claim["evidence_ids"]]} for claim in checked_claims],
+                       "agent_fingerprint": evidence_fingerprint,
+                       "agent_claim_fingerprint": claim_fingerprint,
                        "version_number": len(same) + 1,
                        "outcome": "partial"}
             limitations = item.get("limitations") or []

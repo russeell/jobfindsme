@@ -17,6 +17,10 @@ const displayName=previewBuild?`JobFindsMe ${buildInfo.label} 测试版`:(proces
 const bundleId=process.env.JFM_PACKAGE_BUNDLE_ID || (previewBuild?"com.jobfindsme.desktop.preview.d19":"com.jobfindsme.desktop");
 if(!/^com\.jobfindsme\.desktop(?:\.[a-z0-9-]+)+$/.test(bundleId))throw Error("invalid bundle id");
 const output = process.env.JFM_PACKAGE_OUTPUT || path.join(desktopRoot, "release/mac-unpacked/JobFindsMe.app");
+const qaWidth=Number(process.env.JFM_QA_WINDOW_WIDTH||0),qaHeight=Number(process.env.JFM_QA_WINDOW_HEIGHT||0);
+const qaUserData=process.env.JFM_QA_USER_DATA,qaCaptures=process.env.JFM_QA_CAPTURE_DIR;
+const qa=previewBuild&&qaUserData&&qaCaptures&&Number.isInteger(qaWidth)&&Number.isInteger(qaHeight)&&qaWidth>=760&&qaWidth<=1600&&qaHeight>=600&&qaHeight<=1200&&path.isAbsolute(qaUserData)&&path.isAbsolute(qaCaptures)?{width:qaWidth,height:qaHeight,userData:qaUserData,captures:qaCaptures}:undefined;
+if((qaUserData||qaCaptures||qaWidth||qaHeight)&&!qa)throw Error("invalid isolated QA window configuration");
 
 if (!existsSync(electronApp)) throw new Error("Electron.app is missing; run npm install first");
 if (!existsSync(pythonRuntime)) {
@@ -58,7 +62,7 @@ mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
-  JSON.stringify({ name: "jobfindsme-desktop", version: "0.1.0", jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, main: "dist-electron/main/index.js" }),
+  JSON.stringify({ name: "jobfindsme-desktop", version: "0.1.0", jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, qa, main: "dist-electron/main/index.js" }),
 );
 mkdirSync(path.join(resources, "python"), { recursive: true });
 cpSync(pythonRuntime, path.join(resources, "python/jobfindsme-api"), { recursive:true, verbatimSymlinks:true });

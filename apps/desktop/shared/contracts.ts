@@ -423,7 +423,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{quote:string;evidence_ids:string[];category:string;scope:string}>};
+  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{statement?:string;quote:string;evidence_ids:string[];category:string;scope:string;source_type?:"official_disclosure"|"personal_account"|"mixed";support_level?:"direct"|"qualified"}>};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;

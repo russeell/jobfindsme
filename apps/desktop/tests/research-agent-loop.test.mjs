@@ -45,3 +45,18 @@ test('a fabricated final claim is dropped and no report is saved',async()=>{
   assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/没有生成事实性结论/);assert.equal(executions.at(-1).status,'complete');
  }finally{server.close();}
 });
+
+test('ordinary follow-up stays a conversation without research tools or report',async()=>{
+ const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});
+  sse(response,{role:'assistant',content:'还需要你说明想了解哪个团队。'},'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const invoked=[];
+ const unexpected=async()=>{invoked.push('research');throw Error('ordinary chat called a research tool');};
+ const tools={findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readJob:unexpected,readBrowserPage:unexpected,saveExecution:unexpected,saveReport:unexpected};
+ try{
+  const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_followup',question:'那这个团队呢？',company:'示例公司',history:[{role:'user',text:'示例公司的团队如何？'},{role:'assistant',text:'请说明想了解哪个团队。'}],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.match(result.text,/哪个团队/);assert.equal(result.report,undefined);assert.deepEqual(invoked,[]);
+ }finally{server.close();}
+});
