@@ -154,7 +154,7 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
     <div ref={scrollRef} className={`research-scroll-region${centeredEmpty?" research-empty-state":""}`} role="region" aria-label="研究报告正文" tabIndex={0}><div className="research-reading-column">
       {(!activeChat||showingReport)&&<header className="research-header"><div><h1>{showingReport?(job?.title||report?.job_context?.company||"公司研究"):"想了解哪家公司或岗位？"}</h1><p>{showingReport?`${job?job.company+" · ":"公司研究 · "}${report&&new Date(report.created_at).toLocaleString()} · ${report&&reportStatus(report)}`:job?`${job.company} · ${job.title}`:"直接输入公司问题；岗位链接是可选资料。"}</p></div></header>}
       {activeChat&&<section className="research-chat-messages" aria-label="对话内容">
-        {activeChat.subjectCompany&&<p className="research-subject-caption">{activeChat.subjectCompany}{activeChat.subjectTitle?` · ${activeChat.subjectTitle}`:""}</p>}
+        {activeChat.researchMode&&activeChat.subjectCompany&&<p className="research-subject-caption">{activeChat.subjectCompany}{activeChat.subjectTitle?` · ${activeChat.subjectTitle}`:""}</p>}
         {activeChat.turns.map((item,index)=>{
           const attached=chatReportIds.get(index);
           const attachedReport=attached?reportsById.get(attached):undefined;
