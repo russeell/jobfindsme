@@ -1,34 +1,91 @@
+<div align="center">
+
 # JobFindsMe
 
-**Find a promising job. Then find out whether it is right for you.**
+**Spend less time switching job sites. Get to know your next opportunity.**
 
-JobFindsMe is a local-first desktop workspace for job search and role research. Search for openings, read the original hiring page alongside the result, and investigate the company and role with traceable public evidence. You make the decision.
+Search **4 recruiting platforms + 16 company career sites**, find roles with your resume, and research companies in one desktop app.
 
-[中文](README.md) · [Get started](#get-started) · [Current status](docs/desktop/HANDOFF.md)
+[Download](https://github.com/russeell/jobfindsme/releases/latest) · [Sources](#supported-sources) · [Get started](#get-started) · [简体中文](README.md)
 
-![JobFindsMe search: results and details on the left, original hiring website on the right](docs/images/jobfindsme-search.png)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/russeell/jobfindsme)](https://github.com/russeell/jobfindsme/releases)
 
-*Desktop interface in an isolated QA profile. Listings, counts and source availability shown here may have changed.*
+</div>
 
-## From an opening to an informed choice
+![Job results, details and original listings side by side](docs/images/jobfindsme-search.png)
 
-1. **Find jobs.** Enter a role or skill. With a confirmed resume, you may also search with an empty input and let your experience suggest a bounded set of terms. Filter city, experience and sources on the results page.
-2. **Read the original.** Results, details and the hiring website sit side by side. Missing descriptions, salaries and publication dates are marked unknown; retrieval time is never passed off as publication time.
-3. **Research the role.** Check company business and listing information, positive and negative accounts, workload, benefits, role content and development clues. Reports link to evidence and show dates and scope. What cannot be verified remains unknown.
+*Interface example with isolated test data.*
 
-Save interesting roles and keep read and application states separate. Applications happen on the hiring website; opening a page does not mark a job as applied.
+## What you can do
 
-### What does role research look like?
+- **Search in one place.** Choose sources, enter a role or skill, and filter by city without switching between websites.
+- **Use your resume.** Import and confirm your experience to inform searches and matching, or search without a resume.
+- **Read the original listing.** Keep the job description and recruiting page side by side to check responsibilities, requirements and pay.
+- **Research a company.** Ask a question or provide a job link. The assistant reads public material and brings answers and citations together.
+- **Keep your progress.** Save jobs, track read and application status, and reopen previous research conversations.
 
-Ask about a company directly, start from a selected job with its original description, or paste a job link. Ambiguity is resolved in the conversation. After you select and test a model, the research Agent can reuse evidence, discover sources and read original pages. It saves a new report version only when it finds substantively new verifiable material. Official disclosures and personal accounts are kept distinct.
+## Supported sources
 
-![JobFindsMe role research report with sectioned company findings and linked evidence](docs/images/jobfindsme-research.jpg)
+The app includes **20 job search sources: 4 recruiting platforms and 16 company career sites**.
 
-*Report for a synthetic company in an isolated QA profile. Missing evidence does not become an invented conclusion.*
+| Platform | Access |
+| --- | --- |
+| BOSS Zhipin | Sign in within the app and check the source before searching |
+| Liepin | Public listing search can be attempted without signing in |
+| Zhaopin | Sign in within the app and check the source before searching |
+| 51job | Sign in within the app and check the source before searching |
+
+| Company career sites | | | |
+| --- | --- | --- | --- |
+| Tencent | ByteDance | Alibaba | Meituan |
+| Baidu | JD.com | NetEase | Kuaishou |
+| Xiaomi | DiDi | Pinduoduo | DeepSeek |
+| MiniMax | Zhipu | Moonshot AI | StepFun |
+
+Check **Settings → Job sources** for current access, listing, full-description and pagination status. Expired sessions, verification challenges, rate limits and website changes can interrupt searches. Inclusion here does not guarantee continuous access or complete coverage of current openings.
+
+## Install
+
+Download the desktop app from **[GitHub Releases](https://github.com/russeell/jobfindsme/releases/latest)**.
+
+| System | Available package |
+| --- | --- |
+| macOS · Apple Silicon | Download `mac-arm64.zip`, unzip it and move `JobFindsMe.app` to Applications |
+| macOS · Intel / Windows / Linux | No installers available yet |
+
+The macOS package is not Developer ID signed or notarized. On first launch, macOS may block it; follow the prompts in **System Settings → Privacy & Security**. Releases include SHA-256 checksums. **Settings → Version updates** checks for releases and opens the download page; installation is not automatic.
+
+Data from earlier isolated test builds remains in its original directory and is not automatically merged into the regular app.
 
 ## Get started
 
-This is currently a **macOS development build from source**, not a general-audience installer. Install Git, Python 3.11+ and Node.js/npm:
+1. **Choose sources.** Open **Settings → Job sources**, sign in where required, check access and select the sources you want to search.
+2. **Find roles.** Enter a keyword such as `Python 后端` or `Agent 开发`, then set city and other filters. Use the resume button to import and confirm your resume if you want it to inform matching.
+3. **Read the details.** Open a role, compare its description with the original listing and save opportunities you want to explore.
+4. **Research.** Configure a model in **Settings → Model settings**, then ask in **Job research** or start from a job's details.
+
+Try questions such as:
+
+> What do Tencent's public disclosures say about its business?
+>
+> Which skills does this role require? Explain using its job description.
+>
+> Which sources support the previous answer, and what is still unknown?
+
+![Research report with source references](docs/images/jobfindsme-research.jpg)
+
+*Synthetic report example. Actual answers depend on readable sources and your chosen model; unsupported information is marked as unknown.*
+
+## Data and models
+
+Jobs, resumes, conversations and reports are stored locally. Model keys use system secure storage. Chat and research send relevant input to the model service you configure, which may charge for requests. Local storage does not mean offline processing. Web searches also require internet access; avoid putting private information in public search questions.
+
+Resume import supports PDF, DOCX, Markdown and TXT. Scanned PDFs do not have OCR support yet. The app does not submit applications automatically, and scheduled searches are currently disabled. Research keeps references for you to inspect; sources can be outdated, and a citation alone does not establish that a conclusion is correct.
+
+## Run from source
+
+Requires Python 3.11+, Node.js/npm and Git. The current desktop development workflow primarily targets macOS.
 
 ```bash
 git clone https://github.com/russeell/jobfindsme.git
@@ -42,33 +99,14 @@ npm run build
 npm start
 ```
 
-On first launch:
+The app uses `.venv/bin/python` by default. Set `JFM_PYTHON` to use another interpreter.
 
-- Choose sources under **Settings → Job sources**, sign in through the app browser where needed, and check each source's status.
-- Search with a keyword. A resume is optional; the small button beside the **Find jobs** title opens PDF, DOCX, Markdown and TXT import and review. Scanned PDFs do not yet support OCR.
-- Open a promising result, read the original page, then choose **Research role**.
+## Contribute
 
-The desktop uses the repository's `.venv/bin/python` by default. Set `JFM_PYTHON` to select another interpreter.
+Built with Electron, React, TypeScript, Python and SQLite, with Pi Agent powering research conversations. Report issues or suggest improvements through [Issues](https://github.com/russeell/jobfindsme/issues). For source failures, include the source name, steps and error message; leave out keys, cookies and personal resumes.
 
-## Important limits
-
-- The catalog contains **four hiring platforms and sixteen company career sites**. A site opening in the browser does not mean automated search works. Login, listing, pagination and full-description capabilities are checked separately. Verification prompts, rate limits and website changes can interrupt retrieval; consult the app's source status.
-- **Scheduled search is disabled.** Historical plans and runs remain on your device. The app never submits applications automatically.
-- Jobs, resumes, conversations and reports are stored locally, while hiring sites and public evidence require network access. Chat and research use the model you select in Settings and may incur provider charges; this isolated QA round made no paid model calls. A free-form question may become a public search term; do not enter private information.
-- Public accounts can be old, incomplete or contradictory. Reports help you check evidence; they do not score companies or promise career outcomes.
-
-See the [development handoff](docs/desktop/HANDOFF.md) for known gaps.
-
-## Development and contributions
-
-The desktop uses Electron, React and TypeScript; local services and storage use Python and SQLite. Main code lives in `apps/desktop/` and `src/jobfindsme/`, with tests in `apps/desktop/tests/` and `tests/`.
-
-[Directory map](docs/desktop/STRUCTURE.md) · [Development notes](docs/desktop/README.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
-
-The legacy CLI/MCP entry points, installer, and Skill have been retired. Their documentation remains available in Git history.
+[Contributing](CONTRIBUTING.md) · [Project structure](docs/desktop/STRUCTURE.md) · [Development](docs/desktop/README.md) · [Current status](docs/desktop/HANDOFF.md) · [Security](SECURITY.md)
 
 ## License
 
-The current version uses [PolyForm Noncommercial 1.0.0](LICENSE): learning, personal use and other noncommercial uses are allowed under its terms, as are noncommercial modification and distribution. **Commercial use of this version requires separate permission.** This is a source-available noncommercial license, not an OSI-approved open-source license. Third-party dependencies retain their own licenses.
-
-Earlier versions were published under [MIT](LICENSE-MIT-PRIOR). Rights already granted for those versions are not retroactively withdrawn. Contact the maintainers about licensing or commercial permission.
+[MIT](LICENSE) · Copyright © 2026 Russell. Third-party dependencies retain their own licenses.
