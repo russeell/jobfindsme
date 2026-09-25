@@ -336,7 +336,7 @@ h3 { font-size:14px; }
 .source-catalog { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr)); gap:16px; width:100%; margin:22px 0; }
 .source-catalog .source-card { min-height:142px; }
 .content:has(> .discovery-mount:not([hidden])) { overflow:hidden; display:flex; flex-direction:column; padding-bottom:14px; }
-.content.research-content {overflow:hidden;display:flex;flex-direction:column;padding-top:16px;padding-bottom:12px;}
+.content.research-content {overflow:hidden;display:flex;flex-direction:column;padding:16px 0 12px;}
 .research-mount:not([hidden]) {flex:1;min-height:0;min-width:0;}
 .research-topbar-actions {display:flex;align-items:center;justify-content:flex-end;min-width:0;margin-left:auto;}
 .research-topbar-actions:empty {display:none;}
