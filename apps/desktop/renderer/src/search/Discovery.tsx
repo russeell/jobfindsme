@@ -76,6 +76,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     if (!enabled.length || (cursor&&!enabled.some(s=>s.source_id==="boss"))) {onError("请先选择至少一个当前可检索的来源。");return;}
     if (filters.salary_min_k != null && filters.salary_max_k != null && filters.salary_min_k > filters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
     const epoch=++searchEpoch.current;filterEpoch.current++;
+    filterBaseRun.current=undefined;setResult(undefined);setPage(undefined);setSelected(undefined);setMobileView("list");
     setSearching(true); setSearchError(undefined); setCollection(undefined); setMatchingMessage(""); onError(undefined);
     try {
       const response = await window.jobfindsme!.runSourceSearch({ workspace_id: workspaceId, boss_cursor:cursor, intent: intent.trim(), source_ids: cursor ? ["boss"] : enabled.map((source) => source.source_id), max_pages: 3, time_budget_seconds: 15, filters:normalizeDiscoveryFilters(filters), page_size: pageSize });
@@ -86,7 +87,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       if(failed.length||blocked.length)setSearchError(userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?"source_contract_error":"partial")));
       if(response.result_page.total || (!failed.length&&!blocked.length)){setPage(response.result_page);setSelected(response.result_page.items[0]);setMobileView("list");}
       setMatchingMessage(`本次实际检索方向：${response.keywords.join(" · ")}。请核对岗位原文。`);
-    } catch (error) { setSearchError(userError(error)); } finally { setSearching(false); }
+    } catch (error) { if(epoch===searchEpoch.current)setSearchError(userError(error)); } finally { if(epoch===searchEpoch.current)setSearching(false); }
   }
   async function completeDetail() {
     if(!selected)return;const item=selected;setReadingDetail(true);onError(undefined);
@@ -142,7 +143,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
         <div><strong>{item.job.title}</strong></div>
         <p>{item.job.company} · {item.job.locations.join("/")||"地点未知"} · {formatSalary(item.job)}</p>
         <small>{item.job.source.source_name} · 发布：{item.job.source.published_at?new Date(item.job.source.published_at).toLocaleDateString():"未知"}{item.tracking.saved?" · 已收藏":""}{item.tracking.applied?" · 已投递":""}{item.snapshot_status==="unknown"?" · 历史内容版本未知，旧评分不可用":""}</small>
-      </article>)}</div> : <div className="empty"><strong>{result?"本次没有可展示的岗位":resumeState?.search_profile_state==="ready"?"可按已确认简历搜索":"先输入岗位关键词"}</strong><p>{result?"可调整条件再搜索；来源失败不代表没有岗位。":"选择来源后搜索，结果会显示在这里。"}</p></div>}
+      </article>)}</div> : <div className="empty" role="status"><strong>{searching?"正在检索岗位":searchError?"本次检索未完成":result?"本次没有可展示的岗位":resumeState?.search_profile_state==="ready"?"可按已确认简历搜索":"先输入岗位关键词"}</strong><p>{searching?"请稍候，来源读取情况会显示在上方。":searchError?"请查看上方错误并重试；历史结果已收起。":result?"可调整条件再搜索；来源失败不代表没有岗位。":"选择来源后搜索，结果会显示在这里。"}</p></div>}
       <div className="pagination"><button disabled={!page||page.page<=1} onClick={()=>void changePage((page?.page??1)-1)}>上一页</button><span>{page?.page??0} / {page?.page_count??0}</span><button disabled={!page||page.page>=page.page_count} onClick={()=>void changePage((page?.page??1)+1)}>下一页</button><select value={pageSize} onChange={event=>void changePageSize(Number(event.target.value) as 10|20|50)}><option value="10">10/页</option><option value="20">20/页</option><option value="50">50/页</option></select></div>
     </section>
       <aside className={`detail-pane ${mobileView==="list"?"mobile-detail":""}`}><div className="detail-heading">岗位详情</div>{selected?<div className="job-detail">

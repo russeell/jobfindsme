@@ -11,4 +11,5 @@ test("明确公司问题提取研究对象，含糊对象保持未指定",()=>{
   assert.equal(researchScopeFromQuestion("这家公司福利如何？").company,undefined);
   assert.equal(researchScopeFromQuestion("研究清华大学的 AI 工程师岗位").company,"清华大学");
   assert.equal(researchScopeFromQuestion("研究合成科技AI工程师岗位").company,undefined);
+  assert.equal(researchScopeFromQuestion("合成示例公司的研发团队如何？").company,"合成示例公司");
 });

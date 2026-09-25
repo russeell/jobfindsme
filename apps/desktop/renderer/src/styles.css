@@ -498,3 +498,7 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 @media(max-width:600px){.schedule-dialog{padding:18px;max-height:92vh}.schedule-fields{flex-wrap:wrap}.frequency-options{gap:4px}}
 .task-form .frequency-field{display:block;border:0;padding:0;margin:0;min-width:0}
 .frequency-options{width:100%}.frequency-options button{min-height:36px;white-space:nowrap}
+
+/* Reading and list controls use the same visible keyboard affordance. */
+.discovery-page .job-card:hover{background:var(--surface-hover)}
+.discovery-page .job-card:focus-visible,.research-more summary:focus-visible,.research-reading summary:focus-visible{outline:2px solid #737373;outline-offset:-2px}
