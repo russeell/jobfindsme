@@ -4,7 +4,7 @@ import type {ResearchEvidence} from "../../shared/contracts.js";
 
 const DOMAINS:Record<string,string>={cninfo:"cninfo.com.cn",sse:"sse.com.cn",szse:"szse.cn",hkex:"hkexnews.hk",maimai:"maimai.cn",kanzhun:"kanzhun.com",zhihu:"zhihu.com",offershow:"offershow.cn"};
 function allowed(site:string,value:string){try{const url=new URL(value),domain=DOMAINS[site];return !!domain&&url.protocol==="https:"&&!url.username&&!url.password&&(!url.port||url.port==="443")&&(url.hostname===domain||url.hostname.endsWith("."+domain));}catch{return false;}}
-export async function readIsolatedResearchPage(company:string,site:string,url:string,signal:AbortSignal):Promise<ResearchEvidence&{status:string}>{
+export async function readIsolatedResearchPage(company:string,site:string,url:string,signal:AbortSignal,timeoutMs=8000):Promise<ResearchEvidence&{status:string}>{
   if(!allowed(site,url)||!company.trim()||company.length>100)throw Error("unsupported research URL");
   const origin=new URL(url).origin;
   const view=new BrowserWindow({show:false,width:1024,height:900,webPreferences:{partition:`research-${randomUUID()}`,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false}});
@@ -17,7 +17,7 @@ export async function readIsolatedResearchPage(company:string,site:string,url:st
   wc.session.webRequest.onBeforeRequest({urls:["*://*/*"]},(request,callback)=>callback({cancel:!safe(request.url)}));
   const abort=()=>{wc.stop();};signal.addEventListener("abort",abort,{once:true});
   try{
-    await Promise.race([wc.loadURL(url),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error("browser read timeout")),8000);})]);
+    await Promise.race([wc.loadURL(url),new Promise<never>((_,reject)=>{timer=setTimeout(()=>{wc.stop();reject(Error("browser read timeout"));},Math.max(100,Math.min(8000,timeoutMs)));})]);
     if(signal.aborted)throw Error("cancelled");
     if(!safe(wc.getURL()))throw Error("source redirect blocked");
     const page=await wc.executeJavaScript(`({title:document.title.slice(0,300),text:(document.querySelector('article,main')?.innerText||document.body?.innerText||'').slice(0,30000),url:location.href})`) as {title:string;text:string;url:string};

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "retrieval": [
+    {"id": "html_relevant", "kind": "html_relevant", "expected_status": "read_original", "relevant_original_expected": true, "entity_decidable": true},
+    {"id": "html_other_company", "kind": "html_other_company", "expected_status": "entity_mismatch", "relevant_original_expected": false, "entity_decidable": true},
+    {"id": "pdf_text_relevant", "kind": "pdf_text_relevant", "expected_status": "read_original", "relevant_original_expected": true, "entity_decidable": true},
+    {"id": "pdf_scanned", "kind": "pdf_scanned", "expected_status": "no_text_layer", "relevant_original_expected": false, "entity_decidable": false},
+    {"id": "http_429", "kind": "http_429", "expected_status": "rate_limited", "relevant_original_expected": false, "entity_decidable": false}
+  ],
+  "citations": [
+    {"id": "supported_quote", "statement": "示例公司在上海设立研发团队", "quote": "示例公司在上海设立研发团队", "scope": "上海", "expected_supported": true},
+    {"id": "invented_quote", "statement": "示例公司利润翻倍", "quote": "示例公司利润翻倍", "scope": "团队、地区或法律主体未核实", "expected_supported": false},
+    {"id": "expanded_scope", "statement": "示例公司在全国设立研发团队", "quote": "示例公司在上海设立研发团队", "scope": "全国", "expected_supported": false}
+  ],
+  "jobs": [
+    {"id": "closed", "liveness": "closed", "fetched_at": "2026-09-25T09:00:00Z", "expected_status": "closed", "currently_valid": "unverified"},
+    {"id": "stale", "liveness": "stale", "fetched_at": "2026-09-25T09:00:00Z", "expected_status": "expired", "currently_valid": "unverified"},
+    {"id": "recent_active", "liveness": "active", "fetched_at": "2026-09-25T09:00:00Z", "expected_status": "recently_observed", "currently_valid": "unverified"},
+    {"id": "old_active", "liveness": "active", "fetched_at": "2026-09-22T09:00:00Z", "expected_status": "expired", "currently_valid": "unverified"},
+    {"id": "unknown", "liveness": "unknown", "fetched_at": "2026-09-25T09:00:00Z", "expected_status": "unknown", "currently_valid": "unverified"}
+  ]
+}

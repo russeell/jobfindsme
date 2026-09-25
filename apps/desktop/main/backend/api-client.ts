@@ -339,17 +339,17 @@ export class DesktopApiClient {
     });
   }
 
-  findAgentEvidence(workspaceId:string,company:string,signal?:AbortSignal):Promise<import("../../shared/contracts").ResearchEvidence[]> {
-    return this.json(`/v1/research-agent/evidence?${new URLSearchParams({workspace_id:workspaceId,company})}`,{signal});
+  findAgentEvidence(workspaceId:string,company:string,signal?:AbortSignal,timeoutMs=8000):Promise<import("../../shared/contracts").ResearchEvidence[]> {
+    return this.json(`/v1/research-agent/evidence?${new URLSearchParams({workspace_id:workspaceId,company})}`,{signal},timeoutMs);
   }
-  searchAgentSources(input:{workspace_id:string;company:string;original_question:string;search_query:string;site:string},signal?:AbortSignal):Promise<Array<{url:string;site:string;title:string;status:string}>> {
-    return this.json("/v1/research-agent/search",{method:"POST",body:JSON.stringify(input),signal},8000);
+  searchAgentSources(input:{workspace_id:string;company:string;original_question:string;search_query:string;site:string;timeout_ms?:number},signal?:AbortSignal,timeoutMs=8000):Promise<Array<{url:string;site:string;title:string;status:string}>> {
+    return this.json("/v1/research-agent/search",{method:"POST",body:JSON.stringify(input),signal},timeoutMs);
   }
-  readAgentPage(input:{workspace_id:string;company:string;site:string;url:string},signal?:AbortSignal):Promise<import("../../shared/contracts").ResearchEvidence & {status:string}> {
-    return this.json("/v1/research-agent/read-page",{method:"POST",body:JSON.stringify(input),signal},8000);
+  readAgentPage(input:{workspace_id:string;company:string;site:string;url:string;timeout_ms?:number},signal?:AbortSignal,timeoutMs=8000):Promise<import("../../shared/contracts").ResearchEvidence & {status:string}> {
+    return this.json("/v1/research-agent/read-page",{method:"POST",body:JSON.stringify(input),signal},timeoutMs);
   }
-  readAgentJob(workspaceId:string,jobId:string,signal?:AbortSignal):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
-    return this.json(`/v1/research-agent/jobs/${encodeURIComponent(jobId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{signal});
+  readAgentJob(workspaceId:string,jobId:string,signal?:AbortSignal,timeoutMs=8000):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
+    return this.json(`/v1/research-agent/jobs/${encodeURIComponent(jobId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{signal},timeoutMs);
   }
   saveAgentExecution(input:Record<string,unknown>):Promise<unknown> {
     return this.json("/v1/research-agent/executions",{method:"PUT",body:JSON.stringify(input)});

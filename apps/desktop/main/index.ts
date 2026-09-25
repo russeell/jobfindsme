@@ -675,11 +675,11 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     if(run.signal.aborted)throw Error("cancelled");
     return await runPiResearchAgent({workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,research:input.research,jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
       {
-        findEvidence:(company,signal)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal),
-        searchWeb:(company,searchQuery,site,originalQuestion,signal)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,original_question:originalQuestion,search_query:searchQuery,site},signal),
-        readPage:(company,site,url,signal)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url},signal),
-        readJob:(jobId,signal)=>apiClient!.readAgentJob(input.workspace_id,jobId,signal),
-        readBrowserPage:(company,site,url,signal)=>readIsolatedResearchPage(company,site,url,signal),
+        findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
+        searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,original_question:originalQuestion,search_query:searchQuery,site,timeout_ms:timeoutMs},signal,timeoutMs),
+        readPage:(company,site,url,signal,timeoutMs)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url,timeout_ms:timeoutMs},signal,timeoutMs),
+        readJob:(jobId,signal,timeoutMs)=>apiClient!.readAgentJob(input.workspace_id,jobId,signal,timeoutMs),
+        readBrowserPage:(company,site,url,signal,timeoutMs)=>readIsolatedResearchPage(company,site,url,signal,timeoutMs),
         saveExecution:state=>apiClient!.saveAgentExecution(state),
         saveReport:state=>apiClient!.saveAgentReport(state),
       },

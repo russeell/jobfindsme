@@ -65,7 +65,7 @@ def discover_sources(company: str, question: str, site: str, *, timeout: float =
     opener = urllib.request.build_opener(
         SafeRedirectHandler(max_redirects=2, require_https=True, same_host_only=True)
     )
-    with opener.open(request, timeout=min(timeout, 4)) as response:
+    with opener.open(request, timeout=max(0.1, min(timeout, 4))) as response:
         body = response.read(1_000_000)
     root = ET.fromstring(body)
     hits = []
@@ -116,7 +116,7 @@ def read_original_page(
     request = urllib.request.Request(url, headers={"User-Agent": "JobFindsMe/desktop-research"})
     retrieved_at = datetime.now(UTC).isoformat()
     try:
-        with opener.open(request, timeout=min(timeout, 4)) as response:
+        with opener.open(request, timeout=max(0.1, min(timeout, 4))) as response:
             final_url = response.geturl()
             _source_url(final_url, site)
             content_type = response.headers.get_content_type()
@@ -142,13 +142,15 @@ def read_original_page(
             reader = PdfReader(BytesIO(body), strict=True)
             if reader.is_encrypted or len(reader.pages) > 40:
                 return {"url": final_url, "site": site, "status": "unsupported_source", "limit": "encrypted or over 40 pages"}
+            has_text_layer = False
             for index, page in enumerate(reader.pages):
                 candidate = " ".join((page.extract_text() or "").split())[:12000]
+                has_text_layer = has_text_layer or bool(candidate)
                 if _normalized(company) in _normalized(candidate):
                     text, page_number = candidate, index + 1
                     break
             else:
-                return {"url": final_url, "site": site, "status": "entity_mismatch", "limit": "company not found in PDF text"}
+                return {"url": final_url, "site": site, "status": "entity_mismatch" if has_text_layer else "no_text_layer", "limit": "company not found in PDF text" if has_text_layer else "PDF has no readable text layer"}
         except Exception:
             return {"url": final_url, "site": site, "status": "read_failed", "limit": "PDF text extraction failed"}
         anchored = True

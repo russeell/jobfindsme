@@ -1874,7 +1874,12 @@ def create_app(
                 raise ValueError("original research question exceeds 700 characters")
             if not search_query.strip() or len(search_query) > 700:
                 raise ValueError("research search query exceeds 700 characters")
-            return discover_sources(str(request["company"]), search_query, str(request["site"]))
+            timeout_ms = request.get("timeout_ms")
+            if timeout_ms is None:
+                return discover_sources(str(request["company"]), search_query, str(request["site"]))
+            if not isinstance(timeout_ms, (int, float)) or isinstance(timeout_ms, bool) or not 100 <= timeout_ms <= 4000:
+                raise ValueError("invalid research request timeout")
+            return discover_sources(str(request["company"]), search_query, str(request["site"]), timeout=timeout_ms / 1000)
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -1882,7 +1887,12 @@ def create_app(
     def read_agent_page(request: dict) -> dict:
         try:
             research_agent_store.list_conversations(str(request["workspace_id"]))
-            return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]))
+            timeout_ms = request.get("timeout_ms")
+            if timeout_ms is None:
+                return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]))
+            if not isinstance(timeout_ms, (int, float)) or isinstance(timeout_ms, bool) or not 100 <= timeout_ms <= 4000:
+                raise ValueError("invalid research request timeout")
+            return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]), timeout=timeout_ms / 1000)
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 

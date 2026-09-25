@@ -322,6 +322,25 @@ def test_pdf_reader_rejects_large_or_unreadable_document(monkeypatch):
     assert broken["status"] == "read_failed"
 
 
+def test_scanned_pdf_is_distinct_from_company_mismatch(monkeypatch):
+    import io
+    from pypdf import PdfWriter
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    output = io.BytesIO()
+    writer = PdfWriter()
+    writer.add_blank_page(width=300, height=300)
+    writer.write(output)
+    body = output.getvalue()
+    class Response:
+        headers = SimpleNamespace(get_content_type=lambda: "application/pdf", get_content_charset=lambda: None)
+        def geturl(self): return "https://www.cninfo.com.cn/scan.pdf"
+        def read(self, amount): return body[:amount]
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+    row = agent_sources.read_original_page("https://www.cninfo.com.cn/scan.pdf", "ExampleCorp", "cninfo", opener=SimpleNamespace(open=lambda *_args, **_kwargs: Response()))
+    assert row["status"] == "no_text_layer"
+
+
 def test_rate_limit_has_distinct_read_status(monkeypatch):
     import urllib.error
     monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
@@ -350,3 +369,18 @@ def test_agent_endpoints_require_auth_and_do_not_cross_workspace(tmp_path):
     assert client.put("/v1/research-agent/conversations", headers=headers, json={"workspace_id": workspace, "id": "c1", "turns": [{"role": "user", "text": "研究示例公司"}]}).status_code == 200
     assert len(client.get("/v1/research-agent/conversations", headers=headers, params={"workspace_id": workspace}).json()) == 1
     assert client.get("/v1/research-agent/conversations", headers=headers, params={"workspace_id": "elsewhere"}).status_code == 404
+
+
+def test_research_endpoints_pass_remaining_time_to_source_reader(tmp_path, monkeypatch):
+    import importlib
+    app_module = importlib.import_module("jobfindsme.desktop_api.app")
+    store, workspace = setup_store(tmp_path)
+    seen = []
+    monkeypatch.setattr(app_module, "discover_sources", lambda company, query, site, *, timeout: seen.append(("search", timeout)) or [])
+    monkeypatch.setattr(app_module, "read_original_page", lambda url, company, site, *, timeout: seen.append(("read", timeout)) or {"status": "read_failed", "url": url})
+    client = TestClient(create_app(token="test-secret", database_path=store.database.path))
+    headers = {"Authorization": "Bearer test-secret"}
+    search = client.post("/v1/research-agent/search", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "original_question": "经营", "search_query": "经营", "site": "web", "timeout_ms": 750})
+    read = client.post("/v1/research-agent/read-page", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "site": "web", "url": "https://example.org/a", "timeout_ms": 325})
+    assert search.status_code == read.status_code == 200
+    assert seen == [("search", 0.75), ("read", 0.325)]
