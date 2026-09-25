@@ -78,7 +78,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
   try{await persist();await agent.prompt(prompt);collectUsage();if(signal.aborted)throw Error("cancelled");if(agent.state.errorMessage)throw Error(`模型请求失败：${agent.state.errorMessage}`);
     if(!context.research){if(!raw.trim())throw Error("模型没有返回可显示的内容。");return {text:raw};}
     const checked=parseClaims(raw,evidence,company);const originals=[...evidence.values()].filter(row=>row.verification_status==="independently_retrieved");
-    const lines=[`已核对 ${originals.length} 条原始资料。`];
+    const lines=[`已读取 ${originals.length} 条来源材料；陈述仍需核验来源与适用范围。`];
     for(const claim of checked.claims){const source=evidence.get(claim.evidence_ids[0])!;lines.push(`• ${claim.statement}（${claim.support_level==="direct"?"原文直述":"限定归纳"}；${source.platform}；${source.published_at||"日期未核实"}；${source.url}；范围：${claim.scope}）`);}
     if(!checked.claims.length)lines.push("现有资料不足以回答这个问题；没有生成事实性结论。");
     const limitations=["来源的法律主体、团队与岗位适用性仍需按原页核对。",...failures];if(limitations.length)lines.push(`限制：${limitations.slice(0,4).join("；")}`);

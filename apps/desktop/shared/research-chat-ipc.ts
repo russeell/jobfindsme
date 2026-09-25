@@ -7,8 +7,8 @@ export function modelHistoryWithinBudget(history:ResearchChatTurn[],maxChars=200
     if(selected.length>=200)break;
     const turn=history[index],text=turn.text.slice(-8000),remaining=maxChars-used;
     if(remaining<=0)break;
-    if(text.length>remaining){if(!selected.length)selected.unshift({...turn,text:text.slice(-remaining)});break;}
-    selected.unshift({...turn,text});used+=text.length;
+    if(text.length>remaining){if(!selected.length)selected.unshift({role:turn.role,text:text.slice(-remaining)});break;}
+    selected.unshift({role:turn.role,text});used+=text.length;
   }
   return selected;
 }

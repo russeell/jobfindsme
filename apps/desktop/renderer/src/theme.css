@@ -333,7 +333,7 @@ nav button .nav-label {font-size:13px;}
 .research-again-shortcut {margin:9px 0 0;padding:0;border:0;background:transparent;color:var(--text);font-size:12px;text-decoration:underline;}
 
 /* D51: one composer for first research and evidence-backed follow-up. */
-.research-workbench {width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;}
+.research-workbench {position:relative;width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;}
 .research-scroll-region {flex:1;min-height:0;width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:4px 0 18px;scrollbar-width:thin;scrollbar-color:#c8cac8 transparent;}
 .research-scroll-region::-webkit-scrollbar {width:6px;}
 .research-scroll-region::-webkit-scrollbar-track {background:transparent;}
@@ -348,10 +348,13 @@ nav button .nav-label {font-size:13px;}
 .research-eyebrow {font-size:11px;color:var(--text-muted);letter-spacing:.06em;}
 .research-header .button-row {justify-content:flex-end;flex-wrap:wrap;gap:6px;}
 .research-header button {font-size:12px;white-space:nowrap;}
-.research-history-panel {border-bottom:1px solid var(--line);padding:0 0 15px;margin:0 0 18px;max-width:none;}
+.research-history-panel {position:absolute;z-index:20;top:8px;right:10px;bottom:8px;width:min(400px,calc(100% - 20px));display:flex;flex-direction:column;min-height:0;padding:0;margin:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:0 12px 36px #0002;}
+.research-history-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);}
+.research-history-heading button {min-height:30px;padding:4px 8px;}
+.research-history-body {min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px 14px;}
 .research-history-title {display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;}
 .research-history-title label {display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);}
-.research-history-panel .research-history-list {max-height:250px;margin-top:8px;}
+.research-history-panel .research-history-list {max-height:none;overflow:visible;margin-top:8px;margin-bottom:16px;}
 .research-history-panel .research-history-row {grid-template-columns:minmax(0,1fr) auto;}
 .research-history-panel .research-history-row button:first-child {padding:7px 9px;}
 .research-history-panel .research-history-row small {white-space:normal;line-height:1.5;}
@@ -379,6 +382,7 @@ nav button .nav-label {font-size:13px;}
 .research-chat-turn {max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.65;}
 .research-chat-turn.user {margin-left:auto;max-width:88%;padding:10px 14px;border-radius:11px;background:var(--surface-soft);}
 .research-chat-turn.assistant {padding:4px 0;}
+.research-chat-turn.assistant>.research-reading {display:block;}
 .research-chat-turn strong {font-size:11px;color:var(--text-muted);}
 .research-chat-turn p {margin:5px 0 0;}
 .research-chat-failure {font-size:11px;color:var(--text-muted);}

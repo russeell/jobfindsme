@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,failChat,finishChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
+import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
 test('explicit company needs no link, while ambiguous research asks in the conversation',()=>{
  const direct=decideResearchRequest('腾讯的经营和员工福利怎么样？',{hasJob:false});
@@ -30,6 +31,22 @@ test('failed or cancelled turns remain retryable without duplicate user messages
  const complete=finishChat(retried.chat,'已核对公开材料','r1','2026-01-04');
  assert.deepEqual(complete.turns.map(turn=>turn.role),['user','assistant']);
  assert.equal(complete.draft,undefined);assert.deepEqual(complete.reportIds,['r1']);
+ assert.equal(complete.turns[1].reportId,'r1');
+});
+
+test('report turns keep their saved text and attach each report at its answer',()=>{
+ const first=finishChat(beginChat(undefined,'c1','A 公司如何？','2026-01-01').chat,'已读取来源', 'r1','2026-01-01');
+ const second=finishChat(beginChat(first,'c1','你好','2026-01-02').chat,'你好',undefined,'2026-01-02');
+ const third=finishChat(beginChat(second,'c1','A 公司福利如何？','2026-01-03').chat,'已读取来源', 'r2','2026-01-03');
+ const reports=[{report_id:'r1',job_context:{interest_question:'A 公司如何？'}},{report_id:'r2',job_context:{interest_question:'A 公司福利如何？'}}];
+ assert.deepEqual([...reportIdsByTurn(third,reports)],[[1,'r1'],[5,'r2']]);
+ const old={...third,turns:third.turns.map(({reportId,...turn})=>turn)};
+ assert.deepEqual([...reportIdsByTurn(old,reports)],[[1,'r1'],[5,'r2']]);
+ const repeated={...old,turns:[...old.turns,{role:'user',text:'A 公司如何？'},{role:'assistant',text:'再次回答'}]};
+ assert.deepEqual([...reportIdsByTurn(repeated,reports)],[[5,'r2']]);
+ assert.equal(third.turns[1].text,'已读取来源');
+ assert.equal(fromStoredResearchChat({...toStoredResearchChat('w1',third),updated_at:'2026-01-03'}).turns[1].reportId,'r1');
+ assert.deepEqual(modelHistoryWithinBudget(third.turns)[1],{role:'assistant',text:'已读取来源'});
 });
 
 test('workspace history and streaming events are isolated',()=>{

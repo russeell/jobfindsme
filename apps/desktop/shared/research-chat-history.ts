@@ -14,7 +14,29 @@ export function beginChat(chat:SavedResearchChat|undefined,id:string,question:st
 }
 
 export function finishChat(chat:SavedResearchChat,text:string,reportId:string|undefined,at:string):SavedResearchChat{
-  return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
+  return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text,...(reportId?{reportId}:{})}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
+}
+
+export function reportIdsByTurn(chat:SavedResearchChat,reports:Array<{report_id:string;job_context?:{interest_question?:string|null}}>):Map<number,string>{
+  const available=new Map(reports.filter(item=>chat.reportIds.includes(item.report_id)).map(item=>[item.report_id,item]));
+  const assigned=new Map<number,string>();
+  const used=new Set<string>();
+  for(const [index,turn] of chat.turns.entries())if(turn.role==="assistant"&&turn.reportId&&available.has(turn.reportId)){
+    assigned.set(index,turn.reportId);used.add(turn.reportId);
+  }
+  let question="";
+  const legacyTurns=new Map<string,number[]>();
+  for(const [index,turn] of chat.turns.entries()){
+    if(turn.role==="user"){question=turn.text;continue;}
+    if(assigned.has(index))continue;
+    const turns=legacyTurns.get(question)||[];turns.push(index);legacyTurns.set(question,turns);
+  }
+  for(const [prompt,turns] of legacyTurns){
+    const matches=chat.reportIds.filter(id=>!used.has(id)&&available.get(id)?.job_context?.interest_question===prompt);
+    if(matches.length!==turns.length)continue;
+    for(const [offset,id] of matches.entries()){assigned.set(turns[offset],id);used.add(id);}
+  }
+  return assigned;
 }
 
 export function failChat(chat:SavedResearchChat,reason:string,at:string):SavedResearchChat{

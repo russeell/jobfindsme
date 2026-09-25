@@ -370,7 +370,7 @@ export type PromptTurnInput = {
 
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
-export type ResearchChatTurn = {role:"user"|"assistant";text:string};
+export type ResearchChatTurn = {role:"user"|"assistant";text:string;reportId?:string};
 export type ResearchChatInput = {request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta:string};
 export type ResearchChatResult = {text:string;report?:ResearchReport};
