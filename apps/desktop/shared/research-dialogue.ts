@@ -1,6 +1,6 @@
 import {researchScopeFromQuestion} from "./research-scope";
 
-export type PendingResearch={question:string;missing:"company"|"role";company?:string}|{kind:"job_search";question:string;keyword:string};
+export type PendingResearch={question:string;missing:"company"|"role"|"focus";company?:string}|{kind:"job_search";question:string;keyword:string};
 export type ResearchDecision=
   | {kind:"chat"}
   | {kind:"clarify";reply:string;pending:PendingResearch}
@@ -43,6 +43,10 @@ export function decideResearchRequest(value:string,context:{company?:string;titl
       if(!bareName.test(company)||unknown.test(company))return {kind:"clarify",reply:"请直接说公司全称，或提出新的问题。",pending};
       if(/(?:这个|这家|该公司|某公司)/u.test(company))return {kind:"clarify",reply:"还需要可核对的公司全称。",pending};
       return {kind:"research",question:pending.question,company,title:context.title};
+    }else if(pending.missing==="focus"){
+      const focus=question.replace(/[?？。！!]+$/u,"").trim();
+      if(!focus||focus.length>60||/^(?:你|我|谁|什么)/u.test(focus))return {kind:"clarify",reply:"可以说想了解经营、岗位机会、工作体验或福利中的哪一方面；也可以直接提出新问题。",pending};
+      return {kind:"research",question:`${pending.company}的${focus}怎么样？`,company:pending.company!,title:context.title};
     }else{
       const title=question.replace(/^(?:岗位|职位)(?:名称)?(?:是|[:：])\s*/u,"").trim();
       if(!bareName.test(title)||unknown.test(title))return {kind:"clarify",reply:"请直接说岗位名称，或提出新的问题。",pending};
@@ -56,6 +60,7 @@ export function decideResearchRequest(value:string,context:{company?:string;titl
   const explicitCompany=namedCompany(question);
   const company=explicitCompany||context.company;
   if(!company)return {kind:"clarify",reply:context.hasJob?"这条岗位没有可核对的公司全称。请直接说公司名称。":"想研究哪家公司？请直接说公司名称。",pending:{question,missing:"company"}};
+  if(/^(?:公司)?(?:怎么样|如何|靠谱吗)[?？。！!]*$/u.test(question.replace(company,"").replace(/^的/u,"").trim()))return {kind:"clarify",reply:`${company}涉及多个业务和团队。你更想了解经营与产品、岗位机会、工作体验，还是福利？我可以按具体范围核对公开来源。`,pending:{question,missing:"focus",company}};
   const title=explicitCompany&&context.company&&explicitCompany.toLocaleLowerCase()!==context.company.toLocaleLowerCase()?scope.title:context.title||scope.title;
   if(!title&&/(?:这个|这份|该|此)(?:岗位|职位)/u.test(question))return {kind:"clarify",reply:"具体是哪个岗位？请直接说岗位名称。",pending:{question,missing:"role",company}};
   return {kind:"research",question,company,title};

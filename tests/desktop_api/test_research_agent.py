@@ -384,3 +384,131 @@ def test_research_endpoints_pass_remaining_time_to_source_reader(tmp_path, monke
     read = client.post("/v1/research-agent/read-page", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "site": "web", "url": "https://example.org/a", "timeout_ms": 325})
     assert search.status_code == read.status_code == 200
     assert seen == [("search", 0.75), ("read", 0.325)]
+
+
+def test_search_service_error_execution_persists_without_report(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    saved = store.save_execution(workspace, {
+        "id": "search-failed", "status": "search_service_error", "conversation_id": "chat-a",
+        "actions": [{"tool": "search_web", "status": "search_service_error"}], "evidence": [],
+    })
+    assert saved["status"] == "search_service_error"
+    with store.database.connect() as connection:
+        assert connection.execute("SELECT status FROM research_executions WHERE execution_id='search-failed'").fetchone()["status"] == "search_service_error"
+
+
+def test_conversation_with_pending_search_and_no_report_round_trips(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    item = {"id": "chat-no-report", "subject_company": "腾讯", "research_mode": True,
+            "pending": {"kind": "job_search", "question": "看Agent岗位", "keyword": "Agent"},
+            "turns": [{"role": "user", "text": "腾讯怎么样"},
+                      {"role": "assistant", "text": "请说明想了解的方面", "searchQuery": "腾讯 Agent"}],
+            "report_ids": []}
+    store.save_conversation(workspace, item)
+    assert store.list_conversations(workspace)[0]["pending"] == item["pending"]
+    store.save_conversation(workspace, {**item, "pending": None, "turns": [*item["turns"], {"role": "user", "text": "继续"}, {"role": "assistant", "text": "来源服务未完成，可以限定范围后重试。"}]})
+    row = store.list_conversations(workspace)[0]
+    assert row["turns"][-1]["role"] == "assistant" and len(row["turns"]) == 4
+    assert row["pending"] is None
+    assert row["report_ids"] == []
+    assert row["subject_company"] == "腾讯"
+
+
+def test_bing_regional_redirect_is_allowed_but_other_hosts_are_blocked(monkeypatch):
+    from urllib.request import Request
+    from jobfindsme.connectors.http import UnsafeSourceError
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    handler = agent_sources.BingRedirectHandler(max_redirects=2, require_https=True)
+    original = Request("https://www.bing.com/search?q=example&format=rss")
+    regional = handler.redirect_request(original, None, 302, "Found", {}, "https://cn.bing.com/search?q=example&format=rss")
+    assert regional.full_url.startswith("https://cn.bing.com/")
+    with pytest.raises(UnsafeSourceError):
+        handler.redirect_request(original, None, 302, "Found", {}, "https://attacker.example/search")
+
+
+def test_search_uses_verified_tls_and_no_ambient_proxy(monkeypatch):
+    from urllib.request import ProxyHandler, HTTPSHandler
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None)
+    handlers = []
+    class Response:
+        def read(self, _size): return b"<rss><channel></channel></rss>"
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+    def build(*items):
+        handlers.extend(items)
+        return SimpleNamespace(open=lambda *_args, **_kwargs: Response())
+    monkeypatch.setattr(agent_sources.urllib.request, "build_opener", build)
+    assert agent_sources.discover_sources("示例公司", "经营", "web") == []
+    assert any(isinstance(item, ProxyHandler) and item.proxies == {} for item in handlers)
+    assert any(isinstance(item, HTTPSHandler) and item._context.verify_mode for item in handlers)
+
+
+def test_search_endpoint_reports_safe_provider_failure_instead_of_local_service_error(tmp_path, monkeypatch):
+    import importlib
+    from jobfindsme.connectors.http import UnsafeSourceError
+    app_module = importlib.import_module("jobfindsme.desktop_api.app")
+    store, workspace = setup_store(tmp_path)
+    monkeypatch.setattr(app_module, "discover_sources", lambda *_args, **_kwargs: (_ for _ in ()).throw(UnsafeSourceError("cross-host source redirects are not allowed")))
+    response = TestClient(create_app(token="test-secret", database_path=store.database.path)).post(
+        "/v1/research-agent/search", headers={"Authorization": "Bearer test-secret"},
+        json={"workspace_id": workspace, "company": "腾讯", "original_question": "怎么样", "search_query": "公开资料", "site": "web", "timeout_ms": 750})
+    assert response.status_code == 502
+    assert response.json()["detail"] == "公开检索服务跳转被安全策略拦截"
+
+
+def test_conversation_storage_busy_returns_traceable_safe_error(tmp_path, monkeypatch):
+    import sqlite3
+    store, workspace = setup_store(tmp_path)
+    from jobfindsme.research.agent_store import ResearchAgentStore
+    monkeypatch.setattr(ResearchAgentStore, "save_conversation", lambda *_args, **_kwargs: (_ for _ in ()).throw(sqlite3.OperationalError("database is locked")))
+    response = TestClient(create_app(token="test-secret", database_path=store.database.path)).put(
+        "/v1/research-agent/conversations", headers={"Authorization": "Bearer test-secret"},
+        json={"workspace_id": workspace, "id": "chat-a", "turns": []})
+    assert response.status_code == 503
+    assert response.json()["detail"] == "research_chat_storage:sqlite_busy"
+
+
+def test_execution_status_migration_preserves_existing_rows():
+    import sqlite3
+    base = Path(__file__).parents[2] / "src" / "jobfindsme" / "migrations"
+    connection = sqlite3.connect(":memory:")
+    connection.execute("PRAGMA foreign_keys=ON")
+    connection.executescript("CREATE TABLE workspaces(workspace_id TEXT PRIMARY KEY); CREATE TABLE research_reports(report_id TEXT PRIMARY KEY);")
+    connection.execute("INSERT INTO workspaces VALUES ('w1')")
+    connection.executescript((base / "0036_research_agent.sql").read_text())
+    connection.execute("ALTER TABLE research_executions ADD COLUMN context_json TEXT NOT NULL DEFAULT '{}'")
+    connection.execute("INSERT INTO research_executions(execution_id,workspace_id,subject_key,status,started_at,updated_at) VALUES ('old','w1','company','running','now','now')")
+    connection.executescript((base / "0038_research_execution_statuses.sql").read_text())
+    assert connection.execute("SELECT status FROM research_executions WHERE execution_id='old'").fetchone()[0] == "running"
+    connection.execute("INSERT INTO research_executions(execution_id,workspace_id,subject_key,status,started_at,updated_at) VALUES ('new','w1','company','search_service_error','now','now')")
+    assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+    connection.close()
+
+
+def test_company_research_http_flow_saves_answer_and_reopens(tmp_path, monkeypatch):
+    import importlib
+    app_module = importlib.import_module("jobfindsme.desktop_api.app")
+    store, workspace = setup_store(tmp_path)
+    source = evidence()
+    monkeypatch.setattr(app_module, "discover_sources", lambda *_args, **_kwargs: [{"url": source["url"], "site": "zhihu", "title": "原页", "status": "search_hint_only"}])
+    monkeypatch.setattr(app_module, "read_original_page", lambda *_args, **_kwargs: source)
+    headers = {"Authorization": "Bearer test-secret"}
+    client = TestClient(create_app(token="test-secret", database_path=store.database.path))
+    search = client.post("/v1/research-agent/search", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "original_question": "研发方向", "search_query": "研发方向", "site": "zhihu"})
+    assert search.status_code == 200 and search.json()[0]["url"] == source["url"]
+    read = client.post("/v1/research-agent/read-page", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "site": "zhihu", "url": source["url"]})
+    assert read.status_code == 200 and read.json()["status"] == "read_original"
+    quote = "示例公司在上海设立了研发团队"
+    report = client.post("/v1/research-agent/reports", headers=headers, json={"workspace_id": workspace, "company": "示例公司", "question": "研发方向", "evidence": [read.json()], "claims": [{"statement": quote, "quote": quote, "evidence_ids": [source["evidence_id"]], "category": "business", "scope": "上海"}]})
+    assert report.status_code == 200 and report.json()["report_id"]
+    report_id = report.json()["report_id"]
+    answer = f"{quote}（原页：{source['url']}）"
+    chat = client.put("/v1/research-agent/conversations", headers=headers, json={"workspace_id": workspace, "id": "chat-1", "subject_company": "示例公司", "research_mode": True, "turns": [{"role": "user", "text": "研发方向"}, {"role": "assistant", "text": answer, "reportId": report_id}], "report_ids": [report_id]})
+    assert chat.status_code == 200
+    execution = client.put("/v1/research-agent/executions", headers=headers, json={"workspace_id": workspace, "id": "execution-1", "conversation_id": "chat-1", "status": "complete", "report_id": report_id, "evidence": [read.json()], "actions": [{"tool": "read_page", "status": "read_original"}]})
+    assert execution.status_code == 200
+    reopened = TestClient(create_app(token="test-secret", database_path=store.database.path))
+    restored = reopened.get("/v1/research-agent/conversations", headers=headers, params={"workspace_id": workspace})
+    assert restored.status_code == 200 and restored.json()[0]["turns"][1]["text"] == answer
+    reports = reopened.get("/v1/research-runs", headers=headers, params={"workspace_id": workspace})
+    assert reports.status_code == 200 and any(row["report_id"] == report_id for row in reports.json())

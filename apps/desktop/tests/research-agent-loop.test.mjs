@@ -156,6 +156,7 @@ test('no-evidence answer states what was attempted and offers a next step',()=>{
  assert.match(explainResearchGap(0,[{tool:'find_evidence'}],[]),/没有发起网页检索/);
  assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'read_failed'}],['read failed']),/原页读取失败/);
  assert.match(explainResearchGap(0,[{tool:'search_web',status:'search_service_error'}],['outage']),/检索服务未能完成/);
+ assert.match(explainResearchGap(0,[{tool:'search_web',status:'search_service_error',reason_code:'redirect_blocked'}],[]),/跳转被安全策略拦截/);
  assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'entity_mismatch'}],[]),/主体/);
  assert.match(explainResearchGap(0,[{tool:'find_evidence'},{tool:'read_page',status:'no_text_layer'}],[]),/没有可提取的文字层/);
  assert.match(explainResearchGap(1,[{tool:'find_evidence'}],[]),/不足以支持|没有足够依据/);

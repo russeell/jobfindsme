@@ -3,7 +3,11 @@ from __future__ import annotations
 import hmac
 import json
 import re
+import sqlite3
+import ssl
 import threading
+import urllib.error
+import xml.etree.ElementTree as ET
 from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
@@ -15,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from jobfindsme.app import jobfindsmecore
 from jobfindsme.connectors import RawJobRecord
+from jobfindsme.connectors.http import UnsafeSourceError
 from jobfindsme.contracts import SourceKind
 from jobfindsme.desktop_api.source_search_runs import source_run_outcome
 from jobfindsme.importing.normalizer import normalize_job
@@ -1880,6 +1885,16 @@ def create_app(
             if not isinstance(timeout_ms, (int, float)) or isinstance(timeout_ms, bool) or not 100 <= timeout_ms <= 4000:
                 raise ValueError("invalid research request timeout")
             return discover_sources(str(request["company"]), search_query, str(request["site"]), timeout=timeout_ms / 1000)
+        except UnsafeSourceError as error:
+            raise HTTPException(status_code=502, detail="公开检索服务跳转被安全策略拦截") from error
+        except urllib.error.HTTPError as error:
+            raise HTTPException(status_code=502, detail=f"公开检索服务返回 HTTP {error.code}") from error
+        except urllib.error.URLError as error:
+            detail = "公开检索服务 TLS 证书校验失败" if isinstance(error.reason, ssl.SSLError) else "公开检索服务连接失败"
+            raise HTTPException(status_code=502, detail=detail) from error
+        except (TimeoutError, ET.ParseError) as error:
+            detail = "公开检索服务响应超时" if isinstance(error, TimeoutError) else "公开检索服务返回了无法解析的结果"
+            raise HTTPException(status_code=502, detail=detail) from error
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -1907,6 +1922,10 @@ def create_app(
     def save_agent_conversation(request: dict) -> dict:
         try:
             return research_agent_store.save_conversation(str(request["workspace_id"]), request)
+        except sqlite3.Error as error:
+            message = str(error).lower()
+            code = "sqlite_busy" if "locked" in message or "busy" in message else "sqlite_readonly" if "readonly" in message else "sqlite_full" if "full" in message else "sqlite_constraint" if isinstance(error, sqlite3.IntegrityError) else "sqlite_error"
+            raise HTTPException(status_code=503, detail=f"research_chat_storage:{code}") from error
         except (KeyError, ValueError, LookupError, PermissionError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 

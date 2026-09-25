@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import re
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -13,8 +14,9 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 from pypdf import PdfReader
+import certifi
 
-from jobfindsme.connectors.http import SafeRedirectHandler, validate_public_http_url
+from jobfindsme.connectors.http import SafeRedirectHandler, UnsafeSourceError, validate_public_http_url
 
 from .service import (
     _ReadableHtml,
@@ -36,6 +38,31 @@ SITES = {
     "offershow": ("offershow.cn", "OfferShow", "personal_account"),
     "web": ("", "公开网页", "public_web"),
 }
+
+
+class BingRedirectHandler(SafeRedirectHandler):
+    """Permit Bing's regional RSS redirect without opening arbitrary hosts."""
+
+    _HOSTS = frozenset({"www.bing.com", "cn.bing.com"})
+
+    def __init__(self, *, max_redirects: int, require_https: bool) -> None:
+        super().__init__(max_redirects=max_redirects, require_https=require_https, same_host_only=False)
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        original_host = urllib.parse.urlsplit(req.full_url).hostname
+        next_host = urllib.parse.urlsplit(newurl).hostname
+        if original_host not in self._HOSTS or next_host not in self._HOSTS:
+            raise UnsafeSourceError("search provider redirect left Bing")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _research_opener(*, search: bool):
+    redirect = BingRedirectHandler(max_redirects=2, require_https=True) if search else SafeRedirectHandler(max_redirects=2, require_https=True, same_host_only=True)
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        urllib.request.HTTPSHandler(context=ssl.create_default_context(cafile=certifi.where())),
+        redirect,
+    )
 
 
 def _source_url(value: str, site: str) -> str:
@@ -62,9 +89,7 @@ def discover_sources(company: str, question: str, site: str, *, timeout: float =
         headers={"User-Agent": "JobFindsMe/desktop-research"},
     )
     validate_public_http_url("https://www.bing.com", resolve_dns=True, require_https=True)
-    opener = urllib.request.build_opener(
-        SafeRedirectHandler(max_redirects=2, require_https=True, same_host_only=True)
-    )
+    opener = _research_opener(search=True)
     with opener.open(request, timeout=max(0.1, min(timeout, 4))) as response:
         body = response.read(1_000_000)
     root = ET.fromstring(body)
@@ -110,9 +135,7 @@ def read_original_page(
     if not company.strip() or len(company) > 100:
         raise ValueError("company is required")
     domain, label, source_type = SITES[site]
-    opener = opener or urllib.request.build_opener(
-        SafeRedirectHandler(max_redirects=2, require_https=True, same_host_only=True)
-    )
+    opener = opener or _research_opener(search=False)
     request = urllib.request.Request(url, headers={"User-Agent": "JobFindsMe/desktop-research"})
     retrieved_at = datetime.now(UTC).isoformat()
     try:

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
@@ -14,6 +14,16 @@ test('explicit company needs no link, while ambiguous research asks in the conve
  const answered=decideResearchRequest('腾讯',{hasJob:false,pending:unclear.pending});
  assert.equal(answered.kind,'research');assert.equal(answered.company,'腾讯');assert.equal(answered.question,'这家公司福利怎么样？');
  assert.equal(decideResearchRequest('你好',{hasJob:false}).kind,'chat');
+});
+test('a broad company question asks for scope and resumes the same company',()=>{
+ const broad=decideResearchRequest('腾讯怎么样',{hasJob:false});
+ assert.equal(broad.kind,'clarify');assert.equal(broad.pending.missing,'focus');assert.match(broad.reply,/经营|岗位/);
+ const resumed=decideResearchRequest('经营和产品',{hasJob:false,pending:broad.pending});
+ assert.equal(resumed.kind,'research');assert.equal(resumed.company,'腾讯');assert.match(resumed.question,/经营和产品/);
+});
+test('a transient chat database lock retries the same snapshot once',async()=>{
+ const calls=[];await saveResearchChatWithRetry({id:'chat-a'},async item=>{calls.push(item.id);if(calls.length===1)throw Error('research_chat_storage:sqlite_busy');});
+ assert.deepEqual(calls,['chat-a','chat-a']);
 });
 
 test('agent role exploration keeps its intent when a company is added and uses the existing job search',()=>{

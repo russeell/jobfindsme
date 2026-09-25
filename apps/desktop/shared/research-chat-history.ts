@@ -64,6 +64,13 @@ export function saveResearchChats(workspaceId:string,chats:SavedResearchChat[]):
 export function toStoredResearchChat(workspaceId:string,chat:SavedResearchChat):Record<string,unknown>{
   return {workspace_id:workspaceId,id:chat.id,subject_key:(chat.subjectCompany||"").toLocaleLowerCase().replace(/\s+/g,""),subject_company:chat.subjectCompany,subject_title:chat.subjectTitle,job_id:chat.jobId,research_mode:chat.researchMode,turns:chat.turns,report_ids:chat.reportIds.slice(-30),draft:chat.draft,pending:chat.pendingResearch,failure:chat.failure};
 }
+export async function saveResearchChatWithRetry(item:Record<string,unknown>,save:(item:Record<string,unknown>)=>Promise<unknown>):Promise<void>{
+  try{await save(item);}catch(error){
+    if(!/research_chat_storage:sqlite_busy/.test(String(error)))throw error;
+    await new Promise(resolve=>setTimeout(resolve,200));
+    await save(item);
+  }
+}
 export function fromStoredResearchChat(item:Record<string,unknown>):SavedResearchChat{
   const turns=Array.isArray(item.turns)?item.turns.filter(value=>value&&typeof value==="object"&&["user","assistant"].includes(value.role)&&typeof value.text==="string") as ResearchChatTurn[]:[];
   const first=turns.find(value=>value.role==="user");
