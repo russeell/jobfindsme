@@ -7,7 +7,7 @@ export type ResearchDecision=
   | {kind:"job_search";reply:string;query:string;company?:string;pending?:PendingResearch}
   | {kind:"research";question:string;company:string;title?:string};
 
-const researchCue=/(?:研究|查(?:一下|资料)?|调查|公开资料|公司|企业|岗位|职位|职责|招聘|JD|经营|上市|口碑|评价|员工|工作强度|加班|福利|待遇|薪资|发展|靠谱吗|怎么样)/iu;
+const researchCue=/(?:研究|查(?:一下|资料)?|调查|公开资料|公司|企业|岗位|职位|职责|招聘|JD|经营|上市|口碑|评价|员工|工作强度|加班|福利|待遇|薪资|发展|股价|营收|财报|融资|靠谱吗|怎么样)/iu;
 const unknown=/^(?:这家|该公司|某公司|公司|未知|不知道|不清楚|这个|这份|该岗位|某个)$/u;
 const bareName=/^[\p{Script=Han}\p{L}\p{N}· .-]{2,60}$/u;
 

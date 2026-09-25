@@ -177,6 +177,39 @@ test('ordinary follow-up stays a conversation without research tools or report',
   assert.match(result.text,/哪个团队/);assert.equal(result.report,undefined);assert.deepEqual(invoked,[]);
  }finally{server.close();}
 });
+test('Pi asks a company scope question without inventing a research failure',async()=>{
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:JSON.stringify({message:'你更关注腾讯的经营、岗位机会，还是工作体验？',claims:[]})},'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const unexpected=async()=>{throw Error('clarification should not call source tools');};
+ const tools={findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readJob:unexpected,readBrowserPage:unexpected,saveExecution:async()=>{},saveReport:unexpected};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_pi_clarify',question:'腾讯怎么样',company:'腾讯',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(result.text,'你更关注腾讯的经营、岗位机会，还是工作体验？');assert.equal(result.report,undefined);}finally{server.close();}
+});
+
+test('the same Pi loop can choose research tools from a conversational turn',async()=>{
+ let turn=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('select_subject',{company:'示例公司'},turn):turn===2?tool('find_evidence',{},turn):turn===3?tool('search_web',{site:'zhihu',question:'研发'},turn):turn===4?tool('read_page',{site:'zhihu',url:source.url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const invoked=[];const tools={findEvidence:async()=>{invoked.push('find');return [];},searchWeb:async()=>{invoked.push('search');return [{url:source.url,site:'zhihu',title:'原页',status:'search_hint_only'}];},readPage:async()=>{invoked.push('read');return source;},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async()=>{},saveReport:async()=>({report_id:'pi_unified'})};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_pi_unified',question:'示例公司的研发方向',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.deepEqual(invoked,['find','search','read']);assert.equal(result.report.report_id,'pi_unified');assert.equal(result.company,'示例公司');assert.equal(result.researched,true);}finally{server.close();}
+});
+
+test('one embedded Pi path continues after a tool outage and a cancelled turn',async()=>{
+ let phase='chat',turn=0,modelCalls=0;const phases={chat:()=>({role:'assistant',content:'你好，我可以帮你查公开资料。'}),clarify:()=>({role:'assistant',content:JSON.stringify({message:'你更关注示例公司的经营，还是岗位机会？',claims:[]})}),outage:()=>++turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'经营'},turn):({role:'assistant',content:JSON.stringify({message:'你想先缩小到研发团队吗？',claims:[]})}),followup:()=>({role:'assistant',content:'可以，我们接着看研发团队。'}),cancel:()=>++turn===1?tool('find_evidence',{},turn):tool('search_web',{site:'web',question:'研发'},turn),retry:()=>++turn===1?tool('find_evidence',{},turn):turn===2?tool('search_web',{site:'web',question:'研发'},turn):turn===3?tool('read_page',{site:'web',url:source.url},turn):({role:'assistant',content:JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})})};
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});modelCalls++;const next=phases[phase]();sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const connection={protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'};
+ const history=[];let cancelController;const executions=[];
+ const tools={findEvidence:async()=>[],searchWeb:async(_company,_query,site,_original,signal)=>{if(phase==='outage')throw Error('公开检索服务连接失败');if(phase==='cancel')return new Promise((_resolve,reject)=>{signal.addEventListener('abort',()=>reject(Error('cancelled')),{once:true});setTimeout(()=>cancelController.abort(),10);});return [{url:source.url,site,title:'原页',status:'search_hint_only'}];},readPage:async()=>source,readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async item=>executions.push(item),saveReport:async()=>({report_id:'retry-report'})};
+ const ask=async(question,research,controller=new AbortController())=>runPiResearchAgent({workspaceId:'w1',sessionId:'session-1',requestId:`req_${phase}`,question,company:research?'示例公司':undefined,history:[...history],research},connection,'',tools,()=>{},controller.signal);
+ try{
+  let value=await ask('你好',false);assert.match(value.text,/你好/);history.push({role:'user',text:'你好'},{role:'assistant',text:value.text});
+  phase='clarify';turn=0;value=await ask('示例公司怎么样',true);assert.match(value.text,/更关注/);assert.equal(value.researched,false);history.push({role:'user',text:'示例公司怎么样'},{role:'assistant',text:value.text});
+  phase='outage';turn=0;value=await ask('示例公司经营如何',true);assert.match(value.text,/检索服务未能完成/);assert.match(value.text,/缩小到研发团队/);history.push({role:'user',text:'示例公司经营如何'},{role:'assistant',text:value.text});
+  phase='followup';turn=0;value=await ask('那先说怎么继续',false);assert.match(value.text,/接着看研发团队/);history.push({role:'user',text:'那先说怎么继续'},{role:'assistant',text:value.text});
+  phase='cancel';turn=0;cancelController=new AbortController();await assert.rejects(ask('示例公司研发方向',true,cancelController));
+  phase='retry';turn=0;value=await ask('示例公司研发方向',true);assert.equal(value.report.report_id,'retry-report');assert.match(value.text,/上海设立了研发团队/);assert(modelCalls>=10);assert(executions.some(item=>item.status==='search_service_error'));assert(executions.some(item=>item.status==='complete'));
+ }finally{server.close();}
+});
 
 test('retrieved evidence survives a later model failure without a verified answer',async()=>{
  let turn=0;const server=http.createServer((_request,response)=>{

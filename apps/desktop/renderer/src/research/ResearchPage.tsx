@@ -78,16 +78,12 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   async function sendChat(value:string){
     if(!workspaceId||chatBusy||loadedWorkspace!==workspaceId)return;
     const prior=chats.find(item=>item.id===chatId);
-    const {decision,newSubject,current,currentCompany,activeJobId,sameJob}=resolveResearchSession(value,prior,job,{company:contextCompany,title:contextTitle});
+    const {decision,newSubject,current,currentCompany,activeJobId}=resolveResearchSession(value,prior,job,{company:contextCompany,title:contextTitle});
     const id=current?.id||crypto.randomUUID();
     const at=new Date().toISOString();
     const started=beginChat(current,id,value,at);
-    if(decision.kind!=="clarify"&&decision.kind!=="job_search"&&!modelId){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
+    if(decision.kind!=="job_search"&&!modelId){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
     setChatId(id);
-    if(decision.kind==="clarify"){
-      const clarified={...finishChat(started.chat,decision.reply,undefined,at),pendingResearch:decision.pending};
-      setChats(items=>[clarified,...items.filter(item=>item.id!==id)]);setQuestion("");setMessage("");return;
-    }
     if(decision.kind==="job_search"){
       const guided=finishJobSearchChat(started.chat,decision.reply,decision.query,decision.pending,at);
       if(decision.company)setContextCompany(decision.company);
@@ -102,13 +98,14 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
     if(modelId&&!selected){setMessage("请先在模型设置中保存并测试一个模型。");return;}
     if(!selected){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
     const requestId=crypto.randomUUID();requestRef.current={id:requestId,workspaceId,sessionId:id,kind:"model"};
-    const startedChat={...started.chat,subjectCompany:decision.kind==="research"?decision.company:current?.subjectCompany,subjectTitle:decision.kind==="research"?decision.title:current?.subjectTitle,jobId:activeJobId,researchMode:decision.kind==="research"};
+    const companyHint=decision.kind==="research"?decision.company:decision.kind==="clarify"&&"company" in decision.pending?decision.pending.company:currentCompany;
+    const startedChat={...started.chat,subjectCompany:companyHint||current?.subjectCompany,subjectTitle:decision.kind==="research"?decision.title:current?.subjectTitle,jobId:activeJobId,researchMode:decision.kind!=="chat"};
     setChats(items=>[startedChat,...items.filter(item=>item.id!==id)]);
     setQuestion("");streamingRef.current="";setStreaming("");setMessage("");setChatBusy(true);
     try{
-      const result=await window.jobfindsme!.runResearchChat({request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:decision.kind==="research"?decision.question:value,research:decision.kind==="research",job_id:sameJob?activeJobId:undefined,company:decision.kind==="research"?decision.company:undefined,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
+      const result=await window.jobfindsme!.runResearchChat({request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:decision.kind==="research"?decision.question:value,research:decision.kind!=="chat",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
       if(requestRef.current?.id!==requestId||workspaceRef.current!==workspaceId)return;
-      setChats(items=>items.map(item=>item.id===id?finishChat(item,result.text,result.report?.report_id,new Date().toISOString()):item));
+      setChats(items=>items.map(item=>{if(item.id!==id)return item;const finished=finishChat(item,result.text,result.report?.report_id,new Date().toISOString());return {...finished,subjectCompany:result.company||finished.subjectCompany,researchMode:!!result.researched||finished.researchMode,pendingResearch:decision.kind==="clarify"&&!result.researched?decision.pending:undefined};}));
       if(result.report){const values=await window.jobfindsme!.listResearchReports(workspaceId);if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){keepReports(values);lastOpened.current=result.report.report_id;setReport(result.report);setMode("report");}}
       streamingRef.current="";setStreaming("");
     }catch(error){if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){setChats(items=>items.map(item=>item.id===id?failChat(item,userError(error).message,new Date().toISOString()):item));setQuestion(value);setMessage(`本次对话未完成：${userError(error).message}。提问已保留，可直接重试。`);try{keepReports(await window.jobfindsme!.listResearchReports(workspaceId));}catch{}}}
