@@ -38,6 +38,8 @@ export type BootstrapData = {
 };
 
 export type DesktopBridge = {
+  checkForUpdates():Promise<{status:"available"|"current"|"unpublished";tag?:string;message:string}>;
+  openReleases():Promise<void>;
   matchingRules(workspaceId:string):Promise<MatchingRuleState>;
   saveMatchingRule(input:MatchingRuleInput):Promise<MatchingRule>;
   deleteMatchingRule(workspaceId:string,ruleVersionId:string):Promise<void>;

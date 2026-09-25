@@ -24,7 +24,7 @@ type WorkPage = "discover" | "research" | "records";
 type Page = WorkPage | "settings";
 type SettingsTab = "sources" | "models" | "about";
 const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["岗位研究", "research"], ["已看过", "records"]];
-const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["关于", "about"]];
+const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["版本更新", "about"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
   useEffect(()=>localStorage.setItem("jfm.sources.selected",JSON.stringify(chosenSources)),[chosenSources]);
@@ -80,7 +80,7 @@ export function App() {
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} active={page==="research"} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
-      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:<section className="section"><h2>关于 JobFindsMe</h2><p>版本：{buildInfo.label}</p><p>本地数据 · {data?.workspaces.length??0} 个工作空间</p></section>}</div></section>}
+      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:<UpdatesPage/>}</div></section>}
     </div></section>
   </Workbench>;
 }
@@ -210,3 +210,10 @@ function ModelsPage({ workspaceId, onError }: { workspaceId?:string; onError(mes
 }
 
 function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : "本地服务不可用"; }
+
+function UpdatesPage(){
+ const [busy,setBusy]=useState(false);
+ const [result,setResult]=useState<{message:string;tag?:string}>();
+ async function check(){setBusy(true);setResult(undefined);try{setResult(await window.jobfindsme!.checkForUpdates());}catch(error){setResult({message:messageOf(error)});}finally{setBusy(false);}}
+ return <section className="section"><h2>版本更新</h2><p>当前构建：{buildInfo.label}</p><p>检查 GitHub 正式发布的桌面版本。下载安装不会在后台自动执行。</p><div className="button-row"><button className="primary-button" disabled={busy} onClick={()=>void check()}>{busy?"正在检查…":"检查更新"}</button><button onClick={()=>void window.jobfindsme!.openReleases().catch(error=>setResult({message:messageOf(error)}))}>查看发布与下载</button></div>{result&&<p role="status">{result.tag&&`发布版本：${result.tag} · `}{result.message}</p>}</section>;
+}

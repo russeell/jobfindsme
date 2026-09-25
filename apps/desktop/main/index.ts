@@ -1,3 +1,4 @@
+import {checkForUpdates,releasesUrl} from "./updates";
 import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -748,3 +749,12 @@ app.on("activate", () => {
 
 process.once("SIGINT", () => app.quit());
 process.once("SIGTERM", () => app.quit());
+
+ipcMain.handle("desktop:check-updates",event=>{
+ if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
+ return checkForUpdates(String(packageInfo.releaseTag??""),process.platform);
+});
+ipcMain.handle("desktop:open-releases",async event=>{
+ if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
+ await shell.openExternal(releasesUrl);
+});

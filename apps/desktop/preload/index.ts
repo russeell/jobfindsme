@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge } from "../shared/contracts";
 
 const bridge: DesktopBridge = Object.freeze({
+  checkForUpdates:()=>ipcRenderer.invoke("desktop:check-updates"),
+  openReleases:()=>ipcRenderer.invoke("desktop:open-releases"),
   matchingRules: workspaceId => ipcRenderer.invoke("desktop:matching-rules",workspaceId),
   saveMatchingRule: input => ipcRenderer.invoke("desktop:save-matching-rule",input),
   deleteMatchingRule: (workspaceId,ruleVersionId) => ipcRenderer.invoke("desktop:delete-matching-rule",workspaceId,ruleVersionId),
