@@ -120,8 +120,8 @@ def test_representative_chinese_resume_exports_pdf_docx_and_markdown(tmp_path) -
     assert "分页末尾校验" in markdown.path.read_text(encoding="utf-8")
     if os.name != "nt":
         assert pdf.path.stat().st_mode & 0o077 == 0
-    assert docx.path.stat().st_mode & 0o077 == 0
-    assert markdown.path.stat().st_mode & 0o077 == 0
+        assert docx.path.stat().st_mode & 0o077 == 0
+        assert markdown.path.stat().st_mode & 0o077 == 0
 
 
 def test_edit_preserves_spacing_and_hide_keeps_referenced_snapshots(tmp_path) -> None:
