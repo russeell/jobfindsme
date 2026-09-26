@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import test from "node:test";
@@ -15,8 +16,8 @@ test("packaged runtime resolves inside app resources without source checkout", (
       projectRoot: "/unavailable/source",
     }),
     {
-      executable: "/Applications/JobFindsMe.app/Contents/Resources/python/jobfindsme-api/jobfindsme-api",
-      cwd: "/Applications/JobFindsMe.app/Contents/Resources/python",
+      executable: path.join("/Applications/JobFindsMe.app/Contents/Resources", "python", "jobfindsme-api", process.platform === "win32" ? "jobfindsme-api.exe" : "jobfindsme-api"),
+      cwd: path.join("/Applications/JobFindsMe.app/Contents/Resources", "python"),
       moduleArgs: [],
     },
   );
