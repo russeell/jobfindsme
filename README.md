@@ -13,7 +13,7 @@
 
 <div align="center">
 
-[下载 macOS 版](https://github.com/russeell/jobfindsme/releases/latest) · [支持来源](#支持的来源) · [快速上手](#开始使用) · [English](README.en.md)
+[下载桌面版](https://github.com/russeell/jobfindsme/releases/latest) · [支持来源](#支持的来源) · [快速上手](#开始使用) · [English](README.en.md)
 
 </div>
 
@@ -61,7 +61,10 @@
 | 系统 | 当前安装包 |
 | --- | --- |
 | macOS · Apple Silicon（M 系列） | 下载 `mac-arm64.zip`，解压后将 `JobFindsMe.app` 放入「应用程序」 |
-| macOS · Intel / Windows / Linux | 暂未提供安装包 |
+| Windows · x64 | 下载 `windows-x64.zip`，完整解压后运行 `JobFindsMe.exe`，无需安装 Python 或 Node.js |
+| macOS · Intel / Windows ARM / Linux | 暂未提供安装包 |
+
+Windows 便携包尚未代码签名，可能触发 SmartScreen 提示；请核对发布页 SHA-256。不要只拷贝 exe，需保留完整目录。
 
 当前 macOS 包尚未签名、公证，首次打开可能被系统拦截，请按「系统设置 → 隐私与安全性」提示处理。发布页提供 SHA-256 校验文件。后续可在应用的「设置 → 版本更新」检查新版本并前往下载；暂不自动安装。
 

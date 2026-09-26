@@ -22,6 +22,9 @@ jobs:
       - run: python -m pytest
       - run: npm ci
         working-directory: apps/desktop
+      - name: Install Electron binary explicitly
+        run: node node_modules/electron/install.js
+        working-directory: apps/desktop
       - run: npm run build
         working-directory: apps/desktop
       - run: npm test
