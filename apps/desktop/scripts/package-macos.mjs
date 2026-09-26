@@ -1,3 +1,4 @@
+import {copyRuntimeDependencies} from "./runtime-dependencies.mjs";
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -50,14 +51,8 @@ const appRoot = path.join(resources, "app");
 mkdirSync(appRoot, { recursive: true });
 cpSync(path.join(desktopRoot, "dist"), path.join(appRoot, "dist"), { recursive: true });
 cpSync(path.join(desktopRoot, "dist-electron"), path.join(appRoot, "dist-electron"), { recursive: true });
-// Pi is loaded from the Electron main process at runtime. Keep its exact npm
-// dependency tree in the app; omit build-only packages and Electron's second app.
-const modulesRoot=path.join(desktopRoot,"node_modules");
-const excluded=new Set([".bin",".cache","@types","@vitejs","electron","typescript","vite"]);
-cpSync(modulesRoot,path.join(appRoot,"node_modules"),{recursive:true,verbatimSymlinks:true,filter:source=>{
-  const relative=path.relative(modulesRoot,source);
-  return !relative||(!excluded.has(relative.split(path.sep)[0])&&!/\.(?:md|txt|map)$/i.test(relative)&&!/(?:^|\/)(?:test|tests|docs)(?:\/|$)/i.test(relative));
-}});
+// Renderer libraries are bundled by Vite; only main-process dependencies ship here.
+copyRuntimeDependencies(desktopRoot,path.join(appRoot,"node_modules"),["@earendil-works/pi-agent-core","@earendil-works/pi-ai","typebox"]);
 mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 writeFileSync(

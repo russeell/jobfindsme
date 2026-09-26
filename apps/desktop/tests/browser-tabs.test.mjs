@@ -126,3 +126,19 @@ test('Zhilian foreground user agent removes non-header characters for its login 
  FakeView.onCreate=view=>{view.webContents.getUserAgent=()=> 'Mozilla/5.0 JobFindsMe测试版/0.1 Chrome/152 Electron/44 Safari/537.36';view.webContents.setUserAgent=value=>{used=value;};};
  try{await m.show('zhilian',bounds,'https://www.zhaopin.com/');assert.equal(used,'Mozilla/5.0 JobFindsMe/0.1 Chrome/152 Electron/44 Safari/537.36');}finally{FakeView.onCreate=undefined;m.destroy();}
 });
+
+test('background searches release their renderer on success and failure, preserving foreground',async()=>{
+ const {m,w}=setup();const created=[];
+ await m.show('zhilian',bounds);const foreground=w.children[0];
+ FakeView.onCreate=view=>{created.push(view);view.webContents.executeJavaScript=async()=>({jobs:[],empty:true});};
+ try{
+  await m.searchPage('zhilian',{keyword:'test',city:'',page:1,forceRefresh:true});
+  assert.equal(created[0].webContents.isDestroyed(),true);
+  assert.equal(foreground.webContents.isDestroyed(),false);
+  assert.equal(created[0].options.webPreferences.partition,foreground.options.webPreferences.partition);
+  FakeView.onCreate=view=>{created.push(view);view.webContents.loadURL=async()=>{throw Error('load failed');};};
+  await assert.rejects(m.searchPage('zhilian',{keyword:'test',city:'',page:1,forceRefresh:true}),/load failed/);
+  assert.equal(created.length,2);assert.equal(created[1].webContents.isDestroyed(),true);
+  assert.equal(foreground.webContents.isDestroyed(),false);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});

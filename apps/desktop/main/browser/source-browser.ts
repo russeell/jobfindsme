@@ -245,6 +245,12 @@ export class SourceBrowserManager {
     return view;
   }
 
+  private releaseBackground(sourceId:SourceBrowserId,view:WebContentsView):void {
+    // Close the task's renderer, never the persistent session or foreground tab.
+    if(this.backgrounds.get(sourceId)===view)this.backgrounds.delete(sourceId);
+    if(!view.webContents.isDestroyed())view.webContents.close();
+  }
+
   async readJobDescription(sourceId: SourceBrowserId, url: string): Promise<string> {
     return (await this.readResearchJob(sourceId,url)).description;
   }
@@ -377,7 +383,7 @@ export class SourceBrowserManager {
       this.careerCache.set(key,{time:Date.now(),page:result});if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
     }catch(error){if(records.length)return {records:records.slice(0,100),next_cursor:null,collection:{batches,elapsed_seconds:(Date.now()-now)/1000,stop_reason:'stopped_partial',cursor:null,complete:false,failure:String(error).includes('risk_control:')?'risk_control':String(error).includes('login_required:')?'login_required':null}};throw error;}
-    finally{if(view.webContents.isLoading())view.webContents.stop();}
+    finally{this.releaseBackground(sourceId,view);}
   }
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
@@ -421,7 +427,7 @@ export class SourceBrowserManager {
       this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
-    } finally {if(view.webContents.isLoading())view.webContents.stop();}
+    } finally {this.releaseBackground(sourceId,view);}
   }
 
   destroy(): void {
