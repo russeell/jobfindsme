@@ -1,6 +1,8 @@
 name: Windows desktop package
 on:
   workflow_dispatch:
+  push:
+    branches: [codex/desktop-refactor]
 permissions:
   contents: read
 jobs:
