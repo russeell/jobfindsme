@@ -1,16 +1,17 @@
-"""Workspace-scoped conversation and execution state for the existing research service."""
+"Workspace-scoped conversation and execution state for the existing research service."
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlsplit
 from uuid import uuid4
-from datetime import UTC, datetime, timedelta
 
-from jobfindsme.storage import Database
 from jobfindsme.connectors.http import validate_public_http_url
+from jobfindsme.storage import Database
+
 from .agent_sources import SITES, is_tencent_disclosure_url
 from .service import _host_matches
 
@@ -31,8 +32,33 @@ def _fresh(item: dict, *, at: datetime) -> bool:
         return False
 
 
-_CATEGORIES = {"business", "listing", "positive", "negative", "workload", "benefits", "role", "development"}
-_REGIONS = ("上海", "北京", "深圳", "广州", "杭州", "成都", "全国", "全球", "海外", "中国", "美国", "欧洲", "华东", "华南", "华北")
+_CATEGORIES = {
+    "business",
+    "listing",
+    "positive",
+    "negative",
+    "workload",
+    "benefits",
+    "role",
+    "development",
+}
+_REGIONS = (
+    "上海",
+    "北京",
+    "深圳",
+    "广州",
+    "杭州",
+    "成都",
+    "全国",
+    "全球",
+    "海外",
+    "中国",
+    "美国",
+    "欧洲",
+    "华东",
+    "华南",
+    "华北",
+)
 
 
 def _normalized(value: str) -> str:
@@ -63,27 +89,42 @@ def _claim_basis(claim: dict, evidence: dict, company: str) -> dict:
         raise ValueError("claim entity or quote is unsupported")
     if claim.get("category") not in _CATEGORIES:
         raise ValueError("invalid claim category")
-    if _negative(statement) != _negative(quote) or re.search(r"目前|现在|当前|至今|如今|仍然|仍在|现已", statement):
+    if _negative(statement) != _negative(quote) or re.search(
+        r"目前|现在|当前|至今|如今|仍然|仍在|现已", statement
+    ):
         raise ValueError("claim polarity or current-time scope is unsupported")
-    if _listing_status(statement) and _listing_status(statement) != _listing_status(quote):
+    if _listing_status(statement) and _listing_status(statement) != _listing_status(
+        quote
+    ):
         raise ValueError("claim listing status is unsupported")
-    numbers = re.findall(r"\d+(?:\.\d+)?%?|[一二三四五六七八九十百千万]+(?:年|月|日|人|倍|%)", statement)
-    if any(number not in quote for number in numbers) or any(region in statement and region not in quote for region in _REGIONS):
+    numbers = re.findall(
+        r"\d+(?:\.\d+)?%?|[一二三四五六七八九十百千万]+(?:年|月|日|人|倍|%)", statement
+    )
+    if any(number not in quote for number in numbers) or any(
+        region in statement and region not in quote for region in _REGIONS
+    ):
         raise ValueError("claim number or region is unsupported")
     direct = _normalized(statement) in _normalized(quote)
     if not direct:
         a, b = _normalized(statement), _normalized(quote)
-        grams = {a[i:i + 2] for i in range(len(a) - 1)}
+        grams = {a[i : i + 2] for i in range(len(a) - 1)}
         if not grams or sum(part in b for part in grams) / len(grams) < 0.85:
             raise ValueError("claim wording is insufficiently supported")
     scope = str(claim.get("scope") or "团队、地区或法律主体未核实")
     if scope != "团队、地区或法律主体未核实" and scope not in quote:
         raise ValueError("claim scope is not present in cited original")
     source_type = (evidence.get("context") or {}).get("source_type")
-    return {"statement": statement, "quote": quote, "evidence_ids": claim["evidence_ids"],
-            "category": claim["category"], "scope": scope,
-            "source_type": source_type if source_type in {"official_disclosure", "personal_account", "public_web"} else "public_web",
-            "support_level": "direct" if direct else "qualified"}
+    return {
+        "statement": statement,
+        "quote": quote,
+        "evidence_ids": claim["evidence_ids"],
+        "category": claim["category"],
+        "scope": scope,
+        "source_type": source_type
+        if source_type in {"official_disclosure", "personal_account", "public_web"}
+        else "public_web",
+        "support_level": "direct" if direct else "qualified",
+    }
 
 
 class ResearchAgentStore:
@@ -132,7 +173,11 @@ class ResearchAgentStore:
             connection.execute("BEGIN IMMEDIATE")
             self._workspace(connection, workspace_id)
             existing = connection.execute(
-                "SELECT workspace_id FROM research_conversations WHERE conversation_id=?",
+                (
+                    "SELECT workspace_id FROM research_c"
+                    "onversations WHERE conversation_id="
+                    "?"
+                ),
                 (conversation_id,),
             ).fetchone()
             if existing and existing["workspace_id"] != workspace_id:
@@ -143,8 +188,10 @@ class ResearchAgentStore:
                     report_ids_json,draft,pending_json,updated_at)
                    VALUES (?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(conversation_id) DO UPDATE SET
-                    subject_key=excluded.subject_key, context_json=excluded.context_json,
-                    turns_json=excluded.turns_json, report_ids_json=excluded.report_ids_json,
+                    subject_key=excluded.subject_key,
+                    context_json=excluded.context_json,
+                    turns_json=excluded.turns_json,
+                    report_ids_json=excluded.report_ids_json,
                     draft=excluded.draft,pending_json=excluded.pending_json,
                     updated_at=excluded.updated_at""",
                 (
@@ -194,9 +241,22 @@ class ResearchAgentStore:
     def save_execution(self, workspace_id: str, item: dict) -> dict:
         execution_id = str(item["id"])
         status = item.get("status")
-        if not execution_id or len(execution_id) > 100 or status not in {
-            "running", "complete", "failed", "cancelled", "no_results", "search_service_error", "read_failed", "entity_mismatch", "unsupported_claim"
-        }:
+        if (
+            not execution_id
+            or len(execution_id) > 100
+            or status
+            not in {
+                "running",
+                "complete",
+                "failed",
+                "cancelled",
+                "no_results",
+                "search_service_error",
+                "read_failed",
+                "entity_mismatch",
+                "unsupported_claim",
+            }
+        ):
             raise ValueError("invalid research execution")
         actions = item.get("actions") or []
         evidence = item.get("evidence") or []
@@ -204,31 +264,43 @@ class ResearchAgentStore:
         if len(actions) > 60 or len(evidence) > 24 or len(failures) > 30:
             raise ValueError("research execution exceeds storage bounds")
         context = item.get("context") or {}
-        if not isinstance(context, dict) or len(
-            json.dumps(context, ensure_ascii=False)
-        ) > 16000:
+        if (
+            not isinstance(context, dict)
+            or len(json.dumps(context, ensure_ascii=False)) > 16000
+        ):
             raise ValueError("research execution context exceeds storage bounds")
         now = _now()
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             self._workspace(connection, workspace_id)
             existing = connection.execute(
-                "SELECT workspace_id,started_at FROM research_executions WHERE execution_id=?",
+                (
+                    "SELECT workspace_id,started_at FROM"
+                    " research_executions WHERE executio"
+                    "n_id=?"
+                ),
                 (execution_id,),
             ).fetchone()
             if existing and existing["workspace_id"] != workspace_id:
                 raise PermissionError("execution belongs to another workspace")
             report_id = item.get("report_id")
-            if report_id and not connection.execute(
-                "SELECT 1 FROM research_reports WHERE report_id=? AND workspace_id=?",
-                (report_id, workspace_id),
-            ).fetchone():
+            if (
+                report_id
+                and not connection.execute(
+                    (
+                        "SELECT 1 FROM research_reports WHER"
+                        "E report_id=? AND workspace_id=?"
+                    ),
+                    (report_id, workspace_id),
+                ).fetchone()
+            ):
                 raise ValueError("report belongs to another workspace")
             connection.execute(
                 """INSERT INTO research_executions
                    (execution_id,workspace_id,conversation_id,subject_key,status,
                     budgets_json,actions_json,evidence_json,failures_json,report_id,
-                    started_at,updated_at,context_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    started_at,updated_at,context_json)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(execution_id) DO UPDATE SET
                     status=excluded.status,budgets_json=excluded.budgets_json,
                     actions_json=excluded.actions_json,evidence_json=excluded.evidence_json,
@@ -252,7 +324,9 @@ class ResearchAgentStore:
             )
         return {**item, "updated_at": now}
 
-    def find_evidence(self, workspace_id: str, company: str, *, limit: int = 12) -> list[dict]:
+    def find_evidence(
+        self, workspace_id: str, company: str, *, limit: int = 12
+    ) -> list[dict]:
         key = "".join(company.casefold().split())
         if not key:
             return []
@@ -278,7 +352,11 @@ class ResearchAgentStore:
                     (report["report_id"],),
                 ).fetchall()
                 evidence.extend(
-                    {**dict(row), "context": json.loads(row["context_json"]), "report_id": report["report_id"]}
+                    {
+                        **dict(row),
+                        "context": json.loads(row["context_json"]),
+                        "report_id": report["report_id"],
+                    }
                     for row in rows
                 )
         for execution in executions:
@@ -289,9 +367,14 @@ class ResearchAgentStore:
         seen: set[str] = set()
         result = []
         for item in evidence:
-            if item.get("verification_status") != "independently_retrieved" or not _fresh(item, at=now):
+            if item.get(
+                "verification_status"
+            ) != "independently_retrieved" or not _fresh(item, at=now):
                 continue
-            dedupe = f"{item.get('url','').split('#')[0]}|{str(item.get('excerpt') or '')[:100]}"
+            dedupe = (
+                f"{item.get('url', '').split('#')[0]}|"
+                f"{str(item.get('excerpt') or '')[:100]}"
+            )
             if dedupe in seen:
                 continue
             seen.add(dedupe)
@@ -316,10 +399,14 @@ class ResearchAgentStore:
             raise ValueError("invalid Agent report")
         if not isinstance(claims, list) or len(claims) > 30:
             raise ValueError("invalid claims")
-        verified = [row for row in evidence if isinstance(row, dict)
-                    and row.get("verification_status") == "independently_retrieved"
-                    and row.get("status") in (None, "read_original")
-                    and row.get("url", "").startswith("https://")]
+        verified = [
+            row
+            for row in evidence
+            if isinstance(row, dict)
+            and row.get("verification_status") == "independently_retrieved"
+            and row.get("status") in (None, "read_original")
+            and row.get("url", "").startswith("https://")
+        ]
         if not verified:
             return None
         for row in verified:
@@ -348,57 +435,116 @@ class ResearchAgentStore:
         by_id = {row["evidence_id"]: row for row in verified}
         checked_claims = []
         for claim in claims:
-            if not isinstance(claim, dict) or len(claim.get("evidence_ids") or []) != 1 or not set(claim.get("evidence_ids") or []).issubset(ids):
+            if (
+                not isinstance(claim, dict)
+                or len(claim.get("evidence_ids") or []) != 1
+                or not set(claim.get("evidence_ids") or []).issubset(ids)
+            ):
                 raise ValueError("claim references unknown evidence")
-            checked_claims.append(_claim_basis(claim, by_id[claim["evidence_ids"][0]], company))
+            checked_claims.append(
+                _claim_basis(claim, by_id[claim["evidence_ids"][0]], company)
+            )
         if not checked_claims:
             return None
-        evidence_fingerprint = hashlib.sha256(json.dumps(sorted(
-            (row["url"], row.get("excerpt", "")) for row in verified
-        ), ensure_ascii=False).encode()).hexdigest()
-        claim_fingerprint = hashlib.sha256(json.dumps(sorted(
-            (_normalized(claim["statement"]), claim["category"], by_id[claim["evidence_ids"][0]]["url"])
-            for claim in checked_claims
-        ), ensure_ascii=False).encode()).hexdigest()
+        evidence_fingerprint = hashlib.sha256(
+            json.dumps(
+                sorted((row["url"], row.get("excerpt", "")) for row in verified),
+                ensure_ascii=False,
+            ).encode()
+        ).hexdigest()
+        claim_fingerprint = hashlib.sha256(
+            json.dumps(
+                sorted(
+                    (
+                        _normalized(claim["statement"]),
+                        claim["category"],
+                        by_id[claim["evidence_ids"][0]]["url"],
+                    )
+                    for claim in checked_claims
+                ),
+                ensure_ascii=False,
+            ).encode()
+        ).hexdigest()
         now = _now()
         report_id = f"research_{uuid4().hex}"
         job_id = item.get("job_id")
         with self.database.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             self._workspace(connection, workspace_id)
-            job_row = connection.execute(
-                "SELECT payload_json FROM jobs WHERE workspace_id=? AND job_id=?", (workspace_id, job_id)
-            ).fetchone() if job_id else None
+            job_row = (
+                connection.execute(
+                    "SELECT payload_json FROM jobs WHERE workspace_id=? AND job_id=?",
+                    (workspace_id, job_id),
+                ).fetchone()
+                if job_id
+                else None
+            )
             if job_id and not job_row:
                 raise ValueError("job belongs to another workspace")
             job_snapshot = json.loads(job_row["payload_json"]) if job_row else None
             previous = connection.execute(
-                "SELECT job_id,job_context_json FROM research_reports WHERE workspace_id=? ORDER BY created_at DESC LIMIT 50",
+                (
+                    "SELECT job_id,job_context_json FROM"
+                    " research_reports WHERE workspace_i"
+                    "d=? ORDER BY created_at DESC LIMIT "
+                    "50"
+                ),
                 (workspace_id,),
             ).fetchall()
-            same = [json.loads(row["job_context_json"]) for row in previous
-                    if row["job_id"] == job_id and json.loads(row["job_context_json"]).get("company", "").casefold() == company.casefold()]
+            same = [
+                json.loads(row["job_context_json"])
+                for row in previous
+                if row["job_id"] == job_id
+                and json.loads(row["job_context_json"]).get("company", "").casefold()
+                == company.casefold()
+            ]
             existing_material = set()
             for row in connection.execute(
-                "SELECT e.url,e.excerpt FROM research_evidence e JOIN research_reports r ON e.report_id=r.report_id WHERE r.workspace_id=? AND json_extract(r.job_context_json,'$.company')=?",
+                (
+                    "SELECT e.url,e.excerpt FROM researc"
+                    "h_evidence e JOIN research_reports "
+                    "r ON e.report_id=r.report_id WHERE "
+                    "r.workspace_id=? AND json_extract(r"
+                    ".job_context_json,'$.company')=?"
+                ),
                 (workspace_id, company),
             ):
                 existing_material.add((row["url"], row["excerpt"]))
-            has_new_evidence = any((row["url"], row.get("excerpt", "")) not in existing_material for row in verified)
-            if not has_new_evidence and same and same[0].get("agent_claim_fingerprint") == claim_fingerprint:
+            has_new_evidence = any(
+                (row["url"], row.get("excerpt", "")) not in existing_material
+                for row in verified
+            )
+            if (
+                not has_new_evidence
+                and same
+                and same[0].get("agent_claim_fingerprint") == claim_fingerprint
+            ):
                 return None
-            context = {"scope": "job" if job_id else "company", "company": company,
-                       "title": str(item.get("title") or (job_snapshot or {}).get("title") or "")[:300],
-                       "description": (job_snapshot or {}).get("description") or "",
-                       "url": (job_snapshot or {}).get("apply_url") or "",
-                       "job_snapshot": job_snapshot,
-                       "interest_question": question,
-                       "agent_summary": str(item.get("summary") or "")[:2000],
-                       "agent_claims": [{**claim, "evidence_ids": [f"{report_id}_{value}" for value in claim["evidence_ids"]]} for claim in checked_claims],
-                       "agent_fingerprint": evidence_fingerprint,
-                       "agent_claim_fingerprint": claim_fingerprint,
-                       "version_number": len(same) + 1,
-                       "outcome": "partial"}
+            context = {
+                "scope": "job" if job_id else "company",
+                "company": company,
+                "title": str(
+                    item.get("title") or (job_snapshot or {}).get("title") or ""
+                )[:300],
+                "description": (job_snapshot or {}).get("description") or "",
+                "url": (job_snapshot or {}).get("apply_url") or "",
+                "job_snapshot": job_snapshot,
+                "interest_question": question,
+                "agent_summary": str(item.get("summary") or "")[:2000],
+                "agent_claims": [
+                    {
+                        **claim,
+                        "evidence_ids": [
+                            f"{report_id}_{value}" for value in claim["evidence_ids"]
+                        ],
+                    }
+                    for claim in checked_claims
+                ],
+                "agent_fingerprint": evidence_fingerprint,
+                "agent_claim_fingerprint": claim_fingerprint,
+                "version_number": len(same) + 1,
+                "outcome": "partial",
+            }
             limitations = item.get("limitations") or []
             if not isinstance(limitations, list):
                 raise ValueError("invalid limitations")
@@ -408,9 +554,25 @@ class ResearchAgentStore:
                     resume_observations_json,project_rewrites_json,interview_topics_json,
                     model_connection_id,model_status,limitations_json,created_at,directions_json,job_context_json)
                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (report_id, workspace_id, job_id, None, "limited", "[]", "[]", "[]", "[]",
-                 None, "complete", json.dumps([str(x)[:500] for x in limitations[:20]], ensure_ascii=False),
-                 now, "[]", json.dumps(context, ensure_ascii=False)),
+                (
+                    report_id,
+                    workspace_id,
+                    job_id,
+                    None,
+                    "limited",
+                    "[]",
+                    "[]",
+                    "[]",
+                    "[]",
+                    None,
+                    "complete",
+                    json.dumps(
+                        [str(x)[:500] for x in limitations[:20]], ensure_ascii=False
+                    ),
+                    now,
+                    "[]",
+                    json.dumps(context, ensure_ascii=False),
+                ),
             )
             for row in verified:
                 connection.execute(
@@ -418,10 +580,23 @@ class ResearchAgentStore:
                        (evidence_id,report_id,url,platform,published_at,retrieved_at,company,team,
                         excerpt,evidence_kind,verification_status,relevance,limitations,context_json)
                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (f"{report_id}_{row['evidence_id']}", report_id, row["url"], row.get("platform") or "公开网页",
-                     row.get("published_at"), row.get("retrieved_at") or now, company, row.get("team"),
-                     str(row.get("excerpt") or "")[:1500], "public_source", "independently_retrieved",
-                     row.get("relevance") if row.get("relevance") in {"company", "team", "role"} else "company",
-                     str(row.get("limitations") or "")[:800], json.dumps(row.get("context") or {}, ensure_ascii=False)),
+                    (
+                        f"{report_id}_{row['evidence_id']}",
+                        report_id,
+                        row["url"],
+                        row.get("platform") or "公开网页",
+                        row.get("published_at"),
+                        row.get("retrieved_at") or now,
+                        company,
+                        row.get("team"),
+                        str(row.get("excerpt") or "")[:1500],
+                        "public_source",
+                        "independently_retrieved",
+                        row.get("relevance")
+                        if row.get("relevance") in {"company", "team", "role"}
+                        else "company",
+                        str(row.get("limitations") or "")[:800],
+                        json.dumps(row.get("context") or {}, ensure_ascii=False),
+                    ),
                 )
         return report_id

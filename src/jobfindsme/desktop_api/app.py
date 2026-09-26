@@ -1931,10 +1931,21 @@ def create_app(
             research_agent_store.list_conversations(str(request["workspace_id"]))
             timeout_ms = request.get("timeout_ms")
             if timeout_ms is None:
-                return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]))
-            if not isinstance(timeout_ms, (int, float)) or isinstance(timeout_ms, bool) or not 100 <= timeout_ms <= 4000:
+                return read_original_page(
+                    str(request["url"]), str(request["company"]), str(request["site"])
+                )
+            if (
+                not isinstance(timeout_ms, (int, float))
+                or isinstance(timeout_ms, bool)
+                or not 100 <= timeout_ms <= 4000
+            ):
                 raise ValueError("invalid research request timeout")
-            return read_original_page(str(request["url"]), str(request["company"]), str(request["site"]), timeout=timeout_ms / 1000)
+            return read_original_page(
+                str(request["url"]),
+                str(request["company"]),
+                str(request["site"]),
+                timeout=timeout_ms / 1000,
+            )
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -1948,18 +1959,34 @@ def create_app(
     @app.put("/v1/research-agent/conversations", dependencies=[Depends(require_token)])
     def save_agent_conversation(request: dict) -> dict:
         try:
-            return research_agent_store.save_conversation(str(request["workspace_id"]), request)
+            return research_agent_store.save_conversation(
+                str(request["workspace_id"]), request
+            )
         except sqlite3.Error as error:
             message = str(error).lower()
-            code = "sqlite_busy" if "locked" in message or "busy" in message else "sqlite_readonly" if "readonly" in message else "sqlite_full" if "full" in message else "sqlite_constraint" if isinstance(error, sqlite3.IntegrityError) else "sqlite_error"
-            raise HTTPException(status_code=503, detail=f"research_chat_storage:{code}") from error
+            code = (
+                "sqlite_busy"
+                if "locked" in message or "busy" in message
+                else "sqlite_readonly"
+                if "readonly" in message
+                else "sqlite_full"
+                if "full" in message
+                else "sqlite_constraint"
+                if isinstance(error, sqlite3.IntegrityError)
+                else "sqlite_error"
+            )
+            raise HTTPException(
+                status_code=503, detail=f"research_chat_storage:{code}"
+            ) from error
         except (KeyError, ValueError, LookupError, PermissionError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
     @app.put("/v1/research-agent/executions", dependencies=[Depends(require_token)])
     def save_agent_execution(request: dict) -> dict:
         try:
-            return research_agent_store.save_execution(str(request["workspace_id"]), request)
+            return research_agent_store.save_execution(
+                str(request["workspace_id"]), request
+            )
         except (KeyError, ValueError, LookupError, PermissionError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -1968,16 +1995,24 @@ def create_app(
         try:
             workspace_id = str(request["workspace_id"])
             report_id = research_agent_store.save_report(workspace_id, request)
-            return research.get_report(workspace_id=workspace_id, report_id=report_id) if report_id else None
+            return (
+                research.get_report(workspace_id=workspace_id, report_id=report_id)
+                if report_id
+                else None
+            )
         except (KeyError, ValueError, LookupError, PermissionError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
     @app.get("/v1/research-agent/jobs/{job_id}", dependencies=[Depends(require_token)])
     def read_agent_job(job_id: str, workspace_id: str) -> dict:
         try:
-            return research.jobs.get(workspace_id=workspace_id, job_id=job_id).model_dump(mode="json")
+            return research.jobs.get(
+                workspace_id=workspace_id, job_id=job_id
+            ).model_dump(mode="json")
         except (LookupError, AttributeError) as error:
-            raise HTTPException(status_code=404, detail="job not found in workspace") from error
+            raise HTTPException(
+                status_code=404, detail="job not found in workspace"
+            ) from error
 
     @app.post(
         "/v1/research-runs",
