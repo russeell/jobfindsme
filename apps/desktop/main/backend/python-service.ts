@@ -45,14 +45,14 @@ export function resolvePythonLaunch(options: Pick<
       throw new Error("packaged Python runtime requires resourcesPath");
     }
     return {
-      executable: path.join(options.resourcesPath, "python", "jobfindsme-api", "jobfindsme-api"),
+      executable: path.join(options.resourcesPath, "python", "jobfindsme-api", process.platform === "win32" ? "jobfindsme-api.exe" : "jobfindsme-api"),
       cwd: path.join(options.resourcesPath, "python"),
       // PyInstaller's executable already embeds the desktop_api entry point.
       moduleArgs: [],
     };
   }
   return {
-    executable: process.env.JFM_PYTHON ?? path.join(options.projectRoot, ".venv/bin/python"),
+    executable: process.env.JFM_PYTHON ?? path.join(options.projectRoot, process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python"),
     cwd: options.projectRoot,
     moduleArgs: ["-m", "jobfindsme.desktop_api"],
   };

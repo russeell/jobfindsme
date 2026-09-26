@@ -1,0 +1,44 @@
+name: Windows desktop package
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install -e ".[dev]" pyinstaller
+      - run: python -m pytest
+      - run: npm ci
+        working-directory: apps/desktop
+      - run: npm run build
+        working-directory: apps/desktop
+      - run: npm test
+        working-directory: apps/desktop
+      - run: python -m PyInstaller --clean --noconfirm --distpath apps/desktop/runtime/python --workpath build/jobfindsme-api scripts/jobfindsme_api.spec
+      - run: node scripts/package-windows.mjs
+        working-directory: apps/desktop
+      - run: npm install --no-save --package-lock=false playwright
+        working-directory: apps/desktop
+      - run: node scripts/smoke-windows.mjs
+        working-directory: apps/desktop
+      - shell: pwsh
+        run: |
+          Compress-Archive -Path apps/desktop/release/windows/JobFindsMe -DestinationPath apps/desktop/release/windows/JobFindsMe-windows-x64.zip
+          Get-FileHash apps/desktop/release/windows/JobFindsMe-windows-x64.zip -Algorithm SHA256 | Format-List | Out-File apps/desktop/release/windows/SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JobFindsMe-windows-x64
+          path: |
+            apps/desktop/release/windows/*.zip
+            apps/desktop/release/windows/*.txt
+            apps/desktop/release/windows/*.png
