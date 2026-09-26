@@ -340,3 +340,32 @@ test('fabricated citation to an otherwise readable page cannot save a report',as
  try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_fabricated',question:'示例公司研发如何',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(saved,0);assert.equal(result.report,undefined);}
  finally{server.close();}
 });
+
+test('Tencent benefits follow-up recovers from cache-only early final and reads web evidence',async()=>{
+ let turn=0;const queries=[];const actions=[];
+ const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?{role:'assistant',content:'没有缓存材料，暂时不能回答。'}:turn===3?tool('search_web',{site:'web',question:'腾讯 员工待遇 福利 员工反馈'},turn):turn===4?tool('read_page',{site:'web',url:'https://example.org/tencent'},turn):{role:'assistant',content:JSON.stringify({claims:[],limitations:['员工个人反馈不能代表全公司']})};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async(company,query)=>{queries.push([company,query]);return [{url:'https://example.org/tencent',site:'web',title:'腾讯员工反馈',status:'candidate'}];},readPage:async()=>({...source,url:'https://example.org/tencent',excerpt:'腾讯员工待遇因团队岗位而异',status:'read_original'}),readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>{actions.push(structuredClone(state.actions));},saveReport:async()=>null};
+ try{
+  await runPiResearchAgent({workspaceId:'w1',requestId:'req_benefits',company:'腾讯',question:'员工待遇',history:[{role:'user',text:'调研下腾讯集团'},{role:'assistant',text:'想了解经营还是员工待遇？'}],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(queries.length,1);assert.equal(queries[0][0],'腾讯');assert.match(queries[0][1],/待遇/);
+  assert.ok(actions.at(-1).some(action=>action.tool==='read_page'));
+ }finally{server.close();}
+});
+
+test('a model ignoring the completion repair is stopped without a report',async()=>{
+ let turn=0,saved=0;const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_evidence',{},turn):{role:'assistant',content:'没有材料。'};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{
+  await runPiResearchAgent({workspaceId:'w1',requestId:'req_refuses',company:'腾讯',question:'员工待遇',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[],searchWeb:async()=>{throw Error('unexpected');},readPage:async()=>null,readBrowserPage:async()=>null,readJob:async()=>null,saveExecution:async()=>{},saveReport:async()=>{saved++;}},()=>{},new AbortController().signal);
+  assert.equal(turn,3);assert.equal(saved,0);
+ }finally{server.close();}
+});

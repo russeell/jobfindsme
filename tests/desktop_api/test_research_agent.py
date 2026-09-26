@@ -575,7 +575,7 @@ def test_official_index_and_search_share_one_timeout_and_do_not_retry_rate_limit
     ticks = iter([0.0, 0.0, 4.1])
     monkeypatch.setattr(agent_sources.time, "monotonic", lambda: next(ticks))
     with pytest.raises(TimeoutError, match="time budget"):
-        agent_sources.discover_sources("腾讯", "经营与披露", "hkex")
+        agent_sources.discover_sources("腾讯", "经营与披露", "hkex", timeout=4)
 
 
 def test_search_endpoint_reports_safe_provider_failure_instead_of_local_service_error(tmp_path, monkeypatch):
@@ -647,3 +647,38 @@ def test_company_research_http_flow_saves_answer_and_reopens(tmp_path, monkeypat
     assert restored.status_code == 200 and restored.json()[0]["turns"][1]["text"] == answer
     reports = reopened.get("/v1/research-runs", headers=headers, params={"workspace_id": workspace})
     assert reports.status_code == 200 and any(row["report_id"] == report_id for row in reports.json())
+
+
+def test_benefits_search_rejects_generic_hits_and_uses_one_bounded_fallback(monkeypatch):
+    calls = []
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *a, **k: None)
+    monkeypatch.setattr(agent_sources, "_source_url", lambda url, site: url)
+    bodies = [b'<rss><channel><item><link>https://www.qq.com/</link><title>Tencent home</title></item></channel></rss>',
+              '<a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.org%2Fbenefits">腾讯员工待遇</a><a class="result__snippet">员工个人反馈</a>'.encode()]
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def read(self, size): return bodies.pop(0)
+    def open_page(request, timeout):
+        calls.append((request.full_url, timeout))
+        return Response()
+    monkeypatch.setattr(agent_sources, "_research_opener", lambda **kwargs: SimpleNamespace(open=open_page))
+    rows = agent_sources.discover_sources("腾讯", "员工待遇", "web")
+    assert len(calls) == 2
+    assert 0 < calls[1][1] <= 10
+    assert rows[0]["url"] == "https://example.org/benefits"
+    assert rows[0]["provider"] == "duckduckgo_html"
+    assert rows[0]["status"] == "search_hint_only"
+
+
+def test_search_rate_limit_never_triggers_alternative_channel(monkeypatch):
+    import urllib.error
+    calls = []
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *a, **k: None)
+    def open_page(request, timeout):
+        calls.append(request.full_url)
+        raise urllib.error.HTTPError(request.full_url, 429, "limited", None, None)
+    monkeypatch.setattr(agent_sources, "_research_opener", lambda **kwargs: SimpleNamespace(open=open_page))
+    with pytest.raises(urllib.error.HTTPError):
+        agent_sources.discover_sources("腾讯", "员工待遇", "web")
+    assert len(calls) == 1

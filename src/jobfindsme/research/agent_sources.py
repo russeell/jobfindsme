@@ -198,12 +198,85 @@ def _source_url(value: str, site: str) -> str:
     return value
 
 
+_BENEFIT_TERMS = re.compile(r"待遇|薪资|薪酬|福利|年终|加班|工作强度|工资|salary|benefit|compensation", re.I)
+
+
+def _topic_relevant(row: dict, question: str) -> bool:
+    # Discovery relevance only: snippets never become evidence.
+    if not _BENEFIT_TERMS.search(question):
+        return True
+    return bool(_BENEFIT_TERMS.search(row.get("title", "") + " " + row.get("summary_hint", "")))
+
+
+class _SearchHtml(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.rows = []
+        self.anchor = False
+        self.snippet = False
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        classes = attrs.get("class", "").split()
+        if tag == "a" and "result__a" in classes:
+            self.rows.append({"url": attrs.get("href", ""), "title": "", "summary_hint": ""})
+            self.anchor = True
+        if "result__snippet" in classes:
+            self.snippet = True
+
+    def handle_endtag(self, tag):
+        if tag == "a":
+            self.anchor = False
+            self.snippet = False
+
+    def handle_data(self, data):
+        if self.rows and (self.anchor or self.snippet):
+            key = "title" if self.anchor else "summary_hint"
+            self.rows[-1][key] += data
+
+
+def _fallback_discovery(company: str, question: str, site: str, deadline: float) -> list[dict]:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("research discovery time budget exhausted")
+    domain, label, source_type = SITES[site]
+    query = f'"{company}" {question}' + (f" site:{domain}" if domain else "")
+    endpoint = "https://html.duckduckgo.com/html/?" + urllib.parse.urlencode({"q": query})
+    validate_public_http_url(endpoint, resolve_dns=True, require_https=True)
+    request = urllib.request.Request(endpoint, headers={"User-Agent": "JobFindsMe/desktop-research"})
+    with _research_opener(search=False).open(request, timeout=remaining) as response:
+        body = response.read(1_000_000).decode("utf-8", errors="replace")
+    if re.search(r"anomaly\.js|challenge-form|captcha", body, re.I):
+        raise urllib.error.HTTPError(endpoint, 429, "search verification required", None, None)
+    parser = _SearchHtml()
+    parser.feed(body)
+    rows, seen = [], set()
+    for row in parser.rows[:20]:
+        target = urllib.parse.urljoin("https://html.duckduckgo.com", row["url"])
+        parsed = urllib.parse.urlsplit(target)
+        if parsed.hostname in {"duckduckgo.com", "html.duckduckgo.com"}:
+            target = urllib.parse.parse_qs(parsed.query).get("uddg", [target])[0]
+        try:
+            _source_url(target, site)
+        except (ValueError, OSError):
+            continue
+        if target in seen or not _topic_relevant(row, question):
+            continue
+        seen.add(target)
+        rows.append({**row, "url": target, "site": site, "platform": label,
+                     "source_type": source_type, "provider": "duckduckgo_html",
+                     "status": "search_hint_only", "search_published_at": None})
+        if len(rows) >= 6:
+            break
+    return rows
+
+
 def discover_sources(
-    company: str, question: str, site: str, *, timeout: float = 4, original_question: str | None = None
+    company: str, question: str, site: str, *, timeout: float = 10, original_question: str | None = None
 ) -> list[dict]:
     if site not in SITES or not company.strip() or len(company) > 100 or not question.strip() or len(question) > 700:
         raise ValueError("invalid research discovery")
-    deadline = time.monotonic() + max(0.1, min(timeout, 4))
+    deadline = time.monotonic() + max(0.1, min(timeout, 10))
     if site in {"hkex", "web"} and re.search(r"经营|业绩|财报|年报|披露|收入|利润|results|report|revenue", question, re.I):
         try:
             official = _tencent_disclosures(company, original_question or question, max(0.1, deadline - time.monotonic()))
@@ -228,7 +301,7 @@ def discover_sources(
     )
     validate_public_http_url("https://www.bing.com", resolve_dns=True, require_https=True)
     opener = _research_opener(search=True)
-    with opener.open(request, timeout=max(0.1, remaining)) as response:
+    with opener.open(request, timeout=max(0.1, min(4, remaining))) as response:
         body = response.read(1_000_000)
     root = ET.fromstring(body)
     hits = []
@@ -257,7 +330,10 @@ def discover_sources(
         )
         if len(hits) >= 6:
             break
-    return hits
+    relevant = [row for row in hits if _topic_relevant(row, original_question or question)]
+    if relevant:
+        return relevant
+    return _fallback_discovery(company.strip(), question.strip(), site, deadline)
 
 
 def read_original_page(
