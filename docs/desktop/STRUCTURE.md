@@ -15,3 +15,18 @@ docs/images/        README 使用的界面截图
 Python `sources/` 是来源目录和检索准入的权威位置，`search/` 负责编排与统一结果，`research/` 管有来源的报告，`profiles/` 与 `resume_editor/` 管简历数据，`desktop_api/` 提供本地接口。`migrations/` 必须保留，以读取已有用户数据。
 
 旧 CLI/MCP、安装器和 Skill 已退役。Python 包内部的旧发行名与数据路径只用于现有桌面打包和用户数据迁移。历史设计和验收文件可从 [重构前提交](https://github.com/russeell/jobfindsme/tree/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop) 查阅，不在当前树重复保存。
+
+### Windows x64 packaging
+
+`.github/workflows/windows-release.yml` builds on Windows, runs the Python and
+Node regressions, freezes the API with PyInstaller, and packages Electron with
+`scripts/package-windows.mjs`. `scripts/audit-windows-package.mjs` checks required
+runtime files and rejects local databases/session directories. A Playwright
+Electron smoke test launches the packaged executable twice and verifies the
+renderer → IPC → bundled API → SQLite bootstrap, with screenshots saved beside
+the ZIP artifact. No live recruitment requests or paid model calls are used.
+
+The portable ZIP must be fully extracted before starting `JobFindsMe.exe`.
+Windows uses its user-profile ACLs rather than POSIX permission bits. The build
+is currently unsigned; SmartScreen may warn. Chinese PDF export uses installed
+Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged.
