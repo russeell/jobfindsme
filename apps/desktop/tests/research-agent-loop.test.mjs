@@ -233,7 +233,7 @@ test('a fabricated final claim is dropped and no report is saved',async()=>{
  const tools={findEvidence:async()=>[],searchWeb:async()=>[],readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>executions.push(state),saveReport:async()=>{saved++;return null;}};
  try{
   const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_abcdefgh',question:'公司上市吗',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
-  assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/只检查了已保存的材料/);assert.match(result.text,/没有发起网页检索/);assert.equal(executions.at(-1).status,'unsupported_claim');
+  assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/尝试了公开来源检索/);assert.ok(executions.at(-1).actions.some(action=>action.tool==='search_web'));assert.equal(executions.at(-1).status,'unsupported_claim');
  }finally{server.close();}
 });
 
@@ -345,7 +345,7 @@ test('Tencent benefits follow-up recovers from cache-only early final and reads 
  let turn=0;const queries=[];const actions=[];
  const server=http.createServer((_request,response)=>{
   response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
-  const next=turn===1?tool('find_evidence',{},turn):turn===2?{role:'assistant',content:'没有缓存材料，暂时不能回答。'}:turn===3?tool('search_web',{site:'web',question:'腾讯 员工待遇 福利 员工反馈'},turn):turn===4?tool('read_page',{site:'web',url:'https://example.org/tencent'},turn):{role:'assistant',content:JSON.stringify({claims:[],limitations:['员工个人反馈不能代表全公司']})};
+  const next=turn===1?tool('find_evidence',{},turn):turn===2?{role:'assistant',content:'没有缓存材料，暂时不能回答。'}:{role:'assistant',content:JSON.stringify({claims:[],limitations:['员工个人反馈不能代表全公司']})};
   sse(response,next,next.tool_calls?'tool_calls':'stop');
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -367,5 +367,25 @@ test('a model ignoring the completion repair is stopped without a report',async(
  try{
   await runPiResearchAgent({workspaceId:'w1',requestId:'req_refuses',company:'腾讯',question:'员工待遇',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[],searchWeb:async()=>{throw Error('unexpected');},readPage:async()=>null,readBrowserPage:async()=>null,readJob:async()=>null,saveExecution:async()=>{},saveReport:async()=>{saved++;}},()=>{},new AbortController().signal);
   assert.equal(turn,3);assert.equal(saved,0);
+ }finally{server.close();}
+});
+
+test('explicit research executes bounded acquisition even when the model never calls a tool',async()=>{
+ let turn=0;const invoked=[];
+ const server=http.createServer((_request,response)=>{
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  sse(response,{role:'assistant',content:turn===1?'没有材料。':JSON.stringify({claims:[{statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'}]})},'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{
+  const value=await runPiResearchAgent({workspaceId:'w1',requestId:'req_required',company:'示例公司',question:'研究下示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{
+   findEvidence:async()=>{invoked.push('cache');return [];},
+   searchWeb:async()=>{invoked.push('search');return [{url:source.url,site:'web',title:'原文',status:'candidate'}];},
+   readPage:async()=>{invoked.push('read');return source;},
+   readJob:async()=>null,readBrowserPage:async()=>{throw Error('unexpected browser');},
+   saveExecution:async()=>{},saveReport:async()=>({report_id:'required-report'})
+  },()=>{},new AbortController().signal);
+  assert.deepEqual(invoked,['cache','search','read']);assert.equal(turn,2);
+  assert.equal(value.report.report_id,'required-report');assert.match(value.text,/上海设立了研发团队/);
  }finally{server.close();}
 });
