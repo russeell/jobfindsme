@@ -29,6 +29,8 @@ jobs:
       - run: python -m PyInstaller --clean --noconfirm --distpath apps/desktop/runtime/python --workpath build/jobfindsme-api scripts/jobfindsme_api.spec
       - run: node scripts/package-windows.mjs
         working-directory: apps/desktop
+      - run: node scripts/audit-windows-package.mjs
+        working-directory: apps/desktop
       - run: npm install --no-save --package-lock=false playwright
         working-directory: apps/desktop
       - run: node scripts/smoke-windows.mjs

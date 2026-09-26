@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -117,7 +118,8 @@ def test_representative_chinese_resume_exports_pdf_docx_and_markdown(tmp_path) -
     document_text = "\n".join(p.text for p in Document(docx.path).paragraphs)
     assert "中文内容完整保留" in document_text
     assert "分页末尾校验" in markdown.path.read_text(encoding="utf-8")
-    assert pdf.path.stat().st_mode & 0o077 == 0
+    if os.name != "nt":
+        assert pdf.path.stat().st_mode & 0o077 == 0
     assert docx.path.stat().st_mode & 0o077 == 0
     assert markdown.path.stat().st_mode & 0o077 == 0
 
