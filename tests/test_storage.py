@@ -27,7 +27,8 @@ def test_secure_sqlite_files_tolerates_disappearing_sidecar(
 
     database._secure_sqlite_files()
 
-    assert stat.S_IMODE(database.path.stat().st_mode) == 0o600
+    if os.name != "nt":  # Windows permissions use ACLs, not POSIX mode bits.
+        assert stat.S_IMODE(database.path.stat().st_mode) == 0o600
 
 
 def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> None:
@@ -113,7 +114,8 @@ def test_migration_backup_restores_database_after_failure(
 
     backup = tmp_path / "jobfindsme.db.pre-migration.bak"
     assert backup.exists()
-    assert stat.S_IMODE(backup.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(backup.stat().st_mode) == 0o600
     with database.connect() as connection:
         row = connection.execute(
             "SELECT name FROM workspaces WHERE workspace_id = 'kept'"
@@ -383,8 +385,9 @@ def test_database_directory_and_files_are_private_by_default(tmp_path) -> None:
 
     directory_mode = stat.S_IMODE(database.path.parent.stat().st_mode)
     database_mode = stat.S_IMODE(database.path.stat().st_mode)
-    assert directory_mode == 0o700
-    assert database_mode == 0o600
+    if os.name != "nt":
+        assert directory_mode == 0o700
+        assert database_mode == 0o600
 
 
 def test_hidden_rule_migration_preserves_existing_rule_and_search_reference(

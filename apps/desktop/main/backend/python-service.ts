@@ -138,6 +138,7 @@ export class PythonService {
       ],
       {
         cwd: launch.cwd,
+        windowsHide: true,
         env: { ...process.env, JFM_DESKTOP_TOKEN: token },
         stdio: ["ignore", "pipe", "pipe"],
       },

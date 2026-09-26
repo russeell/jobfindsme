@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import stat
 from pathlib import Path
 
@@ -70,7 +71,8 @@ def test_all_import_modes_apply_their_retention_policy(
     if document.managed_path:
         managed = Path(document.managed_path)
         assert managed.read_text(encoding="utf-8") == RESUME
-        assert stat.S_IMODE(managed.stat().st_mode) == 0o600
+        if os.name != "nt":
+            assert stat.S_IMODE(managed.stat().st_mode) == 0o600
 
 
 def test_database_never_stores_complete_resume_text(tmp_path: Path) -> None:

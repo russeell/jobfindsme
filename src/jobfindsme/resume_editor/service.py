@@ -389,7 +389,13 @@ def _write_pdf(
 
 
 def _register_cjk_font(pdfmetrics, ttfont) -> str:
+    import os
+
+    windows_fonts = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
     candidates = (
+        windows_fonts / "msyh.ttc",
+        windows_fonts / "simsun.ttc",
+        windows_fonts / "msjh.ttc",
         Path("/System/Library/Fonts/STHeiti Light.ttc"),
         Path("/System/Library/Fonts/Supplemental/Songti.ttc"),
         Path("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc"),

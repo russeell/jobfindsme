@@ -13,3 +13,9 @@ test('service errors never masquerade as current version',async()=>{
  await assert.rejects(checkForUpdates('','darwin',reply({})),/无效/);
  await assert.rejects(checkForUpdates('','darwin',async()=>{throw Error('offline');}),/offline/);
 });
+
+test('Windows portable releases are compatible only on Windows',async()=>{
+ const response=reply({tag_name:'v2',assets:[{name:'JobFindsMe-windows-x64.zip'}]});
+ assert.equal((await checkForUpdates('v1','win32',response)).status,'available');
+ assert.equal((await checkForUpdates('v1','darwin',response)).status,'unpublished');
+});
