@@ -49,11 +49,11 @@ const extractionSpecs: Record<BrowserSearchSourceId, {
     next: [".options-pages a.next", "[class*='pagination'] [class*='next']"],
   },
   zhilian: {
-    cards: [".joblist-box__item", ".positionlist__item", "[class*='joblist'] article"],
-    title: ["[class*='job-name']", "[class*='position-name']", "h3"],
-    company: ["[class*='company-name']", "[class*='company']"],
-    location: ["[class*='location']", "[class*='address']"],
-    salary: ["[class*='salary']"],
+    cards: [".joblist-box__item", ".positionlist__item", "[class*='joblist'] article", "[class*='joblist-item']", "[class*='job-item']", "[class*='list-item']", "[class*='job-card']", ".joblist-box"],
+    title: ["[class*='job-name']", "[class*='position-name']", "h3", ".job-title", "[class*='title']"],
+    company: ["[class*='company-name']", "[class*='company']", "[class*='iteminfo__line2__compdesc']"],
+    location: ["[class*='location']", "[class*='address']", "[class*='area']"],
+    salary: ["[class*='salary']", "[class*='job-salary']"],
     link: ["a[href*='jobs.zhaopin.com']", "a[href]"],
     next: ["[class*='pagination'] [class*='next']", "li.next"],
   },
@@ -220,7 +220,7 @@ export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):strin
     const text=(document.body?.innerText||'').slice(0,4000);
     const cardCount=${JSON.stringify(sourceId)}==='wuyou'
       ? document.querySelectorAll('.joblist-item,[class*="joblist-item"]').length
-      : document.querySelectorAll('.joblist-box__item,.positionlist__item,[class*="joblist"] article').length;
+      : document.querySelectorAll('.joblist-box__item,.positionlist__item,[class*="joblist"] article,.joblist-item,.job-item,[class*="job-card"],[class*="list-item"]').length;
     const formCount=document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]').length;
     const challenge=/滑动验证|安全验证|访问过于频繁|captcha|请完成验证/i.test(text);
     const login=/passport\.zhaopin\.com|login\.51job\.com/.test(location.hostname) || (/请登录|登录后查看/.test(text)&&!cardCount);

@@ -80,7 +80,7 @@ export class BossCollector {
   private async detail(value:string,signal:AbortSignal,deadline:number):Promise<BossDetail>{
     const url=canonicalBossJob(value);if(!url)throw Error('不支持的 BOSS 岗位链接');const cached=this.details.get(url);if(cached&&this.now()-Date.parse(cached.fetched_at)<1800000)return cached;
     await this.pace(signal,deadline);await this.bounded(()=>this.driver.load(url,true,signal),signal,deadline);
-    for(let poll=0;poll<3;poll++){const page=await this.bounded(()=>this.driver.read(true),signal,deadline);this.guard(page);if(page.detail?.url===url&&page.detail.description.length>=80){const detail={...page.detail,fetched_at:new Date(this.now()).toISOString()};this.details.set(url,detail);if(this.details.size>100)this.details.delete(this.details.keys().next().value!);return detail;}await this.pace(signal,deadline);}
+    for(let poll=0;poll<3;poll++){const page=await this.bounded(()=>this.driver.read(true),signal,deadline);this.guard(page);if(page.detail?.url===url&&page.detail.description.length>=20){const detail={...page.detail,fetched_at:new Date(this.now()).toISOString()};this.details.set(url,detail);if(this.details.size>100)this.details.delete(this.details.keys().next().value!);return detail;}await this.pace(signal,deadline);}
     throw Error('未读到完整 JD，保留列表信息；可打开原页查看');
   }
 }

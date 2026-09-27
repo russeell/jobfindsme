@@ -49,7 +49,7 @@ def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
             # A caller explicitly recorded a state transition without a new
             # fetch timestamp (for example, a close/reopen update).
             return right
-        return max(
+        winner = max(
             (left, right),
             key=lambda job: (
                 job.source.fetched_at,
@@ -58,6 +58,21 @@ def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
                 job.apply_url,
             ),
         )
+        loser = left if winner is right else right
+        if winner.source.detail_level == "list_card" and loser.source.detail_level == "detail_page":
+            return winner.model_copy(
+                update={
+                    "description": loser.description,
+                    "source": winner.source.model_copy(
+                        update={
+                            "detail_level": "detail_page",
+                            "description_source_url": loser.source.description_source_url,
+                            "description_fetched_at": loser.source.description_fetched_at,
+                        }
+                    )
+                }
+            )
+        return winner
 
     def quality(job: JobPosting) -> tuple[int, int, int, int]:
         return (

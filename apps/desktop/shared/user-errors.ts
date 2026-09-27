@@ -1,6 +1,7 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
- const text=error instanceof Error?error.message:String(error||'');
+ const rawText=error instanceof Error?error.message:String(error||'');
+ const text = rawText.replace(/^Error invoking remote method '[^']+': Error: /, '');
  const chatStorage=text.match(/research_chat_storage:(sqlite_busy|sqlite_readonly|sqlite_full|sqlite_constraint|sqlite_error)/);
  if(chatStorage){const message={sqlite_busy:'本地对话数据库繁忙',sqlite_readonly:'本地对话数据库不可写',sqlite_full:'本地对话数据库空间不足',sqlite_constraint:'本地对话数据库约束冲突',sqlite_error:'本地对话数据库读写失败'}[chatStorage[1]];return {kind:'service',message:`${message}（${chatStorage[1]}）`,action:'retry'};}
  if(/login_required|verified login|登录.*(失效|过期)|请.*登录/.test(text))return {kind:'login',message:'该来源需要重新登录。已读取的岗位会保留。',action:'source'};

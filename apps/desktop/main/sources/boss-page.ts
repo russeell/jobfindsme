@@ -15,7 +15,8 @@ export function canonicalBossJob(value:string):string|null {
 // never accesses cookies, storage, private network endpoints or recruiter identities.
 export function bossPageScript() { return `(${readBossPage.toString()})()`; }
 function readBossPage():BossPage {
-  const visible=(e:Element)=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
+  const docVisible = document.documentElement.clientWidth > 0;
+  const visible=(e:Element)=>{const s=getComputedStyle(e);if(s.display==='none'||s.visibility==='hidden')return false;if(docVisible){const r=e.getBoundingClientRect();return r.width>0&&r.height>0;}return true;};
   const text=(e:Element|null)=>((e as HTMLElement)?.innerText||e?.textContent||'').trim();
   const pick=(e:Element,selectors:string)=>Array.from(e.querySelectorAll(selectors)).filter(visible).map(text).find(Boolean)||'';
   const body=(document.body?.innerText||'').slice(0,30000);
@@ -39,20 +40,24 @@ function readBossPage():BossPage {
     const company=pick(card,'.company-name,.company-info h3,.company-info h4,a[href*="/gongsi/"]');
     if(!title||title.length>300||/[\uE000-\uF8FF]/.test(title))continue;
     const salary=pick(card,'.salary,[class*="salary"]');
-    jobs.push({title,company:company.slice(0,300),location:pick(card,'.job-area,[class*="job-area"]').slice(0,200),salary:/[\uE000-\uF8FF]/.test(salary)?'':salary.slice(0,100),url});seen.add(url);if(jobs.length>=100)break;
+    const jobLocation=pick(card,'.job-area,[class*="job-area"]').slice(0,200);
+    const extractedSalary=/[\uE000-\uF8FF]/.test(salary)?'':salary.slice(0,100);
+    jobs.push({title,company:company.slice(0,300),location:jobLocation,salary:extractedSalary,url});seen.add(url);if(jobs.length>=100)break;
   }
   const empty=has('.job-empty,.search-empty,.empty-result')&&/暂无|没有找到|未找到/.test(body);
   const ended=has('.no-more,.no-more-data,.job-list-bottom')&&/没有更多|暂无更多|已到底|到底了/.test(body);
   let detail:BossPage['detail'];
-  const description=Array.from(document.querySelectorAll('.job-sec-text,.job-detail .text,.job-description')).filter(visible).map(text).find(t=>t.length>=80&&t.length<=30000);
+  const description=Array.from(document.querySelectorAll('.job-sec-text,.job-detail .text,.job-description')).filter(visible).map(text).find(t=>t.length>=20&&t.length<=30000);
   const title=pick(document.body,'.job-name h1,.name h1,.job-detail-header h1,h1');
   const company=pick(document.body,'.sider-company .company-info a[href*="/gongsi/"],.company-info .company-name,.job-company-name,.sider-company a[href*="/gongsi/"]');
   const detailLocation=pick(document.body,'.job-banner .text-city,.job-banner a[href*="/city/"],.job-banner .job-area,.job-banner .text-desc a');
   const detailSalary=pick(document.body,'.job-banner .salary,.job-detail-header .salary');
   // A split-list panel must be linked to its selected job, never inferred from first card.
   const detailUrl=/^\/job_detail\/[\w-]+\.html$/.test(location.pathname)?location.origin+location.pathname:'';
-  const folded=Array.from(document.querySelectorAll('.job-sec button,.job-description button,.job-sec a')).some(e=>visible(e)&&/展开全部|展开更多|查看完整/.test(text(e)));
+  const expandBtn=Array.from(document.querySelectorAll<HTMLElement>('.job-sec button,.job-description button,.job-sec a')).find(e=>visible(e)&&/展开全部|展开更多|查看完整/.test(text(e)));
+  if(expandBtn)expandBtn.click();
+  const folded=!!expandBtn;
   if(description&&title&&detailUrl&&!folded&&!/展开全部|展开更多/.test(description))detail={title,company,location:detailLocation,salary:/[\uE000-\uF8FF]/.test(detailSalary)?'':detailSalary,description,url:detailUrl};
   return {authenticated,loginRequired,blocked,readable:jobs.length>0||empty,empty,ended,jobs,detail};
 }
-export function bossScrollScript(){return `(()=>{const card=document.querySelector('.job-card-wrapper,.job-card-box,.job-list-box li');let node=card?.parentElement;while(node){const s=getComputedStyle(node);if(/auto|scroll/.test(s.overflowY)&&node.scrollHeight>node.clientHeight+4){const before=node.scrollTop;node.scrollBy(0,Math.max(240,node.clientHeight*.8));return {moved:node.scrollTop!==before};}node=node.parentElement;}const before=window.scrollY;window.scrollBy(0,Math.max(240,innerHeight*.8));return {moved:window.scrollY!==before};})()`;}
+export function bossScrollScript(){return `(()=>{const next=document.querySelector('.ui-pagination-next,.pagination-next,.ui-icon-arrow-right');if(next&&!next.className.includes('disabled')){next.click();return {moved:true};}const card=document.querySelector('.job-card-wrapper,.job-card-box,.job-list-box li');let node=card?.parentElement;while(node){const s=getComputedStyle(node);if(/auto|scroll|overlay/.test(s.overflowY)&&node.scrollHeight>node.clientHeight+4){const before=node.scrollTop;node.scrollBy(0,Math.max(240,node.clientHeight*.8));return {moved:node.scrollTop!==before};}node=node.parentElement;}const before=window.scrollY;window.scrollBy(0,Math.max(240,innerHeight*.8));return {moved:window.scrollY!==before};})()`;}

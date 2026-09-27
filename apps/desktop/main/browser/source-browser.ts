@@ -52,6 +52,16 @@ export class SourceBrowserManager {
   private observingBoss=false;
   private bossDocumentTime=0;
   private bossSawLogin=false;
+  private hiddenWindow?: BrowserWindow;
+
+  private getHiddenWindow() {
+    if(!this.hiddenWindow || this.hiddenWindow.isDestroyed()){
+      this.hiddenWindow = new BrowserWindow({show:true, opacity:0, skipTaskbar:true, focusable:false, width:1240,height:900,webPreferences:{offscreen:false}});
+      this.hiddenWindow.setIgnoreMouseEvents(true);
+    }
+    return this.hiddenWindow;
+  }
+
   constructor(private readonly window: BrowserWindow, private readonly onBossPage?:(page:BossPage,explicit?:boolean)=>Promise<void>, private readonly onSourcePage?:(sourceId:"zhilian"|"wuyou",page:PassiveSourceObservation)=>Promise<void>) {
     window.on("resize", () => this.applyBounds());
     // Local reads only while the user is looking at this platform; no periodic requests.
@@ -518,7 +528,10 @@ export class SourceBrowserManager {
       if(ascii!==current)view.webContents.setUserAgent(ascii);
     }
     if(sourceId==="boss"&&foreground){const navigated=()=>{this.bossDocumentTime=Date.now();};view.webContents.on("did-navigate",navigated);view.webContents.on("did-navigate-in-page",navigated);}
-    if(!foreground)view.setBounds({x:0,y:0,width:1240,height:900});
+    if(!foreground){
+      this.getHiddenWindow().contentView.addChildView(view);
+      view.setBounds({x:0,y:0,width:1240,height:900});
+    }
     if(foreground)view.webContents.on("focus",()=>{if(!this.window.isDestroyed())this.window.webContents.send("desktop:source-browser-focused");});
     const session=view.webContents.session;
     if(session && !this.configuredSessions.has(session)){
