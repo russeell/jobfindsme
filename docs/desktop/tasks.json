@@ -1831,6 +1831,17 @@
       "verification": "Python 427 项、Node 172 项、Ruff 和桌面构建通过；隔离 macOS 正常包审计通过，原生 1240×820 检查助手历史位于现有左侧导航及折叠恢复。模拟 Pi 模型核验 research:true 的已存 JD 分析、流式输出、公开读取与报告保存均为零。未使用真实用户登录、真实批量招聘网站或付费模型；四平台真实登录链路仍待用户会话验证。",
       "evidence": ["docs/desktop/HANDOFF.md"],
       "blocker": null
+    },
+    {
+      "id": "D67",
+      "title": "助手侧栏与工作区视觉精简",
+      "depends_on": ["D66"],
+      "status": "done",
+      "scope": ["单行最近对话列表", "低噪归档与报告入口", "白色工作区与轻量输入框", "默认与窄窗原生复验"],
+      "acceptance": ["现有左栏展示多条可辨识标题", "归档恢复及确认删除入口保留", "正文没有第二个固定侧栏", "默认与窄窗截图可复核"],
+      "verification": "2026-09-27 Node 172 项、类型检查、构建、包审计与 git diff --check 通过。隔离资料中 6 条本地对话在默认和约 860px 原生窗口单行展示；归档标题、恢复/删除及二次确认可见，侧栏折叠后可恢复。截图见 HANDOFF；未调用付费模型或真实招聘网站。",
+      "evidence": ["docs/desktop/HANDOFF.md"],
+      "blocker": null
     }
   ]
 }

@@ -1,5 +1,7 @@
 # 当前状态
 
+D67 助手视觉精简（2026-09-27）：现有侧栏默认拓宽至 252px，最近对话改为单行普通字重标题，完整标题可悬停查看；归档图标只在悬停或键盘聚焦时出现。归档与报告移到列表底部，归档管理将标题和恢复/删除分行，永久删除仍需确认。移除重复的“收起历史”按钮和三段大标签；主区保持白色，侧栏接近白色，输入框改白底细边与轻阴影。隔离资料生成 6 条本地对话并在默认及约 860×600 原生窗口核对最近列表、真正新对话空态、有内容聊天、归档管理和折叠恢复。截图：[默认空态](/private/tmp/jobfindsme-D67-captures/empty-default.png)、[窄窗空态](/private/tmp/jobfindsme-D67-captures/empty-narrow.png)、[窄窗聊天](/private/tmp/jobfindsme-D67-captures/chat-narrow.png)、[归档管理](/private/tmp/jobfindsme-D67-captures/archived-default.png)、[窄窗归档](/private/tmp/jobfindsme-D67-captures/archived-narrow.png)。Node 172 项、类型检查、构建、包审计与 diff 检查通过；正常隔离包 `/private/tmp/JobFindsMe-D67-UI-Review.app`。仅改 UI/交互，未使用真实招聘网站、用户会话或付费模型；未覆盖活跃应用、推送或发布。
+
 四平台桌面收束（2026-09-27，本地四批提交）：来源目录只展示 BOSS、智联、前程无忧、猎聘；十六家企业官网来源停止新检索，数据库历史与旧岗位原始链接仍可查看。智联、前程无忧和 BOSS 的登录观察区分账号态、匿名列表和风险控制，登录确认后仅发起一次有界检查；猎聘沿用匿名公开路径。浏览器新增起始页和本地书签，助手历史移入应用现有左侧导航，可归档、恢复，再二次确认永久删除。迁移标记完成后 SQLite 是对话最终记录，重启不再从旧 localStorage 缓存写回已删记录。Pi 对已存 JD 的本地分析可在 `research:true` 上下文选择 `read_job → answer_in_chat`，直接流式答复而不强制联网或生成报告。Python 427 项、Node 172 项、Ruff、构建及隔离正常 macOS 包审计通过；隔离 1240×820 与约 860×600 原生窗口核对四平台设置、浏览器收藏、助手侧栏位置和折叠；隔离工作区实际创建、归档、恢复对话，归档后重启仍显示在归档栏。截图：默认助手历史 `native-01-1240x820.png`、四平台设置 `native-02-1240x820.png`、窄窗归档 `native-05-860x600-archived.png`、窄窗书签 `native-06-860x600-bookmark.png`，均在 `/private/tmp/jobfindsme-delegated-qa-captures/`。未使用真实账号会话、真实批量网站或付费模型；四平台真实登录结果和模型实际答复质量未据此宣称已验证。正常包：`/private/tmp/JobFindsMe-Delegated-Review-20260927.app`，未替换活跃应用、推送或发布。
 
 更新于 2026-09-27。状态以 [任务清单](tasks.json) 为准；这里仅保留当前需要处理的事项。

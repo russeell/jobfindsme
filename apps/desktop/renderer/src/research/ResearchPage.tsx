@@ -4,11 +4,11 @@ import type {BootstrapData,ModelConnection,ResearchReport,SearchResultItem} from
 import {reportJob,reportMatchesJob,reportStatus} from "../../../shared/research-reports";
 import {isAllowedSourceUrl,isPublicWebUrl,isSourceBrowserId,sourceBrowserSpecs} from "../../../shared/source-browser-policy";
 import {userError} from "../../../shared/user-errors";
-import {parseMessageBlocks} from "../../../shared/message-content";
 import {splitResearchInput} from "../../../shared/research-input";
 import {resolveResearchSession} from "../../../shared/research-session";
 import {modelHistoryWithinBudget} from "../../../shared/research-chat-ipc";
 import {useOriginalBrowser} from "../shared/Workbench";
+import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
@@ -23,7 +23,6 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   const [report,setReport]=useState<ResearchReport>();
   const [reports,setReports]=useState<ResearchReport[]>([]);
   const [mode,setMode]=useState<"start"|"report">("start");
-  const [historyCollapsed,setHistoryCollapsed]=useState(false);
   const [historySection,setHistorySection]=useState<"chats"|"archived"|"reports">("chats");
   const [archivedChats,setArchivedChats]=useState<SavedResearchChat[]>([]);
   const [deleteId,setDeleteId]=useState("");
@@ -192,7 +191,6 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
     requestAnimationFrame(()=>document.getElementById(`research-source-${turn}-${number}`)?.focus());
   }
   const historyGroup=(date:string)=>{const day=new Date(date).toDateString(),today=new Date(),yesterday=new Date(today);yesterday.setDate(today.getDate()-1);return day===today.toDateString()?"今天":day===yesterday.toDateString()?"昨天":"更早";};
-  const historySummary=(text:string)=>{const blocks=parseMessageBlocks(text),first=blocks.find(block=>block.kind==="paragraph"||block.kind==="quote")||blocks[0];return first&&"text" in first?first.text.replace(/\*|`/gu,"").slice(0,88):"暂无回复";};
   function updateShownReport(value:ResearchReport){setReport(current=>current?.report_id===value.report_id?value:current);keepReports(reports.map(item=>item.report_id===value.report_id?value:item));}
   function selectHistoryChat(item:SavedResearchChat){
     scrollRef.current?.scrollTo({top:0});setChatId(item.id);
@@ -205,7 +203,6 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   return <div className="research-page research-workbench">
     {active&&topbarTarget&&createPortal(<div className="button-row" aria-label="研究操作">
       <button disabled={chatBusy} onClick={()=>{scrollRef.current?.scrollTo({top:0});setChatId(null);setJob(undefined);setContextCompany("");setContextTitle("");setQuestion("");setCandidate(undefined);setReport(undefined);setMode("start");setStreaming("");setMessage("");inputRef.current?.focus();}}>新对话</button>
-      <button aria-expanded={!historyCollapsed} aria-controls="research-history-panel" onClick={()=>setHistoryCollapsed(value=>!value)}>{historyCollapsed?"显示历史":"收起历史"}</button>
       {job&&<button onClick={()=>openOriginal(job.apply_url)}>岗位原页 ↗</button>}
     </div>,topbarTarget)}
     <div ref={scrollRef} className={`research-scroll-region${centeredEmpty?" research-empty-state":""}`} role="region" aria-label="求职助手对话" tabIndex={0}><div className="research-reading-column">
@@ -227,14 +224,14 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
       </section>}
       {!activeChat&&showingReport&&report&&<ReputationEvidence report={report} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})}/>}
     </div></div>
-    {active&&sidebarTarget&&!historyCollapsed&&createPortal(<aside id="research-history-panel" className="research-history-sidebar" aria-label="历史对话与报告">
-      <div className="research-history-heading"><strong>历史</strong><button type="button" aria-label="收起历史" onClick={()=>setHistoryCollapsed(true)}>收起</button></div>
-      <div className="research-history-tabs" role="tablist" aria-label="历史类型">{(["chats","archived","reports"] as const).map(section=><button key={section} type="button" role="tab" aria-selected={historySection===section} onClick={()=>setHistorySection(section)}>{section==="chats"?`对话 ${chats.length}`:section==="archived"?`归档 ${archivedChats.length}`:`报告 ${history.length}`}</button>)}</div>
+    {active&&sidebarTarget&&createPortal(<aside id="research-history-panel" className="research-history-sidebar" aria-label="历史对话与报告">
+      <div className="research-history-heading">{historySection==="chats"?<strong>最近对话</strong>:<><button type="button" className="research-history-back" onClick={()=>setHistorySection("chats")}>← 最近</button><strong>{historySection==="archived"?"已归档":"历史报告"}</strong></>}</div>
       <div className="research-history-body">
-        {historySection==="chats"&&(chats.length?<div className="research-history-list">{chats.map((item,index)=><div key={item.id}>{(index===0||historyGroup(chats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button disabled={chatBusy||!!busy} aria-pressed={chatId===item.id} onClick={()=>selectHistoryChat(item)}><strong>{item.title}</strong><small>{historySummary(item.turns.at(-1)?.text||"")}</small></button><button type="button" disabled={chatBusy||!!busy} aria-label={`归档${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}>归档</button></div></div>)}</div>:<p className="research-empty-note">还没有对话。</p>)}
-        {historySection==="archived"&&(archivedChats.length?<div className="research-history-list">{archivedChats.map(item=><div className="research-history-row" key={item.id}><div className="research-history-archived-title"><strong>{item.title}</strong><small>{historySummary(item.turns.at(-1)?.text||"")}</small></div><div className="research-history-archived-actions"><button disabled={chatBusy||!!busy} onClick={()=>void changeChatHistory(item,"restore")}>恢复</button><button disabled={chatBusy||!!busy} onClick={()=>setDeleteId(item.id)}>删除</button></div>{deleteId===item.id&&<div className="history-confirm" role="alert"><p>永久删除这条归档对话？</p><div className="button-row"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"delete")}>确认删除</button><button onClick={()=>setDeleteId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">还没有归档对话。</p>)}
-        {historySection==="reports"&&(history.length?<div className="research-history-list">{history.map(item=><div className="research-history-row" key={item.report_id}><button disabled={!!busy||chatBusy} aria-pressed={report?.report_id===item.report_id&&showingReport} onClick={()=>selectHistoryReport(item)}><strong>{item.job_id?`${item.job_context?.company||"公司未知"} · ${item.job_context?.title||"岗位未知"}`:`${item.job_context?.company||"公司未知"} · 公司研究`}</strong><small>{reportStatus(item)}</small></button><button disabled={!!busy||chatBusy} onClick={()=>setHideId(item.report_id)}>移除</button>{hideId===item.report_id&&<div className="history-confirm" role="alert"><p>从列表移除这份报告？本机证据快照保留。</p><div className="button-row"><button disabled={!!busy} onClick={()=>void hideReport(item)}>确认移除</button><button onClick={()=>setHideId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">这里还没有报告。</p>)}
+        {historySection==="chats"&&(chats.length?<div className="research-history-list">{chats.map((item,index)=><div key={item.id}>{(index===0||historyGroup(chats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button className="research-history-item" title={item.title} disabled={chatBusy||!!busy} aria-current={chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.title}</button><button className="research-history-archive" type="button" title="归档" disabled={chatBusy||!!busy} aria-label={`归档${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}><Icon name="archive"/></button></div></div>)}</div>:<p className="research-empty-note">还没有对话。</p>)}
+        {historySection==="archived"&&(archivedChats.length?<div className="research-history-list">{archivedChats.map(item=><div className="research-history-row research-history-archived-row" key={item.id}><span className="research-history-archived-title" title={item.title}>{item.title}</span><div className="research-history-archived-actions"><button disabled={chatBusy||!!busy} onClick={()=>void changeChatHistory(item,"restore")}>恢复</button><button disabled={chatBusy||!!busy} onClick={()=>setDeleteId(item.id)}>删除</button></div>{deleteId===item.id&&<div className="history-confirm" role="alert"><p>永久删除这条归档对话？</p><div className="button-row"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"delete")}>确认删除</button><button onClick={()=>setDeleteId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">还没有归档对话。</p>)}
+        {historySection==="reports"&&(history.length?<div className="research-history-list">{history.map(item=><div className="research-history-row" key={item.report_id}><button className="research-history-item" title={`${item.job_context?.company||"公司未知"} · ${item.job_context?.title||"公司研究"}`} disabled={!!busy||chatBusy} aria-current={report?.report_id===item.report_id&&showingReport?"true":undefined} onClick={()=>selectHistoryReport(item)}>{item.job_id?`${item.job_context?.company||"公司未知"} · ${item.job_context?.title||"岗位未知"}`:`${item.job_context?.company||"公司未知"} · 公司研究`}</button><button className="research-history-remove" disabled={!!busy||chatBusy} onClick={()=>setHideId(item.report_id)}>移除</button>{hideId===item.report_id&&<div className="history-confirm" role="alert"><p>从列表移除这份报告？本机证据快照保留。</p><div className="button-row"><button disabled={!!busy} onClick={()=>void hideReport(item)}>确认移除</button><button onClick={()=>setHideId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">这里还没有报告。</p>)}
       </div>
+      {historySection==="chats"&&<div className="research-history-links"><button type="button" onClick={()=>setHistorySection("archived")}>归档<span>{archivedChats.length}</span></button><button type="button" onClick={()=>setHistorySection("reports")}>报告<span>{history.length}</span></button></div>}
     </aside>,sidebarTarget)}
     {message&&<p className="research-inline-status" role="status">{message}</p>}
     <form className="research-composer" aria-label="求职助手输入框" onSubmit={event=>{event.preventDefault();submitInput();}}>
