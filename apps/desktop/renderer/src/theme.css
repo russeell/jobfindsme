@@ -332,14 +332,16 @@ nav button .nav-label {font-size:13px;}
 
 /* D51: one composer for first research and evidence-backed follow-up. */
 .research-workbench {position:relative;width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;}
-.sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;}
+.sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;margin-right:-15px;}
 .sidebar-history-slot[hidden],.sidebar-collapsed .sidebar-history-slot {display:none;}
 .research-history-sidebar {display:flex;flex-direction:column;min-height:0;min-width:0;flex:1;}
 .research-history-sidebar .research-history-heading {display:flex;align-items:center;gap:8px;padding:3px 9px 5px;border:0;min-height:31px;font-size:12px;color:var(--text-muted);}
 .research-history-sidebar .research-history-heading strong {font-weight:550;}
 .research-history-back {border:0;background:transparent;color:var(--text-muted);padding:1px 3px;min-height:25px;font-size:11px;}
-.research-history-sidebar .research-history-body {flex:1;padding:0 2px 8px;}
-.research-history-sidebar .research-history-list {display:grid;gap:0;margin:0;}
+.research-history-sidebar .research-history-body {flex:1;padding:0 0 18px;scrollbar-width:thin;scrollbar-color:#c8cac8 transparent;}
+.research-history-sidebar .research-history-body::-webkit-scrollbar {width:6px;}
+.research-history-sidebar .research-history-body::-webkit-scrollbar-thumb {background:#c8cac8;border-radius:8px;}
+.research-history-sidebar .research-history-list {display:grid;gap:0;margin:0;padding:0 12px 0 2px;}
 .research-history-sidebar .history-day {margin:12px 9px 4px;color:#898989;font-size:11px;font-weight:400;}
 .research-history-sidebar .research-history-row {position:relative;display:block;border:0;padding:0;border-radius:7px;min-height:34px;}
 .research-history-sidebar .research-history-row:hover,.research-history-sidebar .research-history-row:focus-within {background:var(--surface-hover);}
@@ -372,6 +374,9 @@ nav button .nav-label {font-size:13px;}
 .research-header {border-bottom:1px solid var(--line);padding:0 0 12px;margin:0 0 16px;}
 .research-header h1 {font-size:21px;line-height:1.34;letter-spacing:-.02em;margin:0 0 2px;}
 .research-header p {margin:0;color:var(--text-muted);font-size:12px;line-height:1.6;}
+.research-header-job {padding:3px 0 10px;margin-bottom:10px;}
+.research-header-job strong {display:block;font-size:13px;font-weight:600;line-height:1.5;}
+.research-header-job p {font-size:11px;}
 .research-eyebrow {font-size:11px;color:var(--text-muted);letter-spacing:.06em;}
 .research-header .button-row {justify-content:flex-end;flex-wrap:wrap;gap:6px;}
 .research-header button {font-size:12px;white-space:nowrap;}
@@ -428,6 +433,18 @@ nav button .nav-label {font-size:13px;}
 
 /* The daily work pages stay in the sidebar; configuration is one level deep. */
 .sidebar-bottom {margin-top:auto;min-width:0;}
+.sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:36px;margin:0;padding:7px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
+.sidebar-new-chat:hover,.sidebar-new-chat:focus-visible {background:var(--surface-hover);}
+.sidebar-new-chat .nav-icon {width:17px;flex:0 0 17px;}
+.sidebar-collapsed .sidebar-new-chat {justify-content:center;padding:8px;}
+.sidebar-collapsed .sidebar-new-chat .nav-label {display:none;}
+.research-archive-settings {max-width:760px;}
+.research-archive-list {display:grid;gap:0;margin-top:20px;border-top:1px solid var(--line);}
+.research-archive-item {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:52px;padding:8px 0;border-bottom:1px solid var(--line);}
+.research-archive-item strong {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;}
+.research-archive-item .history-confirm {width:100%;}
+.research-legacy-reports {margin-top:28px;font-size:12px;color:var(--text-muted);}
+.research-legacy-reports button {display:block;max-width:100%;margin-top:7px;padding:5px 0;border:0;background:transparent;color:var(--text);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sidebar-settings {display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:9px 11px;border:0;background:transparent;text-align:left;font-size:13px;color:var(--text-muted);}
 .sidebar-settings.active {background:var(--surface-selected);color:var(--text);box-shadow:inset 2px 0 var(--ink);}
 .sidebar-settings .nav-icon {width:17px;flex:0 0 17px;}

@@ -23,9 +23,9 @@ import type {
 
 type WorkPage = "discover" | "research" | "records";
 type Page = WorkPage | "settings";
-type SettingsTab = "sources" | "models" | "about";
-const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["求职助手", "research"], ["我的岗位", "records"]];
-const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["版本更新", "about"]];
+type SettingsTab = "sources" | "models" | "about" | "archive";
+const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["我的岗位", "records"]];
+const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["版本更新", "about"], ["对话归档", "archive"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
   const hadSourcePreference=useRef(localStorage.getItem("jfm.sources.selected")!==null);
@@ -46,6 +46,9 @@ export function App() {
   const [error, setError] = useState<string>();
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
+  const [researchBusy,setResearchBusy]=useState(false);
+  const [newChatNonce,setNewChatNonce]=useState(0);
+  function openNewChat(){if(researchBusy)return;setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
   const [suggestedSearch,setSuggestedSearch]=useState<{query:string;nonce:number}>();
   useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }); }, [page]);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({ connected: false, message: "本地服务正在启动" });
@@ -80,15 +83,16 @@ export function App() {
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
-    <div id="research-sidebar-history" className="sidebar-history-slot" hidden={page!=="research"}/>
+    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title="新对话" aria-label="新对话" onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">新对话</span></button>
+    <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
   </>}>
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div id="research-topbar-actions" className="research-topbar-actions"/><BrowserToggle/></header><div className={page==="research"?"content research-content":"content"}>
       {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
-      <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} active={page==="research"} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
+      <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
-      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:<UpdatesPage/>}</div></section>}
+      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage/>}</div></section>}
     </div></section>
   </Workbench>;
 }
