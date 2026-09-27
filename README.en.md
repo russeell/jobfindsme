@@ -64,7 +64,7 @@ Download the desktop app from **[GitHub Releases](https://github.com/russeell/jo
 | Windows · x64 | Download `windows-x64.zip`, extract the entire folder, then run `JobFindsMe.exe`. Python and Node.js are bundled. |
 | macOS · Intel / Windows ARM / Linux | No packages available yet |
 
-The macOS package is not Developer ID signed or notarized. On first launch, macOS may block it; follow the prompts in **System Settings → Privacy & Security**. Releases include SHA-256 checksums. **Settings → Version updates** checks for releases and opens the download page; installation is not automatic.
+The macOS package is not Developer ID signed or notarized. On first launch, macOS may block it; follow the prompts in **System Settings → Privacy & Security**. GitHub shows a SHA-256 digest for each release asset. **Settings → Version updates** checks for releases and opens the download page; installation is not automatic.
 
 Data from earlier isolated test builds remains in its original directory and is not automatically merged into the regular app.
 
