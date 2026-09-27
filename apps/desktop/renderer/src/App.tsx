@@ -83,7 +83,7 @@ export function App() {
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
-    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title="新对话" aria-label="新对话" onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">新对话</span></button>
+    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title="新聊天" aria-label="新聊天" onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">新聊天</span></button>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
   </>}>

@@ -332,25 +332,25 @@ nav button .nav-label {font-size:13px;}
 
 /* D51: one composer for first research and evidence-backed follow-up. */
 .research-workbench {position:relative;width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;}
-.sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;margin-right:-15px;}
+.sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;margin-right:-10px;}
 .sidebar-history-slot[hidden],.sidebar-collapsed .sidebar-history-slot {display:none;}
 .research-history-sidebar {display:flex;flex-direction:column;min-height:0;min-width:0;flex:1;}
-.research-history-sidebar .research-history-heading {display:flex;align-items:center;gap:8px;padding:3px 9px 5px;border:0;min-height:31px;font-size:12px;color:var(--text-muted);}
-.research-history-sidebar .research-history-heading strong {font-weight:550;}
-.research-history-back {border:0;background:transparent;color:var(--text-muted);padding:1px 3px;min-height:25px;font-size:11px;}
-.research-history-sidebar .research-history-body {flex:1;padding:0 0 18px;scrollbar-width:thin;scrollbar-color:#c8cac8 transparent;}
-.research-history-sidebar .research-history-body::-webkit-scrollbar {width:6px;}
-.research-history-sidebar .research-history-body::-webkit-scrollbar-thumb {background:#c8cac8;border-radius:8px;}
-.research-history-sidebar .research-history-list {display:grid;gap:0;margin:0;padding:0 12px 0 2px;}
+.research-history-sidebar .research-history-body {flex:1;margin:4px 0;padding:0 0 14px;scrollbar-width:thin;scrollbar-color:#d3d5d3 transparent;}
+.research-history-sidebar .research-history-body::-webkit-scrollbar {width:5px;}
+.research-history-sidebar .research-history-body::-webkit-scrollbar-thumb {background:#d3d5d3;border-radius:8px;}
+.research-history-sidebar .research-history-body::-webkit-scrollbar-thumb:hover {background:#b9bdb9;}
+.research-history-sidebar .research-history-list {display:grid;gap:0;margin:0;padding:0 8px 0 2px;}
 .research-history-sidebar .history-day {margin:12px 9px 4px;color:#898989;font-size:11px;font-weight:400;}
+.research-history-sidebar .research-history-list>div:first-child .history-day {margin-top:5px;}
 .research-history-sidebar .research-history-row {position:relative;display:block;border:0;padding:0;border-radius:7px;min-height:34px;}
 .research-history-sidebar .research-history-row:hover,.research-history-sidebar .research-history-row:focus-within {background:var(--surface-hover);}
+.research-history-sidebar .research-history-row:has(.research-history-item[aria-current="true"]) {background:var(--surface-selected);}
 .research-history-sidebar .research-history-item {display:block;width:100%;min-height:34px;padding:6px 9px;border:0;background:transparent;text-align:left;font-size:13px;font-weight:400;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.research-history-sidebar .research-history-row:hover .research-history-item,.research-history-sidebar .research-history-row:focus-within .research-history-item {padding-right:35px;}
-.research-history-sidebar .research-history-item[aria-current="true"] {background:var(--surface-selected);border-radius:7px;}
-.research-history-archive {position:absolute;right:2px;top:2px;width:28px;min-height:28px;display:grid;place-items:center;margin:0;padding:3px;border:0;border-radius:6px;background:var(--surface-hover);color:var(--text-muted);}
-.research-history-archive svg {width:15px;height:15px;}
-.research-history-archive:hover,.research-history-remove:hover,.research-history-back:hover {background:var(--surface-selected);color:var(--text);}
+.research-history-sidebar .research-history-row:hover .research-history-item,.research-history-sidebar .research-history-row:focus-within .research-history-item {padding-right:30px;}
+.research-history-sidebar .research-history-item[aria-current="true"] {background:transparent;border-radius:7px;}
+.research-history-archive {position:absolute;right:4px;top:5px;width:23px;min-height:23px;display:grid;place-items:center;margin:0;padding:3px;border:0;border-radius:5px;background:transparent;color:var(--text-muted);}
+.research-history-archive svg {width:13px;height:13px;}
+.research-history-archive:hover,.research-history-archive:focus-visible {background:var(--surface-selected);color:var(--text);}
 @media(hover:hover){.research-history-archive {opacity:0;}.research-history-row:hover .research-history-archive,.research-history-row:focus-within .research-history-archive {opacity:1;}}
 .research-history-sidebar .research-history-archived-row {display:flex;flex-direction:column;align-items:stretch;margin-bottom:4px;}
 .research-history-archived-title {display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 9px 1px;font-size:13px;color:var(--text);}
@@ -433,10 +433,10 @@ nav button .nav-label {font-size:13px;}
 
 /* The daily work pages stay in the sidebar; configuration is one level deep. */
 .sidebar-bottom {margin-top:auto;min-width:0;}
-.sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:36px;margin:0;padding:7px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
+.sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:36px;margin:0 0 -12px;padding:7px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
 .sidebar-new-chat:hover,.sidebar-new-chat:focus-visible {background:var(--surface-hover);}
 .sidebar-new-chat .nav-icon {width:17px;flex:0 0 17px;}
-.sidebar-collapsed .sidebar-new-chat {justify-content:center;padding:8px;}
+.sidebar-collapsed .sidebar-new-chat {justify-content:center;margin-bottom:0;padding:8px;}
 .sidebar-collapsed .sidebar-new-chat .nav-label {display:none;}
 .research-archive-settings {max-width:760px;}
 .research-archive-list {display:grid;gap:0;margin-top:20px;border-top:1px solid var(--line);}
