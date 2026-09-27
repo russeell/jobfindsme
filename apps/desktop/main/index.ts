@@ -142,12 +142,30 @@ async function createWindow(): Promise<void> {
   let lastBossState = "";
   sourceBrowserManager = new SourceBrowserManager(mainWindow, async (page,explicit) => {
     if(!apiClient)return;
-    let state = page.blocked ? "risk_control" : page.loginRequired ? "login_required" : page.authenticated && page.readable ? "ready" : "";
+    let state = page.blocked ? "risk_control" : page.loginRequired ? "login_required" : page.authenticated && page.readable ? "ready" : page.authenticated ? "logged_in" : "";
     if(!state || (state===lastBossState&&!explicit&&sourceBrowserManager?.boss.paused!=="login_required"))return;
     if(state==="ready") {
       if(!explicit && (sourceBrowserManager?.boss.paused==="risk_control" || (await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss")?.session_status==="blocked"))return;
       sourceBrowserManager?.boss.resume();
       await apiClient.recordSourceVerification("boss",{session_status:"verified",list_status:"verified",detail_status:"unverified",fields_status:"partial",pagination_status:"unverified",enabled:true,notes:"当前平台页面已登录且列表可读；完整JD及滚动覆盖由每次检索单独报告。"});
+    } else if(state==="logged_in") {
+      if(!explicit && (sourceBrowserManager?.boss.paused==="risk_control" || (await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss")?.session_status==="blocked"))return;
+      sourceBrowserManager?.boss.resume();
+      const current=(await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss");
+      if(current?.session_status!=="verified"||current.list_status!=="verified")await apiClient.recordSourceVerification("boss",{session_status:"verified",list_status:"partial",detail_status:current?.detail_status||"unverified",fields_status:current?.fields_status||"unverified",pagination_status:current?.pagination_status||"unverified",enabled:false,notes:"当前平台页显示已登录；岗位列表和自动检索仍待单独检查。"});
+      const last=sourceAutoCheckAt.get("boss")||0;
+      if(!sourceAutoCheckPending.has("boss")&&Date.now()-last>600000){
+        sourceAutoCheckAt.set("boss",Date.now());sourceAutoCheckPending.add("boss");
+        void (async()=>{try{
+          const result=await sourceBrowserManager!.boss.collect({keyword:"工程师",city:"",maxBatches:1,seconds:10});
+          if(!result.records.length)throw Error("no_matching:本次未读到岗位列表");
+          const summary=summarizeSourceVerification([result]);
+          const latest=(await apiClient!.bootstrap()).sources.find(source=>source.source_id==="boss");
+          if(latest?.session_status==="expired"||latest?.session_status==="blocked")return;
+          await apiClient!.recordSourceVerification("boss",{...summary,detail_status:"unverified",pagination_status:"partial",notes:`登录后一次有界检索：${result.records.length} 条；完整 JD 与续页未验证。`});
+        }catch(error){const failure=String(error);if(/risk_control:|login_required:/.test(failure))await apiClient!.recordSourceRuntimeFailure("boss",failure.includes("risk_control:")?"risk_control":"login_required",failure.slice(0,500));}
+        finally{sourceAutoCheckPending.delete("boss");mainWindow?.webContents.send("desktop:source-status-changed");}})();
+      }
     } else {
       if(sourceBrowserManager)sourceBrowserManager.boss.pause(state as "risk_control"|"login_required");
       await apiClient.recordSourceRuntimeFailure("boss",state as "risk_control"|"login_required",state==="risk_control"?"平台要求验证，处理后点击恢复":"请在当前平台页完成登录");
@@ -159,22 +177,29 @@ async function createWindow(): Promise<void> {
     if(!current)return;
     if(page.kind==="challenge") {
       await apiClient.recordSourceRuntimeFailure(sourceId,"risk_control","原页要求安全验证；自动检索已停止，需用户在原页处理。");
-    } else if(page.kind==="login" || page.kind==="splash") {
-      const reason=page.formCount===0 ? "当前原页未呈现可操作登录表单；平台登录与自动检索仍未验证，请稍后重试。" : "当前页面显示登录表单；会话有效性与检索能力仍需分别确认。";
-      await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:reason});
-    } else if(page.kind==="list") {
-      const recent=current.last_verified_at && Date.now()-Date.parse(current.last_verified_at)<600000;
+    } else if(page.kind==="login") {
+      if(current.session_status==="verified")await apiClient.recordSourceRuntimeFailure(sourceId,"login_required","当前平台页显示登录表单；会话可能已失效，请重新登录。");
+      else await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:"当前页面显示登录表单；会话有效性与检索能力仍需分别确认。"});
+    } else if(page.kind==="list"||page.kind==="account") {
+      if(!page.authenticated&&current.session_status!=="verified"){
+        if(page.kind==="list")await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页可见 ${page.cardCount} 个岗位卡片，但未确认登录身份；自动检索仍待验证。`});
+        mainWindow?.webContents.send("desktop:source-status-changed");return;
+      }
+      const recent=current.session_status==="verified"&&current.list_status==="verified"&&current.last_verified_at && Date.now()-Date.parse(current.last_verified_at)<600000;
       const verified=current.session_status==="verified"&&current.list_status==="verified";
-      if(!verified)await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页可见 ${page.cardCount} 个岗位卡片；自动检索尚待有界验证。`});
+      if(!verified)await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:page.kind==="list"?`原页可见 ${page.cardCount} 个岗位卡片；自动检索尚待有界验证。`:"当前平台页显示已登录；自动检索尚待有界验证。"});
+      if(current.session_status!=="verified")sourceAutoCheckAt.delete(sourceId);
       const last=sourceAutoCheckAt.get(sourceId)||0;
       if(!sourceAutoCheckPending.has(sourceId)&&!recent&&Date.now()-last>600000){
         sourceAutoCheckAt.set(sourceId,Date.now());sourceAutoCheckPending.add(sourceId);
         void (async()=>{try{
           const result=await sourceBrowserManager!.searchPage(sourceId,{keyword:"工程师",city:"",page:1});
           const summary=summarizeSourceVerification([result]);
+          const latest=(await apiClient!.bootstrap()).sources.find(source=>source.source_id===sourceId);
+          if(latest?.session_status==="expired"||latest?.session_status==="blocked")return;
           await apiClient!.recordSourceVerification(sourceId,{...summary,session_status:"verified",detail_status:current.detail_status==="verified"?"verified":"unverified",pagination_status:"partial",notes:`登录后一次有界检索：${result.records.length} 条、1 个网站页。详情与网站续页仍单独待验。`});
         }catch(error){const failure=String(error);
-          if(/risk_control:|login_required:/.test(failure))await apiClient!.recordSourceRuntimeFailure(sourceId,failure.startsWith("risk_control:")?"risk_control":"login_required",failure.slice(0,500));
+          if(/risk_control:|login_required:/.test(failure))await apiClient!.recordSourceRuntimeFailure(sourceId,failure.includes("risk_control:")?"risk_control":"login_required",failure.slice(0,500));
           else await apiClient!.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页有列表，后台有界检索未通过：${failure.slice(0,350)}`});
         }finally{sourceAutoCheckPending.delete(sourceId);mainWindow?.webContents.send("desktop:source-status-changed");}})();
       }
@@ -272,10 +297,15 @@ ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bo
 async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal):Promise<SourceCapability>{
   if(!sourceBrowserManager||!apiClient||!isSourceBrowserId(source.source_id))throw Error("source_contract_error:来源不可检查");
   const sourceId=source.source_id;
+  if(source.login_required&&source.list_status!=="verified"&&Date.now()-(sourceAutoCheckAt.get(sourceId)||0)<60000)throw Error("source_backoff:登录后自动检查刚结束；本次不重复请求，请稍后单独重试");
   const stop=()=>sourceBrowserManager?.cancelCareerSearch();
   if(sourceId==="boss"){
     const page=await sourceBrowserManager.observeBoss(true);
-    if(!page?.authenticated||!page.readable||page.blocked)throw Error("source_contract_error:请在应用内打开 BOSS 已登录的岗位列表后检查");
+    if(!page?.authenticated||page.blocked)throw Error("login_required:请在应用内 BOSS 页面完成登录或平台验证");
+    if(!page.readable){
+      const current=(await apiClient.bootstrap()).sources.find(item=>item.source_id===sourceId);
+      if(!current?.live_search_enabled)throw Error("no_matching:已登录，但尚未读取到可验证的 BOSS 岗位列表");
+    }
     return (await apiClient.bootstrap()).sources.find(item=>item.source_id===sourceId)!;
   }
   signal.addEventListener("abort",stop,{once:true});
@@ -311,6 +341,8 @@ ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
   if(sourceSearchActive)throw Error("岗位检索进行中，请结束后检查全部来源");
   const controller=new AbortController();sourceCheckController=controller;
   try{
+    for(const sourceId of ["boss","zhilian","wuyou"] as const)await sourceBrowserManager.refreshPlatformObservation(sourceId);
+    for(let wait=0;wait<100&&sourceAutoCheckPending.size;wait++)await new Promise(resolve=>setTimeout(resolve,200));
     const sources=(await apiClient.bootstrap()).sources;
     const results=await runSourceCheckQueue({sources,signal:controller.signal,probe:probeSourceForBulk,
       // Only automated QA is capped; an isolated user profile is not a test run.
@@ -342,7 +374,12 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   }
   if(sourceId==="boss"){
     const page=await sourceBrowserManager.observeBoss(true);
-    if(!page?.authenticated||!page.readable||page.blocked)throw Error("请从岗位来源打开 BOSS，完成登录或验证并显示岗位列表后恢复。");
+    if(!page?.authenticated||page.blocked)throw Error("请在应用内 BOSS 页面完成登录或平台验证后重试。");
+    if(!page.readable){
+      for(let wait=0;wait<60&&sourceAutoCheckPending.has("boss");wait++)await new Promise(resolve=>setTimeout(resolve,200));
+      const current=(await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss");
+      if(!current?.live_search_enabled)throw Error("已识别 BOSS 登录，但尚未读取到可验证的岗位列表；请打开岗位列表后重试。");
+    }
     return (await apiClient.bootstrap()).sources.find(source=>source.source_id==="boss");
   }
   const first = await sourceBrowserManager.searchPage(sourceId, { keyword: "Python", city: "", page: 1 });

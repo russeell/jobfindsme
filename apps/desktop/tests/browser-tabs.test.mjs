@@ -81,6 +81,12 @@ test('BOSS observation never revives an expired session from a stale foreground 
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
+test('checking BOSS reads its loaded tab after another platform becomes active',async()=>{
+ let observed=0;const {w,m}=setup(async page=>{if(page.authenticated)observed++;});
+ FakeView.onCreate=view=>{if(view.options.webPreferences.partition==='persist:jobfindsme-source-boss')view.webContents.executeJavaScript=async()=>({authenticated:true,readable:false,loginRequired:false,blocked:null,jobs:[]});};
+ try{await m.show('boss',bounds,'https://www.zhipin.com/web/geek/jobs');await m.show('zhilian',bounds,'https://www.zhaopin.com/');const active=m.state().activeTabId;await m.refreshPlatformObservation('boss');assert.equal(observed,1);assert.equal(m.state().activeTabId,active);assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-source-zhilian');}finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
 test('search tab entering a registered source opens its persistent session',async()=>{
  const {w,m}=setup();await m.show('web',bounds,'https://www.bing.com/search?q=jobs');m.layout(bounds);
  const web=m.state().activeTabId;
@@ -89,6 +95,19 @@ test('search tab entering a registered source opens its persistent session',asyn
  assert.equal(result.tabs.find(t=>t.id===web).sourceId,'web');
  assert.equal(result.tabs.find(t=>t.id===result.activeTabId).sourceId,'zhilian');
  assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-source-zhilian');
+ m.destroy();
+});
+
+test('ordinary links and redirects from web search route into platform sessions',async()=>{
+ const {w,m}=setup();await m.show('web',bounds,'https://www.bing.com/search?q=jobs');m.layout(bounds);
+ const web=w.children[0];let stopped=false;
+ web.webContents.emit('will-navigate',{preventDefault(){stopped=true;}},'https://www.zhaopin.com/jobs');
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(stopped,true);assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-source-zhilian');
+ m.selectTab(m.state().tabs.find(tab=>tab.sourceId==='web').id);stopped=false;
+ web.webContents.emit('will-redirect',{preventDefault(){stopped=true;}},'https://www.51job.com/',false,true);
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(stopped,true);assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-source-wuyou');
  m.destroy();
 });
 

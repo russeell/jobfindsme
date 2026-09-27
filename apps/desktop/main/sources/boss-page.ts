@@ -23,7 +23,7 @@ function readBossPage():BossPage {
   const has=(s:string)=>Array.from(document.querySelectorAll(s)).some(visible);
   const loginForm=has('input[type="password"],input[type="tel"]');
   const signIn=Array.from(document.querySelectorAll('.btn-sign,a[href*="/web/user"]')).some(e=>visible(e)&&/登录|注册/.test(text(e)));
-  const authenticated=!loginForm&&!signIn&&has('a[href*="/web/geek/chat"]')&&has('a[href*="/web/geek/resume"]');
+  const authenticated=!loginForm&&!signIn&&(has('a[href*="/web/geek/chat"],a[href*="/web/geek/resume"]')||has('[class*="user-avatar"],[class*="userAvatar"],[class*="geek-avatar"]'));
   const loginRequired=!authenticated&&(loginForm||signIn||(/\/web\/user/.test(location.pathname)&&/登录|验证码/.test(body)));
   const jobs:BossJob[]=[];const seen=new Set<string>();
   for(const a of Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href*="/job_detail/"]'))){

@@ -30,6 +30,7 @@ export class SourceBrowserManager {
   private readonly tabs:BrowserTab[] = [];
   private readonly observationTimers=new Map<string,ReturnType<typeof setTimeout>>();
   private readonly lastObservations=new Map<string,string>();
+  private readonly platformReads=new Map<string,Promise<void>>();
   private activeId?:string;
   private nextId=1;
   private attached?: WebContentsView;
@@ -46,6 +47,7 @@ export class SourceBrowserManager {
   });
   private bossDetailView?:WebContentsView;
   private bossObservation?:ReturnType<typeof setInterval>;
+  private platformObservation?:ReturnType<typeof setInterval>;
   private observingBoss=false;
   private bossDocumentTime=0;
   private bossSawLogin=false;
@@ -53,16 +55,17 @@ export class SourceBrowserManager {
     window.on("resize", () => this.applyBounds());
     // Local reads only while the user is looking at this platform; no periodic requests.
     if(onBossPage)this.bossObservation=setInterval(()=>{void this.observeBoss();},2500);
+    if(onSourcePage)this.platformObservation=setInterval(()=>{const tab=this.tabs.find(t=>t.id===this.activeId);if(this.visible&&tab&&(tab.sourceId==="zhilian"||tab.sourceId==="wuyou"))void this.observeSourcePage(tab);},2000);
   }
 
   async observeBoss(explicit=false):Promise<BossPage|undefined> {
-    const tab=this.tabs.find(t=>t.id===this.activeId);
-    if(this.observingBoss || this.boss.busy || !this.visible || !tab || tab.sourceId!=="boss" || tab.view.webContents.isDestroyed() || tab.view.webContents.isLoading() || !isAllowedSourceUrl("boss",tab.view.webContents.getURL()))return;
+    const tab=this.tabs.find(t=>t.id===this.activeId&&t.sourceId==="boss")||(explicit?[...this.tabs].reverse().find(t=>t.sourceId==="boss"):undefined);
+    if(this.observingBoss || this.boss.busy || (!explicit&&!this.visible) || !tab || tab.sourceId!=="boss" || tab.view.webContents.isDestroyed() || tab.view.webContents.isLoading() || !isAllowedSourceUrl("boss",tab.view.webContents.getURL()))return;
     this.observingBoss=true;
     try {const page=await tab.view.webContents.executeJavaScript(bossPageScript()) as BossPage;
       if(page.loginRequired)this.bossSawLogin=true;
       if(!explicit && this.boss.paused==="login_required" && page.authenticated && !this.bossSawLogin && this.bossDocumentTime<=this.boss.pausedAt)return page;
-      if(explicit && page.authenticated && page.readable && !page.blocked && !page.loginRequired)this.boss.resume();
+      if(explicit && page.authenticated && !page.blocked && !page.loginRequired)this.boss.resume();
       await this.onBossPage?.(page,explicit);if(!this.boss.paused&&page.authenticated)this.bossSawLogin=false;return page;
     } catch {return;} finally {this.observingBoss=false;}
   }
@@ -101,6 +104,7 @@ export class SourceBrowserManager {
     view.webContents.on("render-process-gone",()=>{tab.error="页面进程已退出，请刷新或关闭标签。";});
     if(sourceId==="zhilian"||sourceId==="wuyou") {
       view.webContents.on("did-finish-load",()=>this.scheduleSourceObservation(tab));
+      view.webContents.on("did-stop-loading",()=>this.scheduleSourceObservation(tab));
       view.webContents.on("did-navigate-in-page",()=>this.scheduleSourceObservation(tab));
     }
     this.selectTab(id);
@@ -113,14 +117,29 @@ export class SourceBrowserManager {
     this.observationTimers.set(tab.id,timer);
   }
 
-  private async observeSourcePage(tab:BrowserTab) {
+  private observeSourcePage(tab:BrowserTab,force=false):Promise<void> {
+    const active=this.platformReads.get(tab.id);
+    if(active)return force?active.then(()=>this.observeSourcePage(tab,true)):active;
+    const read=this.readSourcePage(tab,force).finally(()=>{if(this.platformReads.get(tab.id)===read)this.platformReads.delete(tab.id);});
+    this.platformReads.set(tab.id,read);
+    return read;
+  }
+
+  private async readSourcePage(tab:BrowserTab,force:boolean):Promise<void> {
     const id=tab.sourceId;if((id!=="zhilian"&&id!=="wuyou")||!this.onSourcePage||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame()||!isAllowedSourceUrl(id,tab.view.webContents.getURL()))return;
     try {const page=await tab.view.webContents.executeJavaScript(passiveSourceObservationScript(id)) as PassiveSourceObservation;
       if(!isAllowedSourceUrl(id,page.url))return;
-      const key=JSON.stringify([page.url,page.kind,page.cardCount,page.formCount]);
-      if(this.lastObservations.get(tab.id)===key)return;
+      const key=JSON.stringify([page.url,page.kind,page.cardCount,page.formCount,page.authenticated]);
+      if(!force&&this.lastObservations.get(tab.id)===key)return;
       this.lastObservations.set(tab.id,key);await this.onSourcePage(id,page);
     } catch {/* A page can navigate while its DOM is being read. */}
+  }
+
+  async refreshPlatformObservation(sourceId:SourceBrowserId):Promise<void>{
+    if(sourceId==="boss"){await this.observeBoss(true);return;}
+    if(sourceId!=="zhilian"&&sourceId!=="wuyou")return;
+    const tab=[...this.tabs].reverse().find(t=>t.sourceId===sourceId);
+    if(tab)await this.observeSourcePage(tab,true);
   }
 
   async navigateTab(id:string,url:string) {
@@ -326,7 +345,7 @@ export class SourceBrowserManager {
   }
 
   destroy(): void {
-    this.boss.cancel();if(this.bossObservation)clearInterval(this.bossObservation);
+    this.boss.cancel();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
     for(const timer of this.observationTimers.values())clearTimeout(timer);this.observationTimers.clear();
     if(this.bossDetailView&&!this.bossDetailView.webContents.isDestroyed())this.bossDetailView.webContents.close();
     // The BrowserWindow closed event may run after its native contentView died.

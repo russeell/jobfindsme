@@ -210,20 +210,25 @@ export function sanitizeSourceActionPage(
 
 
 export type PassiveSourceObservation = {
-  url:string; kind:"list"|"login"|"challenge"|"splash"|"unknown"; cardCount:number; formCount:number;
+  url:string; kind:"list"|"account"|"login"|"challenge"|"splash"|"unknown"; cardCount:number; formCount:number; authenticated:boolean;
 };
 
 // Reads the already loaded foreground document. It never clicks, navigates or searches.
 export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):string {
   return `(() => {
     const text=(document.body?.innerText||'').slice(0,4000);
-    const cardCount=${JSON.stringify(sourceId)}==='wuyou'
-      ? document.querySelectorAll('.joblist-item,[class*="joblist-item"]').length
-      : document.querySelectorAll('.joblist-box__item,.positionlist__item,[class*="joblist"] article').length;
-    const formCount=document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]').length;
+    const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
+    const cardCount=Array.from(document.querySelectorAll(${JSON.stringify(sourceId)}==='wuyou'
+      ? '.joblist-item,[class*="joblist-item"]'
+      : '.joblist-box__item,.positionlist__item,[class*="joblist"] article')).filter(visible).length;
+    const formCount=Array.from(document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]')).filter(visible).length;
     const challenge=/滑动验证|安全验证|访问过于频繁|captcha|请完成验证/i.test(text);
-    const login=/passport\.zhaopin\.com|login\.51job\.com/.test(location.hostname) || (/请登录|登录后查看/.test(text)&&!cardCount);
+    const account=Array.from(document.querySelectorAll('a[href*="/resume"],a[href*="/personal"],a[href*="/my/"],[class*="user-avatar"],[class*="userAvatar"]')).filter(visible)
+      .some(node=>/我的简历|个人中心|我的投递|消息|用户|头像/.test((node.textContent||'')+' '+(node.getAttribute('aria-label')||'')) || node.matches('[class*="user-avatar"],[class*="userAvatar"]'));
+    const loginHost=/passport\.zhaopin\.com|login\.51job\.com/.test(location.hostname);
+    const login=loginHost || (/请登录|登录后查看/.test(text)&&!cardCount&&!account);
     const splash=!cardCount&&!formCount&&/找风口工作|登录|招聘/.test(text)&&text.length<1200;
-    return {url:location.href,kind:challenge?'challenge':cardCount?'list':formCount||login?'login':splash?'splash':'unknown',cardCount,formCount};
+    const authenticated=!challenge&&!loginHost&&!formCount&&account;
+    return {url:location.href,kind:challenge?'challenge':cardCount?'list':authenticated?'account':formCount||login?'login':splash?'splash':'unknown',cardCount,formCount,authenticated};
   })()`;
 }

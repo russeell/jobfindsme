@@ -61,8 +61,12 @@ test('named cities are never sent as opaque platform city codes',()=>{
 test('passive source observation separates splash, login form, and readable list without searches',async()=>{
  const {runInNewContext}=await import('node:vm');
  const script=passiveSourceObservationScript('zhilian');
- function observe(text,inputs,cards){return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},document:{body:{innerText:text},querySelectorAll(selector){return Array.from({length:selector.startsWith('input')?inputs:cards},()=>({}));}}});}
+ function observe(text,inputs,cards,account=false){const node=(shown=true)=>({textContent:'我的简历',getAttribute:()=>'',matches:()=>false,getBoundingClientRect:()=>({width:shown?10:0,height:shown?10:0})});return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:text},querySelectorAll(selector){if(selector.startsWith('input'))return Array.from({length:inputs==='hidden'?1:inputs},()=>node(inputs!=='hidden'));if(selector.startsWith('a[href*="/resume"]'))return account?[node(account==='hidden'?false:true)]:[];return Array.from({length:cards},()=>node(true));}}});}
  assert.equal(observe('找风口工作，就上智联招聘',0,0).kind,'splash');
  assert.equal(observe('求职者登录',2,0).kind,'login');
  assert.equal(observe('搜索岗位',0,3).kind,'list');
+ assert.equal(observe('搜索岗位',0,3).authenticated,false);
+ assert.equal(observe('欢迎回来',0,0,true).kind,'account');
+ assert.equal(observe('欢迎回来',0,0,'hidden').authenticated,false);
+ assert.equal(observe('欢迎回来','hidden',0,true).authenticated,true);
 });
