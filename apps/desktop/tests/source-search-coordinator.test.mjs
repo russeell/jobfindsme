@@ -65,3 +65,13 @@ test('other browser-only sources reject a continuation cursor they cannot honor'
  assert.equal(browserCalls,0);
  assert.match(result.errors.company_04,/unsupported_cursor/);
 });
+
+test('four explicitly selected sources retain budget-unstarted identities after two slow readers',async()=>{
+ const ids=['company_04','company_05','company_06','company_07'],seen=[];
+ const result=await collectBrowserSourcePages({source_ids:ids,workspace_id:'w1',intent:'Agent'},
+   {allowed_source_ids:ids,keywords:['Agent'],max_pages:1,time_budget_seconds:.15},
+   {client:{},manager:{collectCareer:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},isCancelled:()=>false});
+ assert.deepEqual(seen,ids.slice(0,2));
+ assert.deepEqual(ids.slice(2).map(id=>result.errors[id]),['time_budget:本次总时间预算已用完','time_budget:本次总时间预算已用完']);
+ assert.deepEqual(Object.keys(result.diagnostics.sources).sort(),[...ids].sort());
+});

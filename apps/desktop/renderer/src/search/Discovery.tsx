@@ -11,21 +11,23 @@ import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-polic
 import {formatSalary} from "./salary";
 import {ResumePage} from "../resume/ResumePage";
 import {presentSourceStatus} from "../../../shared/source-presentation";
+import {mergeSearchCoverage,unstartedSourceIds} from "../../../shared/search-scope";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 
-export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,onSelectQuickSources,reports,suggestedIntent }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;onSelectQuickSources(ids:string[]):void;reports:ResearchReport[];suggestedIntent?:{query:string;nonce:number}; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
+export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports,suggestedIntent }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[];suggestedIntent?:{query:string;nonce:number}; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
   const sources = useMemo(() => data?.sources ?? [], [data]);
   const workspaceId = data?.workspaces[0]?.workspace_id;
   const enabled = selectedSearchSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
-  const quickSources=sources.filter(source=>source.live_search_enabled).sort((a,b)=>Number(b.source_id==="liepin")-Number(a.source_id==="liepin")).slice(0,2).map(source=>source.source_id);
   const [intent, setIntent] = useState("");
   useEffect(()=>{if(suggestedIntent)setIntent(suggestedIntent.query);},[suggestedIntent?.nonce]);
   const [searching, setSearching] = useState(false);
   const [showingPrevious,setShowingPrevious]=useState(false);
   const [searchError,setSearchError]=useState<ReturnType<typeof userError>>();
   const [collection,setCollection]=useState<SourceCollectionProgress>();
+  const [resultRequest,setResultRequest]=useState<{sourceIds:string[];intent:string;filters:SearchFilters}>();
+  const activeRequest=useRef<{sourceIds:string[];intent:string;filters:SearchFilters}|undefined>(undefined);
   const [readingDetail,setReadingDetail]=useState(false);
   const [resumeState,setResumeState]=useState<ResumeState>();
   const [resumeOpen,setResumeOpen]=useState(false);
@@ -56,10 +58,11 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     if(!batch.result_page.total&&!preserveSelection.current)return;
     const sameRun=activeResultRun.current===batch.result_page.run_id;
     activeResultRun.current=batch.result_page.run_id;
-    setResult(previous=>({...batch,source_runs:[...((preserveSelection.current||sameRun)?previous?.source_runs||[]:[]).filter(run=>run.source_id!==progress.source_id),...batch.source_runs]}));
+    setResult(previous=>preserveSelection.current||sameRun?mergeSearchCoverage(previous,batch):batch);
     if(!batch.result_page.total)return;
     const sameDisplayedRun=displayedRun.current===batch.result_page.run_id;
     displayedRun.current=batch.result_page.run_id;
+    if(activeRequest.current&&!preserveSelection.current)setResultRequest(activeRequest.current);
     setShowingPrevious(false);
     setPage(previous=>previous?.run_id===batch.result_page.run_id&&previous.page>1?
       {...previous,total:batch.result_page.total,page_count:batch.result_page.page_count}:batch.result_page);
@@ -73,6 +76,9 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [selected, setSelected] = useState<SearchResultItem>();
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const [filters, setFilters] = useState<SearchFilters>(defaultDiscoveryFilters);
+  const pendingSources=result?unstartedSourceIds(result):[];
+  const coveredSources=resultRequest?.sourceIds||[];
+  const selectionChanged=!!resultRequest&&([...selectedSources].sort().join('|')!==[...coveredSources].sort().join('|'));
   const [filterKey,setFilterKey]=useState(0);
   const filterEpoch=useRef(0);
   const filterBaseRun=useRef<string|undefined>(undefined);
@@ -93,16 +99,19 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(cancelled)return;const byId=new Map(rows.map(row=>[row.job.job_id,row.tracking]));const fresh=(item:SearchResultItem)=>({...item,tracking:byId.get(item.job.job_id) ?? item.tracking});setPage(current=>current && {...current,items:current.items.map(fresh)});setSelected(current=>current && fresh(current));}).catch(error=>onError(messageOf(error)));
     return()=>{cancelled=true;};
   },[active,workspaceId]);
-  async function search(event?: FormEvent, continuation?:{sourceId:string;cursor:string}, expand=false, useResume=false) {
+  async function search(event?: FormEvent, continuation?:{sourceId:string;cursor:string}, expand=false, useResume=false, pending=false) {
     event?.preventDefault();
     if (!workspaceId) return;
-    if ((useResume||!intent.trim()) && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
-    if (!enabled.length && !expand) {onError("请先选择至少一个当前可检索的来源。");return;}
-    if (filters.salary_min_k != null && filters.salary_max_k != null && filters.salary_min_k > filters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
-    const additional=sources.filter(source=>source.live_search_enabled&&!selectedSources.includes(source.source_id)&&!result?.source_runs.some(run=>run.source_id===source.source_id)).slice(0,2);
-    const sourceIds=continuation?[continuation.sourceId]:expand?additional.map(source=>source.source_id):enabled.map(source=>source.source_id);
+    const preserve=!!(continuation||expand||pending)&&!!result;
+    const requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
+    const requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
+    if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
+    if (!preserve&&!enabled.length) {onError("请先选择至少一个当前可检索的来源。");return;}
+    if (requestFilters.salary_min_k != null && requestFilters.salary_max_k != null && requestFilters.salary_min_k > requestFilters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
+    const additional=sources.filter(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id)).slice(0,2);
+    const sourceIds=continuation?[continuation.sourceId]:pending&&result?unstartedSourceIds(result):expand?additional.map(source=>source.source_id):selectedSources;
     if(!sourceIds.length){onError("没有更多当前可检索的来源。");return;}
-    const preserve=!!(continuation||expand)&&!!result;
+    activeRequest.current=preserve?{sourceIds:expand?[...(resultRequest?.sourceIds||[]),...sourceIds]:resultRequest?.sourceIds||sourceIds,intent:requestIntent,filters:requestFilters}:{sourceIds:[...sourceIds],intent:requestIntent,filters:requestFilters};
     preserveSelection.current=preserve;
     const epoch=++searchEpoch.current;filterEpoch.current++;
     const clientRunId=crypto.randomUUID();activeClientRun.current=clientRunId;
@@ -114,14 +123,13 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
         existing_run_id:preserve?result?.result_page.run_id:undefined,
         boss_cursor:continuation?.sourceId==="boss"?continuation.cursor:undefined,
         source_cursor:continuation?.sourceId!=="boss"?continuation?.cursor:undefined,
-        intent: useResume?"":intent.trim(), source_ids:sourceIds, max_pages:1, time_budget_seconds:15,
-        filters:normalizeDiscoveryFilters(filters), page_size: pageSize });
+        intent:requestIntent, source_ids:sourceIds, max_pages:1, time_budget_seconds:15,
+        filters:requestFilters, page_size: pageSize });
       if(epoch!==searchEpoch.current)return;
       const failed=response.source_runs.filter(run=>run.status!=="success");
       const blocked=Object.values(response.blocked_sources);
       const keepPrevious=!preserve&&!response.result_page.total&&!!page?.items.length&&!!(failed.length||blocked.length);
-      if(!keepPrevious){filterBaseRun.current=response.result_page.run_id;setResult(previous=>({...response,
-        source_runs:preserve?[...(previous?.source_runs||[]).filter(run=>!response.source_runs.some(next=>next.source_id===run.source_id)),...response.source_runs]:response.source_runs}));}
+      if(!keepPrevious){filterBaseRun.current=response.result_page.run_id;setResult(previous=>preserve?mergeSearchCoverage(previous,response):response);if(!preserve||expand)setResultRequest(activeRequest.current);}
       if(failed.length||blocked.length||response.batch_failures?.length){
         const base=userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?"source_contract_error":"partial"));
         const batchNotice=response.batch_failures?.map(item=>`${sources.find(source=>source.source_id===item.source_id)?.name||item.source_id}${item.stage==="save"?"的读取结果保存失败":"的来源状态更新失败"}`).join("；");
@@ -129,6 +137,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       }
       if(response.result_page.total || (!failed.length&&!blocked.length)){setShowingPrevious(false);setPage(previous=>preserve&&previous&&previous.page!==1?{...previous,total:response.result_page.total,page_count:response.result_page.page_count}:response.result_page);setSelected(previous=>preserve&&previous?previous:response.result_page.items[0]);}
       setMatchingMessage(response.executed_queries?.length?`已检索：${response.keywords[0]}。远端仅使用首个城市与所列来源；薪资等其余筛选在本地进行。请核对岗位原文。`:`已计划检索「${response.keywords[0]}」，但本次没有完成来源请求。请查看来源状态。`);
+      setCollection(undefined);
     } catch (error) { if(epoch===searchEpoch.current)setSearchError(userError(error)); } finally { if(epoch===searchEpoch.current)setSearching(false); }
   }
   async function completeDetail() {
@@ -165,22 +174,23 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     }).catch(error=>onError(messageOf(error)));
   }
   return <div className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
-    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} /><button className="primary-button" disabled={searching || !workspaceId || enabled.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
+    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || enabled.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
     {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||enabled.length===0} onClick={()=>void search(undefined,undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
-    <div className={`source-summary${selectedSources.length&&!enabled.length?" blocked":""}`} role="status"><span>{selectedSources.length?`本次可查询 ${enabled.length} 个来源${unavailable.length?`，另有 ${unavailable.length} 个需处理`:""}。`:"尚未选择来源。"}</span>{selectedSources.length>2&&quickSources.length>0&&<button type="button" onClick={()=>onSelectQuickSources(quickSources)}>只用 {quickSources.length} 个来源</button>}<button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>调整来源</button>{!!unavailable.length&&<details><summary>查看需处理的来源</summary><ul>{unavailable.map(source=><li key={source.source_id}>{source.name}：{presentSourceStatus(source).title}</li>)}</ul></details>}</div>
-    {(searchError||collection||matchingMessage) && <div className="discovery-feedback"><details><summary title={searchError?.message||collection?.message||matchingMessage}>{searchError?.message||collection?.message||matchingMessage||"来源状态"}</summary><div className="discovery-feedback-details">
+    <div className={`source-summary${selectedSources.length&&!enabled.length?" blocked":""}`} role="status"><span>{selectedSources.length?`下次检索：已选 ${selectedSources.length} 个，当前可用 ${enabled.length} 个${unavailable.length?`，需处理 ${unavailable.length} 个`:""}。`:"下次检索：尚未选择来源。"}</span><button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>调整来源</button>{!!unavailable.length&&<details><summary>查看需处理的来源</summary><ul>{unavailable.map(source=><li key={source.source_id}>{source.name}：{presentSourceStatus(source).title}</li>)}</ul></details>}</div>
+    {!searching&&result&&resultRequest&&<div className="result-scope" role="status"><span>当前结果「{resultRequest.intent||"简历关键词"}」：请求 {coveredSources.length} 个来源，实际执行 {result.executed_queries?.length||0} 个，未轮到 {pendingSources.length} 个，需处理 {Object.keys(result.blocked_sources).length} 个。{selectionChanged?"来源勾选已改变；上方选择将在下次检索生效。":""}</span><details><summary>查看本轮来源</summary><p>已执行：{(result.executed_queries||[]).map(query=>sources.find(source=>source.source_id===query.source_id)?.name||query.source_id).join('、')||'无'}</p><p>未轮到：{pendingSources.map(id=>sources.find(source=>source.source_id===id)?.name||id).join('、')||'无'}</p><p>需处理：{Object.entries(result.blocked_sources).map(([id,reason])=>`${sources.find(source=>source.source_id===id)?.name||id}（${reason}）`).join('；')||'无'}</p></details></div>}
+    {(searchError||collection||(matchingMessage&&!result)) && <div className="discovery-feedback"><details><summary title={searchError?.message||collection?.message||matchingMessage}>{searchError?.message||collection?.message||matchingMessage||"来源状态"}</summary><div className="discovery-feedback-details">
     {searchError&&<div className="notice" role="alert">{searchError.message} <button disabled={searching} onClick={()=>void search()}>重试检索</button><button onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>查看来源状态</button></div>}
     {collection&&<div className="matching-progress" role="status">{collection.message}{searching&&collection.titles?.length ? <p className="note">已读到：{collection.titles.join(" · ")}</p>:null}</div>}
-    {matchingMessage&&<p className="matching-progress" role="status">{matchingMessage}</p>}
+    {matchingMessage&&!result&&<p className="matching-progress" role="status">{matchingMessage}</p>}
     {filters.cities&&filters.cities.length>1&&selectedSources.includes("boss")&&<p className="note">BOSS 本次检索首个城市「{filters.cities[0]}」；其他城市请分别检索。其他条件在已采集岗位中筛选。</p>}
 
     </div></details></div>}
-    {(searching||result)&&<div className="source-next-actions">{searching&&<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止后续读取</button>}{!searching&&result?.source_runs.filter(run=>run.can_continue&&run.next_cursor).map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>继续读取 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}</button>)}{!searching&&result&&sources.some(source=>source.live_search_enabled&&!selectedSources.includes(source.source_id)&&!result.source_runs.some(run=>run.source_id===source.source_id))&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到更多来源</button>}</div>}
+    {(searching||result)&&<div className="source-next-actions">{searching&&<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止后续读取</button>}{!searching&&pendingSources.length>0&&<button type="button" onClick={()=>void search(undefined,undefined,false,false,true)}>继续检索未轮到的 {pendingSources.length} 个来源</button>}{!searching&&result?.source_runs.filter(run=>run.can_continue&&run.next_cursor).map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>续读 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}下一页</button>)}{!searching&&result&&sources.some(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id))&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到其他来源</button>}</div>}
 
     </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => setMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => setMobileView("detail")}>详情</button></div>
     <div className={`workspace ${selected?"":"no-selection"}`}><section className={`list-pane ${mobileView === "detail" ? "mobile-hidden" : ""}`}>
-      <div className="section-title"><strong>岗位结果{showingPrevious?" · 上次成功结果":""}</strong><span>{page?.total ?? 0} 条</span></div>
+      <div className="section-title"><strong>岗位结果{showingPrevious?" · 上次成功结果":selectionChanged?" · 与当前勾选不同":""}</strong><span>{page?.total ?? 0} 条</span></div>
       {page?.items.length ? <div className="job-list">{page.items.map(item=><article className={selected?.job.job_id===item.job.job_id?"job-card selected":"job-card"} key={item.job.job_id} role="button" tabIndex={0} aria-pressed={selected?.job.job_id===item.job.job_id} onClick={()=>selectItem(item)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectItem(item);}}}>
         <div><strong>{item.job.title}</strong></div>
         <p>{item.job.company} · {item.job.locations.join("/")||"地点未知"} · {formatSalary(item.job)}</p>

@@ -374,9 +374,9 @@ h3 { font-size:14px; }
 .sidebar .brand { min-height:34px; padding-right:36px; }
 .collapse-sidebar { top:18px; left:auto; right:14px; display:grid; place-items:center; padding:4px; }
 .sidebar-collapsed .collapse-sidebar { right:17px; }
-.sidebar-restore {display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:7px 11px;border:0;background:transparent;text-align:left;color:var(--text-muted);font-size:12px;}
-.sidebar-collapsed .sidebar-restore .nav-label {display:none;}
-.sidebar-collapsed .sidebar-restore {justify-content:center;padding:7px;}
+.sidebar-collapsed .sidebar .brand { display:none; }
+.sidebar-collapsed .collapse-sidebar { position:relative;top:auto;right:auto;width:36px;height:36px;align-self:center;padding:8px;border-radius:7px; }
+.sidebar-collapsed .collapse-sidebar:hover { background:var(--surface-selected); }
 .sidebar .nav-group {margin-top:0;}
 .nav-icon { display:flex; align-items:center; justify-content:center; }
 nav button.active { box-shadow:inset 2px 0 #3b3b3b; }
