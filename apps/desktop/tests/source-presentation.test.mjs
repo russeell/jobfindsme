@@ -20,3 +20,9 @@ test('a list parse error is never presented as login or risk',()=>{
  assert.equal(sourceCheckFailureOutcome('login_required:登录页'),'login_required');
  assert.equal(sourceCheckFailureOutcome('risk_control:安全验证'),'risk_control');
 });
+
+test('current foreground evidence supersedes an older failed check without claiming search success',()=>{
+ const visible={...source,source_id:'zhilian',session_status:'verified',list_status:'partial',fields_status:'verified',live_search_enabled:false,detail:'当前页已标准化读取 2 条岗位',last_verified_at:'2026-09-28T10:00:02Z'};
+ const status=presentSourceStatus(visible,{outcome:'failed',detail:'超时',attempted_at:'2026-09-28T10:00:00Z'});
+ assert.equal(status.title,'已登录，列表可读');assert.equal(status.available,false);assert.match(status.detail,/2 条/);
+});

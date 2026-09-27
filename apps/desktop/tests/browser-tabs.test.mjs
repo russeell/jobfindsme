@@ -13,7 +13,7 @@ class FakeView {
 const module={exports:{}};
 vm.runInThisContext(`(function(require,module,exports){${readFileSync(file,'utf8')}\n})`)((id)=>id==='electron'?{WebContentsView:FakeView}:nativeRequire(id),module,module.exports);
 const {SourceBrowserManager}=module.exports;
-function setup(onBossPage){const w=new EventEmitter();w.children=[];w.contentView={addChildView:v=>w.children.push(v),removeChildView:v=>{w.children=w.children.filter(x=>x!==v);}};w.getContentSize=()=>[1240,800];w.isDestroyed=()=>false;return {w,m:new SourceBrowserManager(w,onBossPage)};}
+function setup(onBossPage,onSourcePage){const w=new EventEmitter();w.children=[];w.contentView={addChildView:v=>w.children.push(v),removeChildView:v=>{w.children=w.children.filter(x=>x!==v);}};w.getContentSize=()=>[1240,800];w.isDestroyed=()=>false;return {w,m:new SourceBrowserManager(w,onBossPage,onSourcePage)};}
 const bounds={x:650,y:100,width:590,height:700};
 const a='https://www.liepin.com/job/1.shtml';const b='https://www.liepin.com/job/2.shtml';
 test('source buttons reopen public homepages without forcing sign-in pages',async()=>{
@@ -186,4 +186,35 @@ test('a cancelled DOM read exits promptly without caching its late result or can
   const retried=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1});
   assert.equal(retried.records.length,1);assert.equal(zhilianViews,2);
  }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('visible Zhaopin inspection never opens background search and keeps normalized cards',async()=>{
+ const {w,m}=setup();
+ try{
+  await m.show('zhilian',bounds,'https://www.zhaopin.com/jobs');m.layout(bounds);
+  const wc=w.children[0].webContents;let reads=0;
+  wc.executeJavaScript=async()=>{reads++;return {url:wc.getURL(),kind:'list',authenticated:true,cardCount:1,formCount:0,jobs:[{title:'大模型研发',company:'示例公司',location:'上海',url:'https://www.zhaopin.com/jobdetail/abc.htm'}]};};
+  const result=await m.readVisibleZhilian();assert.equal(result.records.length,1);assert.equal(reads,1);assert.equal(m.backgrounds.size,0);assert.equal(wc.getURL(),'https://www.zhaopin.com/jobs');
+  m.hide();assert.equal(await m.readVisibleZhilian(),undefined);assert.equal(reads,1);
+ }finally{m.destroy();}
+});
+
+test('Zhaopin search keeps synonymous titles, rejects redirected recommendations and unknown city',async()=>{
+ const {m}=setup();let redirect=false;
+ FakeView.onCreate=view=>{const original=view.webContents.loadURL;view.webContents.loadURL=url=>original(redirect?'https://www.zhaopin.com/jobs':url);view.webContents.executeJavaScript=async()=>({jobs:[{title:'大模型应用研发',company:'示例',location:'上海',url:'https://www.zhaopin.com/jobdetail/abc.htm'},{title:'算法工程师',company:'示例',location:'',url:'https://www.zhaopin.com/jobdetail/def.htm'}]});};
+ try{const result=await m.searchPage('zhilian',{keyword:'AI Agent',city:'上海',page:1,forceRefresh:true});assert.equal(result.records.length,1);assert.equal(result.records[0].payload.title,'大模型应用研发');
+ redirect=true;await assert.rejects(m.searchPage('zhilian',{keyword:'AI Agent',city:'上海',page:1,forceRefresh:true}),/未保留本次关键词/);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+
+test('hidden Zhaopin tabs cannot overwrite the current source observation',async()=>{
+ let seen=0;const {w,m}=setup(undefined,async()=>{seen++;});
+ try{
+  await m.show('zhilian',bounds,'https://www.zhaopin.com/jobs');const wc=w.children[0].webContents;
+  wc.executeJavaScript=async()=>({url:wc.getURL(),kind:'list',authenticated:true,cardCount:0,formCount:0,jobs:[]});
+  await m.refreshPlatformObservation('zhilian');assert.equal(seen,0);
+  m.layout(bounds);await m.refreshPlatformObservation('zhilian');assert.ok(seen>0);
+  await m.show('liepin',bounds);const before=seen;await m.refreshPlatformObservation('zhilian');assert.equal(seen,before);
+ }finally{m.destroy();}
 });

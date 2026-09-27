@@ -61,7 +61,7 @@ export function App() {
       loadingBootstrap = true;
       try {
         const value = await window.jobfindsme!.getBootstrap();
-        if (!cancelled) { setData(value); setError(undefined); setServiceStatus({ connected: true }); }
+        if (!cancelled) { setData(value); setServiceStatus({ connected: true }); }
       } catch (bootstrapError) {
         const message = messageOf(bootstrapError);
         if (!cancelled && !message.includes("desktop API is not ready")) setError(message);
@@ -136,7 +136,7 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
     onError(undefined);
     try {
       const checked=await window.jobfindsme!.verifySource(sourceId);
-      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{source:checked,outcome:"verified_now",evidence:"live",attempted_at:new Date().toISOString(),detail:"单独重试已读取岗位列表；详情、字段和网站续页见能力状态。",duration_ms:0}:row)}:current);
+      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{source:checked,outcome:checked.live_search_enabled?"verified_now":"unverified",evidence:"live",attempted_at:new Date().toISOString(),detail:checked.detail,duration_ms:0}:row)}:current);
       onRefresh(await window.jobfindsme!.getBootstrap());
     } catch (error) {
       const detail=messageOf(error);
@@ -173,12 +173,13 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
     <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个平台 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个平台"}</p><div className="source-toolbar-actions"><strong>招聘平台 · {platforms.length}</strong><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部平台</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
     {audit&&<div className="source-audit-progress" role="status"><span>{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"检查结束"} · 已评估 {audit.done}/{audit.total} 个来源{!audit.running&&` · 本次实际探测 ${audit.rows.filter(row=>row.evidence==="live").length} 个，通过 ${audit.rows.filter(row=>row.outcome==="verified_now").length} 个 · 复用缓存 ${audit.rows.filter(row=>row.evidence==="cache").length} 个 · 登录/风控跳过 ${audit.rows.filter(row=>row.evidence!=="live"&&["login_required","risk_control","skipped_cooldown"].includes(row.outcome)).length} 个 · 未检查 ${audit.rows.filter(row=>["not_checked_budget","cancelled"].includes(row.outcome)&&row.evidence!=="live").length} 个`}</span>{audit.running&&<progress value={audit.done} max={audit.total} aria-label="来源检查进度"/>}</div>}
     <section className="source-grid source-catalog">{rows.map(source => {
-      const checked=audit?.rows.find(result=>result.source.source_id===source.source_id);
+      const recorded=audit?.rows.find(result=>result.source.source_id===source.source_id);
+      const checked=recorded?.attempted_at&&source.last_verified_at&&Date.parse(source.last_verified_at)>Date.parse(recorded.attempted_at)?undefined:recorded;
       const presented=presentSourceStatus(source,checked);
       return <article className="panel source-card" key={source.source_id}>
         <div className="source-card-head"><label className="source-choice"><input type="checkbox" aria-label={`加入搜索范围：${source.name}`} checked={selected.includes(source.source_id)} onChange={event=>onSelect(source.source_id,event.target.checked)}/><strong>{source.name}</strong></label><span className={presented.available?"ready":"muted"}>{presented.title}</span></div>
         <p className="source-card-status">{presented.detail}</p>
-        <div className="button-row source-card-actions">{presented.action==="login"?<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>登录 / 验证</button>:presented.action==="check"?<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"检查"}</button>:null}{presented.action!=="check"&&<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"检查"}</button>}{presented.action!=="login"&&<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>打开官网</button>}</div>
+        <div className="button-row source-card-actions">{presented.action==="login"?<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>登录 / 验证</button>:presented.action==="check"?<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":source.source_id==="zhilian"?"排查":"检查"}</button>:null}{presented.action!=="check"&&<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":source.source_id==="zhilian"?"排查":"检查"}</button>}{presented.action!=="login"&&<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>打开官网</button>}</div>
         {checked?.outcome==="login_required"&&<p className="note source-login-help">请在应用内完成登录，再重试检查。</p>}
         <details><summary>能力与限制</summary><p className="note">列表：{capabilityLabel(source.list_status)} · 详情：{capabilityLabel(source.detail_status)} · 字段：{capabilityLabel(source.fields_status)} · 网站续页：{capabilityLabel(source.pagination_status)}</p><p className="note">{checked?.detail||source.detail}</p>{source.last_verified_at&&<p className="note">上次验证：{new Date(source.last_verified_at).toLocaleString()}</p>}</details>
       </article>;

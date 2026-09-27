@@ -8,6 +8,8 @@ export function userError(error:unknown):UserError {
  if(/source_backoff:/.test(text))return {kind:'source',message:'该来源正在检查或刚完成检查，本次没有重复访问。',action:'retry'};
  if(/source_check_timeout|source_timeout:/.test(text))return {kind:'source',message:'本次来源读取超时，登录和检索能力尚未确认。',action:'retry'};
  if(/no_matching:/.test(text))return {kind:'source',message:'本次未读到匹配岗位，检索能力仍待验证。',action:'retry'};
+ if(/source_visible_page_required:/.test(text))return {kind:'source',message:'请在内置浏览器打开智联岗位列表。排查只读取当前页；输入关键词可直接尝试搜索。',action:'source'};
+ if(/source_scope_mismatch:/.test(text))return {kind:'source',message:'站内页面未保留本次关键词、城市或页码，未将推荐岗位计作搜索结果。',action:'retry'};
  if(/source_contract_error:/.test(text))return {kind:'source',message:'本次未读到可验证的岗位列表，可能是页面结构变化；登录状态仍待确认。',action:'source'};
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};
  if(/source_contract|来源|continuation_expired/.test(text))return {kind:'source',message:'来源暂时无法读取，请打开对应网站确认状态。',action:'source'};

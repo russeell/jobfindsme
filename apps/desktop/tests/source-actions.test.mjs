@@ -61,7 +61,7 @@ test('named cities are never sent as opaque platform city codes',()=>{
 test('passive source observation separates splash, login form, and readable list without searches',async()=>{
  const {runInNewContext}=await import('node:vm');
  const script=passiveSourceObservationScript('zhilian');
- function observe(text,inputs,cards,account=false){const node=(shown=true)=>({textContent:'我的简历',getAttribute:()=>'',matches:()=>false,getBoundingClientRect:()=>({width:shown?10:0,height:shown?10:0})});return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:text},querySelectorAll(selector){if(selector.startsWith('input'))return Array.from({length:inputs==='hidden'?1:inputs},()=>node(inputs!=='hidden'));if(selector.startsWith('a[href*="/resume"]'))return account?[node(account==='hidden'?false:true)]:[];return Array.from({length:cards},()=>node(true));}}});}
+ function observe(text,inputs,cards,account=false){const node=(shown=true)=>({textContent:'我的简历',getAttribute:()=>'',querySelector:()=>null,matches:()=>false,getBoundingClientRect:()=>({width:shown?10:0,height:shown?10:0})});return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:text},querySelector:()=>null,querySelectorAll(selector){if(selector.startsWith('input'))return Array.from({length:inputs==='hidden'?1:inputs},()=>node(inputs!=='hidden'));if(selector.startsWith('a[href*="/resume"]'))return account?[node(account==='hidden'?false:true)]:[];return Array.from({length:cards},()=>node(true));}}});}
  assert.equal(observe('找风口工作，就上智联招聘',0,0).kind,'splash');
  assert.equal(observe('求职者登录',2,0).kind,'login');
  assert.equal(observe('搜索岗位',0,3).kind,'list');
@@ -73,7 +73,7 @@ test('passive source observation separates splash, login form, and readable list
 
 test('current Zhaopin jobs template keeps footer login prompts separate from session evidence',async()=>{
  const {runInNewContext}=await import('node:vm');
- const visible={textContent:'',innerText:'',getAttribute:()=>'',matches:()=>false,getBoundingClientRect:()=>({width:20,height:20})};
+ const visible={textContent:'',innerText:'',getAttribute:()=>'',querySelector:()=>null,matches:()=>false,getBoundingClientRect:()=>({width:20,height:20})};
  const avatar={...visible};
  const header=(avatarVisible=true)=>({...visible,innerText:'职位 消息 我要招人 账户',querySelectorAll:selector=>selector.includes('alt*="头像"')?avatarVisible?[avatar]:[{...avatar,getBoundingClientRect:()=>({width:0,height:0})}]:[]});
  const anonymousHeader={...visible,innerText:'职位 消息 我要招人',querySelectorAll:()=>[]};
@@ -83,7 +83,7 @@ test('current Zhaopin jobs template keeps footer login prompts separate from ses
   getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),
   document:{body:{innerText:'热门职位 登录查看更多相关职位 立即登录'},querySelector:()=>null,querySelectorAll(selector){
    if(selector.startsWith('header,'))return [authenticated?header(!options.hiddenAvatar):anonymousHeader];
-   if(selector.startsWith('input'))return options.phoneInput?[visible]:[];
+   if(selector.startsWith('input'))return options.phoneInput&&!selector.includes('type="password"')?[visible]:[];
    if(selector.includes('job-list'))return options.cards===false?[]:[card,card];
    return [];
   }}
@@ -102,4 +102,33 @@ test('current Zhaopin jobs template keeps footer login prompts separate from ses
  assert.equal(extracted.loginRequired,false);assert.equal(extracted.jobs.length,2);
  const login=runInNewContext(sourceListExtractionScript('zhilian'),context(false,true,{cards:false}));
  assert.equal(login.loginRequired,true);
+});
+
+test('foreground Zhaopin standardization is distinct from authenticated search capability',async()=>{
+ const {foregroundZhilianVerification,validateZhilianSearchScope}=await import('../dist-electron/main/sources/source-actions.js');
+ const job={title:'大模型应用研发',company:'示例科技',location:'上海',salary:'20-30K',url:'https://www.zhaopin.com/jobdetail/123.htm'};
+ const page=sanitizeSourceActionPage('zhilian','https://www.zhaopin.com/jobs',1,{jobs:[job,job,{...job,url:'https://www.zhaopin.com/resume'},{...job,company:'',url:'https://www.zhaopin.com/jobdetail/456.htm'}]});
+ assert.equal(page.records.length,1);assert.equal(page.records[0].payload.company,'示例科技');
+ const current={session_status:'unverified',list_status:'unverified',detail_status:'unverified',fields_status:'unverified',pagination_status:'unverified',live_search_enabled:false};
+ const observed=foregroundZhilianVerification(current,{authenticated:true,records:page.records});
+ assert.equal(observed.session_status,'verified');assert.equal(observed.list_status,'partial');assert.equal(observed.fields_status,'verified');assert.equal(observed.enabled,false);
+ assert.match(observed.notes,/1 条岗位/);
+ const anonymous=foregroundZhilianVerification(current,{authenticated:false,records:page.records});assert.equal(anonymous.session_status,'unverified');
+ const prior=foregroundZhilianVerification({...current,session_status:'verified',list_status:'verified',live_search_enabled:true},{authenticated:false,records:[]});assert.equal(prior.enabled,true);assert.equal(prior.list_status,'verified');
+ assert.doesNotThrow(()=>validateZhilianSearchScope('https://sou.zhaopin.com/?kw=AI%20Agent&jl=538&p=1','AI Agent','538',1));
+ for(const url of ['https://www.zhaopin.com/jobs','https://sou.zhaopin.com/?kw=工程师','https://sou.zhaopin.com/?kw=AI%20Agent&jl=530'])assert.throws(()=>validateZhilianSearchScope(url,'AI Agent','538',1),/source_scope_mismatch/);
+});
+
+test('canonical-link fallback reads company fields and rejects visible login overlay even with cards',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const shown={getBoundingClientRect:()=>({width:20,height:20}),matches:()=>false};
+ const link={...shown,href:'https://www.zhaopin.com/jobdetail/abc.htm',textContent:'大模型应用研发'};
+ const card={...shown,querySelector(selector){if(selector==='.jobinfo__name')return link;if(selector==='.companyinfo__name')return {textContent:'示例科技'};if(selector==='.jobinfo__other-info-item')return {textContent:'上海'};if(selector.includes('/jobdetail/'))return link;return null;}};
+ link.closest=()=>card;
+ let overlay=false;
+ const context={location:{hostname:'www.zhaopin.com',href:'https://www.zhaopin.com/jobs'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'登录查看更多相关职位'},querySelector:()=>null,querySelectorAll(selector){if(selector.startsWith('input'))return overlay?[shown]:[];if(selector==='a[href*="/jobdetail/"],a[href*="jobs.zhaopin.com/"]')return [link];return [];}}};
+ const raw=runInNewContext(sourceListExtractionScript('zhilian'),context);assert.equal(raw.jobs.length,1);assert.equal(raw.jobs[0].company,'示例科技');assert.equal(raw.loginRequired,false);
+ assert.equal(sanitizeSourceActionPage('zhilian',context.location.href,1,raw).records.length,1);
+ overlay=true;assert.equal(runInNewContext(passiveSourceObservationScript('zhilian'),context).kind,'login');
+ context.document.body.innerText='请完成验证';assert.equal(runInNewContext(passiveSourceObservationScript('zhilian'),context).kind,'challenge');
 });

@@ -1,3 +1,4 @@
+import {validateZhilianSearchScope} from "../sources/source-actions";
 import {BossCollector} from "../sources/boss-collector";
 import {bossPageScript,bossScrollScript,type BossPage} from "../sources/boss-page";
 import { researchExtractionScript } from "../sources/research-extraction";
@@ -126,12 +127,28 @@ export class SourceBrowserManager {
 
   private async readSourcePage(tab:BrowserTab,force:boolean):Promise<void> {
     const id=tab.sourceId;if((id!=="zhilian"&&id!=="wuyou")||!this.onSourcePage||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame()||!isAllowedSourceUrl(id,tab.view.webContents.getURL()))return;
+    if(id==="zhilian"&&(!this.visible||tab.id!==this.activeId))return;
     try {const page=await tab.view.webContents.executeJavaScript(passiveSourceObservationScript(id)) as PassiveSourceObservation;
-      if(!isAllowedSourceUrl(id,page.url))return;
-      const key=JSON.stringify([page.url,page.kind,page.cardCount,page.formCount,page.authenticated]);
+      if(!isAllowedSourceUrl(id,page.url)||page.url!==tab.view.webContents.getURL()||id==="zhilian"&&(!this.visible||tab.id!==this.activeId))return;
+      if(id==="zhilian")page.records=sanitizeSourceActionPage(id,page.url,1,{jobs:page.jobs}).records;
+      const key=JSON.stringify([page.url,page.kind,page.cardCount,page.formCount,page.authenticated,page.records]);
       if(!force&&this.lastObservations.get(tab.id)===key)return;
       this.lastObservations.set(tab.id,key);await this.onSourcePage(id,page);
     } catch {/* A page can navigate while its DOM is being read. */}
+  }
+
+  async readVisibleZhilian():Promise<PassiveSourceObservation|undefined>{
+    const tab=this.tabs.find(t=>t.id===this.activeId);
+    if(!this.visible||tab?.sourceId!=="zhilian"||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame())return;
+    const url=tab.view.webContents.getURL();if(!isAllowedSourceUrl("zhilian",url))return;
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    try{
+      const page=await Promise.race([tab.view.webContents.executeJavaScript(passiveSourceObservationScript("zhilian")) as Promise<PassiveSourceObservation>,
+        new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error("source_timeout:当前页读取超时")),2500);})]);
+      if(tab.view.webContents.getURL()!==url||page.url!==url)throw Error("source_contract_error:当前页面已变化，请稍后重试");
+      page.records=sanitizeSourceActionPage("zhilian",url,1,{jobs:page.jobs}).records;
+      return page;
+    }finally{if(timer)clearTimeout(timer);}
   }
 
   async refreshPlatformObservation(sourceId:SourceBrowserId):Promise<void>{
@@ -366,9 +383,13 @@ export class SourceBrowserManager {
       }
       if(!raw?.jobs?.length&&!raw?.empty)throw Error('source_contract_error:未读取到岗位列表，请在原页确认');
       if(!current())throw Error('cancelled:检索已停止');
+      if(sourceId==="zhilian")validateZhilianSearchScope(view.webContents.getURL(),input.keyword,input.city,input.page);
       const result=sanitizeSourceActionPage(sourceId,searchUrl,input.page,raw!,new Map());
+      if(sourceId==="zhilian"){
+        if(raw?.jobs?.length&&!result.records.length)throw Error("source_contract_error:可见岗位未通过标准字段校验，未计作搜索成功");
+      }
       // Site city parameters use opaque IDs. Apply named cities to observed fields locally.
-      if(input.city&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>!r.payload.location||String(r.payload.location).includes(input.city));
+      if(input.city&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>Boolean(r.payload.location)&&String(r.payload.location).includes(input.city));
       if(!current())throw Error('cancelled:检索已停止');
       this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);

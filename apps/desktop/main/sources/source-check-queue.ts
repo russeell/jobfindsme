@@ -54,7 +54,7 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
           controller.signal.addEventListener("abort",()=>reject(Error("source_check_cancelled")),{once:true});
       });
       const value=await Promise.race([options.probe(source,controller.signal),aborted]);
-      append({source:value,outcome:"verified_now",evidence:"live",attempted_at,duration_ms:now()-began,detail:"本次有界检索读取到岗位列表；JD 与分页仍按各自状态展示。"});
+      append({source:value,outcome:value.source_id!=="zhilian"||value.live_search_enabled?"verified_now":"unverified",evidence:"live",attempted_at,duration_ms:now()-began,detail:value.source_id!=="zhilian"||value.live_search_enabled?"本次有界检索读取到岗位列表；JD 与分页仍按各自状态展示。":value.detail});
     }catch(error){
       const message=String(error);
       const cancelled=options.signal.aborted;

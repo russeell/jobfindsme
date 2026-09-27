@@ -1,3 +1,4 @@
+import {foregroundZhilianVerification} from "./sources/source-actions";
 import {checkForUpdates,releasesUrl} from "./updates";
 import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -182,6 +183,10 @@ async function createWindow(): Promise<void> {
       if(current.session_status==="blocked")return;
       if(current.session_status==="verified")await apiClient.recordSourceRuntimeFailure(sourceId,"login_required","当前平台页显示登录表单；会话可能已失效，请重新登录。");
       else await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:"当前页面显示登录表单；会话有效性与检索能力仍需分别确认。"});
+    } else if(sourceId==="zhilian"&&(page.kind==="list"||page.kind==="account")) {
+      // Observing an already rendered page never starts an unrelated search.
+      if(current.session_status!=="blocked"&&current.list_status!=="blocked")
+        await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(current,page));
     } else if(page.kind==="list"||page.kind==="account") {
       if(current.session_status==="blocked"||current.list_status==="blocked"){
         mainWindow?.webContents.send("desktop:source-status-changed");return;
@@ -327,7 +332,14 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
   signal.addEventListener("abort",stop,{once:true});
   try{
     let pages:BrowserSourcePage[];
-    if(sourceId==="zhilian"||sourceId==="wuyou"){
+    if(sourceId==="zhilian"){
+      const visible=await sourceBrowserManager.readVisibleZhilian();
+      if(signal.aborted)throw Error("source_check_cancelled");
+      if(!visible)throw Error("source_visible_page_required:请打开智联岗位列表；检查只读取当前页面，输入关键词后可直接尝试搜索");
+      if(visible.kind==="challenge")throw Error("risk_control:当前页要求平台验证");
+      if(visible.kind==="login")throw Error("login_required:当前页显示登录表单");
+      return apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(source,visible),signal);
+    }else if(sourceId==="wuyou"){
       const page=await sourceBrowserManager.searchPage(sourceId,{keyword:"工程师",city:"",page:1,forceRefresh:true});
       pages=[page];
     }else if(sourceId==="liepin"){
@@ -353,7 +365,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
 }
 async function recheckPersistedSessions():Promise<void>{
   if(!apiClient||!sourceBrowserManager||isQuitting)return;
-  const sources=(await apiClient.bootstrap()).sources.filter(source=>requiresElectronSourceSearch(source.source_id)&&
+  const sources=(await apiClient.bootstrap()).sources.filter(source=>source.source_id!=="zhilian"&&requiresElectronSourceSearch(source.source_id)&&
     source.session_status==="verified"&&source.list_status!=="blocked"&&
     (!source.live_search_enabled||!source.last_verified_at||Date.now()-Date.parse(source.last_verified_at)>600000));
   for(const source of sources){
