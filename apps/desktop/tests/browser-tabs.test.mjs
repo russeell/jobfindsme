@@ -265,3 +265,13 @@ test('Zhaopin user searches open a new source tab and retain its failed page for
  try{await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(m.state().tabs.length,2);assert.equal(original.webContents.isDestroyed(),false);assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/original.htm');assert.equal(events[0][0],'desktop:source-browser-opened');assert.equal(m.backgrounds.size,0);assert.match(m.state().url,/jl=765/);}
  finally{FakeView.onCreate=undefined;m.destroy();}
 });
+
+
+test('cancelling an auto-opened Zhaopin search stops only its owned navigation; expired work opens nothing',async()=>{
+ const {m,w}=setup();await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');const original=w.children[0];let started,stops=0;
+ const loading=new Promise(resolve=>{started=resolve;});
+ FakeView.onCreate=view=>{view.webContents.isLoadingMainFrame=()=>true;view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;started();return new Promise(()=>{});};view.webContents.stop=()=>{stops++;};};
+ try{const work=m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1});await loading;m.cancelCareerSearch('zhilian');await assert.rejects(work,/cancelled/);assert.equal(stops,1);assert.equal(original.webContents.isDestroyed(),false);assert.equal(m.state().tabs.length,2);
+ await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,2);}
+ finally{FakeView.onCreate=undefined;m.destroy();}
+});

@@ -375,6 +375,7 @@ export class SourceBrowserManager {
   ): Promise<SourceActionPage> {
     const key=JSON.stringify([sourceId,input.keyword,input.city,input.page]),cached=this.careerCache.get(key),now=Date.now();
     if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
+    if(input.deadline!==undefined&&now>=input.deadline)throw Error("source_timeout:本轮读取时间已用完");
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
     const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
     const active=this.tabs.find(tab=>tab.id===this.activeId);
@@ -389,6 +390,8 @@ export class SourceBrowserManager {
     if(searchTab)this.window.webContents?.send("desktop:source-browser-opened",this.state());
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
     const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
+    const stopOwnedNavigation=()=>{if(searchTab&&!view.webContents.isDestroyed()&&view.webContents.isLoadingMainFrame())view.webContents.stop();};
+    controller.signal.addEventListener("abort",stopOwnedNavigation,{once:true});
     const current=()=>!controller.signal.aborted&&epoch===this.careerEpoch&&sourceEpoch===(this.careerSourceEpoch.get(sourceId)||0);
     const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;let onAbort:()=>void=()=>{};try{
       if(!current())throw Error('cancelled:检索已停止');
@@ -399,11 +402,11 @@ export class SourceBrowserManager {
       // The SPA can render usable listings before ad/analytics resources finish.
       // Start reading at DOM readiness while the normal load promise remains handled.
       if(!reuseVisible){
-      let onReady:()=>void=()=>{};
-      const ready=new Promise<void>(resolve=>{onReady=resolve;view.webContents.once("dom-ready",onReady);});
-      const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
-      try{await bounded(Promise.race([loaded,ready]));}
-      finally{view.webContents.removeListener("dom-ready",onReady);}
+        let onReady:()=>void=()=>{};
+        const ready=new Promise<void>(resolve=>{onReady=resolve;view.webContents.once("dom-ready",onReady);});
+        const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
+        try{await bounded(Promise.race([loaded,ready]));}
+        finally{view.webContents.removeListener("dom-ready",onReady);}
       }
       if(!current())throw Error('cancelled:检索已停止');
       let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string}|undefined;
@@ -443,7 +446,7 @@ export class SourceBrowserManager {
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
     } catch(error){throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}]`);}
-    finally {controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!foreground)this.releaseBackground(sourceId,view);}
+    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!foreground)this.releaseBackground(sourceId,view);}
   }
 
   destroy(): void {
