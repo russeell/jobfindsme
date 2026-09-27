@@ -1,8 +1,12 @@
 import {type SourceBrowserId} from "../../../shared/source-browser-policy";
-import {resolveWebsiteHomepage,type BrowserDestination} from "../../../shared/browser-search";
+import {normalizeSearchEngine,resolveBrowserDestination,resolveWebsiteHomepage,type BrowserDestination} from "../../../shared/browser-search";
+import type {BrowserBookmark} from "../../../shared/browser-bookmarks";
+import {useState} from "react";
 
 const shortcuts:Array<[SourceBrowserId,string]>=[["liepin","猎聘"],["zhilian","智联招聘"],["boss","BOSS直聘"],["wuyou","前程无忧"]];
 
-export function BrowserStartPage({onOpen,limitReached}:{onOpen(destination:Extract<BrowserDestination,{url:string}>):void;limitReached:boolean}) {
-  return <div className="browser-new-page"><p>在上方地址栏输入网址或搜索词。</p><div className="browser-start-shortcuts" aria-label="招聘网站快捷入口">{shortcuts.map(([id,name])=><button type="button" key={id} disabled={limitReached} onClick={()=>{const destination=resolveWebsiteHomepage(id);if("url" in destination)onOpen(destination);}}>{name}</button>)}</div></div>;
+export function BrowserStartPage({onOpen,onDeleteBookmark,bookmarks,limitReached}:{onOpen(destination:Extract<BrowserDestination,{url:string}>):void;onDeleteBookmark(url:string):void;bookmarks:BrowserBookmark[];limitReached:boolean}) {
+  const [query,setQuery]=useState(""),[error,setError]=useState("");
+  function navigate(value:string){const destination=resolveBrowserDestination(value,normalizeSearchEngine(localStorage.getItem("jfm.browser.search-engine")));if("url" in destination){setError("");onOpen(destination);}else setError(destination.summary);}
+  return <div className="browser-new-page"><div className="browser-start-mark">JobFindsMe</div><p className="browser-start-subtitle">搜索网页，或打开岗位原页</p><form className="browser-start-search" onSubmit={event=>{event.preventDefault();navigate(query);}}><input aria-label="搜索网页或输入网址" placeholder="搜索网页或输入网址" value={query} onChange={event=>setQuery(event.target.value)}/><button type="submit" disabled={limitReached}>搜索</button></form>{error&&<p className="browser-start-error" role="alert">{error}</p>}<div className="browser-start-shortcuts" aria-label="招聘平台快捷入口">{shortcuts.map(([id,name])=><button type="button" key={id} disabled={limitReached} onClick={()=>{const destination=resolveWebsiteHomepage(id);if("url" in destination)onOpen(destination);}}><span className="browser-start-site-icon">{name.slice(0,1)}</span>{name}</button>)}</div><div className="browser-bookmarks"><h3>收藏的网站</h3>{bookmarks.length?<div className="browser-bookmark-grid">{bookmarks.map(bookmark=><div className="browser-bookmark" key={bookmark.url}><button type="button" className="browser-bookmark-open" disabled={limitReached} title={bookmark.url} onClick={()=>navigate(bookmark.url)}><span className="browser-bookmark-icon">{bookmark.title.slice(0,1)}</span><span>{bookmark.title}</span></button><button type="button" className="browser-bookmark-remove" aria-label={`删除收藏 ${bookmark.title}`} onClick={()=>onDeleteBookmark(bookmark.url)}>×</button></div>)}</div>:<p>打开网页后，点击地址栏旁的 ☆ 收藏。</p>}</div></div>;
 }
