@@ -303,7 +303,8 @@ ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bo
     throw new Error("source browser is not available");
   }
   if (!isSourceBrowserId(sourceId)) throw new Error("unknown source browser");
-  await sourceBrowserManager.show(sourceId, bounds);
+  if(sourceId==="zhilian")sourceBrowserManager.prepareZhilianCheck(bounds);
+  else await sourceBrowserManager.show(sourceId, bounds);
 });
 async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ignorePending=false):Promise<SourceCapability>{
   if(!sourceBrowserManager||!apiClient||!isSourceBrowserId(source.source_id))throw Error("source_contract_error:来源不可检查");
@@ -333,7 +334,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
   try{
     let pages:BrowserSourcePage[];
     if(sourceId==="zhilian"){
-      const visible=await sourceBrowserManager.readVisibleZhilian();
+      const visible=await sourceBrowserManager.waitForVisibleZhilian(signal);
       if(signal.aborted)throw Error("source_check_cancelled");
       if(!visible)throw Error("source_visible_page_required:请打开智联岗位列表；检查只读取当前页面，输入关键词后可直接尝试搜索");
       if(visible.kind==="challenge")throw Error("risk_control:当前页要求平台验证");

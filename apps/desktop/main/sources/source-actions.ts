@@ -48,10 +48,10 @@ const extractionSpecs: Record<BrowserSearchSourceId, {
     next: [".options-pages a.next", "[class*='pagination'] [class*='next']"],
   },
   zhilian: {
-    cards: [".joblist-box__item", ".positionlist__item", "[class*='joblist'] article", "[class*='job-list'] [class*='item']", "[class*='position-list'] [class*='item']"],
-    title: [".jobinfo__name", "[class*='job-name']", "[class*='position-name']", "h3"],
-    company: [".companyinfo__name", "[class*='company-name']", "[class*='company']"],
-    location: [".jobinfo__other-info-item", "[class*='location']", "[class*='address']"],
+    cards: [".job-list-panel .job-card", ".joblist-box__item", ".positionlist__item", "[class*='joblist'] article", "[class*='job-list'] [class*='item']", "[class*='position-list'] [class*='item']"],
+    title: [".job-card__title-clamp .vue-clamp__text", ".job-card__name", ".jobinfo__name", "[class*='job-name']", "[class*='position-name']", "h3"],
+    company: [".job-card__company-name", ".companyinfo__name", "[class*='company-name']", "[class*='company']"],
+    location: [".job-card__location", ".jobinfo__other-info-item", "[class*='location']", "[class*='address']"],
     salary: ["[class*='salary']"],
     link: ["a[href*='/jobdetail/']", "a[href*='jobs.zhaopin.com']", "a[href]"],
     next: ["[class*='pagination'] [class*='next']", "li.next"],
@@ -78,13 +78,14 @@ export function buildSourceSearchUrl(
   if(sourceId==="boss"){if(page!==1)throw Error("BOSS uses scroll continuation, not page numbers");return bossSearchUrl(keyword,city);}
   const targets = {
     boss: new URL("https://www.zhipin.com/web/geek/job"),
-    zhilian: new URL("https://sou.zhaopin.com/"),
+    zhilian: new URL("https://www.zhaopin.com/jobs/"),
     wuyou: new URL("https://we.51job.com/pc/search"),
   };
   const target = targets[sourceId];
   if (sourceId === "zhilian") {
     target.searchParams.set("kw", keyword.trim());
-    if (/^\d+$/.test(city.trim())) target.searchParams.set("jl", city.trim());
+    target.searchParams.set("pageMode", "search");
+    target.searchParams.set("jl", zhilianCityCode(city));
     target.searchParams.set("p", String(page));
   } else {
     target.searchParams.set("keyword", keyword.trim());
@@ -115,6 +116,14 @@ export function sourceListExtractionScript(
       return "";
     };
     const href = (root) => {
+      if (${JSON.stringify(sourceId)} === 'zhilian' && root.matches?.('.job-card')) {
+        // Public JobCard props observed in the site's loaded component (2026-09-28).
+        // Read only this rendered card's job link; never enumerate Vue state/user/cookies.
+        const job=root.__vue__?.$props?.job;
+        if(job && typeof job.name==='string' && typeof job.companyName==='string' &&
+          job.name.trim()===pick(root,spec.title) && job.companyName.trim()===pick(root,spec.company) &&
+          typeof job.positionUrl==='string') return job.positionUrl;
+      }
       if (root.matches?.('a[href]')) return root.href;
       for (const selector of spec.link) {
         const node = root.querySelector(selector);
@@ -159,7 +168,8 @@ export function sourceListExtractionScript(
         hasNext = true; break;
       }
     }
-    return { jobs, hasNext, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
+    const searchKeyword=${JSON.stringify(sourceId)}==='zhilian' ? document.querySelector('input[placeholder="搜索职位、公司"]')?.value : undefined;
+    return { jobs, hasNext, searchKeyword, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
   })()`;
 }
 
@@ -188,10 +198,11 @@ export function sanitizeSourceActionPage(
   const seen = new Set<string>();
   for (const item of raw.jobs || []) {
     if (!item || typeof item.title !== "string" || typeof item.url !== "string") continue;
-    if (!isAllowedSourceUrl(sourceId, item.url)) continue;
+    const candidateUrl=sourceId==="zhilian"?normalizeZhilianJobUrl(item.url):item.url;
+    if (!candidateUrl||!isAllowedSourceUrl(sourceId, candidateUrl)) continue;
     const title = item.title.trim().slice(0, 300);
     if (!title) continue;
-    const url = new URL(item.url).toString();
+    const url = new URL(candidateUrl).toString();
     if(sourceId==="zhilian" && (!isZhilianJobUrl(url) || !String(item.company||"").trim()))continue;
     if(seen.has(url))continue;
     seen.add(url);
@@ -232,7 +243,7 @@ export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):strin
     const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
     let cardCount=Array.from(document.querySelectorAll(${JSON.stringify(sourceId)}==='wuyou'
       ? '.joblist-item,[class*="joblist-item"]'
-      : '.joblist-box__item,.positionlist__item,[class*="joblist"] article,[class*="job-list"] [class*="item"],[class*="position-list"] [class*="item"]')).filter(visible).length;
+      : '.job-list-panel .job-card,.joblist-box__item,.positionlist__item,[class*="joblist"] article,[class*="job-list"] [class*="item"],[class*="position-list"] [class*="item"]')).filter(visible).length;
     const extracted=${sourceId === "zhilian" ? sourceListExtractionScript("zhilian") : "null"};
     if(extracted)cardCount=Math.max(cardCount,extracted.jobs.length);
     const formCount=Array.from(document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]')).filter(visible).length;
@@ -241,7 +252,7 @@ export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):strin
       .some(node=>/我的简历|个人中心|我的投递|消息|用户|头像/.test((node.textContent||'')+' '+(node.getAttribute('aria-label')||'')) || node.matches('[class*="user-avatar"],[class*="userAvatar"]'));
     const accountHeader=Array.from(document.querySelectorAll('header,[role="banner"],nav,[class*="header"],[class*="Header"]')).filter(visible).slice(0,20)
       .some(node=>{const label=(node.innerText||'').slice(0,1000);return /消息/.test(label)&&!/登录\\s*\\/?\\s*注册|立即登录/.test(label)&&Array.from(node.querySelectorAll('img[alt*="头像"],img[class*="avatar"],img[class*="Avatar"],[class*="avatar"] img,[class*="Avatar"] img,[aria-label*="个人"],[title*="个人"]')).some(visible);});
-    const account=accountLink||accountHeader;
+    const account=accountLink||accountHeader||(${JSON.stringify(sourceId)}==='zhilian'&&Array.from(document.querySelectorAll('.c-login__top .c-login__top__img[alt="avatar"]')).some(visible));
     const loginHost=/passport\\.zhaopin\\.com|login\\.51job\\.com/.test(location.hostname);
     const login=loginHost || (formCount>0&&!cardCount&&!account) || Boolean(extracted?.loginRequired);
     const splash=!cardCount&&!formCount&&/找风口工作|登录|招聘/.test(text)&&text.length<1200;
@@ -267,6 +278,24 @@ export function foregroundZhilianVerification(current:{session_status:string;lis
 
 export function validateZhilianSearchScope(url:string,keyword:string,city:string,page:number):void {
   const target=new URL(url);
-  if(target.searchParams.get("kw")!==keyword.trim() || Number(target.searchParams.get("p")||"1")!==page ||
-    (/^\d+$/.test(city)&&target.searchParams.get("jl")!==city))throw Error("source_scope_mismatch:站内搜索未保留本次关键词、城市或页码，不能将推荐列表当作检索结果");
+  if(target.hostname!=="www.zhaopin.com"||!/^\/jobs\/?$/.test(target.pathname)||target.searchParams.get("pageMode")!=="search"||
+    target.searchParams.get("kw")!==keyword.trim() || Number(target.searchParams.get("p")||target.searchParams.get("pageIndex")||"1")!==page ||
+    target.searchParams.get("jl")!==zhilianCityCode(city))throw Error("source_scope_mismatch:站内搜索未保留本次关键词、城市或页码，不能将推荐列表当作检索结果");
+}
+
+// Existing Python connector city codes; 全国=489 also confirmed in the current site bundle.
+export function zhilianCityCode(city:string):string {
+  const value=city.trim();
+  const codes:Record<string,string>={"":"489","全国":"489","北京":"530","上海":"538","广州":"654","深圳":"765","杭州":"736","南京":"631","苏州":"639","成都":"801","武汉":"570","西安":"535","重庆":"551"};
+  if(/^\d+$/.test(value))return value;
+  if(codes[value])return codes[value];
+  throw Error("source_scope_mismatch:尚未确认该城市的站内筛选，请选择已支持的城市");
+}
+
+export function normalizeZhilianJobUrl(value:string):string|null {
+  try{
+    const url=new URL(value);
+    if(url.protocol==="http:"&&["www.zhaopin.com","jobs.zhaopin.com"].includes(url.hostname)&&!url.port&&!url.username&&!url.password)url.protocol="https:";
+    return isZhilianJobUrl(url.toString())?url.toString():null;
+  }catch{return null;}
 }

@@ -134,6 +134,10 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
   async function verify(sourceId: string) {
     setVerifying(sourceId);
     onError(undefined);
+    if(sourceId==="zhilian"){
+      openBrowser({sourceId,title:"智联招聘",checkSource:true,onComplete:()=>setVerifying(undefined)});
+      return;
+    }
     try {
       const checked=await window.jobfindsme!.verifySource(sourceId);
       setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{source:checked,outcome:checked.live_search_enabled?"verified_now":"unverified",evidence:"live",attempted_at:new Date().toISOString(),detail:checked.detail,duration_ms:0}:row)}:current);

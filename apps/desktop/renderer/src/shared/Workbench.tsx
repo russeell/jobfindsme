@@ -8,7 +8,7 @@ import {BrowserAddressBar} from "./BrowserAddressBar";
 import { Icon } from "./Icon";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type CSSProperties } from "react";
 
-type Target = { sourceId: string; url?: string; title: string };
+type Target = { sourceId: string; url?: string; title: string; checkSource?:boolean; onComplete?:()=>void };
 const BrowserContext = createContext<(target: Target) => void>(() => {});
 export const useOriginalBrowser = () => useContext(BrowserContext);
 const ToggleContext = createContext({open:false,toggle:() => {}});
@@ -102,6 +102,9 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   useEffect(()=>{localStorage.setItem("jfm.browser.bookmarks",JSON.stringify(bookmarks));},[bookmarks]);
   const activeTab=browserState.tabs.find(t=>t.id===browserState.activeTabId);
   const slot = useRef<HTMLDivElement>(null);
+  useEffect(()=>window.jobfindsme?.onSourceBrowserOpen(state=>{
+    setBrowserState(state);setPanelOpen(true);setNewTab(false);setMode("browser");setTabError("");
+  }),[]);
   const splitterContext = `${hasBrowser}:${effectiveCollapsed}:${narrow}:${mode}:${browserExpanded}:${newTab}:${browserState.activeTabId}:${windowWidth}`;
   const visible = hasBrowser && !newTab && !!activeTab && (browserExpanded || !narrow || mode === "browser");
   useEffect(() => { localStorage.setItem("jfm.sidebar.width", String(sidebarWidth)); }, [sidebarWidth]);
@@ -109,7 +112,21 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   useEffect(() => { localStorage.setItem("jfm.browser.width", String(browserWidth)); }, [browserWidth]);
   useEffect(() => { const resize = () => setWindowWidth(window.innerWidth); window.addEventListener("resize", resize); return () => window.removeEventListener("resize", resize); }, []);
   // Opening a target creates/reuses a tab. Restoring the panel only restores layout.
-  useEffect(() => { if (!target || !slot.current) return; const r=slot.current.getBoundingClientRect();setTabError("");void window.jobfindsme!.openJobOriginal(target.sourceId,target.url??"",{x:r.x,y:r.y,width:r.width,height:r.height}).catch(e=>setTabError(String(e))).finally(()=>void window.jobfindsme!.sourceBrowserCommand("state").then(setBrowserState)); }, [target]);
+  useEffect(() => {
+    if (!target || !slot.current) return;
+    const r=slot.current.getBoundingClientRect(),bounds={x:r.x,y:r.y,width:r.width,height:r.height};setTabError("");
+    void (async()=>{
+      try{
+        if(target.checkSource){
+          await window.jobfindsme!.openSourceBrowser(target.sourceId,bounds);
+          setBrowserState(await window.jobfindsme!.sourceBrowserCommand("state"));
+          await window.jobfindsme!.layoutSourceBrowser(bounds);
+          await window.jobfindsme!.verifySource(target.sourceId);
+        }else await window.jobfindsme!.openJobOriginal(target.sourceId,target.url??"",bounds);
+      }catch(e){setTabError(String(e));}
+      finally{target.onComplete?.();void window.jobfindsme!.sourceBrowserCommand("state").then(setBrowserState);}
+    })();
+  }, [target]);
   useEffect(() => {
     let frame=0,lastLayout="";
     const selector="[data-browser-overlay],dialog[open],[aria-modal='true']";

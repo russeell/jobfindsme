@@ -54,7 +54,7 @@ export async function collectBrowserSourcePages(
         if(isCancelled())throw Error('cancelled:已停止后续翻页，保留已读取结果');
         const result = await manager.searchPage(
           sourceId,
-          { keyword: preflight.keywords[0], city: input.city || input.filters?.cities?.[0] || "", page },
+          { keyword: preflight.keywords[0], city: input.city || input.filters?.cities?.[0] || "", page, deadline },
         );
         pages.push(result);
         fetched++;

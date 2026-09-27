@@ -137,6 +137,33 @@ export class SourceBrowserManager {
     } catch {/* A page can navigate while its DOM is being read. */}
   }
 
+  /** Open/reveal one existing source tab; the renderer can show it before load finishes. */
+  prepareZhilianCheck(bounds:SourceBrowserBounds):void {
+    this.requestedBounds=bounds;
+    const tab=this.tabs.find(t=>t.id===this.activeId&&t.sourceId==="zhilian")||this.tabs.find(t=>t.sourceId==="zhilian");
+    if(tab){this.selectTab(tab.id);this.layout(bounds);return;}
+    if(this.tabs.length>=MAX_BROWSER_TABS)throw Error(`最多打开${MAX_BROWSER_TABS}个标签，请先关闭不需要的页面。`);
+    const target=sourceBrowserSpecs.zhilian.homeUrl!;
+    const created=this.createForegroundTab("zhilian",target);this.layout(bounds);
+    void this.loadTab(created,target).catch(()=>{}); // loadTab retains a visible page error.
+  }
+
+  async waitForVisibleZhilian(signal:AbortSignal):Promise<PassiveSourceObservation|undefined>{
+    const deadline=Date.now()+7000;
+    let last:PassiveSourceObservation|undefined;
+    while(!signal.aborted&&Date.now()<deadline){
+      last=await this.readVisibleZhilian();
+      if(last&&(last.kind==="challenge"||last.kind==="login"||last.records?.length))return last;
+      const tab=this.tabs.find(t=>t.id===this.activeId);
+      if(!this.visible||tab?.sourceId!=="zhilian")return last;
+      if(tab.error)throw Error("source_contract_error:智联页面加载失败，请在原页重试");
+      await new Promise(resolve=>setTimeout(resolve,200));
+    }
+    if(signal.aborted)throw Error("source_check_cancelled");
+    if(last?.authenticated)return last;
+    throw Error("source_timeout:智联岗位页尚未就绪");
+  }
+
   async readVisibleZhilian():Promise<PassiveSourceObservation|undefined>{
     const tab=this.tabs.find(t=>t.id===this.activeId);
     if(!this.visible||tab?.sourceId!=="zhilian"||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame())return;
@@ -332,7 +359,7 @@ export class SourceBrowserManager {
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
   private platformPending=new Map<string,Promise<SourceActionPage>>();
-  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
+  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number;forceRefresh?:boolean;deadline?:number}):Promise<SourceActionPage>{
     if(sourceId==="boss")return Promise.reject(Error("请使用 BOSS 有界采集入口"));
     const key=JSON.stringify([sourceId,input]),existing=this.platformPending.get(key);if(existing)return existing;
     const tail=this.platformTail.get(sourceId)||Promise.resolve();
@@ -344,30 +371,44 @@ export class SourceBrowserManager {
 
   private async searchPageRun(
     sourceId: "zhilian" | "wuyou",
-    input: { keyword: string; city: string; page: number; forceRefresh?:boolean },
+    input: { keyword: string; city: string; page: number; forceRefresh?:boolean;deadline?:number },
   ): Promise<SourceActionPage> {
-    const key=JSON.stringify([sourceId,input]),cached=this.careerCache.get(key),now=Date.now();
+    const key=JSON.stringify([sourceId,input.keyword,input.city,input.page]),cached=this.careerCache.get(key),now=Date.now();
     if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
-    const view=this.backgroundView(sourceId),epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=now+18000;
+    const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
+    const active=this.tabs.find(tab=>tab.id===this.activeId);
+    let reuseVisible=false;
+    if(sourceId==="zhilian"&&this.visible&&active?.sourceId==="zhilian"&&!active.view.webContents.isDestroyed()){
+      try{validateZhilianSearchScope(active.view.webContents.getURL(),input.keyword,input.city,input.page);reuseVisible=true;}catch{/* A different visible page cannot satisfy this query. */}
+    }
+    const foreground=sourceId==="zhilian";
+    if(foreground&&!reuseVisible&&this.tabs.length>=MAX_BROWSER_TABS)throw Error(`最多打开${MAX_BROWSER_TABS}个标签，请先关闭不需要的页面。`);
+    const searchTab=foreground&&!reuseVisible?this.createForegroundTab("zhilian",searchUrl):undefined;
+    const view=reuseVisible?active!.view:searchTab?.view||this.backgroundView(sourceId);
+    if(searchTab)this.window.webContents?.send("desktop:source-browser-opened",this.state());
+    const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
     const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
     const current=()=>!controller.signal.aborted&&epoch===this.careerEpoch&&sourceEpoch===(this.careerSourceEpoch.get(sourceId)||0);
     const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;let onAbort:()=>void=()=>{};try{
       if(!current())throw Error('cancelled:检索已停止');
       return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));}),new Promise<T>((_,reject)=>{onAbort=()=>reject(Error('cancelled:检索已停止'));controller.signal.addEventListener('abort',onAbort,{once:true});})]);
     }finally{if(timer)clearTimeout(timer);controller.signal.removeEventListener('abort',onAbort);}};
-    const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
+    let stage="load";
     try {
       // The SPA can render usable listings before ad/analytics resources finish.
       // Start reading at DOM readiness while the normal load promise remains handled.
+      if(!reuseVisible){
       let onReady:()=>void=()=>{};
       const ready=new Promise<void>(resolve=>{onReady=resolve;view.webContents.once("dom-ready",onReady);});
       const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
       try{await bounded(Promise.race([loaded,ready]));}
       finally{view.webContents.removeListener("dom-ready",onReady);}
+      }
       if(!current())throw Error('cancelled:检索已停止');
-      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean}|undefined;
-      for(let attempt=0;attempt<12;attempt++){
+      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string}|undefined;
+      stage="extract";
+      while(Date.now()<deadline){
         if(!current())throw Error('cancelled:检索已停止');
         if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:来源页面跳转不受支持');
         raw=await bounded(view.webContents.executeJavaScript(sourceListExtractionScript(sourceId)));
@@ -375,26 +416,34 @@ export class SourceBrowserManager {
         if(raw?.blocked){this.careerBlocked.set(sourceId,Date.now()+300000);throw Error('risk_control:'+raw.blocked);}
         if(raw?.loginRequired){
           // SSO can briefly render a login document before its redirect ends.
-          if(view.webContents.isLoadingMainFrame()&&attempt<11){await new Promise(r=>setTimeout(r,250));continue;}
+          if(view.webContents.isLoadingMainFrame()&&Date.now()+250<deadline){await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));continue;}
           throw Error('login_required:登录状态已失效');
         }
+        if(sourceId==="zhilian"&&raw?.searchKeyword!==undefined&&raw.searchKeyword.trim()!==input.keyword.trim()){
+          await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));continue;
+        }
         if(raw?.jobs?.length||raw?.empty)break;
-        await new Promise(r=>setTimeout(r,250));
+        await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));
       }
+      if(!raw?.jobs?.length&&!raw?.empty&&Date.now()>=deadline)throw Error('source_timeout:本轮时间内未出现岗位列表');
       if(!raw?.jobs?.length&&!raw?.empty)throw Error('source_contract_error:未读取到岗位列表，请在原页确认');
       if(!current())throw Error('cancelled:检索已停止');
+      stage="scope";
+      if(sourceId==="zhilian"&&raw?.searchKeyword!==undefined&&raw.searchKeyword.trim()!==input.keyword.trim())throw Error("source_scope_mismatch:页面搜索框与本次关键词不一致");
       if(sourceId==="zhilian")validateZhilianSearchScope(view.webContents.getURL(),input.keyword,input.city,input.page);
+      stage="normalize";
       const result=sanitizeSourceActionPage(sourceId,searchUrl,input.page,raw!,new Map());
       if(sourceId==="zhilian"){
         if(raw?.jobs?.length&&!result.records.length)throw Error("source_contract_error:可见岗位未通过标准字段校验，未计作搜索成功");
       }
       // Site city parameters use opaque IDs. Apply named cities to observed fields locally.
-      if(input.city&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>Boolean(r.payload.location)&&String(r.payload.location).includes(input.city));
+      if(input.city&&input.city!=="全国"&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>Boolean(r.payload.location)&&String(r.payload.location).includes(input.city));
       if(!current())throw Error('cancelled:检索已停止');
       this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
-    } finally {controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);this.releaseBackground(sourceId,view);}
+    } catch(error){throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}]`);}
+    finally {controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!foreground)this.releaseBackground(sourceId,view);}
   }
 
   destroy(): void {
@@ -431,7 +480,7 @@ export class SourceBrowserManager {
         webSecurity: true,
         allowRunningInsecureContent: false,
       }});
-    if(sourceId==="zhilian"&&foreground){
+    if(sourceId==="zhilian"){
       const current=view.webContents.getUserAgent();
       // The app display name can contain CJK characters. The first-party
       // login widget copies the user agent into an XHR header, which then fails.

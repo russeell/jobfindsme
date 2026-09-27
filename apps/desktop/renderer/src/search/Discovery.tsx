@@ -145,7 +145,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       const keepPrevious=!preserve&&!response.result_page.total&&!!page?.items.length&&!!(failed.length||blocked.length);
       if(!keepPrevious){filterBaseRun.current=response.result_page.run_id;setResult(previous=>preserve?mergeSearchCoverage(previous,response):response);if(!preserve||expand)setResultRequest(activeRequest.current);}
       if(failed.length||blocked.length||response.batch_failures?.length){
-        const base=userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?"source_contract_error":"partial"));
+        const base=userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?(failed[0]?.error||"source_contract_error") :"partial"));
         const batchNotice=response.batch_failures?.map(item=>`${sources.find(source=>source.source_id===item.source_id)?.name||item.source_id}${item.stage==="save"?"的读取结果保存失败":"的来源状态更新失败"}`).join("；");
         setSearchError(batchNotice?{...base,message:`${batchNotice}。已保存的岗位会保留。`}:base);
       }
@@ -195,9 +195,9 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       <p>{searching?`本轮请求 ${activeRequest.current?.sourceIds.length||0} 个来源；岗位在每个来源保存后加入结果。`:resultRequest?`结果对应「${resultRequest.intent||"简历关键词"}」和当时选择的 ${coveredSources.length} 个来源。`:"勾选会在下次检索时使用。"}</p>
       {searchError&&<p className="search-menu-warning">{searchError.message} 已保存的岗位保留。</p>}
       {matchingMessage&&<p>{matchingMessage}</p>}
-      {!searching&&result?.source_runs.map(run=><p key={run.source_id}>{sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}：{run.status==="success"?"已读取":run.status==="partial"?"部分岗位已读取":"本次未完成"} · {runReason(run.stop_reason)}</p>)}
+      {!searching&&result?.source_runs.map(run=><p key={run.source_id}>{sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}：{run.status==="success"?"已读取":run.status==="partial"?"部分岗位已读取":"本次未完成"} · {run.error?userError(run.error).message:runReason(run.stop_reason)}</p>)}
       {!searching&&result&&Object.entries(result.blocked_sources).map(([id,reason])=><p key={id}>{sources.find(source=>source.source_id===id)?.name||id}：{blockedReason(reason)}</p>)}
-      {!result&&unavailable.map(source=><p key={source.source_id}>{source.name}：需在岗位来源中检查或登录</p>)}
+      {!result&&unavailable.map(source=><p key={source.source_id}>{source.name}：{attemptable.some(item=>item.source_id===source.source_id)?"输入关键词即可尝试搜索，无需先检查":"请在原页完成平台验证后重试"}</p>)}
       <button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>管理岗位来源</button>
     </div></details>
     {searching?<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止</button>:result&&(pendingSources.length||continueRuns.length||canExpand)?<details ref={continueMenuRef} className="search-status-menu continue-menu"><summary>继续查找</summary><div className="search-menu-content"><p>按需选择下一批；已找到的岗位会保留。</p>{pendingSources.length>0&&<button type="button" onClick={()=>void search(undefined,undefined,false,false,true)}>检索未轮到的 {pendingSources.length} 个来源</button>}{continueRuns.map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>读取 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}下一页</button>)}{canExpand&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到其他来源（每次最多 2 个）</button>}</div></details>:null}

@@ -53,7 +53,7 @@ test("browser source results reject cross-origin URLs and bound fields", () => {
 test('named cities are never sent as opaque platform city codes',()=>{
  for(const id of ['zhilian','wuyou']){
  const url=new URL(buildSourceSearchUrl(id,'工程师','上海',1));
- assert.equal(url.searchParams.has(id==='zhilian'?'jl':'jobArea'),false);
+ assert.equal(url.searchParams.get(id==='zhilian'?'jl':'jobArea'),id==='zhilian'?'538':null);
  }
 });
 
@@ -61,7 +61,7 @@ test('named cities are never sent as opaque platform city codes',()=>{
 test('passive source observation separates splash, login form, and readable list without searches',async()=>{
  const {runInNewContext}=await import('node:vm');
  const script=passiveSourceObservationScript('zhilian');
- function observe(text,inputs,cards,account=false){const node=(shown=true)=>({textContent:'我的简历',getAttribute:()=>'',querySelector:()=>null,matches:()=>false,getBoundingClientRect:()=>({width:shown?10:0,height:shown?10:0})});return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:text},querySelector:()=>null,querySelectorAll(selector){if(selector.startsWith('input'))return Array.from({length:inputs==='hidden'?1:inputs},()=>node(inputs!=='hidden'));if(selector.startsWith('a[href*="/resume"]'))return account?[node(account==='hidden'?false:true)]:[];return Array.from({length:cards},()=>node(true));}}});}
+ function observe(text,inputs,cards,account=false){const node=(shown=true)=>({textContent:'我的简历',getAttribute:()=>'',querySelector:()=>null,matches:()=>false,getBoundingClientRect:()=>({width:shown?10:0,height:shown?10:0})});return runInNewContext(script,{location:{href:'https://www.zhaopin.com/',hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:text},querySelector:()=>null,querySelectorAll(selector){if(selector.startsWith('.c-login'))return [];if(selector.startsWith('input'))return Array.from({length:inputs==='hidden'?1:inputs},()=>node(inputs!=='hidden'));if(selector.startsWith('a[href*="/resume"]'))return account?[node(account==='hidden'?false:true)]:[];return Array.from({length:cards},()=>node(true));}}});}
  assert.equal(observe('找风口工作，就上智联招聘',0,0).kind,'splash');
  assert.equal(observe('求职者登录',2,0).kind,'login');
  assert.equal(observe('搜索岗位',0,3).kind,'list');
@@ -115,7 +115,7 @@ test('foreground Zhaopin standardization is distinct from authenticated search c
  assert.match(observed.notes,/1 条岗位/);
  const anonymous=foregroundZhilianVerification(current,{authenticated:false,records:page.records});assert.equal(anonymous.session_status,'unverified');
  const prior=foregroundZhilianVerification({...current,session_status:'verified',list_status:'verified',live_search_enabled:true},{authenticated:false,records:[]});assert.equal(prior.enabled,true);assert.equal(prior.list_status,'verified');
- assert.doesNotThrow(()=>validateZhilianSearchScope('https://sou.zhaopin.com/?kw=AI%20Agent&jl=538&p=1','AI Agent','538',1));
+ assert.doesNotThrow(()=>validateZhilianSearchScope('https://www.zhaopin.com/jobs/?pageMode=search&kw=AI%20Agent&jl=538&p=1','AI Agent','538',1));
  for(const url of ['https://www.zhaopin.com/jobs','https://sou.zhaopin.com/?kw=工程师','https://sou.zhaopin.com/?kw=AI%20Agent&jl=530'])assert.throws(()=>validateZhilianSearchScope(url,'AI Agent','538',1),/source_scope_mismatch/);
 });
 
@@ -131,4 +131,38 @@ test('canonical-link fallback reads company fields and rejects visible login ove
  assert.equal(sanitizeSourceActionPage('zhilian',context.location.href,1,raw).records.length,1);
  overlay=true;assert.equal(runInNewContext(passiveSourceObservationScript('zhilian'),context).kind,'login');
  context.document.body.innerText='请完成验证';assert.equal(runInNewContext(passiveSourceObservationScript('zhilian'),context).kind,'challenge');
+});
+
+
+test('observed split-layout JobCard uses only its matched public job prop for the canonical URL',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const title='AI agent BD',company='进迭时空(杭州)科技有限公司';
+ const job={name:title,companyName:company,positionUrl:'http://www.zhaopin.com/jobdetail/CCL1378359190J000000001.htm'};
+ const vue={$props:{job}};
+ for(const key of ['$data','$store','user','cookiesData'])Object.defineProperty(vue,key,{get(){throw Error('must not read private Vue state');}});
+ const card={__vue__:vue,matches:s=>s==='.job-card',getBoundingClientRect:()=>({width:300,height:200}),querySelector(s){
+  if(s==='.job-card__title-clamp .vue-clamp__text')return {textContent:title};
+  if(s==='.job-card__company-name')return {textContent:company};
+  if(s==='.job-card__location')return {textContent:'深圳 宝安 新安'};
+  if(s.includes('salary'))return {textContent:'1.5-3万'};
+  return null;
+ }};
+ const ctx={location:{hostname:'www.zhaopin.com',href:'https://www.zhaopin.com/jobs/?pageMode=search&jl=765&kw=AI+Agent'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'职位 消息 AI Agent'},querySelector:s=>s.startsWith('input')?{value:'AI Agent'}:null,querySelectorAll:s=>s==='.job-list-panel .job-card'?[card]:[]}};
+ const raw=runInNewContext(sourceListExtractionScript('zhilian'),ctx);assert.equal(raw.jobs.length,1);assert.equal(raw.jobs[0].url,job.positionUrl);assert.equal(raw.searchKeyword,'AI Agent');
+ const normalized=sanitizeSourceActionPage('zhilian',ctx.location.href,1,raw);assert.equal(normalized.records.length,1);assert.equal(normalized.records[0].payload.url,job.positionUrl.replace('http:','https:'));
+ job.name='另一个岗位';assert.equal(runInNewContext(sourceListExtractionScript('zhilian'),ctx).jobs.length,0);
+});
+
+test('Zhaopin uses the observed site search route and explicit city scope',()=>{
+ const url=new URL(buildSourceSearchUrl('zhilian','AI Agent','深圳',1));
+ assert.equal(url.origin+url.pathname,'https://www.zhaopin.com/jobs/');assert.equal(url.searchParams.get('pageMode'),'search');assert.equal(url.searchParams.get('jl'),'765');
+ assert.equal(new URL(buildSourceSearchUrl('zhilian','AI','',1)).searchParams.get('jl'),'489');
+ assert.throws(()=>buildSourceSearchUrl('zhilian','AI','未核对城市',1),/source_scope_mismatch/);
+});
+
+
+test('observed HTTP official detail links upgrade only their transport, never an unknown host',async()=>{
+ const {normalizeZhilianJobUrl}=await import('../dist-electron/main/sources/source-actions.js');
+ assert.equal(normalizeZhilianJobUrl('http://www.zhaopin.com/jobdetail/CC000374740J40791423406.htm'),'https://www.zhaopin.com/jobdetail/CC000374740J40791423406.htm');
+ for(const url of ['http://evil.example/jobdetail/1.htm','http://www.zhaopin.com/companydetail/1.htm','http://www.zhaopin.com:8080/jobdetail/1.htm','http://user@www.zhaopin.com/jobdetail/1.htm'])assert.equal(normalizeZhilianJobUrl(url),null);
 });

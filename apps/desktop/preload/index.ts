@@ -80,6 +80,11 @@ const bridge: DesktopBridge = Object.freeze({
   legacyTaskStatus: (workspaceId) => ipcRenderer.invoke("desktop:legacy-task-status", workspaceId),
   secureStorageAvailable: () => ipcRenderer.invoke("desktop:secure-storage-available"),
   getServiceStatus: () => ipcRenderer.invoke("desktop:get-service-status"),
+  onSourceBrowserOpen: listener => {
+    const handler=(_event:Electron.IpcRendererEvent,state:Parameters<typeof listener>[0])=>listener(state);
+    ipcRenderer.on("desktop:source-browser-opened",handler);
+    return ()=>ipcRenderer.removeListener("desktop:source-browser-opened",handler);
+  },
   onSourceBrowserFocus: listener => {
     const handler=()=>listener();
     ipcRenderer.on("desktop:source-browser-focused",handler);

@@ -27,6 +27,7 @@ export const sourceBrowserSpecs: Record<SourceBrowserId, {
     partition: "persist:jobfindsme-source-liepin",
   },
   zhilian: {
+    homeUrl: "https://www.zhaopin.com/jobs/",
     loginUrl: "https://passport.zhaopin.com/login?bkUrl=https%3A%2F%2Fi.zhaopin.com%2Fblank%3Fhttps%3A%2F%2Fwww.zhaopin.com%2Findex%3FvalidateCampus%3D",
     allowedHosts: ["zhaopin.com"],
     partition: "persist:jobfindsme-source-zhilian",
