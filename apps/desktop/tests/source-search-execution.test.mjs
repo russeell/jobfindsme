@@ -41,3 +41,31 @@ test('source status update failure is reported after A was saved and B still sav
  assert.equal(result.source_runs.find(run=>run.source_id==='zhilian')?.status,'partial');
  assert.equal(result.source_runs.find(run=>run.source_id==='wuyou')?.status,'success');
 });
+
+test('the fast source is saved and emitted before the slow source finishes',async()=>{
+ let releaseSlow,notifyFast;const slow=new Promise(resolve=>{releaseSlow=resolve;});
+ const fastSeen=new Promise(resolve=>{notifyFast=resolve;});const events=[],writes=[];
+ const client={searchPreflight:async()=>preflight,runSourceSearch:async request=>{const id=request.source_ids[0];writes.push(id);return response(id,'run-stream',writes.length);}};
+ const work=executeBoundedSourceSearch(input,{client,manager:{searchPage:async id=>{if(id==='wuyou')await slow;return {records:[record(id)],next_cursor:null};}},getCancellationEpoch:()=>0,onProgress:value=>{if(value.response){events.push(value);if(value.source_id==='zhilian')notifyFast();}}});
+ await fastSeen;
+ assert.deepEqual(writes,['zhilian']);
+ assert.equal(events[0].response.result_page.total,1);
+ assert.equal(events[0].run_id,'run-stream');
+ releaseSlow();const final=await work;
+ assert.deepEqual(writes,['zhilian','wuyou']);
+ assert.equal(final.result_page.total,2);
+ assert.deepEqual(events.map(event=>event.response.result_page.total),[1,2]);
+});
+
+test('cancel after a saved fast source retains its batch and skips queued sources',async()=>{
+ let epoch=0,notifyFast,releaseSlow;const fastSeen=new Promise(resolve=>{notifyFast=resolve;});const slow=new Promise(resolve=>{releaseSlow=resolve;});
+ const seen=[],saved=[];
+ const ids=['zhilian','wuyou','boss'];
+ const client={searchPreflight:async()=>({...preflight,allowed_source_ids:ids}),runSourceSearch:async request=>{const id=request.source_ids[0];saved.push(id);return response(id,'run-cancel',saved.length);}};
+ const work=executeBoundedSourceSearch({...input,source_ids:ids},{client,manager:{searchPage:async id=>{seen.push(id);if(id==='wuyou')await slow;return {records:[record(id)],next_cursor:null};}},getCancellationEpoch:()=>epoch,onProgress:value=>{if(value.response?.source_runs[0]?.source_id==='zhilian')notifyFast();}});
+ await fastSeen;epoch++;releaseSlow();
+ const final=await work;
+ assert.deepEqual(seen,['zhilian','wuyou']);
+ assert.ok(saved.includes('zhilian'));
+ assert.equal(final.result_page.run_id,'run-cancel');
+});
