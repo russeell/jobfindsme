@@ -358,12 +358,15 @@ export class DesktopApiClient {
   saveAgentReport(input:Record<string,unknown>):Promise<ResearchReport|null> {
     return this.json("/v1/research-agent/reports",{method:"POST",body:JSON.stringify(input)});
   }
-  listAgentConversations(workspaceId:string):Promise<Array<Record<string,unknown>>> {
-    return this.json(`/v1/research-agent/conversations?${new URLSearchParams({workspace_id:workspaceId})}`);
+  listAgentConversations(workspaceId:string,archived=false):Promise<Array<Record<string,unknown>>> {
+    return this.json(`/v1/research-agent/conversations?${new URLSearchParams({workspace_id:workspaceId,archived:String(archived)})}`);
   }
   saveAgentConversation(input:Record<string,unknown>):Promise<unknown> {
     return this.json("/v1/research-agent/conversations",{method:"PUT",body:JSON.stringify(input)});
   }
+  archiveAgentConversation(workspaceId:string,conversationId:string):Promise<unknown>{return this.json(`/v1/research-agent/conversations/${encodeURIComponent(conversationId)}/archive?${new URLSearchParams({workspace_id:workspaceId})}`,{method:"POST"});}
+  restoreAgentConversation(workspaceId:string,conversationId:string):Promise<unknown>{return this.json(`/v1/research-agent/conversations/${encodeURIComponent(conversationId)}/restore?${new URLSearchParams({workspace_id:workspaceId})}`,{method:"POST"});}
+  deleteArchivedAgentConversation(workspaceId:string,conversationId:string):Promise<unknown>{return this.json(`/v1/research-agent/conversations/${encodeURIComponent(conversationId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{method:"DELETE"});}
 
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]> {
     const query = new URLSearchParams({ workspace_id: workspaceId });

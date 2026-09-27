@@ -220,12 +220,15 @@ class ResearchAgentStore:
             )
         return {**item, "updated_at": now}
 
-    def list_conversations(self, workspace_id: str) -> list[dict]:
+    def list_conversations(
+        self, workspace_id: str, *, archived: bool = False
+    ) -> list[dict]:
         with self.database.connect() as connection:
             self._workspace(connection, workspace_id)
             rows = connection.execute(
-                """SELECT * FROM research_conversations WHERE workspace_id=?
-                   AND hidden_at IS NULL ORDER BY updated_at DESC LIMIT 50""",
+                f"""SELECT * FROM research_conversations WHERE workspace_id=?
+                   AND hidden_at IS {"NOT NULL" if archived else "NULL"}
+                   ORDER BY updated_at DESC LIMIT 50""",
                 (workspace_id,),
             ).fetchall()
         return [
@@ -244,9 +247,50 @@ class ResearchAgentStore:
                 if row["pending_json"]
                 else None,
                 "updated_at": row["updated_at"],
+                "archived_at": row["hidden_at"],
             }
             for row in rows
         ]
+
+    def archive_conversation(self, workspace_id: str, conversation_id: str) -> None:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            self._workspace(connection, workspace_id)
+            result = connection.execute(
+                """UPDATE research_conversations SET hidden_at=?
+                   WHERE workspace_id=? AND conversation_id=? AND hidden_at IS NULL""",
+                (_now(), workspace_id, conversation_id),
+            )
+            if not result.rowcount:
+                raise LookupError("active conversation not found")
+
+    def restore_conversation(self, workspace_id: str, conversation_id: str) -> None:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            self._workspace(connection, workspace_id)
+            result = connection.execute(
+                """UPDATE research_conversations SET hidden_at=NULL
+                   WHERE workspace_id=? AND conversation_id=?
+                   AND hidden_at IS NOT NULL""",
+                (workspace_id, conversation_id),
+            )
+            if not result.rowcount:
+                raise LookupError("archived conversation not found")
+
+    def delete_archived_conversation(
+        self, workspace_id: str, conversation_id: str
+    ) -> None:
+        with self.database.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            self._workspace(connection, workspace_id)
+            result = connection.execute(
+                """DELETE FROM research_conversations
+                   WHERE workspace_id=? AND conversation_id=?
+                   AND hidden_at IS NOT NULL""",
+                (workspace_id, conversation_id),
+            )
+            if not result.rowcount:
+                raise LookupError("archived conversation not found")
 
     def save_execution(self, workspace_id: str, item: dict) -> dict:
         execution_id = str(item["id"])

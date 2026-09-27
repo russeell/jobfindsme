@@ -501,14 +501,14 @@ test('a failed correction still returns the previously verified claim',async()=>
  }finally{server.close();}
 });
 
-test('a saved JD can be summarized naturally without public source access or a report',async()=>{
+test('a job-linked research turn analyzes its saved JD with streaming and no public reads or report',async()=>{
  let turn=0,publicReads=0,reports=0,release,firstChunk;const gate=new Promise(resolve=>{release=resolve;});const sawChunk=new Promise(resolve=>{firstChunk=resolve;});const server=http.createServer(async(_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
   if(turn<=2){sse(response,turn===1?tool('read_job',{job_id:'job-42'},turn):tool('answer_in_chat',{},turn),'tool_calls');return;}
   response.write(`data: ${JSON.stringify({id:'chatcmpl-jd',object:'chat.completion.chunk',created:1,model:'mock',choices:[{index:0,delta:{role:'assistant',content:'这份 JD 主要写了 Python 开发'},finish_reason:null}]})}\n\n`);
   firstChunk();await gate;sse(response,{role:'assistant',content:'与团队协作；我可以帮你改写简历。'},'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const deltas=[];let finished=false;
- try{const work=runPiResearchAgent({workspaceId:'w1',requestId:'req_jd_local',question:'帮我概括这份 JD',jobId:'job-42',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>{publicReads++;return [];},searchWeb:async()=>{publicReads++;return [];},readPage:async()=>{publicReads++;return null;},readJob:async()=>({job_id:'job-42',description:'Python 开发，团队协作'}),readBrowserPage:async()=>{publicReads++;return null;},saveExecution:async()=>{},saveReport:async()=>{reports++;return null;}},delta=>deltas.push(delta),new AbortController().signal).then(value=>{finished=true;return value;});
+ try{const work=runPiResearchAgent({workspaceId:'w1',requestId:'req_jd_local',question:'岗位有坑吗',jobId:'job-42',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>{publicReads++;return [];},searchWeb:async()=>{publicReads++;return [];},readPage:async()=>{publicReads++;return null;},readJob:async()=>({job_id:'job-42',description:'Python 开发，团队协作'}),readBrowserPage:async()=>{publicReads++;return null;},saveExecution:async()=>{},saveReport:async()=>{reports++;return null;}},delta=>deltas.push(delta),new AbortController().signal).then(value=>{finished=true;return value;});
   await sawChunk;await new Promise(resolve=>setTimeout(resolve,15));assert.equal(finished,false);assert.deepEqual(deltas,['这份 JD 主要写了 Python 开发']);
   release();const result=await work;assert.equal(publicReads,0);assert.equal(reports,0);assert.match(result.text,/Python 开发/);assert.equal(deltas.join(''),result.text);assert.equal(result.report,undefined);
  }finally{release();server.close();}

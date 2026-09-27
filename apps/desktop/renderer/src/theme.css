@@ -336,6 +336,23 @@ nav button .nav-label {font-size:13px;}
 
 /* D51: one composer for first research and evidence-backed follow-up. */
 .research-workbench {position:relative;width:100%;max-width:none;height:100%;min-height:0;display:flex;flex-direction:column;}
+.sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;}
+.sidebar-history-slot[hidden],.sidebar-collapsed .sidebar-history-slot {display:none;}
+.research-history-sidebar {display:flex;flex-direction:column;min-height:0;min-width:0;flex:1;border-top:1px solid var(--line);}
+.research-history-sidebar .research-history-heading {padding:8px 10px;}
+.research-history-sidebar .research-history-body {padding:8px;}
+.research-history-tabs {display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--line);}
+.research-history-tabs button {flex:1;min-width:0;padding:5px 2px;font-size:11px;}
+.research-history-tabs button[aria-selected="true"] {background:var(--surface-selected);font-weight:650;}
+.research-history-sidebar .research-history-row {gap:2px;}
+.research-history-sidebar .research-history-row>button:first-child {padding:7px 3px;}
+.research-history-sidebar .research-history-row>button:not(:first-child) {padding:4px;font-size:11px;}
+@media(hover:hover){.research-history-sidebar .research-history-row>button[aria-label^="归档"] {opacity:0;}.research-history-sidebar .research-history-row:hover>button[aria-label^="归档"],.research-history-sidebar .research-history-row:focus-within>button[aria-label^="归档"] {opacity:1;}}
+.research-history-archived-title {min-width:0;display:grid;gap:2px;padding:7px 3px;}
+.research-history-archived-title strong,.research-history-archived-title small {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.research-history-archived-title small {font-size:11px;color:var(--text-muted);}
+.research-history-archived-actions {display:flex;flex-direction:column;}
+.research-history-archived-actions button {padding:3px;font-size:11px;}
 .research-scroll-region {flex:1;min-height:0;width:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:4px 0 18px;scrollbar-width:thin;scrollbar-color:#c8cac8 transparent;}
 .research-scroll-region::-webkit-scrollbar {width:6px;}
 .research-scroll-region::-webkit-scrollbar-track {background:transparent;}

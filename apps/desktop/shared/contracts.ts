@@ -102,7 +102,11 @@ export type DesktopBridge = {
   hideResearchReport(workspaceId:string,reportId:string):Promise<void>;
   createResearchReport(input: ResearchRunInput): Promise<ResearchReport>;
   listResearchChats(workspaceId:string):Promise<Array<Record<string,unknown>>>;
+  listArchivedResearchChats(workspaceId:string):Promise<Array<Record<string,unknown>>>;
   saveResearchChat(input:Record<string,unknown>):Promise<void>;
+  archiveResearchChat(workspaceId:string,conversationId:string):Promise<void>;
+  restoreResearchChat(workspaceId:string,conversationId:string):Promise<void>;
+  deleteArchivedResearchChat(workspaceId:string,conversationId:string):Promise<void>;
   cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
   runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
   cancelResearchChat(requestId:string):Promise<void>;

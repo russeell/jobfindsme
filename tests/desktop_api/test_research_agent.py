@@ -44,6 +44,28 @@ def evidence(
     }
 
 
+def test_conversation_archive_restore_delete_are_scoped_and_persistent(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    other = WorkspaceService(store.database).create().workspace_id
+    item = {"id": "chat-1", "turns": [{"role": "user", "text": "岗位有坑吗"}]}
+    store.save_conversation(workspace, item)
+    with pytest.raises(LookupError):
+        store.delete_archived_conversation(workspace, "chat-1")
+    with pytest.raises(LookupError):
+        store.archive_conversation(other, "chat-1")
+    store.archive_conversation(workspace, "chat-1")
+    assert store.list_conversations(workspace) == []
+    assert len(store.list_conversations(workspace, archived=True)) == 1
+    store.save_conversation(workspace, item)
+    assert store.list_conversations(workspace) == []
+    store.restore_conversation(workspace, "chat-1")
+    assert len(store.list_conversations(workspace)) == 1
+    store.archive_conversation(workspace, "chat-1")
+    store.delete_archived_conversation(workspace, "chat-1")
+    assert store.list_conversations(workspace, archived=True) == []
+    assert store.list_conversations(workspace) == []
+
+
 def test_conversation_execution_and_report_are_workspace_scoped(tmp_path):
     store, workspace = setup_store(tmp_path)
     other = WorkspaceService(store.database).create().workspace_id
@@ -765,6 +787,63 @@ def test_agent_endpoints_require_auth_and_do_not_cross_workspace(tmp_path):
             params={"workspace_id": "elsewhere"},
         ).status_code
         == 404
+    )
+    path = "/v1/research-agent/conversations/c1"
+    assert (
+        client.delete(
+            path, headers=headers, params={"workspace_id": workspace}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            f"{path}/archive", headers=headers, params={"workspace_id": workspace}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/v1/research-agent/conversations",
+            headers=headers,
+            params={"workspace_id": workspace},
+        ).json()
+        == []
+    )
+    assert (
+        len(
+            client.get(
+                "/v1/research-agent/conversations",
+                headers=headers,
+                params={"workspace_id": workspace, "archived": True},
+            ).json()
+        )
+        == 1
+    )
+    assert (
+        client.post(
+            f"{path}/restore", headers=headers, params={"workspace_id": workspace}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"{path}/archive", headers=headers, params={"workspace_id": workspace}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.delete(
+            path, headers=headers, params={"workspace_id": workspace}
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            "/v1/research-agent/conversations",
+            headers=headers,
+            params={"workspace_id": workspace, "archived": True},
+        ).json()
+        == []
     )
 
 

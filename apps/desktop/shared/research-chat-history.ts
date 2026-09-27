@@ -56,6 +56,10 @@ export function loadResearchChats(workspaceId:string):SavedResearchChat[]{
   }catch{return [];}
 }
 
+export function legacyChatsForMigration(cached:SavedResearchChat[],archivedIds:Set<string>,alreadyMigrated:boolean):SavedResearchChat[]{
+  return alreadyMigrated?[]:cached.filter(item=>!archivedIds.has(item.id));
+}
+
 export function saveResearchChats(workspaceId:string,chats:SavedResearchChat[]):boolean{
   try{localStorage.setItem(key(workspaceId),JSON.stringify(chats.slice(0,50)));return true;}
   catch{return false;}

@@ -1982,9 +1982,50 @@ def create_app(
             raise HTTPException(status_code=400, detail=str(error)) from error
 
     @app.get("/v1/research-agent/conversations", dependencies=[Depends(require_token)])
-    def list_agent_conversations(workspace_id: str) -> list[dict]:
+    def list_agent_conversations(
+        workspace_id: str, archived: bool = False
+    ) -> list[dict]:
         try:
-            return research_agent_store.list_conversations(workspace_id)
+            return research_agent_store.list_conversations(
+                workspace_id, archived=archived
+            )
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.post(
+        "/v1/research-agent/conversations/{conversation_id}/archive",
+        dependencies=[Depends(require_token)],
+    )
+    def archive_agent_conversation(conversation_id: str, workspace_id: str) -> dict:
+        try:
+            research_agent_store.archive_conversation(workspace_id, conversation_id)
+            return {"archived": True}
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.post(
+        "/v1/research-agent/conversations/{conversation_id}/restore",
+        dependencies=[Depends(require_token)],
+    )
+    def restore_agent_conversation(conversation_id: str, workspace_id: str) -> dict:
+        try:
+            research_agent_store.restore_conversation(workspace_id, conversation_id)
+            return {"restored": True}
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
+
+    @app.delete(
+        "/v1/research-agent/conversations/{conversation_id}",
+        dependencies=[Depends(require_token)],
+    )
+    def delete_archived_agent_conversation(
+        conversation_id: str, workspace_id: str
+    ) -> dict:
+        try:
+            research_agent_store.delete_archived_conversation(
+                workspace_id, conversation_id
+            )
+            return {"deleted": True}
         except LookupError as error:
             raise HTTPException(status_code=404, detail=str(error)) from error
 

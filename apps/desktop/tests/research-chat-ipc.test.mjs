@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {beginChat,finishChat,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {beginChat,finishChat,legacyChatsForMigration,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {explicitReportRequest,modelHistoryWithinBudget,validResearchChatInput} from '../dist-electron/shared/research-chat-ipc.js';
 
 test('a separate report needs an affirmative current request',()=>{
@@ -31,10 +31,10 @@ test('15 rounds with a long answer pass the same validator as the IPC handler',(
  assert.equal(chat.turns.at(-1).text.length,12004);
 });
 
-test('IPC question contract accepts 300, 301 and 700 characters but rejects 701',()=>{
+test('IPC question contract accepts a pasted JD up to 12000 characters',()=>{
  const base={request_id:'request-1234',session_id:'session-1234',workspace_id:'workspace-1',connection_id:'model-1',research:true,history:[]};
- for(const size of [300,301,700])assert.equal(validResearchChatInput({...base,question:'问'.repeat(size)}),true);
- assert.equal(validResearchChatInput({...base,question:'问'.repeat(701)}),false);
+ for(const size of [300,301,700,12000])assert.equal(validResearchChatInput({...base,question:'问'.repeat(size)}),true);
+ assert.equal(validResearchChatInput({...base,question:'问'.repeat(12001)}),false);
 });
 
 test('more than 200 short saved turns remain complete while IPC receives the latest 200',()=>{
@@ -45,4 +45,10 @@ test('more than 200 short saved turns remain complete while IPC receives the lat
  assert.deepEqual(model[0],full[20]);
  const input={request_id:'request-1234',session_id:'session-1234',workspace_id:'workspace-1',connection_id:'model-1',question:'继续追问',research:false,history:model};
  assert.equal(validResearchChatInput(input),true);
+});
+
+test('archived and deleted chats never migrate back from device cache after SQLite takeover',()=>{
+ const cached=[{id:'archived'},{id:'deleted'},{id:'legacy'}];
+ assert.deepEqual(legacyChatsForMigration(cached,new Set(['archived']),false).map(item=>item.id),['deleted','legacy']);
+ assert.deepEqual(legacyChatsForMigration(cached,new Set(),true),[]);
 });

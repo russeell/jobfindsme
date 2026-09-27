@@ -721,10 +721,21 @@ ipcMain.handle("desktop:list-research-chats",async(event,workspaceId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
   return apiClient.listAgentConversations(workspaceId);
 });
+ipcMain.handle("desktop:list-archived-research-chats",async(event,workspaceId:string)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
+  return apiClient.listAgentConversations(workspaceId,true);
+});
 ipcMain.handle("desktop:save-research-chat",async(event,input:Record<string,unknown>)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||!input||typeof input.workspace_id!=="string")throw Error("research unavailable");
   await apiClient.saveAgentConversation(input);
 });
+for(const [channel,action] of [["archive",(workspaceId:string,id:string)=>apiClient!.archiveAgentConversation(workspaceId,id)],["restore",(workspaceId:string,id:string)=>apiClient!.restoreAgentConversation(workspaceId,id)],["delete-archived",(workspaceId:string,id:string)=>apiClient!.deleteArchivedAgentConversation(workspaceId,id)]] as const){
+  ipcMain.handle(`desktop:${channel}-research-chat`,async(event,workspaceId:string,id:string)=>{
+    if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string"||typeof id!=="string")throw Error("research unavailable");
+    if(chatRuns.current?.sessionId===id&&chatRuns.current.workspaceId===workspaceId)throw Error("当前对话运行中，请先停止再整理历史");
+    await action(workspaceId,id);
+  });
+}
 ipcMain.handle("desktop:cancel-research-chat",async(event,requestId:string)=>{
   if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
   if(requestId)chatRuns.cancel(requestId);
