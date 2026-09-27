@@ -339,7 +339,7 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
     }catch(error){throw Error(`source_contract_error:${String(error).slice(0,250)}`);}
     const first=pages.flatMap(p=>p.records)[0];
     if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
-    if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
+    if(sourceId!=='company_03'&&first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
     const summary=summarizeSourceVerification(pages);
     summary.session_status='anonymous';summary.pagination_status='partial';
     summary.notes='有界检索已读取列表；分页/城市覆盖仍需逐项实测。'+summary.notes;

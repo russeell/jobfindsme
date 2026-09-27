@@ -58,8 +58,12 @@ async function setCareerKeyword(keyword:string):Promise<boolean>{
 export function careerRecords(sourceId:SourceBrowserId,url:string,raw:CareerPage,keyword:string,city:string):SourceActionPage {
  const seen=new Set<string>();
  raw={...raw,jobs:raw.jobs.map(job=>({...job,url:canonicalJobUrl(job.url)}))};
- const records=raw.jobs.filter(j=>isAllowedSourceUrl(sourceId,j.url)&&!seen.has(j.url)&&!!seen.add(j.url)).filter(j=>!keyword||j.title.toLowerCase().includes(keyword.toLowerCase())).filter(j=>!city||!!j.location&&j.location.includes(city)).map(j=>({external_id:j.url,source_name:browserSiteNames[sourceId],source_url:url,payload:{title:j.title,company:j.company||browserSiteNames[sourceId],location:j.location,salary:j.salary,description:j.description||j.title,url:j.url,apply_url:j.url,detail_level:j.description&&j.description.length>=80?'detail_page':'list_card'}}));
+ const records=raw.jobs.filter(j=>isAllowedSourceUrl(sourceId,j.url)&&!seen.has(j.url)&&!!seen.add(j.url)).filter(j=>careerTitleMatches(sourceId,j.title,keyword)).filter(j=>!city||!!j.location&&j.location.includes(city)).map(j=>({external_id:j.url,source_name:browserSiteNames[sourceId],source_url:url,payload:{title:j.title,company:j.company||browserSiteNames[sourceId],location:j.location,salary:j.salary,description:j.description||j.title,url:j.url,apply_url:j.url,detail_level:j.description&&j.description.length>=80?'detail_page':'list_card'}}));
  return {records,next_cursor:null};
+}
+export function careerTitleMatches(sourceId:SourceBrowserId,title:string,keyword:string):boolean{
+ const candidate=title.toLowerCase(),query=keyword.toLowerCase().trim();if(!query)return true;
+ return sourceId==='company_03'?query.split(/\s+/u).some(part=>candidate.includes(part)):candidate.includes(query);
 }
 
 // Observed click-only list titles, scoped per first-party site. No application buttons.
@@ -72,11 +76,18 @@ export function careerClickableScript(sourceId:SourceBrowserId,index=-1):string 
 function alibabaClickablePage(index:number):Array<{title:string;location:string}> {
  const visible=(element:HTMLElement)=>{const bounds=element.getBoundingClientRect();return bounds.width>0&&bounds.height>0;};
  const text=(element:HTMLElement)=>(element.innerText||'').trim();
- const cards=Array.from(document.querySelectorAll<HTMLElement>('article,li,div')).filter(visible)
-  .filter(element=>getComputedStyle(element).cursor==='pointer'&&/更新于|Updated On/i.test(text(element))&&text(element).length<600)
-  .filter(element=>!Array.from(element.children).some(child=>child instanceof HTMLElement&&getComputedStyle(child).cursor==='pointer'&&/更新于|Updated On/i.test(text(child))));
+ const roleCard=(element:HTMLElement)=>{const lines=text(element).split('\n').map(line=>line.trim()).filter(Boolean);return getComputedStyle(element).cursor==='pointer'&&lines.length>=3&&!/^(更新于|Updated On)/i.test(lines[0])&&lines.some(line=>/^(更新于|Updated On)/i.test(line))&&text(element).length<600;};
+ const cards=Array.from(document.querySelectorAll<HTMLElement>('article,li,div')).filter(visible).filter(roleCard)
+  .filter(element=>!Array.from(element.children).some(child=>child instanceof HTMLElement&&roleCard(child)));
  if(index>=0){cards[index]?.click();return [];}
- return cards.slice(0,40).map(element=>({title:text(element).split('\n')[0].trim(),location:text(element)})).filter(item=>!!item.title);
+ return cards.slice(0,40).map(element=>{const lines=text(element).split('\n').map(line=>line.trim()).filter(Boolean);return {title:lines[0],location:lines.at(-1)||''};});
+}
+export function alibabaSearchStateScript():string{return `(()=>{const input=Array.from(document.querySelectorAll('input')).find(e=>/关键词搜索职位/.test(e.placeholder||''));const body=document.body?.innerText||'';return {keyword:input?.value||'',count:/共(\\d+)个岗位/.exec(body)?.[1]||'',titles:(${alibabaClickablePage.toString()})(-1).map(item=>item.title)}})()`;}
+export type AlibabaSearchState={keyword:string;count:string;titles:string[]};
+export function alibabaSearchUpdated(before:AlibabaSearchState,after:AlibabaSearchState,keyword:string):boolean{
+ if(after.keyword!==keyword||!after.count&&!after.titles.length)return false;
+ if(after.titles.join('|')!==before.titles.join('|'))return !after.titles.length||after.titles.some(title=>careerTitleMatches('company_03',title,keyword));
+ return after.count!==before.count&&after.titles.every(title=>careerTitleMatches('company_03',title,keyword));
 }
 export function careerEntryClickScript(sourceId:SourceBrowserId):string {
  if(sourceId!=='company_01')return 'false';

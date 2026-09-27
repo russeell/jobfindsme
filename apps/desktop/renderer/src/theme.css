@@ -462,6 +462,8 @@ nav button .nav-label {font-size:13px;}
 .source-summary>button {border:0;background:transparent;padding:3px;color:var(--text);text-decoration:underline;font-size:12px;}
 .source-summary details {width:100%;}
 .source-summary details ul {margin:5px 0;padding-left:18px;}
+.source-next-actions {display:flex;flex-wrap:wrap;gap:8px;margin:9px 0 2px;}
+.source-next-actions:empty {display:none;}
 .discovery-page:not(.has-results) .workspace,.discovery-page:not(.has-results) .mobile-switch {display:none;}
 .discovery-page:not(.has-results) .discovery-controls {max-height:none;}
 .resume-modal-backdrop {position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:#20202060;}

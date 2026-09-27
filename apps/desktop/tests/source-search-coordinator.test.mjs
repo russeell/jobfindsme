@@ -48,11 +48,20 @@ test('a failed public continuation never falls back to a first-page browser sear
  assert.equal(result.pages.liepin,undefined);
 });
 
-test('a browser-only source rejects a continuation cursor it cannot honor',async()=>{
+test('Alibaba passes an observed page cursor to its browser collector',async()=>{
+ let pageSeen=0;
+ const result=await collectBrowserSourcePages({source_ids:['company_03'],workspace_id:'w1',intent:'Agent',source_cursor:'2'},
+   {allowed_source_ids:['company_03'],keywords:['Agent'],max_pages:1,time_budget_seconds:10},
+   {client:{},manager:{collectCareer:async(_source,input)=>{pageSeen=input.page;return {records:[],next_cursor:'3'};}},isCancelled:()=>false});
+ assert.equal(pageSeen,2);
+ assert.equal(result.pages.company_03[0].next_cursor,'3');
+});
+
+test('other browser-only sources reject a continuation cursor they cannot honor',async()=>{
  let browserCalls=0;
- const result=await collectBrowserSourcePages({source_ids:['company_03'],workspace_id:'w1',intent:'Python',source_cursor:'2'},
-   {allowed_source_ids:['company_03'],keywords:['Python'],max_pages:1,time_budget_seconds:10},
+ const result=await collectBrowserSourcePages({source_ids:['company_04'],workspace_id:'w1',intent:'Python',source_cursor:'2'},
+   {allowed_source_ids:['company_04'],keywords:['Python'],max_pages:1,time_budget_seconds:10},
    {client:{},manager:{collectCareer:async()=>{browserCalls++;return {records:[],next_cursor:null};}},isCancelled:()=>false});
  assert.equal(browserCalls,0);
- assert.match(result.errors.company_03,/unsupported_cursor/);
+ assert.match(result.errors.company_04,/unsupported_cursor/);
 });

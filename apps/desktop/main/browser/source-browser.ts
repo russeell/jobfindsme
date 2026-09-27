@@ -1,6 +1,6 @@
 import {publicAtsDetailEndpoint,parsePublicAtsDetail} from '../sources/public-detail';
 import {canonicalJobUrl} from '../../shared/research-reports';
-import {careerPageScript,careerAdvanceScript,careerKeywordScript,careerRecords,careerEntryClickScript,careerClickableScript,type CareerPage} from '../sources/company-page';
+import {careerPageScript,careerAdvanceScript,careerKeywordScript,careerRecords,careerTitleMatches,careerEntryClickScript,careerClickableScript,alibabaSearchStateScript,alibabaSearchUpdated,type AlibabaSearchState,type CareerPage} from '../sources/company-page';
 import {BossCollector} from "../sources/boss-collector";
 import {bossPageScript,bossScrollScript,type BossPage} from "../sources/boss-page";
 import { researchExtractionScript } from "../sources/research-extraction";
@@ -298,10 +298,12 @@ export class SourceBrowserManager {
   private careerCache=new Map<string,{time:number;page:SourceActionPage}>();
   private careerBlocked=new Map<SourceBrowserId,number>();
   private careerEpoch=0;
-  cancelCareerSearch(){this.careerEpoch++;}
+  private alibabaContinuation?:{view:WebContentsView;keyword:string;city:string;nextPage:number;expiresAt:number;timer:ReturnType<typeof setTimeout>};
+  private releaseAlibabaContinuation(){const state=this.alibabaContinuation;if(!state)return;this.alibabaContinuation=undefined;clearTimeout(state.timer);this.releaseBackground('company_03',state.view);}
+  cancelCareerSearch(){this.careerEpoch++;this.releaseAlibabaContinuation();}
   private careerPending=new Map<string,Promise<SourceActionPage>>();
   private careerTail=new Map<SourceBrowserId,Promise<unknown>>();
-  collectCareer(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
+  collectCareer(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;page?:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
     const key=JSON.stringify([sourceId,input]),existing=this.careerPending.get(key);if(existing)return existing;
     const epoch=this.careerEpoch;
     const tail=this.careerTail.get(sourceId)||Promise.resolve();
@@ -309,76 +311,124 @@ export class SourceBrowserManager {
     const settled=work.catch(()=>{});this.careerTail.set(sourceId,settled);
     this.careerPending.set(key,work);void work.finally(()=>{this.careerPending.delete(key);if(this.careerTail.get(sourceId)===settled)this.careerTail.delete(sourceId);}).catch(()=>{});return work;
   }
-  private async collectCareerRun(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
+  private async collectCareerRun(sourceId:SourceBrowserId,input:{keyword:string;city:string;maxPages:number;seconds:number;page?:number;forceRefresh?:boolean}):Promise<SourceActionPage>{
     const key=JSON.stringify([sourceId,input]),now=Date.now(),cached=this.careerCache.get(key);
-    if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
+    if(sourceId!=='company_03'&&!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
-    const epoch=this.careerEpoch,deadline=now+Math.min(60000,input.seconds*1000),view=this.backgroundView(sourceId),seen=new Set<string>(),records:SourceActionPage['records']=[];
+    const startPage=input.page??1;
+    if(!Number.isInteger(startPage)||startPage<1||startPage>20||startPage>1&&sourceId!=='company_03')throw Error('unsupported_cursor:该来源没有可核验的续查页码');
+    let view:WebContentsView;
+    if(sourceId==='company_03'&&startPage>1){
+      const state=this.alibabaContinuation;
+      if(!state||state.view.webContents.isDestroyed()||state.nextPage!==startPage||state.keyword!==input.keyword||state.city!==input.city||state.expiresAt<now)throw Error('unsupported_cursor:阿里续查上下文已失效，请重新搜索');
+      clearTimeout(state.timer);this.alibabaContinuation=undefined;view=state.view;
+    }else{if(sourceId==='company_03')this.releaseAlibabaContinuation();view=this.backgroundView(sourceId);}
+    const epoch=this.careerEpoch,deadline=now+Math.min(60000,input.seconds*1000),seen=new Set<string>(),records:SourceActionPage['records']=[];
     const check=()=>{if(epoch!==this.careerEpoch||Date.now()>deadline)throw Error('source_budget:已停止，保留已读取岗位');};
     const bounded=async <T>(task:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([task,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:读取超过预算')),Math.max(1,deadline-Date.now()));})]);}finally{if(timer)clearTimeout(timer);}};
-    let batches=0,previousPage='';
+    let batches=0,previousPage='',nextCursor:string|null=null,keepView=false,unresolvedLinks=0,pageNavigation=false;
     const pageIdentity=(page:CareerPage)=>page.jobs.map(j=>canonicalJobUrl(j.url)).sort().join('|');
     try{
-      const url=sourceBrowserSpecs[sourceId].loginUrl;
-      const ready=new Promise<void>(resolve=>view.webContents.once('dom-ready',()=>resolve()));
-      const loaded=view.webContents.loadURL(url).catch(async error=>{
-        if(!await confirmAllowedNavigationAfterAbort(sourceId,url,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;
-      });
-      await bounded(Promise.race([loaded,ready]));
-      // A stale dom-ready event can win the race while a SPA is redirecting.
-      if(view.webContents.isLoadingMainFrame())await bounded(loaded);
-      check();if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:官网跳转超出已核验入口');
-      let raw:CareerPage=await bounded(view.webContents.executeJavaScript(careerPageScript()));
-      for(let wait=0;wait<12&&!raw.jobs.length&&!raw.entry&&!raw.blocked;wait++){check();await new Promise(r=>setTimeout(r,250));raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));}
-      for(let hop=0;hop<2&&!raw.jobs.length&&raw.entry&&!raw.blocked;hop++){
-        if(!isAllowedSourceUrl(sourceId,raw.entry)||raw.entry===view.webContents.getURL())break;
-        check();const entry=raw.entry;try{await bounded(view.webContents.loadURL(entry));}catch(error){if(!await confirmAllowedNavigationAfterAbort(sourceId,entry,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;}raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+      let raw:CareerPage={jobs:[],next:false,empty:false,loading:true};
+      let keywordApplied=false;
+      if(startPage===1){
+        const url=sourceBrowserSpecs[sourceId].loginUrl;
+        const ready=new Promise<void>(resolve=>view.webContents.once('dom-ready',()=>resolve()));
+        const loaded=view.webContents.loadURL(url).catch(async error=>{
+          if(!await confirmAllowedNavigationAfterAbort(sourceId,url,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;
+        });
+        await bounded(Promise.race([loaded,ready]));
+        if(view.webContents.isLoadingMainFrame())await bounded(loaded);
+        check();if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:官网跳转超出已核验入口');
+        raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+        for(let wait=0;wait<12&&!raw.jobs.length&&!raw.entry&&!raw.blocked;wait++){
+          if(sourceId==='company_03'&&!raw.loading&&(await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId)))).length)break;
+          check();await new Promise(r=>setTimeout(r,250));raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+        }
+        for(let hop=0;hop<2&&!raw.jobs.length&&raw.entry&&!raw.blocked;hop++){
+          if(!isAllowedSourceUrl(sourceId,raw.entry)||raw.entry===view.webContents.getURL())break;
+          check();const entry=raw.entry;try{await bounded(view.webContents.loadURL(entry));}catch(error){if(!await confirmAllowedNavigationAfterAbort(sourceId,entry,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;}raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+        }
+        if(!raw.jobs.length&&sourceId==='company_01'){
+          await bounded(view.webContents.executeJavaScript(careerEntryClickScript(sourceId)));
+          await new Promise(r=>setTimeout(r,700));
+        }
+        const before=sourceId==='company_03'?await bounded(view.webContents.executeJavaScript(alibabaSearchStateScript())) as AlibabaSearchState:undefined;
+        let searchPopup='';
+        view.webContents.setWindowOpenHandler(({url})=>{if(isAllowedSourceUrl(sourceId,url))searchPopup=url;return {action:'deny'};});
+        try {
+          check();keywordApplied=Boolean(await bounded(view.webContents.executeJavaScript(careerKeywordScript(input.keyword))));
+          if(sourceId!=='company_03')await new Promise(r=>setTimeout(r,800));
+          if(searchPopup)await bounded(view.webContents.loadURL(searchPopup));
+        } finally {view.webContents.setWindowOpenHandler(()=>({action:'deny'}));}
+        if(sourceId==='company_03'){
+          if(!keywordApplied)throw Error('source_contract_error:阿里岗位关键词控件不可用');
+          let confirmed=false;
+          for(let wait=0;wait<24;wait++){
+            check();const after=await bounded(view.webContents.executeJavaScript(alibabaSearchStateScript())) as AlibabaSearchState;
+            if(before&&alibabaSearchUpdated(before,after,input.keyword)){confirmed=true;break;}
+            await new Promise(r=>setTimeout(r,150));
+          }
+          if(!confirmed)throw Error('source_loading:阿里站内关键词结果未确认，未使用旧列表');
+        }
+      }else{
+        keywordApplied=true;
+        const before=await bounded(view.webContents.executeJavaScript(alibabaSearchStateScript())) as {titles:string[]};
+        raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+        if(!raw.next||!await bounded(view.webContents.executeJavaScript(careerAdvanceScript())))throw Error('unsupported_cursor:官网没有可继续的下一页');
+        let changed=false;
+        for(let wait=0;wait<16;wait++){check();await new Promise(r=>setTimeout(r,150));const after=await bounded(view.webContents.executeJavaScript(alibabaSearchStateScript())) as {titles:string[]};if(after.titles.length&&after.titles.join('|')!==before.titles.join('|')){changed=true;break;}}
+        if(!changed)throw Error('source_loading:官网下一页未完成加载');
       }
-      if(!raw.jobs.length&&sourceId==='company_01'){
-        await bounded(view.webContents.executeJavaScript(careerEntryClickScript(sourceId)));
-        await new Promise(r=>setTimeout(r,700));
-      }
-      let searchPopup='',keywordApplied=false;
-      view.webContents.setWindowOpenHandler(({url})=>{if(isAllowedSourceUrl(sourceId,url))searchPopup=url;return {action:'deny'};});
-      try {
-        check();keywordApplied=Boolean(await bounded(view.webContents.executeJavaScript(careerKeywordScript(input.keyword))));
-        await new Promise(r=>setTimeout(r,800));
-        if(searchPopup)await bounded(view.webContents.loadURL(searchPopup));
-      } finally {view.webContents.setWindowOpenHandler(()=>({action:'deny'}));}
       for(let page=0;page<Math.min(input.maxPages,3);page++){
-        for(let wait=0;wait<24;wait++){check();raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));if(raw.blocked||(!raw.loading&&((raw.empty&&wait>=12)||(raw.jobs.length&&pageIdentity(raw)!==previousPage))))break;await new Promise(r=>setTimeout(r,250));}
+        let observedCandidates=0;
+        for(let wait=0;wait<24;wait++){
+          check();raw=await bounded(view.webContents.executeJavaScript(careerPageScript()));
+          if(raw.blocked||!raw.loading&&((raw.empty&&wait>=12)||(raw.jobs.length&&pageIdentity(raw)!==previousPage)))break;
+          if(sourceId==='company_03'&&!raw.loading&&(await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId)))).length)break;
+          await new Promise(r=>setTimeout(r,250));
+        }
         if(raw.loading)throw Error('source_loading:岗位列表未完成加载');
         if(raw.blocked){if(/登录/.test(raw.blocked))throw Error('login_required:'+raw.blocked);this.careerBlocked.set(sourceId,Date.now()+300000);throw Error('risk_control:'+raw.blocked);}
         if(!raw.jobs.length&&!keywordApplied&&!careerClickableScript(sourceId).includes('querySelectorAll'))throw Error('source_contract_error:官网尚未暴露可验证的岗位检索控件');
         if(!raw.jobs.length){
           const candidates=await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId))) as Array<{title:string;location:string}>;
+          observedCandidates=candidates.length;
           const listUrl=view.webContents.getURL();let clickedUrl='';
           view.webContents.setWindowOpenHandler(({url})=>{if(isAllowedSourceUrl(sourceId,url))clickedUrl=url;return {action:'deny'};});
-          try{let attempted=0;for(let i=0;i<candidates.length&&attempted<5;i++){
-            if(!candidates[i].title.toLowerCase().includes(input.keyword.toLowerCase()))continue;
+          try{let attempted=0;for(let i=0;i<candidates.length&&attempted<(sourceId==='company_03'?10:5);i++){
+            if(!careerTitleMatches(sourceId,candidates[i].title,input.keyword)||input.city&&(!candidates[i].location||!candidates[i].location.includes(input.city)))continue;
             attempted++;
             check();clickedUrl='';await bounded(view.webContents.executeJavaScript(careerClickableScript(sourceId,i)));
             for(let wait=0;wait<8&&!clickedUrl&&view.webContents.getURL()===listUrl;wait++)await new Promise(r=>setTimeout(r,100));
             const target=clickedUrl||view.webContents.getURL();
             if(target!==listUrl&&isAllowedSourceUrl(sourceId,target))raw.jobs.push({...candidates[i],company:'',salary:'',url:target});
-            if(view.webContents.getURL()!==listUrl)break;
+            else if(sourceId==='company_03')unresolvedLinks++;
+            if(view.webContents.getURL()!==listUrl){if(sourceId==='company_03'){pageNavigation=true;unresolvedLinks++;}break;}
           }}finally{view.webContents.setWindowOpenHandler(()=>({action:'deny'}));}
+          if(sourceId==='company_03'&&candidates.filter(item=>careerTitleMatches(sourceId,item.title,input.keyword)&&(!input.city||item.location?.includes(input.city))).length>10)unresolvedLinks++;
         }
-        if(!raw.jobs.length&&!raw.empty)throw Error('source_contract_error:未读取到可验证岗位链接，请在官网手动浏览');
+        if(!raw.jobs.length&&!raw.empty&&!(sourceId==='company_03'&&observedCandidates))throw Error('source_contract_error:未读取到可验证岗位链接，请在官网手动浏览');
         const fingerprint=pageIdentity(raw);
         if(fingerprint&&fingerprint===previousPage)break;
         previousPage=fingerprint;batches++;
         const parsed=careerRecords(sourceId,view.webContents.getURL(),raw,input.keyword,input.city);
         for(const record of parsed.records)if(!seen.has(record.external_id)){seen.add(record.external_id);records.push(record);}
-        if(!raw.next||records.length>=100||page+1>=Math.min(input.maxPages,3))break;
-        check();if(!await bounded(view.webContents.executeJavaScript(careerAdvanceScript())))break;
+        nextCursor=sourceId==='company_03'&&raw.next&&!pageNavigation?String(startPage+page+1):null;
+        if(pageNavigation||!raw.next||records.length>=100||page+1>=Math.min(input.maxPages,3))break;
+        check();if(!await bounded(view.webContents.executeJavaScript(careerAdvanceScript()))){if(sourceId==='company_03'){nextCursor=null;unresolvedLinks++;}break;}
         await new Promise(r=>setTimeout(r,500));
       }
-      const result={records:records.slice(0,100),next_cursor:null,collection:{batches,elapsed_seconds:(Date.now()-now)/1000,stop_reason:'dom_sample',cursor:null,complete:false,failure:null}};
-      this.careerCache.set(key,{time:Date.now(),page:result});if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
+      const complete=sourceId==='company_03'&&!nextCursor&&!unresolvedLinks;
+      const result={records:records.slice(0,100),next_cursor:nextCursor,collection:{batches,elapsed_seconds:(Date.now()-now)/1000,stop_reason:sourceId==='company_03'?(nextCursor?'batch_budget':complete?'complete':'source_contract_error'):'dom_sample',cursor:nextCursor,complete,failure:null}};
+      if(sourceId==='company_03'&&nextCursor){
+        const timer=setTimeout(()=>this.releaseAlibabaContinuation(),120000);
+        this.alibabaContinuation={view,keyword:input.keyword,city:input.city,nextPage:Number(nextCursor),expiresAt:Date.now()+120000,timer};keepView=true;
+      }
+      if(sourceId!=='company_03'){this.careerCache.set(key,{time:Date.now(),page:result});if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);}
       return result;
     }catch(error){if(records.length)return {records:records.slice(0,100),next_cursor:null,collection:{batches,elapsed_seconds:(Date.now()-now)/1000,stop_reason:'stopped_partial',cursor:null,complete:false,failure:String(error).includes('risk_control:')?'risk_control':String(error).includes('login_required:')?'login_required':null}};throw error;}
-    finally{this.releaseBackground(sourceId,view);}
+    finally{if(!keepView)this.releaseBackground(sourceId,view);}
   }
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
@@ -427,6 +477,7 @@ export class SourceBrowserManager {
 
   destroy(): void {
     this.boss.cancel();if(this.bossObservation)clearInterval(this.bossObservation);
+    this.releaseAlibabaContinuation();
     for(const timer of this.observationTimers.values())clearTimeout(timer);this.observationTimers.clear();
     if(this.bossDetailView&&!this.bossDetailView.webContents.isDestroyed())this.bossDetailView.webContents.close();
     // The BrowserWindow closed event may run after its native contentView died.

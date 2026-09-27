@@ -107,6 +107,8 @@ test("source verification enables only evidence-backed bounded results", () => {
   assert.equal(result.detail_status, "verified");
   assert.equal(result.fields_status, "verified");
   assert.equal(result.pagination_status, "verified");
+  const clickOnly=summarizeSourceVerification([{records:[{payload:{title:'Agent工程师',company:'阿里巴巴',url:'https://talent-holding.alibaba.com/off-campus/position-detail?positionId=1'}}],next_cursor:'3',collection:{batches:2}}]);
+  assert.match(clickOnly.notes,/2 页、1 条/);
   assert.throws(() => summarizeSourceVerification([{ records: [], next_cursor: null }]), /没有返回岗位/);
 });
 

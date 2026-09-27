@@ -92,7 +92,7 @@ export function requiresElectronSourceSearch(sourceId: string): sourceId is "bos
   return sourceId === "boss" || sourceId === "zhilian" || sourceId === "wuyou";
 }
 
-export function summarizeSourceVerification(pages: Array<{ records: Array<{ payload: Record<string, unknown> }>; next_cursor: string | null }>) {
+export function summarizeSourceVerification(pages: Array<{ records: Array<{ payload: Record<string, unknown> }>; next_cursor: string | null;collection?:{batches:number} }>) {
   const records = pages.flatMap((page) => page.records);
   if (!records.length) throw new Error("source_contract_error:验证检索没有返回岗位");
   const hasDetail = records.some((record) =>
@@ -103,14 +103,15 @@ export function summarizeSourceVerification(pages: Array<{ records: Array<{ payl
     Boolean(String(record.payload.company || "").trim()) &&
     Boolean(String(record.payload.url || "").trim()),
   );
-  const paginationVerified = pages.length > 1 || pages[0]?.next_cursor === null;
+  const sitePages=pages.reduce((count,page)=>count+Math.max(1,page.collection?.batches||1),0);
+  const paginationVerified = sitePages > 1 || pages[0]?.next_cursor === null;
   return {
     session_status: "verified", list_status: "verified",
     detail_status: hasDetail ? "verified" : "partial",
     fields_status: coreFields ? "verified" : "partial",
     pagination_status: paginationVerified ? "verified" : "partial",
     enabled: true,
-    notes: `桌面隔离会话人工触发验证：${pages.length} 页、${records.length} 条；完整详情=${hasDetail ? "是" : "否"}。`,
+    notes: `桌面隔离会话人工触发验证：${sitePages} 页、${records.length} 条；完整详情=${hasDetail ? "是" : "否"}。`,
   };
 }
 

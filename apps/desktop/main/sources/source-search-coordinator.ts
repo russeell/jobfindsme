@@ -27,9 +27,10 @@ export async function collectBrowserSourcePages(
     if (!requiresElectronSourceSearch(sourceId)) {
       if(!isSourceBrowserId(sourceId))return;
       if(!["liepin","company_01","company_12"].includes(sourceId)){
-        if(input.source_cursor){browserErrors[sourceId]="unsupported_cursor:该来源没有可核验的续查游标";return;}
+        const page=input.source_cursor&&sourceId==='company_03'?Number(input.source_cursor):1;
+        if(input.source_cursor&&(sourceId!=='company_03'||!Number.isInteger(page)||page<2||page>20)){browserErrors[sourceId]="unsupported_cursor:该来源没有可核验的续查游标";return;}
         if(!manager){browserErrors[sourceId]="browser_session_error:来源后台会话不可用";return;}
-        try{browserPages[sourceId]=[await manager.collectCareer(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',maxPages:preflight.max_pages,seconds:remaining()})];}
+        try{browserPages[sourceId]=[await manager.collectCareer(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',maxPages:preflight.max_pages,seconds:remaining(),...(sourceId==='company_03'?{page}:{})})];}
         catch(error){browserErrors[sourceId]=String(error).slice(0,1000);}
         return;
       }

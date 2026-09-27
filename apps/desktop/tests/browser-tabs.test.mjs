@@ -93,6 +93,58 @@ test('career searches merge identical work, cache results and cancel queued work
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
+test('Alibaba waits for a delayed keyword result and continues on the same native list view',async()=>{
+ const {m}=setup();let loads=0,typed=false,phase='initial',clicked=[];
+ FakeView.onCreate=view=>{
+  const wc=view.webContents,load=wc.loadURL;
+  wc.loadURL=async url=>{loads++;await load(url);};
+  wc.executeJavaScript=async script=>{
+   if(script.includes('readCareerPage'))return {jobs:[],next:phase!=='page2',empty:false,loading:false};
+   if(script.includes('count:/共'))return {keyword:typed?'Agent':'',count:phase==='initial'?'613':'30',titles:[phase==='initial'?'公关高级经理':phase==='page1'?'Agent研发工程师-杭州':'Agent算法工程师-北京']};
+   if(script.includes('setCareerKeyword')){typed=true;setTimeout(()=>{phase='page1';},420);return true;}
+   if(script.includes('function alibabaClickablePage')){
+    const match=/\)\((\d+)\)$/u.exec(script);
+    if(match){clicked.push(phase);wc.popup({url:`https://talent-holding.alibaba.com/off-campus/position-detail?positionId=${phase==='page1'?'1001':'1002'}`});return [];}
+    return [{title:phase==='initial'?'公关高级经理':phase==='page1'?'Agent研发工程师-杭州':'Agent算法工程师-北京',location:phase==='page2'?'北京':'杭州'}];
+   }
+   if(script.includes('pagination.*next')){phase='page2';return true;}
+   return false;
+  };
+ };
+ try{
+  const first=await m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5});
+  assert.deepEqual(first.records.map(row=>row.payload.title),['Agent研发工程师-杭州']);
+  assert.equal(first.next_cursor,'2');assert.deepEqual(clicked,['page1']);
+  const second=await m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5,page:2});
+  assert.deepEqual(second.records.map(row=>row.payload.title),['Agent算法工程师-北京']);
+  assert.equal(second.next_cursor,null);assert.equal(second.collection.complete,true);
+  assert.equal(loads,1);
+  await assert.rejects(m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5,page:2}),/续查上下文已失效/);
+  assert.equal(loads,1);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('Alibaba keeps a real next page when this page has no matching city, and does not call missing links complete',async()=>{
+ for(const scenario of [{city:'上海',popup:true,next:true},{city:'',popup:false,next:false}]){
+  const {m}=setup();let typed=false;
+  FakeView.onCreate=view=>{const wc=view.webContents;wc.executeJavaScript=async script=>{
+   if(script.includes('readCareerPage'))return {jobs:[],next:scenario.next,empty:false,loading:false};
+   if(script.includes('count:/共'))return {keyword:typed?'Agent':'',count:typed?'1':'613',titles:[typed?'Agent算法工程师-北京':'公关经理']};
+   if(script.includes('setCareerKeyword')){typed=true;return true;}
+   if(script.includes('function alibabaClickablePage')){
+    if(/\)\(\d+\)$/u.test(script)){if(scenario.popup)wc.popup({url:'https://talent-holding.alibaba.com/off-campus/position-detail?positionId=1003'});return [];}
+    return [{title:typed?'Agent算法工程师-北京':'公关经理',location:'北京'}];
+   }
+   return false;
+  };};
+  try{const result=await m.collectCareer('company_03',{keyword:'Agent',city:scenario.city,maxPages:1,seconds:5});
+   assert.equal(result.records.length,0);
+   assert.equal(result.next_cursor,scenario.next?'2':null);
+   assert.equal(result.collection.complete,false);
+  }finally{FakeView.onCreate=undefined;m.destroy();}
+ }
+});
+
 test('career risk control pauses a source and never turns the failure into an empty result',async()=>{
  const {m}=setup();let loads=0;
  FakeView.onCreate=v=>{const load=v.webContents.loadURL;v.webContents.loadURL=async url=>{loads++;await load(url);};v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[],next:false,empty:false,loading:false,blocked:'访问过于频繁'}:false;};
