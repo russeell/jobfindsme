@@ -23,7 +23,7 @@ for(let attempt=0;attempt<2;attempt++){
    await delay(500);
   }
   assert.ok(data?.workspaces,`Backend never became ready: ${lastError}`);
-  assert.ok(data.workspaces.length>0);assert.equal(data.sources.length,20);
+  assert.ok(data.workspaces.length>0);assert.equal(data.sources.length,4);
   await window.screenshot({path:`release/windows/smoke-${attempt}.png`});
   console.log(`Packaged Windows UI + IPC + Python + SQLite bootstrap passed (${attempt+1}/2)`);
  }finally{await app.close();}

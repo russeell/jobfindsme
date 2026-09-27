@@ -15,12 +15,11 @@ vm.runInThisContext(`(function(require,module,exports){${readFileSync(file,'utf8
 const {SourceBrowserManager}=module.exports;
 function setup(onBossPage){const w=new EventEmitter();w.children=[];w.contentView={addChildView:v=>w.children.push(v),removeChildView:v=>{w.children=w.children.filter(x=>x!==v);}};w.getContentSize=()=>[1240,800];w.isDestroyed=()=>false;return {w,m:new SourceBrowserManager(w,onBossPage)};}
 const bounds={x:650,y:100,width:590,height:700};
-const a='https://careers.tencent.com/jobdesc.html?postId=1';const b='https://careers.tencent.com/jobdesc.html?postId=2';
+const a='https://www.liepin.com/job/1.shtml';const b='https://www.liepin.com/job/2.shtml';
 test('source buttons reopen public homepages without forcing sign-in pages',async()=>{
  const {m}=setup();
  await m.show('liepin',bounds);assert.equal(m.state().url,'https://www.liepin.com/');
  await m.show('wuyou',bounds);assert.equal(m.state().url,'https://www.51job.com/');
- await m.show('company_16',bounds);assert.equal(m.state().url,'https://app.mokahr.com/social-recruitment/step/94904#/');
  m.destroy();
 });
 test('shutdown flushes each opened persistent source session once',async()=>{
@@ -41,27 +40,27 @@ test('shutdown flushes each opened persistent source session once',async()=>{
   assert.deepEqual(flushed.sort(),['persist:jobfindsme-source-liepin','persist:jobfindsme-source-wuyou']);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
-test('zoom is bounded and restored per tab; fit width reads the document without rewriting it',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);const one=m.state().activeTabId;await m.command('fit-width');assert.equal(m.state().zoom,.5);await m.show('company_01',bounds,b);assert.equal(m.state().zoom,1);await m.command('zoom-in');assert.equal(m.state().zoom,1.1);m.selectTab(one);assert.equal(w.children[0].webContents.getZoomFactor(),.5);for(let i=0;i<10;i++)await m.command('zoom-out');assert.equal(m.state().zoom,.3);await m.command('zoom-reset');assert.equal(m.state().zoom,1);m.destroy();});
-test('blocked navigation stays with its tab and removes query secrets from notices',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);const one=m.state().activeTabId;let prevented=false;w.children[0].webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'file:///private/path?token=private',false,true);assert.equal(prevented,true);assert.match(m.state().notice,/重定向.*private\/path/);assert.doesNotMatch(m.state().notice,/token=private/);await m.show('company_01',bounds,b);assert.equal(m.state().notice,'');m.selectTab(one);assert.match(m.state().notice,/此协议/);await m.command('reload');assert.equal(m.state().notice,'');m.destroy();});
-test('tabs preserve per-page history, reuse URL, share source partition and isolate background',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);m.layout(bounds);const one=m.state().activeTabId;const view=w.children[0];await view.webContents.loadURL(a+'&detail=1');await m.show('company_01',bounds,b);const two=m.state().activeTabId;const second=w.children[0];assert.equal(m.state().tabs.length,2);assert.equal(view.options.webPreferences.partition,second.options.webPreferences.partition);assert.equal(view.visible,false);assert.equal(w.children.length,1);assert.equal(m.state().canGoBack,false);m.selectTab(one);assert.equal(m.state().canGoBack,true);m.command('back');assert.equal(m.state().url,a);m.selectTab(two);assert.equal(m.state().url,b);await m.show('company_01',bounds,b);assert.equal(m.state().tabs.length,2);const background=m.backgroundView('company_01');await background.webContents.loadURL(a);assert.equal(m.state().url,b);assert.notEqual(background,second);m.layout(null);assert.equal(second.visible,false);m.selectTab(one);assert.equal(view.visible,false);m.layout(bounds);assert.equal(view.visible,true);m.closeTab(one);assert.equal(m.state().activeTabId,two);assert.equal(view.webContents.isDestroyed(),true);m.destroy();assert.equal(m.state().tabs.length,0);assert.equal(background.webContents.isDestroyed(),true);});
+test('zoom is bounded and restored per tab; fit width reads the document without rewriting it',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);const one=m.state().activeTabId;await m.command('fit-width');assert.equal(m.state().zoom,.5);await m.show('liepin',bounds,b);assert.equal(m.state().zoom,1);await m.command('zoom-in');assert.equal(m.state().zoom,1.1);m.selectTab(one);assert.equal(w.children[0].webContents.getZoomFactor(),.5);for(let i=0;i<10;i++)await m.command('zoom-out');assert.equal(m.state().zoom,.3);await m.command('zoom-reset');assert.equal(m.state().zoom,1);m.destroy();});
+test('blocked navigation stays with its tab and removes query secrets from notices',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);const one=m.state().activeTabId;let prevented=false;w.children[0].webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'file:///private/path?token=private',false,true);assert.equal(prevented,true);assert.match(m.state().notice,/重定向.*private\/path/);assert.doesNotMatch(m.state().notice,/token=private/);await m.show('liepin',bounds,b);assert.equal(m.state().notice,'');m.selectTab(one);assert.match(m.state().notice,/此协议/);await m.command('reload');assert.equal(m.state().notice,'');m.destroy();});
+test('tabs preserve per-page history, reuse URL, share source partition and isolate background',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);m.layout(bounds);const one=m.state().activeTabId;const view=w.children[0];await view.webContents.loadURL(a+'&detail=1');await m.show('liepin',bounds,b);const two=m.state().activeTabId;const second=w.children[0];assert.equal(m.state().tabs.length,2);assert.equal(view.options.webPreferences.partition,second.options.webPreferences.partition);assert.equal(view.visible,false);assert.equal(w.children.length,1);assert.equal(m.state().canGoBack,false);m.selectTab(one);assert.equal(m.state().canGoBack,true);m.command('back');assert.equal(m.state().url,a);m.selectTab(two);assert.equal(m.state().url,b);await m.show('liepin',bounds,b);assert.equal(m.state().tabs.length,2);const background=m.backgroundView('liepin');await background.webContents.loadURL(a);assert.equal(m.state().url,b);assert.notEqual(background,second);m.layout(null);assert.equal(second.visible,false);m.selectTab(one);assert.equal(view.visible,false);m.layout(bounds);assert.equal(view.visible,true);m.closeTab(one);assert.equal(m.state().activeTabId,two);assert.equal(view.webContents.isDestroyed(),true);m.destroy();assert.equal(m.state().tabs.length,0);assert.equal(background.webContents.isDestroyed(),true);});
 test('cross-site popups retain WindowProxy and secure opener partition while bounding resources',async()=>{
- const {w,m}=setup();await m.show('company_01',bounds,a);const handler=w.children[0].webContents.popup;
+ const {w,m}=setup();await m.show('liepin',bounds,a);const handler=w.children[0].webContents.popup;
  const popup=handler({url:'about:blank'});assert.equal(popup.action,'allow');
  const adopted=new EventEmitter();adopted.getURL=()=>'';adopted.getTitle=()=>'';adopted.isLoading=adopted.isLoadingMainFrame=()=>false;adopted.isDestroyed=()=>false;adopted.close=()=>{};adopted.setWindowOpenHandler=()=>{};adopted.setZoomFactor=()=>{};adopted.getZoomFactor=()=>1;adopted.loadURL=async()=>{};adopted.executeJavaScript=async()=>({});adopted.navigationHistory={canGoBack:()=>false,canGoForward:()=>false};
  const options={webContents:adopted,webPreferences:{partition:'untrusted',preload:'/bad',nodeIntegration:true,sandbox:false}};const child=popup.createWindow(options);
  assert.equal(child,w.children[0].webContents);assert.equal(m.state().tabs.length,2);
  assert.equal(w.children[0].options,options);assert.equal(w.children[0].options.webContents,adopted);assert.equal(child,w.children[0].webContents);
  assert.equal(handler({url:'javascript:alert(1)'}).action,'deny');assert.equal(handler({url:'http://127.0.0.1/'}).action,'deny');
- for(let i=2;i<12;i++)await m.show('company_01',bounds,`https://careers.tencent.com/jobdesc.html?postId=${i+10}`);
+ for(let i=2;i<12;i++)await m.show('liepin',bounds,`https://www.liepin.com/job/${i+10}.shtml`);
  assert.equal(handler({url:'about:blank'}).action,'deny');assert.equal(m.state().tabs.length,12);m.destroy();
 });
-test('teardown after native window destruction closes contents without reading native layout',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);const view=w.children[0];const background=m.backgroundView('company_01');w.isDestroyed=()=>true;w.getContentSize=()=>{throw Error('window destroyed');};w.contentView.removeChildView=()=>{throw Error('native view destroyed');};assert.doesNotThrow(()=>m.destroy());assert.equal(view.webContents.isDestroyed(),true);assert.equal(background.webContents.isDestroyed(),true);assert.equal(m.state().tabs.length,0);});
+test('teardown after native window destruction closes contents without reading native layout',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);const view=w.children[0];const background=m.backgroundView('liepin');w.isDestroyed=()=>true;w.getContentSize=()=>{throw Error('window destroyed');};w.contentView.removeChildView=()=>{throw Error('native view destroyed');};assert.doesNotThrow(()=>m.destroy());assert.equal(view.webContents.isDestroyed(),true);assert.equal(background.webContents.isDestroyed(),true);assert.equal(m.state().tabs.length,0);});
 
-test('research extraction follows an allowed SPA abort and always releases its temporary view',async()=>{const {m}=setup();let temporary;FakeView.onCreate=view=>{temporary=view;view.webContents.loadURL=async()=>{view.webContents.getURL=()=> 'https://tencent.wd1.myworkdayjobs.com/Tencent_Careers/job/example';throw Object.assign(new Error('redirect'),{code:'ERR_ABORTED'});};view.webContents.executeJavaScript=async()=>({title:'Test role',company:'Tencent',description:'Verified page text '.repeat(10)});};try{const result=await m.readResearchJob('company_01',a);assert.equal(result.title,'Test role');assert.match(result.url,/tencent.wd1/);assert.equal(temporary.webContents.isDestroyed(),true);assert.equal(m.state().tabs.length,0);}finally{FakeView.onCreate=undefined;m.destroy();}});
+test('research extraction follows an allowed SPA abort and always releases its temporary view',async()=>{const {m}=setup();let temporary;FakeView.onCreate=view=>{temporary=view;view.webContents.loadURL=async()=>{view.webContents.getURL=()=> 'https://www.liepin.com/job/example.shtml';throw Object.assign(new Error('redirect'),{code:'ERR_ABORTED'});};view.webContents.executeJavaScript=async()=>({title:'Test role',company:'Tencent',description:'Verified page text '.repeat(10)});};try{const result=await m.readResearchJob('liepin',a);assert.equal(result.title,'Test role');assert.match(result.url,/liepin.com/);assert.equal(temporary.webContents.isDestroyed(),true);assert.equal(m.state().tabs.length,0);}finally{FakeView.onCreate=undefined;m.destroy();}});
 
-test('foreground permits arbitrary HTTP(S) but background remains source-scoped',async()=>{const {w,m}=setup();await m.show('web',bounds,'http://jobs.example.org/');assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-web');const view=w.children[0];let prevented=false;view.webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'https://sso.example.net/',false,true);assert.equal(prevented,false);const bg=m.backgroundView('company_03');bg.webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'https://sso.example.net/',false,true);assert.equal(prevented,true);assert.deepEqual(view.options.webPreferences,{partition:'persist:jobfindsme-web',nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false});await assert.rejects(m.readResearchJob('company_03','https://sso.example.net/'),/未支持/);m.destroy();});
+test('foreground permits arbitrary HTTP(S) but background remains source-scoped',async()=>{const {w,m}=setup();await m.show('web',bounds,'http://jobs.example.org/');assert.equal(w.children[0].options.webPreferences.partition,'persist:jobfindsme-web');const view=w.children[0];let prevented=false;view.webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'https://sso.example.net/',false,true);assert.equal(prevented,false);const bg=m.backgroundView('liepin');bg.webContents.emit('will-redirect',{preventDefault(){prevented=true;}},'https://sso.example.net/',false,true);assert.equal(prevented,true);assert.deepEqual(view.options.webPreferences,{partition:'persist:jobfindsme-web',nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false});await assert.rejects(m.readResearchJob('liepin','https://sso.example.net/'),/未支持/);m.destroy();});
 
-test('fit width is capped at 100 percent and idempotent from manual zoom levels',async()=>{const {w,m}=setup();await m.show('company_01',bounds,a);for(const start of [1.2,1,.6]){await m.command('zoom-reset');const command=start>1?'zoom-in':'zoom-out';for(let n=0;n<Math.round(Math.abs(start-1)*10);n++)await m.command(command);await m.command('fit-width');const fit=m.state().zoom;assert.equal(fit,.5);await m.command('fit-width');assert.equal(m.state().zoom,fit);}w.children[0].webContents.executeJavaScript=async()=>({width:640,viewport:640});await m.command('fit-width');assert.equal(m.state().zoom,1);m.destroy();});
+test('fit width is capped at 100 percent and idempotent from manual zoom levels',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);for(const start of [1.2,1,.6]){await m.command('zoom-reset');const command=start>1?'zoom-in':'zoom-out';for(let n=0;n<Math.round(Math.abs(start-1)*10);n++)await m.command(command);await m.command('fit-width');const fit=m.state().zoom;assert.equal(fit,.5);await m.command('fit-width');assert.equal(m.state().zoom,fit);}w.children[0].webContents.executeJavaScript=async()=>({width:640,viewport:640});await m.command('fit-width');assert.equal(m.state().zoom,1);m.destroy();});
 
 test('address navigation reuses its tab and session, supports back/forward, and rejects unsafe URLs',async()=>{
  const {w,m}=setup();await m.show('web',bounds,'https://example.com/');m.layout(bounds);const id=m.state().activeTabId,view=w.children[0];const other='https://docs.example.org/page';
@@ -81,86 +80,6 @@ test('BOSS observation never revives an expired session from a stale foreground 
  const bg=m.backgroundView('boss');assert.equal(bg.options.webPreferences.partition,w.children[0].options.webPreferences.partition);assert.equal(bg.options.webPreferences.partition,'persist:jobfindsme-source-boss');
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
-
-test('career searches merge identical work, cache results and cancel queued work before navigation',async()=>{
- const {m}=setup();let loads=0;
- FakeView.onCreate=v=>{const load=v.webContents.loadURL;v.webContents.loadURL=async url=>{loads++;await load(url);};v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[{title:'AI工程师',company:'智谱',location:'北京',salary:'',url:'https://app.mokahr.com/social-recruitment/zphz/148983#/job/one'}],next:false,empty:false,loading:false}:false;};
- try{
- const input={keyword:'AI',city:'北京',maxPages:1,seconds:5};
- const one=m.collectCareer('company_14',input),same=m.collectCareer('company_14',input);assert.equal(one,same);assert.equal((await one).records.length,1);
- assert.equal((await m.collectCareer('company_14',input)).records.length,1);assert.equal(loads,1);
- const queued=m.collectCareer('company_14',{...input,keyword:'other'});m.cancelCareerSearch();await assert.rejects(queued,/cancelled/);assert.equal(loads,1);
- }finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
-test('Alibaba waits for a delayed keyword result and continues on the same native list view',async()=>{
- const {m}=setup();let loads=0,typed=false,phase='initial',clicked=[];
- FakeView.onCreate=view=>{
-  const wc=view.webContents,load=wc.loadURL;
-  wc.loadURL=async url=>{loads++;await load(url);};
-  wc.executeJavaScript=async script=>{
-   if(script.includes('readCareerPage'))return {jobs:[],next:phase!=='page2',empty:false,loading:false};
-   if(script.includes('count:/共'))return {keyword:typed?'Agent':'',count:phase==='initial'?'613':'30',titles:[phase==='initial'?'公关高级经理':phase==='page1'?'Agent研发工程师-杭州':'Agent算法工程师-北京']};
-   if(script.includes('setCareerKeyword')){typed=true;setTimeout(()=>{phase='page1';},420);return true;}
-   if(script.includes('function alibabaClickablePage')){
-    const match=/\)\((\d+)\)$/u.exec(script);
-    if(match){clicked.push(phase);wc.popup({url:`https://talent-holding.alibaba.com/off-campus/position-detail?positionId=${phase==='page1'?'1001':'1002'}`});return [];}
-    return [{title:phase==='initial'?'公关高级经理':phase==='page1'?'Agent研发工程师-杭州':'Agent算法工程师-北京',location:phase==='page2'?'北京':'杭州'}];
-   }
-   if(script.includes('pagination.*next')){phase='page2';return true;}
-   return false;
-  };
- };
- try{
-  const first=await m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5});
-  assert.deepEqual(first.records.map(row=>row.payload.title),['Agent研发工程师-杭州']);
-  assert.equal(first.next_cursor,'2');assert.deepEqual(clicked,['page1']);
-  const second=await m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5,page:2});
-  assert.deepEqual(second.records.map(row=>row.payload.title),['Agent算法工程师-北京']);
-  assert.equal(second.next_cursor,null);assert.equal(second.collection.complete,true);
-  assert.equal(loads,1);
-  await assert.rejects(m.collectCareer('company_03',{keyword:'Agent',city:'',maxPages:1,seconds:5,page:2}),/续查上下文已失效/);
-  assert.equal(loads,1);
- }finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
-test('Alibaba keeps a real next page when this page has no matching city, and does not call missing links complete',async()=>{
- for(const scenario of [{city:'上海',popup:true,next:true},{city:'',popup:false,next:false}]){
-  const {m}=setup();let typed=false;
-  FakeView.onCreate=view=>{const wc=view.webContents;wc.executeJavaScript=async script=>{
-   if(script.includes('readCareerPage'))return {jobs:[],next:scenario.next,empty:false,loading:false};
-   if(script.includes('count:/共'))return {keyword:typed?'Agent':'',count:typed?'1':'613',titles:[typed?'Agent算法工程师-北京':'公关经理']};
-   if(script.includes('setCareerKeyword')){typed=true;return true;}
-   if(script.includes('function alibabaClickablePage')){
-    if(/\)\(\d+\)$/u.test(script)){if(scenario.popup)wc.popup({url:'https://talent-holding.alibaba.com/off-campus/position-detail?positionId=1003'});return [];}
-    return [{title:typed?'Agent算法工程师-北京':'公关经理',location:'北京'}];
-   }
-   return false;
-  };};
-  try{const result=await m.collectCareer('company_03',{keyword:'Agent',city:scenario.city,maxPages:1,seconds:5});
-   assert.equal(result.records.length,0);
-   assert.equal(result.next_cursor,scenario.next?'2':null);
-   assert.equal(result.collection.complete,false);
-  }finally{FakeView.onCreate=undefined;m.destroy();}
- }
-});
-
-test('career risk control pauses a source and never turns the failure into an empty result',async()=>{
- const {m}=setup();let loads=0;
- FakeView.onCreate=v=>{const load=v.webContents.loadURL;v.webContents.loadURL=async url=>{loads++;await load(url);};v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[],next:false,empty:false,loading:false,blocked:'访问过于频繁'}:false;};
- try{const input={keyword:'AI',city:'',maxPages:1,seconds:5};await assert.rejects(m.collectCareer('company_14',input),/risk_control/);await assert.rejects(m.collectCareer('company_14',input),/source_backoff/);assert.equal(loads,1);}finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
-test('career SPA navigation accepts an allowed abort and still reads the current page',async()=>{
- const {m}=setup();
- FakeView.onCreate=v=>{
-  v.webContents.loadURL=async()=>{v.webContents.getURL=()=> 'https://app.mokahr.com/social-recruitment/step/94904#/jobs';throw Object.assign(Error('SPA navigation'),{code:'ERR_ABORTED'});};
-  v.webContents.executeJavaScript=async script=>script.includes('readCareerPage')?{jobs:[{title:'模型工程师',company:'阶跃星辰',location:'北京',salary:'',url:'https://app.mokahr.com/social-recruitment/step/94904#/job/observed'}],next:false,empty:false,loading:false}:false;
- };
- try{const result=await m.collectCareer('company_16',{keyword:'工程师',city:'',maxPages:1,seconds:5});assert.equal(result.records.length,1);assert.match(result.records[0].payload.url,/observed/);}
- finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
 
 test('search tab entering a registered source opens its persistent session',async()=>{
  const {w,m}=setup();await m.show('web',bounds,'https://www.bing.com/search?q=jobs');m.layout(bounds);

@@ -38,6 +38,7 @@ export function App() {
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
   useEffect(()=>{const show=()=>openSettings("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[page]);
   const [data, setData] = useState<BootstrapData>();
+  useEffect(()=>{if(!data)return;const allowed=new Set(data.sources.map(source=>source.source_id));setChosenSources(current=>current.filter(id=>allowed.has(id)));},[data]);
   useEffect(()=>{if(!data||hadSourcePreference.current)return;hadSourcePreference.current=true;
     const first=data.sources.find(source=>source.source_id==="liepin"&&source.live_search_enabled)||data.sources.find(source=>source.live_search_enabled);
     if(first)setChosenSources([first.source_id]);
@@ -119,14 +120,12 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
 
 function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
   const capabilityLabel=(status:string)=>({verified:"已验证",partial:"部分可用",blocked:"受阻",unverified:"待验证"})[status]??status;
-  const [tab, setTab] = useState<"platform" | "company">("platform");
   const [verifying, setVerifying] = useState<string>();
   const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCheckResult[];startedAt:string}>();
   const auditRunId=useRef("");
   useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;setAudit(current=>current?.running?({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}):current);});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
   const openBrowser = useOriginalBrowser();
   const platforms = data?.sources.filter(source => source.source_type === "platform") ?? [];
-  const companies = data?.sources.filter(source => source.source_type === "company") ?? [];
   async function verify(sourceId: string) {
     setVerifying(sourceId);
     onError(undefined);
@@ -162,9 +161,9 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
     }finally{if(auditRunId.current===runId)auditRunId.current="";}
   }
   function cancelInspect(){setAudit(current=>current&&({...current,cancelled:true}));void window.jobfindsme!.cancelAllSourceChecks().catch(error=>onError(messageOf(error)));}
-  const rows = tab === "platform" ? platforms : companies;
+  const rows = platforms;
   return <>
-    <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个来源 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个来源"}</p><div className="source-toolbar-actions"><div className="source-tabs"><button className={tab === "platform" ? "active" : ""} onClick={() => setTab("platform")}>招聘平台 · {platforms.length}</button><button className={tab === "company" ? "active" : ""} onClick={() => setTab("company")}>公司官网 · {companies.length}</button></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部来源</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
+    <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个平台 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个平台"}</p><div className="source-toolbar-actions"><strong>招聘平台 · {platforms.length}</strong><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部平台</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
     {audit&&<div className="source-audit-progress" role="status"><span>{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"检查结束"} · 已评估 {audit.done}/{audit.total} 个来源{!audit.running&&` · 本次实际探测 ${audit.rows.filter(row=>row.evidence==="live").length} 个，通过 ${audit.rows.filter(row=>row.outcome==="verified_now").length} 个 · 复用缓存 ${audit.rows.filter(row=>row.evidence==="cache").length} 个 · 登录/风控跳过 ${audit.rows.filter(row=>row.evidence!=="live"&&["login_required","risk_control","skipped_cooldown"].includes(row.outcome)).length} 个 · 未检查 ${audit.rows.filter(row=>["not_checked_budget","cancelled"].includes(row.outcome)&&row.evidence!=="live").length} 个`}</span>{audit.running&&<progress value={audit.done} max={audit.total} aria-label="来源检查进度"/>}</div>}
     <section className="source-grid source-catalog">{rows.map(source => {
       const checked=audit?.rows.find(result=>result.source.source_id===source.source_id);

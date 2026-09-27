@@ -5,25 +5,25 @@ import {resolveBrowserDestination as resolve,resolveWebsiteHomepage,resolveWebSe
 test('website action takes only a site and opens its homepage, not login',()=>{
  assert.equal(resolveWebsiteHomepage('').kind,'empty');
  assert.equal(resolveWebsiteHomepage('boss').url,'https://www.zhipin.com/');
- assert.equal(resolveWebsiteHomepage('company_01').url,'https://careers.tencent.com/');
- assert.equal(resolveWebsiteHomepage('company_01').sourceId,'company_01');
+ assert.equal(resolveWebsiteHomepage('liepin').url,'https://www.liepin.com/');
+ assert.equal(resolveWebsiteHomepage('liepin').sourceId,'liepin');
 });
 test('top address input preserves direct URL normalization and target partition',()=>{
  assert.equal(resolve('  ','bing').kind,'empty');
- const r=resolve('https://careers.tencent.com/jobdesc.html?postId=123','bing');
- assert.equal(r.kind,'url');assert.equal(r.sourceId,'company_01');
+ const r=resolve('https://www.liepin.com/job/123.shtml','bing');
+ assert.equal(r.kind,'url');assert.equal(r.sourceId,'liepin');
  assert.equal(resolve('example.com/path?q=中文','bing').sourceId,'web');
  assert.equal(resolve('example.com/path?q=中文','bing').url,'https://example.com/path?q=%E4%B8%AD%E6%96%87');
 });
 test('all engines search full keywords without inheriting a website selection',()=>{
- const home=resolveWebsiteHomepage('company_01');
+ const home=resolveWebsiteHomepage('liepin');
  for(const engine of ['bing','baidu','google']){
   const text='AI: 工程师 C++ & R&D / 远程 #上海 + 100%';
   const r=resolveWebSearch(text,engine),url=new URL(r.url),key=engine==='baidu'?'wd':'q';
   assert.equal(r.kind,'search');assert.equal(r.sourceId,'web');assert.equal(url.searchParams.get(key),text);
   assert.equal(url.hostname,{bing:'www.bing.com',baidu:'www.baidu.com',google:'www.google.com'}[engine]);
  }
- assert.equal(home.url,resolveWebsiteHomepage('company_01').url);
+ assert.equal(home.url,resolveWebsiteHomepage('liepin').url);
  assert.equal(resolveWebSearch('','google').kind,'empty');
 });
 test('dangerous and malformed URLs stay rejected in top address and search inputs',()=>{

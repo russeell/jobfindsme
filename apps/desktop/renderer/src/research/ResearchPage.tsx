@@ -2,7 +2,7 @@ import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import type {BootstrapData,ModelConnection,ResearchReport,SearchResultItem} from "../../../shared/contracts";
 import {reportJob,reportMatchesJob,reportStatus} from "../../../shared/research-reports";
-import {isAllowedSourceUrl,isSourceBrowserId,sourceBrowserSpecs} from "../../../shared/source-browser-policy";
+import {isAllowedSourceUrl,isPublicWebUrl,isSourceBrowserId,sourceBrowserSpecs} from "../../../shared/source-browser-policy";
 import {userError} from "../../../shared/user-errors";
 import {parseMessageBlocks} from "../../../shared/message-content";
 import {splitResearchInput} from "../../../shared/research-input";
@@ -134,7 +134,7 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
     try{await window.jobfindsme!.hideResearchReport(workspaceId,value.report_id);const next=await window.jobfindsme!.listResearchReports(workspaceId);keepReports(next);if(report?.report_id===value.report_id){const previous=next.find(item=>job&&reportMatchesJob(item,job)&&item.outcome!=="failed");if(previous)openSaved(previous);else{setReport(undefined);setMode("start");lastOpened.current=undefined;}}setHideId("");setMessage("已从历史列表移除，原始证据快照仍保存在本机。");}
     catch(error){setMessage(userError(error).message);}finally{setBusy(null);}
   }
-  function openOriginal(value:string){const id=Object.keys(sourceBrowserSpecs).find(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,value));if(id)openBrowser({sourceId:id,url:value,title:job?.title||"岗位原页"});else setMessage("请使用已登记招聘来源的岗位详情链接。");}
+  function openOriginal(value:string){const id=Object.keys(sourceBrowserSpecs).find(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,value));if(isPublicWebUrl(value))openBrowser({sourceId:id||"web",url:value,title:job?.title||"岗位原页"});else setMessage("该岗位原页链接不是可打开的公共网页。");}
   const history=reports;
   const showingReport=mode==="report"&&!!report;
   function submitInput(){

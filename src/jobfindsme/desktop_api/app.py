@@ -649,7 +649,7 @@ def create_app(
     )
     def public_source_pages(source_id: str, request: PublicSourcePagesRequest):
         # Only proven anonymous adapters may run before a capability check.
-        if source_id not in {"liepin", "company_01", "company_12"}:
+        if source_id != "liepin":
             raise HTTPException(status_code=409, detail="no_public_adapter")
         import time
 

@@ -29,15 +29,6 @@ test('fast source is committed while the second source is still loading',async()
  assert.deepEqual(committed,['zhilian','wuyou']);
 });
 
-test('Alibaba uses its existing browser collector without a known unsupported local adapter call',async()=>{
- let publicCalls=0,careerCalls=0;
- const result=await collectBrowserSourcePages({source_ids:['company_03'],workspace_id:'w1',intent:'AI Infra'},
-   {allowed_source_ids:['company_03'],keywords:['AI Infra'],max_pages:1,time_budget_seconds:10},
-   {client:{publicSourcePages:async()=>{publicCalls++;throw Error('no_public_adapter');}},
-    manager:{collectCareer:async()=>{careerCalls++;return {records:[],next_cursor:null};}},isCancelled:()=>false});
- assert.equal(publicCalls,0);assert.equal(careerCalls,1);assert.equal(result.pages.company_03.length,1);
-});
-
 test('a failed public continuation never falls back to a first-page browser search',async()=>{
  let browserCalls=0;
  const result=await collectBrowserSourcePages({source_ids:['liepin'],workspace_id:'w1',intent:'Python',source_cursor:'2'},
@@ -48,29 +39,11 @@ test('a failed public continuation never falls back to a first-page browser sear
  assert.equal(result.pages.liepin,undefined);
 });
 
-test('Alibaba passes an observed page cursor to its browser collector',async()=>{
- let pageSeen=0;
- const result=await collectBrowserSourcePages({source_ids:['company_03'],workspace_id:'w1',intent:'Agent',source_cursor:'2'},
-   {allowed_source_ids:['company_03'],keywords:['Agent'],max_pages:1,time_budget_seconds:10},
-   {client:{},manager:{collectCareer:async(_source,input)=>{pageSeen=input.page;return {records:[],next_cursor:'3'};}},isCancelled:()=>false});
- assert.equal(pageSeen,2);
- assert.equal(result.pages.company_03[0].next_cursor,'3');
-});
-
-test('other browser-only sources reject a continuation cursor they cannot honor',async()=>{
- let browserCalls=0;
- const result=await collectBrowserSourcePages({source_ids:['company_04'],workspace_id:'w1',intent:'Python',source_cursor:'2'},
-   {allowed_source_ids:['company_04'],keywords:['Python'],max_pages:1,time_budget_seconds:10},
-   {client:{},manager:{collectCareer:async()=>{browserCalls++;return {records:[],next_cursor:null};}},isCancelled:()=>false});
- assert.equal(browserCalls,0);
- assert.match(result.errors.company_04,/unsupported_cursor/);
-});
-
 test('four explicitly selected sources retain budget-unstarted identities after two slow readers',async()=>{
- const ids=['company_04','company_05','company_06','company_07'],seen=[];
+ const ids=['boss','liepin','zhilian','wuyou'],seen=[];
  const result=await collectBrowserSourcePages({source_ids:ids,workspace_id:'w1',intent:'Agent'},
    {allowed_source_ids:ids,keywords:['Agent'],max_pages:1,time_budget_seconds:.15},
-   {client:{},manager:{collectCareer:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},isCancelled:()=>false});
+   {manager:{boss:{collect:async()=>{seen.push("boss");await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},searchPage:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},client:{publicSourcePages:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return [{records:[],next_cursor:null}];}},isCancelled:()=>false});
  assert.deepEqual(seen,ids.slice(0,2));
  assert.deepEqual(ids.slice(2).map(id=>result.errors[id]),['time_budget:本次总时间预算已用完','time_budget:本次总时间预算已用完']);
  assert.deepEqual(Object.keys(result.diagnostics.sources).sort(),[...ids].sort());

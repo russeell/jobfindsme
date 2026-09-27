@@ -66,25 +66,6 @@ PLATFORM_SOURCES = (
     ),
 )
 
-COMPANY_NAMES = (
-    "腾讯",
-    "字节跳动",
-    "阿里巴巴",
-    "美团",
-    "百度",
-    "京东",
-    "网易",
-    "快手",
-    "小米",
-    "滴滴",
-    "拼多多",
-    "DeepSeek",
-    "MiniMax",
-    "智谱",
-    "月之暗面",
-    "阶跃星辰",
-)
-
 
 class SourceGateError(PermissionError):
     pass
@@ -131,79 +112,19 @@ class DesktopSourceService:
                 ON CONFLICT(source_id) DO NOTHING""",
                 PLATFORM_SOURCES,
             )
-            connection.executemany(
-                """INSERT INTO desktop_source_capabilities (
-                    source_id, source_type, name, login_required, session_status,
-                    list_status, detail_status, fields_status, pagination_status,
-                    enabled, last_verified_at, notes
-                ) VALUES (?, 'company', ?, 0, 'anonymous', 'unverified',
-                    'unverified', 'unverified', 'unverified', 0, NULL, ?)
-                ON CONFLICT(source_id) DO NOTHING""",
-                [
-                    (
-                        f"company_{index:02d}",
-                        name,
-                        "校招/社招入口、列表、详情、字段和分页均待逐项验证",
-                    )
-                    for index, name in enumerate(COMPANY_NAMES, start=1)
-                ],
-            )
+            # Keep historical company rows and their linked job evidence readable,
+            # but never offer them as current search capabilities again.
             connection.execute(
-                """UPDATE desktop_source_capabilities SET
-                    session_status = 'anonymous', list_status = 'verified',
-                    detail_status = 'verified', fields_status = 'partial',
-                    pagination_status = 'verified', enabled = 1,
-                    last_verified_at = '2026-09-18T00:00:00+00:00',
-                    notes = '腾讯官网 JSON 已实测列表、JD 与分页；无薪资字段。'
-                WHERE source_id = 'company_01' AND list_status = 'unverified'"""
+                """UPDATE desktop_source_capabilities SET enabled = 0
+                WHERE source_type = 'company'"""
             )
-            connection.execute(
-                """UPDATE desktop_source_capabilities SET
-                    list_status='verified', detail_status='verified',
-                    fields_status='partial', pagination_status='unverified', enabled=1,
-                    last_verified_at='2026-09-19T00:00:00+00:00',
-                    notes='官网岗位快照：2026-09-19 实读34条，Agent匹配15条。'
-                    || '含完整JD；快照日期2026-09-17，不代表ATS实时全量。'
-                    || '城市本地筛选，薪资未提供。'
-                WHERE source_id='company_12' AND list_status='unverified'"""
-            )
-            # Enable only sources with a real list and a full-JD sample in D37.
-            for source_id, note in (
-                ("company_02", "字节跳动实读2条及完整JD520字；覆盖及分页待验证。"),
-                ("company_04", "美团实读10条及完整JD915字；点击式列表，分页待验证。"),
-                ("company_05", "百度实读5条及完整JD350字；点击式列表，分页待验证。"),
-                (
-                    "company_06",
-                    "京东2026-09-20实读两页，北京本地筛选17条，完整JD457字；有界覆盖。",
-                ),
-                ("company_09", "小米实读9条及官方详情接口完整JD315字；分页待验证。"),
-                ("company_10", "滴滴实读6条及完整JD557字；分页待验证。"),
-                ("company_07", "网易实读1条及完整JD918字；点击式列表，分页尚待验证。"),
-                ("company_08", "快手校招实读1条及完整JD987字；分页尚待验证。"),
-                ("company_11", "拼多多实读18条及完整JD400字；分页尚待验证。"),
-                (
-                    "company_13",
-                    "MiniMax实读10条及官方详情接口完整JD598字；分页待验证。",
-                ),
-                ("company_14", "智谱Moka实读两页42条及完整JD678字。"),
-                ("company_15", "月之暗面Moka实读两页39条及完整JD824字。"),
-                ("company_16", "阶跃星辰Moka实读两页60条及完整JD688字。"),
-            ):
-                connection.execute(
-                    """UPDATE desktop_source_capabilities SET
-                        list_status='verified', detail_status='verified',
-                        fields_status='partial', pagination_status='partial',
-                        enabled=1, last_verified_at='2026-09-19T12:40:00+00:00',
-                        notes=? WHERE source_id=? AND list_status='unverified'""",
-                    (note + "关键词/城市在有界候选中筛选，未知字段保留。", source_id),
-                )
 
     def list(self, *, source_type: str | None = None) -> list[SourceCapabilityRecord]:
         with self.database.connect() as connection:
             if source_type is None:
                 rows = connection.execute(
                     """SELECT * FROM desktop_source_capabilities
-                    ORDER BY source_type DESC, rowid"""
+                    WHERE source_type = 'platform' ORDER BY rowid"""
                 ).fetchall()
             else:
                 rows = connection.execute(
@@ -233,7 +154,7 @@ class DesktopSourceService:
             raise SourceGateError(
                 f"{source.name} list search capability is not verified"
             )
-        if source.source_type not in {"platform", "company"}:
+        if source.source_type != "platform":
             raise SourceGateError(f"{source.name} has no verified search adapter")
         return source
 
@@ -255,6 +176,8 @@ class DesktopSourceService:
         if not statuses <= CAPABILITY_STATUSES:
             raise ValueError("invalid source capability status")
         existing = self.get(source_id)
+        if existing.source_type != "platform":
+            raise SourceGateError("retired source cannot be verified")
         if (
             existing.login_required
             and enabled

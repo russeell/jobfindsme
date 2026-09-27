@@ -27,7 +27,6 @@ const sourceNames: Record<string, string> = {
   liepin: "猎聘",
   zhilian: "智联招聘",
   wuyou: "前程无忧",
-  company_01: "腾讯招聘官网",
 };
 
 const extractionSpecs: Record<BrowserSearchSourceId, {

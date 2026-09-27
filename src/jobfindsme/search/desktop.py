@@ -77,20 +77,6 @@ class LiepinPagedAdapter:
         )
 
 
-class NumericPagedAdapter:
-    def __init__(self, connector, *, first_page: int = 1) -> None:
-        self.connector = connector
-        self.first_page = first_page
-
-    def fetch_page(self, cursor: str | None) -> SourcePage:
-        page_number = int(cursor) if cursor is not None else self.first_page
-        records, next_page = self.connector.fetch_page(page_number)
-        return SourcePage(
-            records=tuple(records),
-            next_cursor=str(next_page) if next_page is not None else None,
-        )
-
-
 class SerializedPageAdapter:
     """Consume already-sanitized pages produced by the Electron session bridge."""
 
@@ -271,23 +257,6 @@ def build_search_keywords(*, intent: str, resume) -> tuple[str, ...]:
 
 
 def connector_adapter_for(*, source_id: str, keyword: str, city: str):
-    if source_id == "company_12":
-        from jobfindsme.connectors.deepseek_careers import DeepSeekCareersConnector
-
-        return NumericPagedAdapter(
-            DeepSeekCareersConnector(
-                keyword, policy=ConnectorPolicy(public_access=True, robots_allowed=True)
-            )
-        )
-    if source_id == "company_01":
-        from jobfindsme.connectors.company_careers import TencentCareersConnector
-
-        return NumericPagedAdapter(
-            TencentCareersConnector(
-                keyword,
-                policy=ConnectorPolicy(public_access=True, robots_allowed=True),
-            )
-        )
     if source_id != "liepin":
         raise SourceGateError(
             "browser-backed sources require the Electron session bridge; "

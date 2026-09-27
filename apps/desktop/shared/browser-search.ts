@@ -3,7 +3,7 @@ import {isAllowedSourceUrl,isPublicWebUrl,sourceBrowserSpecs,type ForegroundBrow
 export type SearchEngine = "bing" | "baidu" | "google";
 export const searchEngineNames:Record<SearchEngine,string>={bing:"Bing",baidu:"百度",google:"Google"};
 export function normalizeSearchEngine(value:string|null):SearchEngine {return value==="baidu"||value==="google"?value:"bing";}
-export const browserSiteNames:Record<SourceBrowserId,string>={boss:"BOSS直聘",liepin:"猎聘",zhilian:"智联招聘",wuyou:"前程无忧",company_01:"腾讯",company_02:"字节跳动",company_03:"阿里巴巴",company_04:"美团",company_05:"百度",company_06:"京东",company_07:"网易",company_08:"快手",company_09:"小米",company_10:"滴滴",company_11:"拼多多",company_12:"DeepSeek",company_13:"MiniMax",company_14:"智谱",company_15:"月之暗面",company_16:"阶跃星辰"};
+export const browserSiteNames:Record<SourceBrowserId,string>={boss:"BOSS直聘",liepin:"猎聘",zhilian:"智联招聘",wuyou:"前程无忧"};
 const platformHome:Partial<Record<SourceBrowserId,string>>={boss:"https://www.zhipin.com/",liepin:"https://www.liepin.com/",zhilian:"https://www.zhaopin.com/",wuyou:"https://www.51job.com/"};
 export type BrowserDestination = {kind:"empty"|"invalid";summary:string} | {kind:"homepage"|"url"|"search";url:string;sourceId:ForegroundBrowserId;summary:string};
 

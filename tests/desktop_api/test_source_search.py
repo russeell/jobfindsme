@@ -52,30 +52,15 @@ def test_source_catalog_separates_login_and_capability_gates(tmp_path) -> None:
     companies = sources.list(source_type="company")
 
     assert len(platforms) == 4
-    assert len(companies) == 16
-    assert sources.require_live_search("company_01").name == "腾讯"
-    assert all(
-        item.list_status == "unverified" and not item.enabled
-        for item in companies
-        if item.source_id
-        not in {
-            "company_01",
-            "company_02",
-            "company_04",
-            "company_05",
-            "company_06",
-            "company_09",
-            "company_10",
-            "company_07",
-            "company_08",
-            "company_11",
-            "company_12",
-            "company_13",
-            "company_14",
-            "company_15",
-            "company_16",
-        }
-    )
+    assert companies == []
+    assert {item.source_id for item in sources.list()} == {
+        "boss",
+        "liepin",
+        "zhilian",
+        "wuyou",
+    }
+    with pytest.raises(LookupError):
+        sources.get("company_01")
     liepin = sources.require_live_search("liepin")
     assert liepin.session_status == "anonymous"
     assert "生产 .app 快照 92 条" in liepin.notes
@@ -94,6 +79,33 @@ def test_source_catalog_separates_login_and_capability_gates(tmp_path) -> None:
             enabled=True,
             notes="offline fixture",
         )
+
+
+def test_legacy_company_capability_is_preserved_but_retired(tmp_path) -> None:
+    database = Database(tmp_path / "legacy.db")
+    DesktopSourceService(database)
+    with database.connect() as connection:
+        connection.execute(
+            """INSERT INTO desktop_source_capabilities
+            (source_id, source_type, name, login_required, session_status,
+             list_status, detail_status, fields_status, pagination_status,
+             enabled, last_verified_at, notes)
+            VALUES ('company_01', 'company', '腾讯', 0, 'anonymous',
+                    'verified', 'verified', 'partial', 'partial', 1, NULL,
+                    '旧来源记录')"""
+        )
+    sources = DesktopSourceService(database)
+    assert {item.source_id for item in sources.list()} == {
+        "boss",
+        "liepin",
+        "zhilian",
+        "wuyou",
+    }
+    historical = sources.get("company_01")
+    assert historical.notes == "旧来源记录"
+    assert not historical.enabled
+    with pytest.raises(SourceGateError):
+        sources.require_live_search("company_01")
 
 
 def test_explicit_query_stays_remote_query_and_resume_is_local_matching_input(
@@ -516,6 +528,16 @@ def test_salary_yuan_input_is_not_a_backend_k_value(tmp_path):
 
 def test_agent_two_sources_and_20_to_50k_filter_keep_overlap_and_unknown(tmp_path):
     database, workspace, _ = _confirmed_resume(tmp_path)
+    DesktopSourceService(database).record_verification(
+        source_id="zhilian",
+        session_status="verified",
+        list_status="verified",
+        detail_status="unverified",
+        fields_status="partial",
+        pagination_status="unverified",
+        enabled=True,
+        notes="synthetic test platform",
+    )
     client = TestClient(create_app(token="test-secret", database_path=database.path))
     headers = {"Authorization": "Bearer test-secret"}
 
@@ -525,7 +547,7 @@ def test_agent_two_sources_and_20_to_50k_filter_keep_overlap_and_unknown(tmp_pat
             "source_name": source_name,
             "source_url": "https://www.liepin.com/"
             if source_name == "猎聘"
-            else "https://careers.tencent.com/",
+            else "https://www.zhaopin.com/",
             "payload": {
                 "title": "Agent 工程师",
                 "company": company,
@@ -541,7 +563,7 @@ def test_agent_two_sources_and_20_to_50k_filter_keep_overlap_and_unknown(tmp_pat
         json={
             "workspace_id": workspace.workspace_id,
             "intent": "agent",
-            "source_ids": ["liepin", "company_01"],
+            "source_ids": ["liepin", "zhilian"],
             "max_pages": 1,
             "filters": {
                 "salary_min_k": 20,
@@ -559,9 +581,9 @@ def test_agent_two_sources_and_20_to_50k_filter_keep_overlap_and_unknown(tmp_pat
                         "next_cursor": None,
                     }
                 ],
-                "company_01": [
+                "zhilian": [
                     {
-                        "records": [record("腾讯", "unknown", "样例三")],
+                        "records": [record("智联招聘", "unknown", "样例三")],
                         "next_cursor": None,
                     }
                 ],
@@ -667,6 +689,16 @@ def test_bad_source_record_does_not_drop_other_records(tmp_path, monkeypatch):
 
     monkeypatch.setattr(module, "normalize_job", normalize)
     database, workspace, _ = _confirmed_resume(tmp_path)
+    DesktopSourceService(database).record_verification(
+        source_id="zhilian",
+        session_status="verified",
+        list_status="verified",
+        detail_status="unverified",
+        fields_status="partial",
+        pagination_status="unverified",
+        enabled=True,
+        notes="synthetic test platform",
+    )
     client = TestClient(create_app(token="test-secret", database_path=database.path))
     records = [
         {
@@ -688,8 +720,8 @@ def test_bad_source_record_does_not_drop_other_records(tmp_path, monkeypatch):
         json={
             "workspace_id": workspace.workspace_id,
             "intent": "Python",
-            "source_ids": ["liepin", "company_01"],
-            "browser_errors": {"company_01": "fixture source failed"},
+            "source_ids": ["liepin", "zhilian"],
+            "browser_errors": {"zhilian": "fixture source failed"},
             "browser_pages": {"liepin": [{"records": records, "next_cursor": None}]},
         },
     )
@@ -748,7 +780,7 @@ def test_explicit_subset_and_empty_source_selection_never_expand(tmp_path):
     )
     for requested, expected in [
         ([], []),
-        (["company_01"], ["company_01"]),
+        (["company_01"], []),
         (["boss", "liepin"], ["liepin"]),
     ]:
         called.clear()
@@ -784,18 +816,14 @@ def test_public_page_bridge_caches_and_keeps_partial_on_failure(tmp_path):
     )
     headers = {"Authorization": "Bearer test-secret"}
     body = {"keyword": "Python", "max_pages": 2}
-    assert (
-        client.post("/v1/sources/company_12/public-pages", json=body).status_code == 401
-    )
-    first = client.post(
-        "/v1/sources/company_12/public-pages", json=body, headers=headers
-    )
+    assert client.post("/v1/sources/liepin/public-pages", json=body).status_code == 401
+    first = client.post("/v1/sources/liepin/public-pages", json=body, headers=headers)
     assert first.status_code == 200
     assert first.json()[0]["collection"]["complete"] is False
     assert first.json()[0]["next_cursor"] is None
     assert (
         client.post(
-            "/v1/sources/company_12/public-pages", json=body, headers=headers
+            "/v1/sources/liepin/public-pages", json=body, headers=headers
         ).json()
         == first.json()
     )
@@ -824,7 +852,7 @@ def test_public_page_continuation_uses_returned_cursor(tmp_path):
         )
     )
     headers = {"Authorization": "Bearer test-secret"}
-    endpoint = "/v1/sources/company_12/public-pages"
+    endpoint = "/v1/sources/liepin/public-pages"
     first = client.post(
         endpoint, headers=headers, json={"keyword": "agent", "max_pages": 1}
     )
@@ -854,7 +882,7 @@ def test_public_page_bridge_force_refresh_bypasses_success_cache(tmp_path):
             source_adapter_factory_override=lambda *_: Adapter(),
         )
     )
-    endpoint = "/v1/sources/company_12/public-pages"
+    endpoint = "/v1/sources/liepin/public-pages"
     headers = {"Authorization": "Bearer fixture"}
     body = {"keyword": "Python", "max_pages": 1}
     for request in (body, body, {**body, "force_refresh": True}):

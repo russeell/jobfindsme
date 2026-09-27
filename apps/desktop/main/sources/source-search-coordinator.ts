@@ -26,21 +26,9 @@ export async function collectBrowserSourcePages(
     onProgress?.({stage:"loading",count:0,message:`正在读取 ${isSourceBrowserId(sourceId)?browserSiteNames[sourceId]:"岗位来源"}`});
     if (!requiresElectronSourceSearch(sourceId)) {
       if(!isSourceBrowserId(sourceId))return;
-      if(!["liepin","company_01","company_12"].includes(sourceId)){
-        const page=input.source_cursor&&sourceId==='company_03'?Number(input.source_cursor):1;
-        if(input.source_cursor&&(sourceId!=='company_03'||!Number.isInteger(page)||page<2||page>20)){browserErrors[sourceId]="unsupported_cursor:该来源没有可核验的续查游标";return;}
-        if(!manager){browserErrors[sourceId]="browser_session_error:来源后台会话不可用";return;}
-        try{browserPages[sourceId]=[await manager.collectCareer(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',maxPages:preflight.max_pages,seconds:remaining(),...(sourceId==='company_03'?{page}:{})})];}
-        catch(error){browserErrors[sourceId]=String(error).slice(0,1000);}
-        return;
-      }
       try { browserPages[sourceId]=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',max_pages:Math.min(3,preflight.max_pages),seconds:Math.max(1,Math.min(60,remaining())),cursor:input.source_cursor}); }
       catch(primaryError){
-        if(input.source_cursor){browserErrors[sourceId]=String(primaryError).slice(0,1000);return;}
-        if(/429|risk_control|访问过于频繁|captcha/i.test(String(primaryError))){browserErrors[sourceId]=String(primaryError);return;}
-        if(!manager){browserErrors[sourceId]=String(primaryError);return;}
-        try {browserPages[sourceId]=[await manager.collectCareer(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',maxPages:preflight.max_pages,seconds:remaining()})];}
-        catch(fallbackError){browserErrors[sourceId]=`首选通道：${String(primaryError).slice(0,300)}；内嵌浏览器：${String(fallbackError).slice(0,400)}`;}
+        browserErrors[sourceId]=String(primaryError).slice(0,1000);
       }
       return;
     }

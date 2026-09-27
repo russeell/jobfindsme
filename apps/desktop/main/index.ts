@@ -284,11 +284,9 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal):Pr
     if(sourceId==="zhilian"||sourceId==="wuyou"){
       const page=await sourceBrowserManager.searchPage(sourceId,{keyword:"工程师",city:"",page:1,forceRefresh:true});
       pages=[page];
-    }else if(["liepin","company_01","company_12"].includes(sourceId)){
+    }else if(sourceId==="liepin"){
       pages=await apiClient.publicSourcePages(sourceId,{keyword:"工程师",city:"",max_pages:1,seconds:8,force_refresh:true},signal);
-    }else{
-      pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:"工程师",city:"",maxPages:1,seconds:8,forceRefresh:true})];
-    }
+    }else throw Error("source_contract_error:未知招聘平台");
     if(signal.aborted)throw Error("source_check_cancelled");
     if(pages.some(page=>page.collection?.failure==="risk_control"))throw Error("risk_control:来源要求安全验证");
     if(pages.some(page=>page.collection?.failure==="login_required"))throw Error("login_required:来源要求重新登录");
@@ -332,14 +330,11 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   if(!requiresElectronSourceSearch(sourceId)){
     let pages:BrowserSourcePage[];
     try{
-      if(["liepin","company_01","company_12"].includes(sourceId)){
-        try {pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});}
-        catch {pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];}
-      }else pages=[await sourceBrowserManager.collectCareer(sourceId,{keyword:'工程师',city:'',maxPages:2,seconds:30})];
+      pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});
     }catch(error){throw Error(`source_contract_error:${String(error).slice(0,250)}`);}
     const first=pages.flatMap(p=>p.records)[0];
     if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
-    if(sourceId!=='company_03'&&first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
+    if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
     const summary=summarizeSourceVerification(pages);
     summary.session_status='anonymous';summary.pagination_status='partial';
     summary.notes='有界检索已读取列表；分页/城市覆盖仍需逐项实测。'+summary.notes;

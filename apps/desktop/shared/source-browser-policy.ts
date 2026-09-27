@@ -1,4 +1,4 @@
-export type SourceBrowserId = "boss" | "liepin" | "zhilian" | "wuyou" | "company_01" | "company_02" | "company_03" | "company_04" | "company_05" | "company_06" | "company_07" | "company_08" | "company_09" | "company_10" | "company_11" | "company_12" | "company_13" | "company_14" | "company_15" | "company_16";
+export type SourceBrowserId = "boss" | "liepin" | "zhilian" | "wuyou";
 
 export type SourceBrowserBounds = {
   x: number;
@@ -37,26 +37,7 @@ export const sourceBrowserSpecs: Record<SourceBrowserId, {
     allowedHosts: ["51job.com"],
     partition: "persist:jobfindsme-source-wuyou",
   },
-  company_01: {
-    loginUrl: "https://careers.tencent.com/",
-    allowedHosts: ["careers.tencent.com"],
-    partition: "persist:jobfindsme-source-company-01",
-  },
-  company_02: {loginUrl:"https://jobs.bytedance.com/", allowedHosts:["jobs.bytedance.com", "seed.bytedance.com"], partition:"persist:jobfindsme-source-company-02"},
-  company_03: {loginUrl:"https://talent-holding.alibaba.com/off-campus/position-list?lang=zh", allowedHosts:["talent.alibaba.com", "campus-talent.alibaba.com", "talent-holding.alibaba.com"], partition:"persist:jobfindsme-source-company-03"},
-  company_04: {loginUrl:"https://career.meituan.com/", allowedHosts:["career.meituan.com"], partition:"persist:jobfindsme-source-company-04"},
-  company_05: {loginUrl:"https://talent.baidu.com/", allowedHosts:["talent.baidu.com"], partition:"persist:jobfindsme-source-company-05"},
-  company_06: {loginUrl:"https://zhaopin.jd.com/home", allowedHosts:["zhaopin.jd.com"], partition:"persist:jobfindsme-source-company-06"},
-  company_07: {loginUrl:"https://hr.163.com/", allowedHosts:["hr.163.com", "campus.163.com"], partition:"persist:jobfindsme-source-company-07"},
-  company_08: {loginUrl:"https://campus.kuaishou.cn/", allowedHosts:["campus.kuaishou.cn", "zhaopin.kuaishou.cn"], partition:"persist:jobfindsme-source-company-08"},
-  company_09: {loginUrl:"https://hr.xiaomi.com/website/opportunities.html", allowedHosts:["hr.xiaomi.com", "career.mi.com", "xiaomi.jobs.f.mioffice.cn"], partition:"persist:jobfindsme-source-company-09"},
-  company_10: {loginUrl:"https://talent.didiglobal.com/", allowedHosts:["talent.didiglobal.com"], partition:"persist:jobfindsme-source-company-10"},
-  company_11: {loginUrl:"https://careers.pddglobalhr.com/jobs", allowedHosts:["careers.pddglobalhr.com"], partition:"persist:jobfindsme-source-company-11"},
-  company_12: {"loginUrl": "https://talent.deepseek.com/", "allowedHosts": ["talent.deepseek.com"], "allowedPaths": ["/social-recruitment/high-flyer/140576"], "partition": "persist:jobfindsme-source-company-12"},
-  company_13: {"loginUrl": "https://vrfi1sk8a0.jobs.feishu.cn/index/", "allowedHosts": ["vrfi1sk8a0.jobs.feishu.cn", "www.minimax.cn"], "allowedPaths": [], "partition": "persist:jobfindsme-source-company-13"},
-  company_14: {"loginUrl": "https://app.mokahr.com/social-recruitment/zphz/148983?locale=zh-CN#/", "allowedHosts": ["www.zhipuai.cn"], "allowedPaths": ["/social-recruitment/zphz/148983", "/campus-recruitment/zphz/148984"], "partition": "persist:jobfindsme-source-company-14"},
-  company_15: {"loginUrl": "https://app.mokahr.com/apply/moonshot/148506#/jobs", "allowedHosts": ["careers.kimi.com", "careers.kimi.ai"], "allowedPaths": ["/apply/moonshot/148506"], "partition": "persist:jobfindsme-source-company-15"},
-  company_16: {"loginUrl": "https://app.mokahr.com/social-recruitment/step/94904#/", "allowedHosts": ["www.stepfun.com"], "allowedPaths": ["/social-recruitment/step/94904", "/campus-recruitment/step/94905"], "partition": "persist:jobfindsme-source-company-16"},
+
 };
 
 const sourceBrowserNames: Record<string, SourceBrowserId> = {
@@ -64,23 +45,7 @@ const sourceBrowserNames: Record<string, SourceBrowserId> = {
   "猎聘": "liepin",
   "智联招聘": "zhilian",
   "前程无忧": "wuyou",
-  "腾讯": "company_01",
-  "腾讯招聘官网": "company_01",
-  "字节跳动": "company_02",
-  "阿里巴巴": "company_03",
-  "美团": "company_04",
-  "百度": "company_05",
-  "京东": "company_06",
-  "网易": "company_07",
-  "快手": "company_08",
-  "小米": "company_09",
-  "滴滴": "company_10",
-  "拼多多": "company_11",
-  "DeepSeek": "company_12",
-  "MiniMax": "company_13",
-  "智谱": "company_14",
-  "月之暗面": "company_15",
-  "阶跃星辰": "company_16",
+
 
 };
 
@@ -123,8 +88,6 @@ export function isAllowedSourceUrl(sourceId: SourceBrowserId, value: string): bo
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || (url.port && url.port !== "443")) return false;
-    // Tencent's own job detail page redirects international roles to this tenant.
-    if (sourceId === "company_01" && url.hostname === "tencent.wd1.myworkdayjobs.com") return true;
     if(url.hostname === "app.mokahr.com") return (sourceBrowserSpecs[sourceId].allowedPaths || []).some(path => url.pathname === path || url.pathname.startsWith(path + "/"));
     return sourceBrowserSpecs[sourceId].allowedHosts.some(
       (host) => url.hostname === host || url.hostname.endsWith(`.${host}`),

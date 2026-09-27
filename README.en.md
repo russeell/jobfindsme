@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">JobFindsMe</h1>
 <p align="center"><strong>Your job search, in one workspace.</strong></p>
-<p align="center">Search 4 recruiting platforms and 16 company career sites. Bring your resume. Keep the evidence.</p>
+<p align="center">Search four recruiting platforms. Bring your resume. Keep the evidence.</p>
 
 <p align="center">
   <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=27272a" alt="Latest release"></a>
@@ -28,7 +28,7 @@
 
 <table>
 <tr>
-<td width="33%" valign="top"><h3>01 · Find</h3><p>Search by role, skill and city across recruiting platforms and company sites. Optionally use your confirmed resume to inform matching.</p></td>
+<td width="33%" valign="top"><h3>01 · Find</h3><p>Search by role, skill and city across recruiting platforms. Optionally use your confirmed resume to inform matching.</p></td>
 <td width="33%" valign="top"><h3>02 · Understand</h3><p>Read the original listing, ask about the company and follow research citations. Missing information stays unknown.</p></td>
 <td width="33%" valign="top"><h3>03 · Keep</h3><p>Save interesting roles, track read and application status, and return to earlier conversations without starting over.</p></td>
 </tr>
@@ -36,7 +36,7 @@
 
 ## Supported sources
 
-The app includes **20 job search sources: 4 recruiting platforms and 16 company career sites**.
+The app includes **four job search sources**: BOSS Zhipin, Liepin, Zhaopin and 51job. Company websites can still be opened in the built-in browser, and saved jobs retain their original links.
 
 | Platform | Access |
 | --- | --- |
@@ -44,13 +44,6 @@ The app includes **20 job search sources: 4 recruiting platforms and 16 company 
 | Liepin | Public listing search can be attempted without signing in |
 | Zhaopin | Sign in within the app and check the source before searching |
 | 51job | Sign in within the app and check the source before searching |
-
-| Company career sites | | | |
-| --- | --- | --- | --- |
-| Tencent | ByteDance | Alibaba | Meituan |
-| Baidu | JD.com | NetEase | Kuaishou |
-| Xiaomi | DiDi | Pinduoduo | DeepSeek |
-| MiniMax | Zhipu | Moonshot AI | StepFun |
 
 Check **Settings → Job sources** for current access, listing, full-description and pagination status. Expired sessions, verification challenges, rate limits and website changes can interrupt searches. Inclusion here does not guarantee continuous access or complete coverage of current openings.
 
