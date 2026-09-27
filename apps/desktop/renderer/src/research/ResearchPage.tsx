@@ -4,11 +4,13 @@ import type {BootstrapData,ModelConnection,ResearchReport,SearchResultItem} from
 import {reportJob,reportMatchesJob,reportStatus} from "../../../shared/research-reports";
 import {isAllowedSourceUrl,isSourceBrowserId,sourceBrowserSpecs} from "../../../shared/source-browser-policy";
 import {userError} from "../../../shared/user-errors";
+import {parseMessageBlocks} from "../../../shared/message-content";
 import {splitResearchInput} from "../../../shared/research-input";
 import {resolveResearchSession} from "../../../shared/research-session";
 import {modelHistoryWithinBudget} from "../../../shared/research-chat-ipc";
 import {useOriginalBrowser} from "../shared/Workbench";
 import {ReputationEvidence} from "./ReputationEvidence";
+import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
@@ -45,6 +47,7 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   const scrollRef=useRef<HTMLDivElement>(null);
   const historyButtonRef=useRef<HTMLButtonElement>(null);
   const historyCloseRef=useRef<HTMLButtonElement>(null);
+  const historyDialogRef=useRef<HTMLDivElement>(null);
   const saveQueue=useRef<Promise<unknown>>(Promise.resolve());
   const savedChats=useRef(new Map<string,string>());
   const [busy,setBusy]=useState<"link"|"prepare"|"history"|null>(null);
@@ -56,7 +59,15 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   function keepReports(values:ResearchReport[]){setReports(values);onReports(values);}
   function openSaved(value:ResearchReport){sequence.current++;lastOpened.current=value.report_id;scrollRef.current?.scrollTo({top:0});setChatId(null);setJob(value.job_id?reportJob(value):undefined);setReport(value);setMode("report");setCandidate(undefined);setContextCompany(value.job_id?"":value.job_context?.company||"");setContextTitle(value.job_id?"":value.job_context?.title||"");setQuestion("");setMessage("");setBusy(null);}
   useEffect(()=>setTopbarTarget(document.getElementById("research-topbar-actions")),[]);
-  useEffect(()=>{if(!historyOpen)return;historyCloseRef.current?.focus();const onKey=(event:KeyboardEvent)=>{if(event.key==="Escape"){event.preventDefault();closeHistory();}};window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[historyOpen]);
+  useEffect(()=>{if(!historyOpen||!active)return;const shell=document.querySelector<HTMLElement>(".shell");if(shell)shell.inert=true;historyCloseRef.current?.focus();const onKey=(event:KeyboardEvent)=>{
+    if(event.key==="Escape"){event.preventDefault();closeHistory();return;}
+    if(event.key!=="Tab"||!historyDialogRef.current)return;
+    const focusable=Array.from(historyDialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex='-1'])")).filter(element=>element.getClientRects().length>0);
+    if(!focusable.length)return;const first=focusable[0],last=focusable[focusable.length-1];
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+  };window.addEventListener("keydown",onKey);return()=>{if(shell)shell.inert=false;window.removeEventListener("keydown",onKey);};},[historyOpen,active]);
+  useEffect(()=>{if(!active&&historyOpen)setHistoryOpen(false);},[active,historyOpen]);
   useEffect(()=>{if(!workspaceId)return;let cancelled=false;savedChats.current.clear();const cached=loadResearchChats(workspaceId);setLoadedWorkspace(null);setChats(cached);setReports([]);setChatId(null);setChatBusy(false);setStreaming("");streamingRef.current="";setModelId(getCurrentModel(workspaceId));void window.jobfindsme!.listResearchChats(workspaceId).then(async rows=>{if(cancelled)return;const remote=rows.map(fromStoredResearchChat);try{const verified=await migrateResearchChats(workspaceId,cached,remote,item=>window.jobfindsme!.saveResearchChat(item),()=>window.jobfindsme!.listResearchChats(workspaceId));if(cancelled)return;for(const chat of verified)savedChats.current.set(chat.id,JSON.stringify(toStoredResearchChat(workspaceId,chat)));setChats(verified);}catch(error){if(cancelled)return;for(const chat of remote)savedChats.current.set(chat.id,JSON.stringify(toStoredResearchChat(workspaceId,chat)));setChats(mergeResearchChats(cached,remote));setMessage(`历史迁移未完成，设备缓存已保留：${userError(error).message}`);}setLoadedWorkspace(workspaceId);}).catch(error=>{if(!cancelled){setLoadedWorkspace(workspaceId);setMessage(`对话记录暂未从本地服务加载；当前显示设备缓存：${userError(error).message}`);}});return()=>{cancelled=true;const active=requestRef.current;if(active?.workspaceId===workspaceId){requestRef.current=null;void(active.kind==="model"?window.jobfindsme!.cancelResearchChat(active.id):window.jobfindsme!.cancelResearch());}};},[workspaceId]);
   useEffect(()=>{if(!workspaceId||loadedWorkspace!==workspaceId)return;if(!saveResearchChats(workspaceId,chats))setMessage("历史对话未能写入设备缓存，请检查可用空间。");for(const chat of chats){const stored=toStoredResearchChat(workspaceId,chat),serialized=JSON.stringify(stored);if(savedChats.current.get(chat.id)===serialized)continue;savedChats.current.set(chat.id,serialized);saveQueue.current=saveQueue.current.catch(()=>undefined).then(()=>saveResearchChatWithRetry(stored,item=>window.jobfindsme!.saveResearchChat(item))).catch(error=>{if(savedChats.current.get(chat.id)===serialized)savedChats.current.delete(chat.id);setMessage(`对话记录未能写入本地服务：${userError(error).message}。设备缓存仍保留，请重试。`);});}},[workspaceId,loadedWorkspace,chats]);
   useEffect(()=>{if(!active)return;void window.jobfindsme!.listModelConnections().then(values=>{setConnections(values);const saved=getCurrentModel(workspaceId);setModelId(saved&&values.some(value=>value.connection_id===saved&&value.status==="verified")?saved:null);}).catch(error=>onError(userError(error).message));},[active,workspaceId]);
@@ -139,18 +150,14 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
   const activeChat=chats.find(item=>item.id===chatId);
   const chatReportIds=activeChat?reportIdsByTurn(activeChat,reports):new Map<number,string>();
   const reportsById=new Map(reports.map(item=>[item.report_id,item]));
-  function answerText(text:string,turn:number,sources:ResearchReport["evidence"]|undefined){
-    if(!sources?.length)return text;
-    return text.split(/(\[\d+\]|\*\*[^*]+\*\*)/gu).map((part,index)=>{if(/^\*\*[^*]+\*\*$/u.test(part))return <strong key={`em-${index}`}>{part.slice(2,-2)}</strong>;const number=/^\[(\d+)\]$/u.exec(part);if(!number)return part;const citation=Number(number[1]);if(!sources[citation-1])return part;
-      return <button key={`${index}-${citation}`} type="button" className="citation-button" aria-label={`查看引用 ${citation}`} onClick={()=>{setFocusedCitation({turn,number:citation});const details=document.getElementById(`research-sources-${turn}`) as HTMLDetailsElement|null;if(details)details.open=true;requestAnimationFrame(()=>document.getElementById(`research-source-${turn}-${citation}`)?.focus());}}>{part}</button>;});
+  function showCitation(turn:number,number:number){
+    setFocusedCitation({turn,number});
+    const details=document.getElementById(`research-sources-${turn}`) as HTMLDetailsElement|null;
+    if(details)details.open=true;
+    requestAnimationFrame(()=>document.getElementById(`research-source-${turn}-${number}`)?.focus());
   }
-  function readableAnswer(text:string,turn:number,sources:ResearchReport["evidence"]|undefined){
-    return text.split(/\n/gu).map((line,lineIndex)=>{const heading=/^#{1,3}\s+(.+)$/u.exec(line);const bullet=/^\s*[-*]\s+(.+)$/u.exec(line);const numbered=/^\s*(\d+)\.\s+(.+)$/u.exec(line);
-      if(heading)return <h3 key={lineIndex} className="research-answer-heading">{answerText(heading[1],turn,sources)}</h3>;
-      if(bullet||numbered)return <p key={lineIndex} className="research-answer-list">{numbered?`${numbered[1]}. `:"• "}{answerText((bullet||numbered)![bullet?1:2],turn,sources)}</p>;
-      return <p key={lineIndex} className="research-answer-line">{line?answerText(line,turn,sources):"\u00a0"}</p>;
-    });
-  }
+  const historyGroup=(date:string)=>{const day=new Date(date).toDateString(),today=new Date(),yesterday=new Date(today);yesterday.setDate(today.getDate()-1);return day===today.toDateString()?"今天":day===yesterday.toDateString()?"昨天":"更早";};
+  const historySummary=(text:string)=>{const blocks=parseMessageBlocks(text),first=blocks.find(block=>block.kind==="paragraph"||block.kind==="quote")||blocks[0];return first&&"text" in first?first.text.replace(/\*|`/gu,"").slice(0,88):"暂无回复";};
   function updateShownReport(value:ResearchReport){setReport(current=>current?.report_id===value.report_id?value:current);keepReports(reports.map(item=>item.report_id===value.report_id?value:item));}
   function selectHistoryChat(item:SavedResearchChat){
     scrollRef.current?.scrollTo({top:0});setChatId(item.id);
@@ -174,31 +181,32 @@ export function ResearchPage({active,data,target,onSearchJobs,onError,onReports}
           const attached=chatReportIds.get(index);
           const attachedReport=attached?reportsById.get(attached):undefined;
           return <article className={`research-chat-turn ${item.role}`} aria-label={item.role==="user"?"你":"求职助手"} key={`${activeChat.id}-${index}`}>
-            {item.role==="assistant"?readableAnswer(item.text,index,attachedReport?.evidence||item.evidence):<p>{item.text}</p>}
+            {item.role==="assistant"?<MessageContent text={item.text} sources={attachedReport?.evidence||item.evidence} onCitation={number=>showCitation(index,number)}/>:<p>{item.text}</p>}
             {attachedReport?<details id={`research-sources-${index}`}><summary>来源与核验详情（{attachedReport.evidence.length}）</summary><ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})} focusedEvidenceId={focusedCitation?.turn===index?attachedReport.evidence[focusedCitation.number-1]?.evidence_id:undefined}/></details>:item.evidence?.length?<details id={`research-sources-${index}`}><summary>来源片段（{item.evidence.length}）</summary>{item.evidence.map((source,sourceIndex)=><article id={`research-source-${index}-${sourceIndex+1}`} tabIndex={-1} className={`evidence-card${focusedCitation?.turn===index&&focusedCitation.number===sourceIndex+1?" research-source-focused":""}`} key={source.evidence_id}><strong>原文片段 [{sourceIndex+1}] · {source.platform}</strong><small>{source.context?.page?`第 ${source.context.page} 页 · `:""}{source.published_at||"发布时间未知"}</small><blockquote>{source.excerpt}</blockquote><p className="note">{source.limitations} · 读取于 {source.retrieved_at}</p>{source.url&&<button type="button" onClick={()=>openBrowser({sourceId:"web",url:source.url!,title:"研究来源"})}>查看原页 ↗</button>}</article>)}</details>:null}
             {!!item.process?.length&&<details className="research-diagnostics"><summary>检索与阅读过程（{item.process.length}）</summary><ol>{item.process.map((step,stepIndex)=><li key={stepIndex}>{({find_evidence:"核对已存材料",search_web:"发现网页",read_page:"读取原页",read_browser_page:"浏览器读取原页",answer_check:"核对陈述",completion_check:"补查缺口"} as Record<string,string>)[step.tool]||step.tool}{step.site?` · ${step.site}`:""} · {step.status}{typeof step.count==="number"?` · ${step.count} 条`:""}</li>)}</ol></details>}
             {item.searchQuery&&<button type="button" className="research-search-action" onClick={()=>onSearchJobs(item.searchQuery!)}>去找工作 · {item.searchQuery}</button>}
           </article>;
         })}
-        {chatBusy&&<article className="research-chat-turn assistant" aria-label="求职助手" aria-live="polite">{readableAnswer(streaming||liveProcess||"正在处理…",-1,undefined)}{streaming&&liveProcess&&<small className="note">{liveProcess}</small>}</article>}
+        {chatBusy&&<article className="research-chat-turn assistant" aria-label="求职助手" aria-live="polite"><MessageContent text={streaming||liveProcess||"正在处理…"}/>{streaming&&liveProcess&&<small className="note">{liveProcess}</small>}</article>}
         {activeChat.failure&&!chatBusy&&<p className="research-chat-failure" role="status">{activeChat.failure} · 输入框已保留提问，可重试。</p>}
       </section>}
       {!activeChat&&showingReport&&report&&<ReputationEvidence report={report} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})}/>}
     </div></div>
-    {historyOpen&&<aside id="research-history-panel" className="research-history-panel" role="dialog" aria-label="历史对话与报告" aria-modal="false">
+    {active&&historyOpen&&createPortal(<div className="research-history-backdrop" data-browser-overlay="modal" onMouseDown={event=>{if(event.target===event.currentTarget)closeHistory();}}><div ref={historyDialogRef} id="research-history-panel" className="research-history-panel" role="dialog" aria-label="历史对话与报告" aria-modal="true">
       <div className="research-history-heading"><strong>历史</strong><button ref={historyCloseRef} type="button" aria-label="关闭历史" onClick={()=>closeHistory()}>关闭</button></div>
       <div className="research-history-body">
         <div className="research-history-title"><strong>历史对话</strong></div>
-        <div className="research-history-list">{chats.map(item=><div className="research-history-row" key={item.id}><button disabled={chatBusy} aria-pressed={chatId===item.id} onClick={()=>selectHistoryChat(item)}><strong>{item.title}</strong><small>{new Date(item.updatedAt).toLocaleString()} · {item.turns.length} 条消息</small></button></div>)}</div>
+        <div className="research-history-list">{chats.map((item,index)=><div key={item.id}>{(index===0||historyGroup(chats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button disabled={chatBusy} aria-pressed={chatId===item.id} onClick={()=>selectHistoryChat(item)}><strong>{item.title}</strong><small>{historySummary(item.turns.at(-1)?.text||"")}</small></button></div></div>)}</div>
         <div className="research-history-title"><strong>历史报告</strong></div>
-        {history.length?<div className="research-history-list">{history.map(item=><div className="research-history-row" key={item.report_id}><button disabled={!!busy||chatBusy} aria-pressed={report?.report_id===item.report_id&&showingReport} onClick={()=>selectHistoryReport(item)}><strong>{item.job_id?`${item.job_context?.company||"公司未知"} · ${item.job_context?.title||"岗位未知"}`:`${item.job_context?.company||"公司未知"} · 公司研究`}</strong><small>{new Date(item.created_at).toLocaleString()} · {reportStatus(item)}{item.job_context?.interest_question?` · 问：${item.job_context.interest_question}`:""}</small></button><button disabled={!!busy||chatBusy} onClick={()=>setHideId(item.report_id)}>移除</button>{hideId===item.report_id&&<div className="history-confirm" role="alert"><p>从列表移除这份报告？本机证据快照保留。</p><div className="button-row"><button disabled={!!busy} onClick={()=>void hideReport(item)}>确认移除</button><button onClick={()=>setHideId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">这里还没有报告。明确要求生成报告后会显示在这里。</p>}
+        {history.length?<div className="research-history-list">{history.map((item,index)=><div key={item.report_id}>{(index===0||historyGroup(history[index-1].created_at)!==historyGroup(item.created_at))&&<p className="history-day">{historyGroup(item.created_at)}</p>}<div className="research-history-row"><button disabled={!!busy||chatBusy} aria-pressed={report?.report_id===item.report_id&&showingReport} onClick={()=>selectHistoryReport(item)}><strong>{item.job_id?`${item.job_context?.company||"公司未知"} · ${item.job_context?.title||"岗位未知"}`:`${item.job_context?.company||"公司未知"} · 公司研究`}</strong><small>{reportStatus(item)}{item.job_context?.interest_question?` · ${item.job_context.interest_question}`:""}</small></button><button disabled={!!busy||chatBusy} onClick={()=>setHideId(item.report_id)}>移除</button>{hideId===item.report_id&&<div className="history-confirm" role="alert"><p>从列表移除这份报告？本机证据快照保留。</p><div className="button-row"><button disabled={!!busy} onClick={()=>void hideReport(item)}>确认移除</button><button onClick={()=>setHideId("")}>取消</button></div></div>}</div></div>)}</div>:<p className="research-empty-note">这里还没有报告。明确要求生成报告后会显示在这里。</p>}
       </div>
-    </aside>}
+    </div></div>,document.body)}
     {message&&<p className="research-inline-status" role="status">{message}</p>}
     <form className="research-composer" aria-label="求职助手输入框" onSubmit={event=>{event.preventDefault();submitInput();}}>
       <textarea ref={inputRef} rows={1} aria-label="向求职助手提问" value={question} maxLength={2200} disabled={!!busy||chatBusy} onChange={event=>{setQuestion(event.target.value);setCandidate(undefined);setMessage("");}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();submitInput();}}} placeholder={job?"继续聊这个岗位、公司或求职准备":"问求职助手，也可以粘贴 JD 或岗位链接"}/>
       {candidate&&<div className="research-candidate"><strong>{candidate.company} · {candidate.title}</strong><span title={candidate.description}>{candidate.description?candidate.description.slice(0,120):"岗位原文不完整"}</span><button type="button" disabled={!!busy} onClick={()=>void confirmCandidate()}>确认岗位</button></div>}
       <div className="research-composer-actions"><select aria-label="当前使用模型" value={modelId||""} onChange={event=>{const value=event.target.value;setModelId(value||null);if(value)setCurrentModel(workspaceId,value);}}><option value="">选择模型</option>{connections.filter(item=>item.status==="verified").map(item=><option key={item.connection_id} value={item.connection_id}>{item.provider} · {item.model_id}</option>)}</select><div className="button-row">{chatBusy&&<button type="button" onClick={()=>void cancelChat()}>停止</button>}<button type="submit" className="primary-button" disabled={!!busy||chatBusy||!!candidate}>{busy==="link"?"读取中…":chatBusy?"处理中…":"发送 ↑"}</button></div></div>
     </form>
+    {centeredEmpty&&<div className="research-examples" aria-label="示例问题">{["帮我分析一份 JD","如何准备技术面试？","调研一家目标公司"].map(example=><button key={example} type="button" onClick={()=>{setQuestion(example);inputRef.current?.focus();}}>{example}</button>)}</div>}
   </div>;
 }

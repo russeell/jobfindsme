@@ -339,12 +339,11 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
     const unresolved=rejectedBeforeRepair>checked.claims.length||rejectedClaims(raw,evidence,company).length>0;
     const lines=validClaims.length?validClaims.map(claim=>`${claim.statement} [${originals.findIndex(item=>item.evidence_id===claim.evidence_ids[0])+1}]`):[explainResearchGap(originals.length,actions,failures,context.question)];
     const limitations=[...checked.limitations,...(unresolved?["原回答有陈述未通过原文校验，已排除；只保留本次核对通过的内容。"]:[]),"来源的法律主体、团队与岗位适用性仍需按原页核对。",...failures];
-    if(validClaims.length&&(unresolved||checked.limitations.length))lines.push(`尚缺依据：${[...new Set(limitations.slice(0,3))].join("；")}`);
+    if(validClaims.length&&(unresolved||checked.limitations.length))lines.push(`尚缺依据：${checked.limitations[0]||"部分陈述未通过原文校验，已从回答中排除。"}`);
     if(!validClaims.length){
       if(originals.length){
         lines.length=0;
-        lines.push("现有原文不足以支持直接结论。缺口：回答中的陈述未能通过原文和主体核对。");
-        for(const [index,item] of originals.slice(0,2).entries())lines.push(`来源片段 [${index+1}]：${excerpt(item).slice(0,100)}${item.excerpt.length>100?"…":""}`);
+        lines.push(`已读取 ${originals.length} 份材料，但本次回答未通过原文与公司主体核对。材料已保留，可展开查看。`);
       }
       const followUp=safeClarification(raw);if(followUp)lines.push(followUp);
     }

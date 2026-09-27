@@ -11,6 +11,7 @@ import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "..
 import { Discovery } from "./search/Discovery";
 import {formatSalary} from "./search/salary";
 import { Workbench, BrowserToggle, useOriginalBrowser } from "./shared/Workbench";
+import {presentSourceStatus} from "../../shared/source-presentation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
@@ -23,7 +24,7 @@ import type {
 type WorkPage = "discover" | "research" | "records";
 type Page = WorkPage | "settings";
 type SettingsTab = "sources" | "models" | "about";
-const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["求职助手", "research"], ["已看过", "records"]];
+const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["求职助手", "research"], ["我的岗位", "records"]];
 const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["版本更新", "about"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
@@ -32,6 +33,7 @@ export function App() {
   const [reports,setReports]=useState<ResearchReport[]>([]);
   function chooseSource(id:string, selected:boolean) {setChosenSources(current => {const previous=current;const next=selected ? [...new Set([...previous,id])] : previous.filter(s=>s!==id);localStorage.setItem("jfm.sources.selected",JSON.stringify(next));return next;});}
   function chooseAllSources(selected:boolean) {setChosenSources(selected?(data?.sources.map(source=>source.source_id)??[]):[]);}
+  function chooseQuickSources(ids:string[]){setChosenSources(ids);}
   const [page, setPage] = useState<Page>("discover");
   const [settingsTab,setSettingsTab]=useState<SettingsTab>("sources");
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
@@ -77,12 +79,12 @@ export function App() {
   }, []);
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
-    <div className="nav-group"><p className="eyebrow">开始</p><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
+    <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
   </>}>
-    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page!=="settings"&&<span>工作空间 / {navItems.find(([,target])=>target===page)?.[0]}</span>}{page==="settings"&&<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>}<div id="research-topbar-actions" className="research-topbar-actions"/><span className="pill">本地数据 · {data?.workspaces.length??0} 个工作空间</span><BrowserToggle/></header><div className={page==="research"?"content research-content":"content"}>
-      {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>{setError(undefined);openSettings("sources");}}>查看来源状态</button><button onClick={()=>setError(undefined)}>关闭提示</button></div>}
-      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
+    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div id="research-topbar-actions" className="research-topbar-actions"/><BrowserToggle/></header><div className={page==="research"?"content research-content":"content"}>
+      {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
+      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} onSelectQuickSources={chooseQuickSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} active={page==="research"} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:<UpdatesPage/>}</div></section>}
@@ -107,7 +109,7 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
     } catch (error) { onError(messageOf(error)); }
   }
   useEffect(() => { if (workspaceId) void window.jobfindsme!.listJobTracking(workspaceId).then(setItems).catch((error) => onError(messageOf(error))); }, [workspaceId, onError]);
-  return <><div className="heading-row"><div><h1>已看过</h1><p>回到你认真看过的机会。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div>
+  return <><div className="heading-row"><div><h1>我的岗位</h1><p>回到你认真看过的机会。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div>
     <div className="source-tabs">{[["read","已看过"],["saved","收藏"],["applied","已投递"]].map(([key,label])=><button key={key} className={filter===key?"active":""} onClick={()=>setFilter(key)}>{label}</button>)}</div>
     <div className="job-list section">{visibleItems.length?visibleItems.map(item=><article key={item.job.job_id}>
       <div><strong>{item.job.title}</strong><span>{item.job.source.source_name}</span></div>
@@ -118,7 +120,6 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
 
 function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
   const capabilityLabel=(status:string)=>({verified:"已验证",partial:"部分可用",blocked:"受阻",unverified:"待验证"})[status]??status;
-  const outcomeLabel=(result:SourceCheckResult)=>({verified_now:"本次探测通过",cached_recent:"最近验证缓存",skipped_cooldown:"冷却中跳过",login_required:"需在应用内登录",risk_control:"平台验证 / 风控",unverified:"本次未确认",failed:"本次检查失败",not_checked_budget:"预算未轮到",cancelled:"取消未检查"})[result.outcome];
   const [tab, setTab] = useState<"platform" | "company">("platform");
   const [verifying, setVerifying] = useState<string>();
   const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCheckResult[];startedAt:string}>();
@@ -167,14 +168,12 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
     <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个来源 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个来源"}</p><div className="source-toolbar-actions"><div className="source-tabs"><button className={tab === "platform" ? "active" : ""} onClick={() => setTab("platform")}>招聘平台 · {platforms.length}</button><button className={tab === "company" ? "active" : ""} onClick={() => setTab("company")}>公司官网 · {companies.length}</button></div><div className="button-row"><button disabled={!!audit?.running||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部来源</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
     {audit&&<div className="source-audit-progress" role="status"><span>{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"检查结束"} · 已评估 {audit.done}/{audit.total} 个来源{!audit.running&&` · 本次实际探测 ${audit.rows.filter(row=>row.evidence==="live").length} 个，通过 ${audit.rows.filter(row=>row.outcome==="verified_now").length} 个 · 复用缓存 ${audit.rows.filter(row=>row.evidence==="cache").length} 个 · 登录/风控跳过 ${audit.rows.filter(row=>row.evidence!=="live"&&["login_required","risk_control","skipped_cooldown"].includes(row.outcome)).length} 个 · 未检查 ${audit.rows.filter(row=>["not_checked_budget","cancelled"].includes(row.outcome)&&row.evidence!=="live").length} 个`}</span>{audit.running&&<progress value={audit.done} max={audit.total} aria-label="来源检查进度"/>}</div>}
     <section className="source-grid source-catalog">{rows.map(source => {
-      const stale=!!source.last_verified_at && Date.now()-Date.parse(source.last_verified_at)>24*60*60*1000;
-      const login=source.session_status==="verified"?"当前已确认":source.session_status==="expired"?"已失效":source.session_status==="blocked"?"平台验证中":source.login_required?"未确认":"公开浏览";
-      const ability=source.live_search_enabled?(stale?"历史可检索 · 待复查":source.fields_status!=="verified"||source.pagination_status!=="verified"?"可检索 · 部分覆盖":"可检索"):source.list_status==="partial"?"列表可见 · 自动检索待验":source.list_status==="blocked"?"检索暂停":"自动检索待验证";
       const checked=audit?.rows.find(result=>result.source.source_id===source.source_id);
+      const presented=presentSourceStatus(source,checked);
       return <article className="panel source-card" key={source.source_id}>
-        <div className="source-card-head"><label className="source-choice"><input type="checkbox" checked={selected.includes(source.source_id)} onChange={event=>onSelect(source.source_id,event.target.checked)}/><strong>{source.name}</strong></label><span className={checked?.outcome==="verified_now"||!checked&&source.live_search_enabled&&!stale?"ready":"muted"}>{checked?outcomeLabel(checked):ability}</span></div>
-        <div className="source-card-status"><span>登录：{login}</span></div>
-        <div className="button-row source-card-actions"><button className="primary-button" onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>{source.login_required?"打开来源 / 登录":"打开官网"}</button><button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"重试检查"}</button></div>
+        <div className="source-card-head"><label className="source-choice"><input type="checkbox" aria-label={`加入搜索范围：${source.name}`} checked={selected.includes(source.source_id)} onChange={event=>onSelect(source.source_id,event.target.checked)}/><strong>{source.name}</strong></label><span className={presented.available?"ready":"muted"}>{presented.title}</span></div>
+        <p className="source-card-status">{presented.detail}</p>
+        <div className="button-row source-card-actions">{presented.action==="login"?<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>登录 / 验证</button>:presented.action==="check"?<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"检查"}</button>:null}{presented.action!=="check"&&<button disabled={Boolean(verifying)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying===source.source_id?"检查中…":"检查"}</button>}{presented.action!=="login"&&<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>打开官网</button>}</div>
         {checked?.outcome==="login_required"&&<p className="note source-login-help">请在应用内完成登录，再重试检查。</p>}
         <details><summary>能力与限制</summary><p className="note">列表：{capabilityLabel(source.list_status)} · 详情：{capabilityLabel(source.detail_status)} · 字段：{capabilityLabel(source.fields_status)} · 网站续页：{capabilityLabel(source.pagination_status)}</p><p className="note">{checked?.detail||source.detail}</p>{source.last_verified_at&&<p className="note">上次验证：{new Date(source.last_verified_at).toLocaleString()}</p>}</details>
       </article>;
@@ -183,35 +182,49 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
 }
 
 function ModelsPage({ workspaceId, onError }: { workspaceId?:string; onError(message?: string): void }) {
-  const [connections, setConnections] = useState<ModelConnection[]>([]);
-  const [secure, setSecure] = useState(false);
-  const [testing, setTesting] = useState<string>();
-  const [notice, setNotice] = useState("");
-  const [selected, setSelected] = useState<string | null>(()=>getCurrentModel(workspaceId));
-  const [form, setForm] = useState<ModelConnectionInput>({ provider: "DeepSeek", protocol: "openai_compatible", endpoint: "https://api.deepseek.com", model_id: "", api_key: "", auth_mode: "api_key" });
+  const emptyForm=():ModelConnectionInput=>({provider:"DeepSeek",protocol:"openai_compatible",endpoint:"https://api.deepseek.com",model_id:"",api_key:"",auth_mode:"api_key"});
+  const [connections,setConnections]=useState<ModelConnection[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [editing,setEditing]=useState(false);
+  const [secure,setSecure]=useState(false);
+  const [testing,setTesting]=useState<string>();
+  const [notice,setNotice]=useState("");
+  const [selected,setSelected]=useState<string|null>(()=>getCurrentModel(workspaceId));
+  const [form,setForm]=useState<ModelConnectionInput>(emptyForm);
   const preset=modelPresets.find(item=>item.name===form.provider);
-  useEffect(() => { setSelected(getCurrentModel(workspaceId)); },[workspaceId]);
-  useEffect(() => { void Promise.all([window.jobfindsme!.listModelConnections(), window.jobfindsme!.secureStorageAvailable()]).then(([items, available]) => { setConnections(items); setSecure(available); }).catch((e) => onError(messageOf(e))); }, [onError]);
-  async function test(connectionId:string){
+  useEffect(()=>{setSelected(getCurrentModel(workspaceId));},[workspaceId]);
+  useEffect(()=>{let cancelled=false;void Promise.all([window.jobfindsme!.listModelConnections(),window.jobfindsme!.secureStorageAvailable()]).then(([items,available])=>{if(cancelled)return;setConnections(items);setSecure(available);setEditing(items.length===0);setLoading(false);}).catch(error=>{if(!cancelled){setLoading(false);onError(messageOf(error));}});return()=>{cancelled=true;};},[onError]);
+  async function test(connectionId:string):Promise<ModelConnection|undefined>{
     setTesting(connectionId);setNotice("正在测试模型连接…");onError(undefined);
-    try{const tested=await window.jobfindsme!.testModelConnection(connectionId);setConnections(items=>items.map(item=>item.connection_id===connectionId?{...tested,has_api_key:item.has_api_key}:item));setNotice(tested.status==="verified"?"连接测试通过，可以设为当前模型。":"连接测试未通过，请查看连接状态。");}
-    catch(error){setConnections(await window.jobfindsme!.listModelConnections());setNotice("连接测试失败，配置已保存。请检查密钥、地址与模型 ID。");onError(messageOf(error));}
+    try{const tested=await window.jobfindsme!.testModelConnection(connectionId);setConnections(items=>items.map(item=>item.connection_id===connectionId?{...tested,has_api_key:item.has_api_key}:item));setNotice(tested.status==="verified"?"连接测试通过，可以设为当前模型。":"连接测试未通过，请查看连接状态。");return tested;}
+    catch(error){try{setConnections(await window.jobfindsme!.listModelConnections());}catch{/* Keep the saved entry visible when refresh also fails. */}setNotice("连接测试失败，配置已保存。请检查密钥、地址与模型 ID。");onError(messageOf(error));return undefined;}
     finally{setTesting(undefined);}
   }
   async function save(event:FormEvent){
     event.preventDefault();onError(undefined);setNotice("正在保存配置…");
-    try{const saved=await window.jobfindsme!.saveModelConnection(form);setConnections(items=>[saved,...items.filter(item=>item.connection_id!==saved.connection_id)]);setForm(value=>({...value,connection_id:saved.connection_id,api_key:""}));await test(saved.connection_id);}
+    try{const saved=await window.jobfindsme!.saveModelConnection(form);setConnections(items=>[saved,...items.filter(item=>item.connection_id!==saved.connection_id)]);setForm(value=>({...value,connection_id:saved.connection_id,api_key:""}));const tested=await test(saved.connection_id);if(tested?.status==="verified")setEditing(false);}
     catch(error){setNotice("保存失败，请检查填写内容。");onError(messageOf(error));}
   }
   function choose(connection:ModelConnection){if(connection.status!=="verified")return;setCurrentModel(workspaceId,connection.connection_id);setSelected(connection.connection_id);setNotice(`当前模型已设为 ${connection.provider} · ${connection.model_id}。`);}
-  return <><div className="model-toolbar"><span className={secure?"pill ready":"pill blocked"}>{secure?"安全存储可用":"安全存储不可用"}</span><span>测试会向所选服务发送一次最小请求；服务商可能计费。</span></div><div className="settingssplit"><form className="panel model-form" onSubmit={event=>void save(event)}>
-    <label>1. 模型服务<select value={preset?form.provider:"自定义"} onChange={event=>{const next=modelPresets.find(item=>item.name===event.target.value)!;setForm({provider:next.name,protocol:next.protocol,endpoint:next.endpoint,model_id:"",api_key:"",auth_mode:next.local?"none":"api_key"});setNotice("");}}>{modelPresets.map(item=><option key={item.name}>{item.name}</option>)}</select></label>
-    {preset?.note&&<p className="note">{preset.note}</p>}
-    {preset?.local?<label>2. 本地服务地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label>:form.auth_mode!=="none"&&<label>2. API Key<input type="password" value={form.api_key} onChange={event=>setForm({...form,api_key:event.target.value})} placeholder={form.connection_id?"留空则保留已保存密钥":"仅保存到系统安全存储"}/></label>}
-    <label>3. 模型 ID<input value={form.model_id} onChange={event=>setForm({...form,model_id:event.target.value})} placeholder="按服务商控制台或本地模型列表填写" required/></label>
-    <details className="model-advanced"><summary>高级选项</summary><label>协议<select value={form.protocol} onChange={event=>setForm({...form,protocol:event.target.value as ModelProtocol})}><option value="openai_compatible">OpenAI 兼容</option><option value="anthropic">Anthropic 原生</option><option value="gemini">Gemini 原生</option></select></label><label>API 基础地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label><label>认证方式<select value={form.auth_mode??"api_key"} onChange={event=>setForm({...form,auth_mode:event.target.value as "api_key"|"none",api_key:""})}><option value="api_key">API Key</option><option value="none">本机免密</option></select></label></details>
-    <button className="primary-button" disabled={!!testing||(!secure&&Boolean(form.api_key))}>{testing?"测试中…":"保存并测试"}</button>{notice&&<p role="status" className="note">{notice}</p>}
-  </form><aside className="panel"><h3>已保存连接</h3>{connections.length===0&&<p className="muted">尚无配置。岗位检索不依赖模型。</p>}{connections.map(connection=><article key={connection.connection_id}><div><strong>{connection.provider} · {connection.model_id}</strong><span className={connection.status==="verified"?"ready":"blocked"}>{{unverified:"待测试",testing:"测试中",verified:"可用",failed:"连接失败",cancelled:"已取消"}[connection.status]}</span></div><p>{protocolNames[connection.protocol]} · {connection.endpoint}<br/>认证：{connection.auth_mode==="none"?"本机免密":connection.has_api_key?"密钥已安全保存":"密钥未保存"}{connection.last_error?` · ${connection.last_error}`:""}</p><div className="button-row"><button type="button" onClick={()=>{setForm({connection_id:connection.connection_id,provider:connection.provider,protocol:connection.protocol,endpoint:connection.endpoint,model_id:connection.model_id,auth_mode:connection.auth_mode??"api_key",api_key:""});setNotice("正在编辑已保存连接；更改后请重新测试。");}}>编辑</button><button type="button" disabled={connection.status!=="verified"} aria-pressed={selected===connection.connection_id} onClick={()=>choose(connection)}>{selected===connection.connection_id?"当前使用":"设为当前模型"}</button><button type="button" disabled={(!connection.has_api_key&&connection.auth_mode!=="none")||!!testing} onClick={()=>void test(connection.connection_id)}>{testing===connection.connection_id?"测试中…":"重新测试"}</button>{testing===connection.connection_id&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest()}>取消测试</button>}</div>{connection.last_tested_at&&<p className="note">最近测试 {new Date(connection.last_tested_at).toLocaleString()} · 用量 {connection.input_tokens??"?"}/{connection.output_tokens??"?"} tokens</p>}</article>)}</aside></div></>;
+  function edit(connection:ModelConnection){setForm({connection_id:connection.connection_id,provider:connection.provider,protocol:connection.protocol,endpoint:connection.endpoint,model_id:connection.model_id,auth_mode:connection.auth_mode??"api_key",api_key:""});setEditing(true);setNotice("");}
+  return <div className="models-page">
+    {!secure&&!loading&&<p className="model-security-warning" role="status">系统安全存储不可用，暂不能保存新的 API Key。</p>}
+    {loading?<p className="muted">正在读取已保存连接…</p>:<>
+      {connections.length>0&&<section className="model-connections"><div className="model-section-heading"><div><h2>模型连接</h2><p className="note">选择用于求职助手的模型。</p></div><button type="button" onClick={()=>{setForm(emptyForm());setEditing(true);setNotice("");}}>添加连接</button></div>
+        <p className="note model-test-note">测试连接会向所选服务发送一次最小请求，服务商可能计费。</p><div className="model-connection-list">{connections.map(connection=><article className="model-connection" key={connection.connection_id}><div className="model-connection-top"><strong>{connection.provider} · {connection.model_id}</strong><span className="model-status-tags">{selected===connection.connection_id&&<span className="ready">当前模型</span>}<span className={connection.status==="verified"?"ready":"blocked"}>{({unverified:"待测试",testing:"测试中",verified:"可用",failed:"连接失败",cancelled:"已取消"})[connection.status]}</span></span></div><p>{protocolNames[connection.protocol]} · {connection.endpoint}<br/>认证：{connection.auth_mode==="none"?"本机免密":connection.has_api_key?"密钥已安全保存":"密钥未保存"}{connection.last_error?` · ${connection.last_error}`:""}</p>{connection.last_tested_at&&<small>最近测试 {new Date(connection.last_tested_at).toLocaleString()} · 用量 {connection.input_tokens??"?"}/{connection.output_tokens??"?"} tokens</small>}<div className="button-row"><button type="button" onClick={()=>edit(connection)}>编辑</button>{selected!==connection.connection_id&&<button type="button" disabled={connection.status!=="verified"} onClick={()=>choose(connection)}>设为当前模型</button>}<button type="button" disabled={(!connection.has_api_key&&connection.auth_mode!=="none")||!!testing} onClick={()=>void test(connection.connection_id)}>{testing===connection.connection_id?"测试中…":"测试连接"}</button>{testing===connection.connection_id&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest()}>取消测试</button>}</div></article>)}</div>
+      </section>}
+      {editing&&<form className="panel model-form" onSubmit={event=>void save(event)}><div className="model-section-heading"><h2>{form.connection_id?"编辑连接":"添加连接"}</h2>{connections.length>0&&<button type="button" onClick={()=>setEditing(false)}>收起</button>}</div>
+        <label>模型服务<select value={preset?form.provider:"自定义"} onChange={event=>{const next=modelPresets.find(item=>item.name===event.target.value)!;setForm({provider:next.name,protocol:next.protocol,endpoint:next.endpoint,model_id:"",api_key:"",auth_mode:next.local?"none":"api_key"});setNotice("");}}>{modelPresets.map(item=><option key={item.name}>{item.name}</option>)}</select></label>
+        {preset?.note&&<p className="note">{preset.note}</p>}
+        <label>模型 ID<input value={form.model_id} onChange={event=>setForm({...form,model_id:event.target.value})} placeholder="按服务商控制台或本地模型列表填写" required/></label>
+        {preset?.local?<label>本地服务地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label>:form.auth_mode!=="none"&&<label>API Key<input type="password" value={form.api_key} onChange={event=>setForm({...form,api_key:event.target.value})} placeholder={form.connection_id?"留空则保留已保存密钥":"仅保存到系统安全存储"}/></label>}
+        <details className="model-advanced"><summary>高级选项</summary><label>协议<select value={form.protocol} onChange={event=>setForm({...form,protocol:event.target.value as ModelProtocol})}><option value="openai_compatible">OpenAI 兼容</option><option value="anthropic">Anthropic 原生</option><option value="gemini">Gemini 原生</option></select></label><label>API 基础地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label><label>认证方式<select value={form.auth_mode??"api_key"} onChange={event=>setForm({...form,auth_mode:event.target.value as "api_key"|"none",api_key:""})}><option value="api_key">API Key</option><option value="none">本机免密</option></select></label></details>
+        <p className="note model-test-note">保存并测试会向所选服务发送一次最小请求，服务商可能计费。</p><button className="primary-button" disabled={!!testing||(!secure&&Boolean(form.api_key))}>{testing?"测试中…":"保存并测试"}</button>
+      </form>}
+      {!connections.length&&!editing&&<p className="muted">尚无配置。岗位检索不依赖模型。</p>}
+      {notice&&<p role="status" className="note model-notice">{notice}</p>}
+    </>}
+  </div>;
 }
 
 function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : "本地服务不可用"; }
@@ -220,5 +233,5 @@ function UpdatesPage(){
  const [busy,setBusy]=useState(false);
  const [result,setResult]=useState<{message:string;tag?:string}>();
  async function check(){setBusy(true);setResult(undefined);try{setResult(await window.jobfindsme!.checkForUpdates());}catch(error){setResult({message:messageOf(error)});}finally{setBusy(false);}}
- return <section className="section"><h2>版本更新</h2><p>当前构建：{buildInfo.label}</p><p>检查 GitHub 正式发布的桌面版本。下载安装不会在后台自动执行。</p><div className="button-row"><button className="primary-button" disabled={busy} onClick={()=>void check()}>{busy?"正在检查…":"检查更新"}</button><button onClick={()=>void window.jobfindsme!.openReleases().catch(error=>setResult({message:messageOf(error)}))}>查看发布与下载</button></div>{result&&<p role="status">{result.tag&&`发布版本：${result.tag} · `}{result.message}</p>}</section>;
+ return <section className="section updates-page"><h2>关于与更新</h2><p>当前版本：{buildInfo.label.split("+")[0]}</p><p>检查 GitHub 正式发布的桌面版本。下载安装不会在后台自动执行。</p><div className="button-row"><button className="primary-button" disabled={busy} onClick={()=>void check()}>{busy?"正在检查…":"检查更新"}</button><button onClick={()=>void window.jobfindsme!.openReleases().catch(error=>setResult({message:messageOf(error)}))}>查看发布与下载</button></div>{result&&<p role="status">{result.tag&&`发布版本：${result.tag} · `}{result.message}</p>}<details><summary>构建信息</summary><p>{buildInfo.label}</p></details></section>;
 }

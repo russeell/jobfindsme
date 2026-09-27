@@ -387,7 +387,7 @@ test('fabricated citation to an otherwise readable page cannot save a report',as
  });
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  let saved=0;const tools={findEvidence:async()=>[],searchWeb:async()=>[{url:source.url,site:'zhihu',title:'原页',status:'search_hint_only'}],readPage:async()=>({...source,evidence_id:'ev_fabricated'}),readJob:async()=>null,readBrowserPage:async()=>source,saveExecution:async()=>{},saveReport:async()=>{saved++;return null;}};
- try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_fabricated',question:'示例公司研发如何',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/来源片段/);assert.equal(result.evidence?.[0].url,source.url);assert.equal(result.evidence?.[0].excerpt,source.excerpt);}
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_fabricated',question:'示例公司研发如何',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/已读取 1 份材料/);assert.doesNotMatch(result.text,/示例公司在上海设立了研发团队/);assert.equal(result.evidence?.[0].url,source.url);assert.equal(result.evidence?.[0].excerpt,source.excerpt);}
  finally{server.close();}
 });
 
