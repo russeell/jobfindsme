@@ -43,12 +43,13 @@ test("cancel stops the active check and marks every unvisited source",async()=>{
   assert.equal(results[2].attempted_at,null);
 });
 
-test("source timeout leaves a partial result and never starts the next network check",async()=>{
+test("source timeout is recorded and a later source uses the remaining total budget",async()=>{
   let calls=0;
   const results=await runSourceCheckQueue({sources:[source("liepin"),source("sample_1")],signal:new AbortController().signal,
-    perSourceMs:20,totalMs:1000,probe:async()=>{calls++;return new Promise(()=>{});}});
-  assert.equal(calls,1);
-  assert.deepEqual(results.map(item=>item.outcome),["failed","not_checked_budget"]);
+    perSourceMs:20,totalMs:1000,probe:async()=>{calls++;return calls===1?new Promise(()=>{}):source("sample_1");}});
+  assert.equal(calls,2);
+  assert.deepEqual(results.map(item=>item.outcome),["failed","verified_now"]);
+  assert.match(results[0].detail,/超时/);
 });
 
 test("total budget marks unvisited sources without probing them",async()=>{

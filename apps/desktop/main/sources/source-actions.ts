@@ -48,12 +48,12 @@ const extractionSpecs: Record<BrowserSearchSourceId, {
     next: [".options-pages a.next", "[class*='pagination'] [class*='next']"],
   },
   zhilian: {
-    cards: [".joblist-box__item", ".positionlist__item", "[class*='joblist'] article"],
+    cards: [".joblist-box__item", ".positionlist__item", "[class*='joblist'] article", "[class*='job-list'] [class*='item']", "[class*='position-list'] [class*='item']"],
     title: ["[class*='job-name']", "[class*='position-name']", "h3"],
     company: ["[class*='company-name']", "[class*='company']"],
     location: ["[class*='location']", "[class*='address']"],
     salary: ["[class*='salary']"],
-    link: ["a[href*='jobs.zhaopin.com']", "a[href]"],
+    link: ["a[href*='/jobdetail/']", "a[href*='jobs.zhaopin.com']", "a[href]"],
     next: ["[class*='pagination'] [class*='next']", "li.next"],
   },
   wuyou: {
@@ -103,8 +103,9 @@ export function sourceListExtractionScript(
     const text = (document.body?.innerText || "").slice(0, 5000);
     const blocked = ["滑动验证", "安全验证", "访问过于频繁", "captcha", "请完成验证"]
       .find((marker) => text.toLowerCase().includes(marker.toLowerCase()));
-    const login = ["请登录", "登录后查看", "立即登录"]
-      .find((marker) => text.includes(marker));
+    const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
+    const loginHost=/passport\\.zhaopin\\.com|login\\.51job\\.com/.test(location.hostname);
+    const loginForm=Array.from(document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[placeholder*="验证码"]')).some(visible);
     const pick = (root, selectors) => {
       for (const selector of selectors) {
         const node = root.querySelector(selector);
@@ -118,7 +119,7 @@ export function sourceListExtractionScript(
         const node = root.querySelector(selector);
         if (node?.href) return node.href;
       }
-      if (${JSON.stringify(sourceId)} === 'wuyou' && !blocked && !login) {
+      if (${JSON.stringify(sourceId)} === 'wuyou' && !blocked && !loginHost && !loginForm) {
         // Observed 51job code: window.open('_blank'); child.location.href=jobHref.
         // Capture only a title click's destination; never click application controls.
         const title = root.querySelector('.jname');
@@ -151,7 +152,7 @@ export function sourceListExtractionScript(
         hasNext = true; break;
       }
     }
-    return { jobs, hasNext, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(login && !jobs.length) };
+    return { jobs, hasNext, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean((loginHost||loginForm)&&!jobs.length) };
   })()`;
 }
 
@@ -220,15 +221,18 @@ export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):strin
     const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
     const cardCount=Array.from(document.querySelectorAll(${JSON.stringify(sourceId)}==='wuyou'
       ? '.joblist-item,[class*="joblist-item"]'
-      : '.joblist-box__item,.positionlist__item,[class*="joblist"] article')).filter(visible).length;
+      : '.joblist-box__item,.positionlist__item,[class*="joblist"] article,[class*="job-list"] [class*="item"],[class*="position-list"] [class*="item"]')).filter(visible).length;
     const formCount=Array.from(document.querySelectorAll('input[type="password"],input[type="tel"],input[autocomplete="tel"],input[placeholder*="手机号"],input[placeholder*="验证码"]')).filter(visible).length;
     const challenge=/滑动验证|安全验证|访问过于频繁|captcha|请完成验证/i.test(text);
-    const account=Array.from(document.querySelectorAll('a[href*="/resume"],a[href*="/personal"],a[href*="/my/"],[class*="user-avatar"],[class*="userAvatar"]')).filter(visible)
+    const accountLink=Array.from(document.querySelectorAll('a[href*="/resume"],a[href*="/personal"],a[href*="/my/"],[class*="user-avatar"],[class*="userAvatar"]')).filter(visible)
       .some(node=>/我的简历|个人中心|我的投递|消息|用户|头像/.test((node.textContent||'')+' '+(node.getAttribute('aria-label')||'')) || node.matches('[class*="user-avatar"],[class*="userAvatar"]'));
-    const loginHost=/passport\.zhaopin\.com|login\.51job\.com/.test(location.hostname);
-    const login=loginHost || (/请登录|登录后查看/.test(text)&&!cardCount&&!account);
+    const accountHeader=Array.from(document.querySelectorAll('header,[role="banner"],nav,[class*="header"],[class*="Header"]')).filter(visible).slice(0,20)
+      .some(node=>{const label=(node.innerText||'').slice(0,1000);return /消息/.test(label)&&!/登录\\s*\\/?\\s*注册|立即登录/.test(label)&&Array.from(node.querySelectorAll('img[alt*="头像"],img[class*="avatar"],img[class*="Avatar"],[class*="avatar"] img,[class*="Avatar"] img,[aria-label*="个人"],[title*="个人"]')).some(visible);});
+    const account=accountLink||accountHeader;
+    const loginHost=/passport\\.zhaopin\\.com|login\\.51job\\.com/.test(location.hostname);
+    const login=loginHost || (formCount>0&&!cardCount&&!account);
     const splash=!cardCount&&!formCount&&/找风口工作|登录|招聘/.test(text)&&text.length<1200;
-    const authenticated=!challenge&&!loginHost&&!formCount&&account;
-    return {url:location.href,kind:challenge?'challenge':cardCount?'list':authenticated?'account':formCount||login?'login':splash?'splash':'unknown',cardCount,formCount,authenticated};
+    const authenticated=!challenge&&!loginHost&&account;
+    return {url:location.href,kind:challenge?'challenge':cardCount?'list':authenticated?'account':login?'login':splash?'splash':'unknown',cardCount,formCount,authenticated};
   })()`;
 }

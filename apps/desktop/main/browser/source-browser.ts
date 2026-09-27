@@ -305,7 +305,7 @@ export class SourceBrowserManager {
   private careerCache=new Map<string,{time:number;page:SourceActionPage}>();
   private careerBlocked=new Map<SourceBrowserId,number>();
   private careerEpoch=0;
-  cancelCareerSearch(){this.careerEpoch++;}
+  cancelCareerSearch(){this.careerEpoch++;for(const id of ["zhilian","wuyou"] as const){const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}}
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
   private platformPending=new Map<string,Promise<SourceActionPage>>();
@@ -330,14 +330,24 @@ export class SourceBrowserManager {
     const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));})]);}finally{if(timer)clearTimeout(timer);}};
     const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
     try {
-      await bounded(view.webContents.loadURL(searchUrl));
+      // The SPA can render usable listings before ad/analytics resources finish.
+      // Start reading at DOM readiness while the normal load promise remains handled.
+      let onReady:()=>void=()=>{};
+      const ready=new Promise<void>(resolve=>{onReady=resolve;view.webContents.once("dom-ready",onReady);});
+      const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
+      try{await bounded(Promise.race([loaded,ready]));}
+      finally{view.webContents.removeListener("dom-ready",onReady);}
       let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean}|undefined;
-      for(let attempt=0;attempt<32;attempt++){
+      for(let attempt=0;attempt<12;attempt++){
         if(epoch!==this.careerEpoch)throw Error('cancelled:检索已停止');
         if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:来源页面跳转不受支持');
         raw=await bounded(view.webContents.executeJavaScript(sourceListExtractionScript(sourceId)));
         if(raw?.blocked){this.careerBlocked.set(sourceId,Date.now()+300000);throw Error('risk_control:'+raw.blocked);}
-        if(raw?.loginRequired)throw Error('login_required:登录状态已失效');
+        if(raw?.loginRequired){
+          // SSO can briefly render a login document before its redirect ends.
+          if(view.webContents.isLoadingMainFrame()&&attempt<11){await new Promise(r=>setTimeout(r,250));continue;}
+          throw Error('login_required:登录状态已失效');
+        }
         if(raw?.jobs?.length||raw?.empty)break;
         await new Promise(r=>setTimeout(r,250));
       }

@@ -41,7 +41,9 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
       stop="not_checked_budget";
       append({...base,outcome:stop,evidence:"none",detail:"本次检查预算已用尽，未访问此来源。"});continue;
     }
-    const allowance=Math.min(perSourceMs,deadline-began);
+    // BOSS's bounded collector itself can run for 10 seconds; other adapters
+    // retain the shorter per-source cap.
+    const allowance=Math.min(options.perSourceMs??(source.source_id==="boss"?12000:perSourceMs),deadline-began);
     liveAttempts++;
     const controller=new AbortController();
     const abort=()=>controller.abort();options.signal.addEventListener("abort",abort,{once:true});
@@ -59,9 +61,8 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
       const timedOut=message.includes("source_check_timeout")||(!cancelled&&controller.signal.aborted);
       const outcome:SourceCheckResult["outcome"]=cancelled?"cancelled":timedOut?"failed":/risk_control:|captcha|429|访问过于频繁/i.test(message)?"risk_control":/login_required:/.test(message)?"login_required":/source_backoff:|cooldown/.test(message)?"skipped_cooldown":/未读取到|没有返回岗位|no_matching/.test(message)?"unverified":"failed";
       const alreadyChecking=outcome==="skipped_cooldown"&&message.includes("source_backoff:");
-      append({...base,outcome,evidence:alreadyChecking?"history":"live",attempted_at:alreadyChecking?null:attempted_at,duration_ms:now()-began,detail:cancelled?"已取消当前来源。":timedOut?"本次探测超时；未开始后续来源。":message.slice(0,300)});
+      append({...base,outcome,evidence:alreadyChecking?"history":"live",attempted_at:alreadyChecking?null:attempted_at,duration_ms:now()-began,detail:cancelled?"已取消当前来源。":timedOut?"本次来源探测超时；剩余来源按总预算继续。":message.slice(0,300)});
       if(cancelled)stop="cancelled";
-      if(timedOut)stop="not_checked_budget";
     }finally{if(timer)clearTimeout(timer);options.signal.removeEventListener("abort",abort);}
   }
   return results;

@@ -142,3 +142,26 @@ test('background searches release their renderer on success and failure, preserv
   assert.equal(foreground.webContents.isDestroyed(),false);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
+
+test('source search reads at DOM readiness without waiting for late resources',async()=>{
+ const {m}=setup();let background;
+ FakeView.onCreate=view=>{if(view.options.webPreferences?.backgroundThrottling===false){background=view;
+  view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;queueMicrotask(()=>view.webContents.emit('dom-ready'));return new Promise(()=>{});};
+  view.webContents.executeJavaScript=async()=>({jobs:[{title:'工程师',company:'示例',url:'https://www.zhaopin.com/jobdetail/example.htm'}],hasNext:false});}};
+ try{const began=Date.now();const page=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1,forceRefresh:true});
+  assert.equal(page.records.length,1);assert.ok(Date.now()-began<1000);assert.equal(background.webContents.isDestroyed(),true);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('cancelling a loading background source stops and releases its renderer',async()=>{
+ const {m}=setup();let background,rejectLoad,started;
+ const loading=new Promise(resolve=>{started=resolve;});
+ FakeView.onCreate=view=>{if(view.options.webPreferences?.backgroundThrottling===false){background=view;
+  view.webContents.isLoadingMainFrame=()=>true;
+  view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;started();return new Promise((_,reject)=>{rejectLoad=reject;});};
+  view.webContents.stop=()=>rejectLoad(Error('cancelled'));
+ }};
+ try{const work=m.searchPage('zhilian',{keyword:'工程师',city:'',page:1,forceRefresh:true});await loading;m.cancelCareerSearch();
+  await assert.rejects(work,/cancelled/);assert.equal(background.webContents.isDestroyed(),true);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});

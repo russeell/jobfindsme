@@ -10,6 +10,8 @@ const electronApp = process.env.JFM_ELECTRON_APP || path.join(desktopRoot, "node
 const pythonRuntime = path.join(desktopRoot, "runtime/python/jobfindsme-api");
 const previewBuild=process.env.JFM_PACKAGE_PREVIEW === "1";
 const buildInfo=JSON.parse(readFileSync(path.join(desktopRoot,"build-info.json"),"utf8"));
+const buildLabel=process.env.JFM_PACKAGE_BUILD_LABEL || buildInfo.label;
+if(process.env.JFM_PACKAGE_BUILD_LABEL&&!/^v\d+\.\d+\.\d+\+local\.D\d+$/.test(buildLabel))throw Error("invalid local build label");
 // Keep user-facing preview releases on the existing D55 profile. QA can opt
 // into a separate profile; build labels must never silently reset sessions.
 const previewUserData=process.env.JFM_PACKAGE_PREVIEW_USER_DATA || "jobfindsme-preview-D55-reading-column";
@@ -57,7 +59,7 @@ mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
-  JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildInfo.label, previewUserData, qa, main: "dist-electron/main/index.js" }),
+  JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildLabel, previewUserData, qa, main: "dist-electron/main/index.js" }),
 );
 mkdirSync(path.join(resources, "python"), { recursive: true });
 cpSync(pythonRuntime, path.join(resources, "python/jobfindsme-api"), { recursive:true, verbatimSymlinks:true });

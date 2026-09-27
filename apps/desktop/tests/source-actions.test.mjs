@@ -70,3 +70,36 @@ test('passive source observation separates splash, login form, and readable list
  assert.equal(observe('欢迎回来',0,0,'hidden').authenticated,false);
  assert.equal(observe('欢迎回来','hidden',0,true).authenticated,true);
 });
+
+test('current Zhaopin jobs template keeps footer login prompts separate from session evidence',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const visible={textContent:'',innerText:'',getAttribute:()=>'',matches:()=>false,getBoundingClientRect:()=>({width:20,height:20})};
+ const avatar={...visible};
+ const header=(avatarVisible=true)=>({...visible,innerText:'职位 消息 我要招人 账户',querySelectorAll:selector=>selector.includes('alt*="头像"')?avatarVisible?[avatar]:[{...avatar,getBoundingClientRect:()=>({width:0,height:0})}]:[]});
+ const anonymousHeader={...visible,innerText:'职位 消息 我要招人',querySelectorAll:()=>[]};
+ const card={...visible,querySelector(selector){if(selector==='h3')return {textContent:'工程师'};if(selector.includes('/jobdetail/'))return {href:'https://www.zhaopin.com/jobdetail/example.htm'};return null;}};
+ const context=(authenticated,loginHost=false,options={})=>({
+  location:{href:loginHost?'https://passport.zhaopin.com/login':'https://www.zhaopin.com/jobs',hostname:loginHost?'passport.zhaopin.com':'www.zhaopin.com'},
+  getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),
+  document:{body:{innerText:'热门职位 登录查看更多相关职位 立即登录'},querySelector:()=>null,querySelectorAll(selector){
+   if(selector.startsWith('header,'))return [authenticated?header(!options.hiddenAvatar):anonymousHeader];
+   if(selector.startsWith('input'))return options.phoneInput?[visible]:[];
+   if(selector.includes('job-list'))return options.cards===false?[]:[card,card];
+   return [];
+  }}
+ });
+ const observed=runInNewContext(passiveSourceObservationScript('zhilian'),context(true));
+ assert.equal(observed.kind,'list');assert.equal(observed.authenticated,true);assert.equal(observed.cardCount,2);
+ const publicObserved=runInNewContext(passiveSourceObservationScript('zhilian'),context(false));
+ assert.equal(publicObserved.authenticated,false);assert.notEqual(publicObserved.kind,'login');
+ const hidden=runInNewContext(passiveSourceObservationScript('zhilian'),context(true,false,{hiddenAvatar:true}));
+ assert.equal(hidden.authenticated,false);
+ const phone=runInNewContext(passiveSourceObservationScript('zhilian'),context(false,false,{phoneInput:true}));
+ assert.equal(phone.authenticated,false);assert.notEqual(phone.kind,'login');
+ const phoneWithAccount=runInNewContext(passiveSourceObservationScript('zhilian'),context(true,false,{phoneInput:true}));
+ assert.equal(phoneWithAccount.authenticated,true);
+ const extracted=runInNewContext(sourceListExtractionScript('zhilian'),context(false));
+ assert.equal(extracted.loginRequired,false);assert.equal(extracted.jobs.length,2);
+ const login=runInNewContext(sourceListExtractionScript('zhilian'),context(false,true,{cards:false}));
+ assert.equal(login.loginRequired,true);
+});
