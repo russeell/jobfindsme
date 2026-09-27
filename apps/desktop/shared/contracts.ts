@@ -154,6 +154,7 @@ export type BrowserSourcePage = {
 };
 
 export type SourceSearchExecutionInput = SourceSearchInput & {
+  attempt_unverified_login?: boolean;
   resume_version_id?: string;
   rule_version_id?: string;
   browser_pages?: Record<string, BrowserSourcePage[]>;

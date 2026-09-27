@@ -150,6 +150,7 @@ class SearchPreflightRequest(StrictResponse):
     workspace_id: str
     intent: str = Field(default="", max_length=80)
     source_ids: list[str] = Field(default_factory=lambda: ["liepin"], max_length=20)
+    attempt_unverified_login: bool = False
     city: str = Field(default="", max_length=30)
     max_pages: int = Field(default=3, ge=1, le=20)
     time_budget_seconds: float = Field(default=15, ge=0.1, le=120)
@@ -792,6 +793,7 @@ def create_app(
                 max_pages=request.max_pages,
                 time_budget_seconds=request.time_budget_seconds,
                 resume_version_id=request.resume_version_id,
+                attempt_unverified_login=request.attempt_unverified_login,
             )
         except SearchPreflightError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
@@ -811,6 +813,7 @@ def create_app(
                 max_pages=request.max_pages,
                 time_budget_seconds=request.time_budget_seconds,
                 resume_version_id=request.resume_version_id,
+                attempt_unverified_login=request.attempt_unverified_login,
             )
         except SearchPreflightError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error

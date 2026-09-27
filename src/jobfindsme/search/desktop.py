@@ -165,6 +165,7 @@ class DesktopSearchService:
         max_pages: int = 3,
         time_budget_seconds: float = 15,
         resume_version_id: str | None = None,
+        attempt_unverified_login: bool = False,
     ) -> SearchPreflight:
         if self.profiles.active_draft_profile_id(workspace_id=workspace_id):
             raise SearchPreflightError(
@@ -193,7 +194,22 @@ class DesktopSearchService:
             try:
                 self.sources.require_live_search(source_id)
             except (LookupError, SourceGateError) as error:
-                blocked[source_id] = str(error)
+                # A user-started desktop search is itself the bounded session
+                # check. Only the Electron-backed adapters may try this path.
+                try:
+                    source = self.sources.get(source_id)
+                except LookupError:
+                    blocked[source_id] = str(error)
+                else:
+                    if (
+                        attempt_unverified_login
+                        and source_id in {"boss", "zhilian", "wuyou"}
+                        and source.session_status != "blocked"
+                        and source.list_status != "blocked"
+                    ):
+                        allowed.append(source_id)
+                    else:
+                        blocked[source_id] = str(error)
             else:
                 allowed.append(source_id)
         if not 1 <= max_pages <= 20:

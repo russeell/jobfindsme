@@ -130,6 +130,27 @@ def test_explicit_query_stays_remote_query_and_resume_is_local_matching_input(
     assert preflight.allowed_source_ids == ("liepin",)
     assert set(preflight.blocked_sources) == {"boss", "zhilian", "wuyou"}
 
+    attempted = service.preflight(
+        workspace_id=workspace.workspace_id,
+        intent="AI 应用工程师",
+        source_ids=["boss", "liepin", "zhilian", "wuyou"],
+        attempt_unverified_login=True,
+    )
+    assert attempted.allowed_source_ids == ("boss", "liepin", "zhilian", "wuyou")
+    assert attempted.blocked_sources == {}
+    sources = service.sources
+    sources.record_runtime_failure(
+        source_id="zhilian", failure="risk_control", notes="challenge"
+    )
+    paused = service.preflight(
+        workspace_id=workspace.workspace_id,
+        intent="AI 应用工程师",
+        source_ids=["zhilian"],
+        attempt_unverified_login=True,
+    )
+    assert paused.allowed_source_ids == ()
+    assert "zhilian" in paused.blocked_sources
+
 
 def test_confirmed_resume_can_search_without_manual_keywords_then_clear(
     tmp_path,

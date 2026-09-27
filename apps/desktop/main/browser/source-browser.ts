@@ -51,22 +51,21 @@ export class SourceBrowserManager {
   private observingBoss=false;
   private bossDocumentTime=0;
   private bossSawLogin=false;
-  constructor(private readonly window: BrowserWindow, private readonly onBossPage?:(page:BossPage,explicit?:boolean)=>Promise<void>, private readonly onSourcePage?:(sourceId:"zhilian"|"wuyou",page:PassiveSourceObservation)=>Promise<void>) {
+  constructor(private readonly window: BrowserWindow, private readonly onBossPage?:(page:BossPage,explicit?:boolean,revisit?:boolean,probeOnly?:boolean)=>Promise<void>, private readonly onSourcePage?:(sourceId:"zhilian"|"wuyou",page:PassiveSourceObservation)=>Promise<void>) {
     window.on("resize", () => this.applyBounds());
     // Local reads only while the user is looking at this platform; no periodic requests.
     if(onBossPage)this.bossObservation=setInterval(()=>{void this.observeBoss();},2500);
     if(onSourcePage)this.platformObservation=setInterval(()=>{const tab=this.tabs.find(t=>t.id===this.activeId);if(this.visible&&tab&&(tab.sourceId==="zhilian"||tab.sourceId==="wuyou"))void this.observeSourcePage(tab);},2000);
   }
 
-  async observeBoss(explicit=false):Promise<BossPage|undefined> {
+  async observeBoss(explicit=false,revisit=false,probeOnly=false):Promise<BossPage|undefined> {
     const tab=this.tabs.find(t=>t.id===this.activeId&&t.sourceId==="boss")||(explicit?[...this.tabs].reverse().find(t=>t.sourceId==="boss"):undefined);
     if(this.observingBoss || this.boss.busy || (!explicit&&!this.visible) || !tab || tab.sourceId!=="boss" || tab.view.webContents.isDestroyed() || tab.view.webContents.isLoading() || !isAllowedSourceUrl("boss",tab.view.webContents.getURL()))return;
     this.observingBoss=true;
     try {const page=await tab.view.webContents.executeJavaScript(bossPageScript()) as BossPage;
       if(page.loginRequired)this.bossSawLogin=true;
       if(!explicit && this.boss.paused==="login_required" && page.authenticated && !this.bossSawLogin && this.bossDocumentTime<=this.boss.pausedAt)return page;
-      if(explicit && page.authenticated && !page.blocked && !page.loginRequired)this.boss.resume();
-      await this.onBossPage?.(page,explicit);if(!this.boss.paused&&page.authenticated)this.bossSawLogin=false;return page;
+      await this.onBossPage?.(page,explicit,revisit,probeOnly);if(!this.boss.paused&&page.authenticated)this.bossSawLogin=false;return page;
     } catch {return;} finally {this.observingBoss=false;}
   }
   private bossView(detail:boolean):WebContentsView {
@@ -173,11 +172,16 @@ export class SourceBrowserManager {
   selectTab(id:string) {
     const tab=this.tabs.find(t=>t.id===id);
     if(!tab)throw new Error("标签已关闭");
+    const returning=this.activeId!==id;
     if(this.attached!==tab.view){
       if(this.attached){this.attached.setVisible(false);this.window.contentView.removeChildView(this.attached);}
       this.attached=tab.view;this.window.contentView.addChildView(tab.view);
     }
     this.activeId=id;tab.view.webContents.setZoomFactor(tab.zoom);this.notice="";this.applyBounds();this.attached.setVisible(this.visible);
+    if(returning&&this.visible){
+      if(tab.sourceId==="boss")void this.observeBoss(false,true);
+      else if(tab.sourceId==="zhilian"||tab.sourceId==="wuyou")void this.observeSourcePage(tab,true);
+    }
     return this.state();
   }
 
@@ -199,9 +203,12 @@ export class SourceBrowserManager {
 
   layout(bounds: SourceBrowserBounds | null): void {
     if(this.window.isDestroyed())return;
+    const returning=!this.visible&&Boolean(bounds);
     this.visible=Boolean(bounds);
     if(bounds)this.requestedBounds=bounds;
     this.attached?.setVisible(this.visible);this.applyBounds();
+    if(returning){const tab=this.tabs.find(t=>t.id===this.activeId);if(tab?.sourceId==="boss")void this.observeBoss(false,true);
+      else if(tab?.sourceId==="zhilian"||tab?.sourceId==="wuyou")void this.observeSourcePage(tab,true);}
   }
 
   async command(command: string) {

@@ -76,8 +76,18 @@ test('BOSS observation never revives an expired session from a stale foreground 
  FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>snapshot;};
  try{await m.show('boss',bounds,'https://www.zhipin.com/web/geek/jobs');m.layout(bounds);await m.observeBoss();assert.equal(seen,1);m.boss.pause('login_required');await m.observeBoss();assert.equal(seen,1);assert.equal(m.boss.paused,'login_required');
  snapshot={...ready,authenticated:false,loginRequired:true};await m.observeBoss();snapshot=ready;await m.observeBoss();assert.equal(m.boss.paused,undefined);
- m.boss.pause('risk_control');await m.observeBoss();assert.equal(m.boss.paused,'risk_control');await m.observeBoss(true);assert.equal(m.boss.paused,undefined);
+ m.boss.pause('risk_control');await m.observeBoss();assert.equal(m.boss.paused,'risk_control');await m.observeBoss(true);assert.equal(m.boss.paused,'risk_control');
  const bg=m.backgroundView('boss');assert.equal(bg.options.webPreferences.partition,w.children[0].options.webPreferences.partition);assert.equal(bg.options.webPreferences.partition,'persist:jobfindsme-source-boss');
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('returning to BOSS refreshes local observation without explicit risk recovery',async()=>{
+ const flags=[];const {m}=setup(async(_page,explicit,revisit)=>{flags.push({explicit,revisit});});
+ FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({authenticated:true,readable:true,loginRequired:false,blocked:null,jobs:[]});};
+ try{await m.show('boss',bounds,'https://www.zhipin.com/web/geek/jobs');m.layout(bounds);await new Promise(resolve=>setTimeout(resolve,0));
+   m.boss.pause('risk_control');await m.show('liepin',bounds);m.selectTab(m.state().tabs.find(tab=>tab.sourceId==='boss').id);
+   await new Promise(resolve=>setTimeout(resolve,0));
+   assert.equal(m.boss.paused,'risk_control');assert.equal(flags.at(-1)?.explicit,false);assert.equal(flags.at(-1)?.revisit,true);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 

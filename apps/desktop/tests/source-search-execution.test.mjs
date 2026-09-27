@@ -19,9 +19,18 @@ test('cancelling while preflight waits prevents all source requests and snapshot
  assert.equal(sourceCalls,0);assert.equal(writes,0);
 });
 
+test('selected unverified source uses the user search once and verifies only after save',async()=>{
+ const calls=[];
+ const client={searchPreflight:async request=>{calls.push(['preflight',request.attempt_unverified_login]);return {...preflight,allowed_source_ids:['zhilian']};},
+  runSourceSearch:async request=>{calls.push(['save',request.attempt_unverified_login]);return {...response('zhilian','run-verify',1),jobs:[{...record('zhilian'),source_id:'zhilian'}]};},
+  recordSourceVerification:async(id,summary)=>{calls.push(['verify',id,summary.list_status]);}};
+ await executeBoundedSourceSearch({...input,source_ids:['zhilian']},{client,manager:{searchPage:async()=>{calls.push(['search']);return {records:[record('zhilian')],next_cursor:null};}},getCancellationEpoch:()=>0});
+ assert.deepEqual(calls,[['preflight',true],['search'],['save',true],['verify','zhilian','verified']]);
+});
+
 test('a failed batch save does not poison the next valid source',async()=>{
  const writes=[];
- const client={searchPreflight:async()=>preflight,runSourceSearch:async request=>{writes.push(request.source_ids[0]);if(request.source_ids[0]==='zhilian')throw Error('disk full');return response('wuyou','run_b',1);}};
+ const client={searchPreflight:async()=>preflight,runSourceSearch:async request=>{writes.push(request.source_ids[0]);if(request.source_ids[0]==='zhilian')throw Error('disk full');return response('wuyou','run_b',1);},recordSourceVerification:async()=>{}};
  const result=await executeBoundedSourceSearch(input,{client,manager:manager(),getCancellationEpoch:()=>0});
  assert.deepEqual(writes,['zhilian','wuyou']);
  assert.equal(result.result_page.run_id,'run_b');
@@ -32,7 +41,7 @@ test('a failed batch save does not poison the next valid source',async()=>{
 
 test('source status update failure is reported after A was saved and B still saves',async()=>{
  const writes=[],status=[];
- const client={searchPreflight:async()=>({...preflight,max_pages:2}),runSourceSearch:async request=>{const id=request.source_ids[0];writes.push(id);return response(id,'run_a',writes.length,id==='zhilian'?'partial':'success');},recordSourceRuntimeFailure:async id=>{status.push(id);throw Error('status store busy');}};
+ const client={searchPreflight:async()=>({...preflight,max_pages:2}),runSourceSearch:async request=>{const id=request.source_ids[0];writes.push(id);return response(id,'run_a',writes.length,id==='zhilian'?'partial':'success');},recordSourceRuntimeFailure:async id=>{status.push(id);throw Error('status store busy');},recordSourceVerification:async()=>{}};
  const sourceManager={searchPage:async(id,{page})=>{if(id==='zhilian'&&page===2)throw Error('risk_control:verify');return {records:[record(id)],next_cursor:id==='zhilian'?'2':null};}};
  const result=await executeBoundedSourceSearch({...input,max_pages:2},{client,manager:sourceManager,getCancellationEpoch:()=>0});
  assert.deepEqual([...writes].sort(),['wuyou','zhilian']);assert.deepEqual(status,['zhilian']);

@@ -68,3 +68,12 @@ test("QA probe cap checks one eligible source while reporting the rest",async()=
   assert.equal(results[1].outcome,"verified_now");
   assert.equal(results.filter(item=>item.outcome==="not_checked_budget").length,0);
 });
+
+test("explicit all-source check probes an old unverified login state while retaining risk pause",async()=>{
+  const calls=[];
+  const results=await runSourceCheckQueue({sources:[source("zhilian"),source("wuyou",{session_status:"blocked",list_status:"blocked"})],
+    signal:new AbortController().signal,probeUnverifiedLogin:true,probe:async item=>{calls.push(item.source_id);throw Error("login_required:session expired");}});
+  assert.deepEqual(calls,["zhilian"]);
+  assert.deepEqual(results.map(item=>item.outcome),["login_required","skipped_cooldown"]);
+  assert.deepEqual(results.map(item=>item.evidence),["live","history"]);
+});

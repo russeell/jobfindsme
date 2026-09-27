@@ -9,6 +9,7 @@ type CheckOptions={
   perSourceMs?:number;
   cacheMs?:number;
   maxLiveProbes?:number;
+  probeUnverifiedLogin?:boolean;
   now?:()=>number;
 };
 
@@ -26,7 +27,7 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
     if(stop==="cancelled"){append({source,outcome:stop,evidence:"none",attempted_at:null,detail:"已取消，未轮到此来源。",duration_ms:0});continue;}
     const began=now(),attempted_at=new Date(began).toISOString();
     const base={source,attempted_at:null,duration_ms:0};
-    if(source.login_required&&source.session_status!=="verified"){
+    if(source.login_required&&source.session_status!=="verified"&&!options.probeUnverifiedLogin){
       append({...base,outcome:source.session_status==="blocked"?"risk_control":"login_required",evidence:"history",detail:source.session_status==="blocked"?"来源要求平台验证；本次未发起检索。":"应用独立会话尚未确认登录；本次未发起检索。"});continue;
     }
     if(source.session_status==="blocked"||source.list_status==="blocked"){
@@ -57,7 +58,8 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
       const cancelled=options.signal.aborted;
       const timedOut=message.includes("source_check_timeout")||(!cancelled&&controller.signal.aborted);
       const outcome:SourceCheckResult["outcome"]=cancelled?"cancelled":timedOut?"failed":/risk_control:|captcha|429|访问过于频繁/i.test(message)?"risk_control":/login_required:/.test(message)?"login_required":/source_backoff:|cooldown/.test(message)?"skipped_cooldown":/未读取到|没有返回岗位|no_matching/.test(message)?"unverified":"failed";
-      append({...base,outcome,evidence:"live",attempted_at,duration_ms:now()-began,detail:cancelled?"已取消当前来源。":timedOut?"本次探测超时；未开始后续来源。":message.slice(0,300)});
+      const alreadyChecking=outcome==="skipped_cooldown"&&message.includes("source_backoff:");
+      append({...base,outcome,evidence:alreadyChecking?"history":"live",attempted_at:alreadyChecking?null:attempted_at,duration_ms:now()-began,detail:cancelled?"已取消当前来源。":timedOut?"本次探测超时；未开始后续来源。":message.slice(0,300)});
       if(cancelled)stop="cancelled";
       if(timedOut)stop="not_checked_budget";
     }finally{if(timer)clearTimeout(timer);options.signal.removeEventListener("abort",abort);}

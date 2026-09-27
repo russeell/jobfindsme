@@ -1,6 +1,6 @@
 import {reportMatchesJob,hasFullDescription} from "../../../shared/research-reports";
 import type {ResearchReport} from "../../../shared/contracts";
-import {defaultDiscoveryFilters,normalizeDiscoveryFilters,selectedSearchSources} from "../../../shared/discovery-filters";
+import {defaultDiscoveryFilters,normalizeDiscoveryFilters,selectedSearchSources,selectedAttemptableSources} from "../../../shared/discovery-filters";
 import {userError} from "../../../shared/user-errors";
 import {JobActions} from "./JobActions";
 import {useEffect, useMemo,useState,useRef,type FormEvent} from "react";
@@ -20,6 +20,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const sources = useMemo(() => data?.sources ?? [], [data]);
   const workspaceId = data?.workspaces[0]?.workspace_id;
   const enabled = selectedSearchSources(sources,selectedSources);
+  const attemptable = selectedAttemptableSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
   const [intent, setIntent] = useState("");
   useEffect(()=>{if(suggestedIntent)setIntent(suggestedIntent.query);},[suggestedIntent?.nonce]);
@@ -90,7 +91,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const continueRuns=result?.source_runs.filter(run=>run.can_continue&&run.next_cursor)||[];
   const canExpand=!!result&&sources.some(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id));
   const issueCount=result?(result.batch_failures?.length||0)+result.source_runs.filter(sourceRunNeedsAttention).length:0;
-  const statusText=searching?`正在查找 · 已找到 ${currentFound} 条岗位，已处理 ${processedSourceIds.length} 个来源`:showingPrevious?`本次未完成 · 保留上次找到的 ${page?.total??0} 条岗位`:result?`已找到 ${page?.total??0} 条岗位 · ${result.executed_queries?.length||0} 个来源已检索${Object.keys(result.blocked_sources).length?` · ${Object.keys(result.blocked_sources).length} 个需处理`:""}${pendingSources.length?` · ${pendingSources.length} 个未轮到`:""}${issueCount?" · 部分读取失败":""}${selectionChanged?" · 勾选变更下次生效":""}`:searchError?"本次未完成，已保留上次结果":selectedSources.length?`已选 ${selectedSources.length} 个来源 · ${enabled.length} 个可检索${unavailable.length?` · ${unavailable.length} 个需处理`:""}`:"请选择岗位来源";
+  const statusText=searching?`正在查找 · 已找到 ${currentFound} 条岗位，已处理 ${processedSourceIds.length} 个来源`:showingPrevious?`本次未完成 · 保留上次找到的 ${page?.total??0} 条岗位`:result?`已找到 ${page?.total??0} 条岗位 · ${result.executed_queries?.length||0} 个来源已检索${Object.keys(result.blocked_sources).length?` · ${Object.keys(result.blocked_sources).length} 个需处理`:""}${pendingSources.length?` · ${pendingSources.length} 个未轮到`:""}${issueCount?" · 部分读取失败":""}${selectionChanged?" · 勾选变更下次生效":""}`:searchError?"本次未完成，已保留上次结果":selectedSources.length?`已选 ${selectedSources.length} 个来源 · ${enabled.length} 个已验证可检索${attemptable.length-enabled.length?` · ${attemptable.length-enabled.length} 个本次可尝试验证`:""}${selectedSources.length-attemptable.length?` · ${selectedSources.length-attemptable.length} 个需处理`:""}`:"请选择岗位来源";
   const [filterKey,setFilterKey]=useState(0);
   const filterEpoch=useRef(0);
   const filterBaseRun=useRef<string|undefined>(undefined);
@@ -118,7 +119,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     const requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
     const requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
     if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
-    if (!preserve&&!enabled.length) {onError("请先选择至少一个当前可检索的来源。");return;}
+    if (!preserve&&!attemptable.length) {onError("请先选择至少一个可检索或可尝试验证的来源。");return;}
     if (requestFilters.salary_min_k != null && requestFilters.salary_max_k != null && requestFilters.salary_min_k > requestFilters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
     const additional=sources.filter(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id)).slice(0,2);
     const sourceIds=continuation?[continuation.sourceId]:pending&&result?unstartedSourceIds(result):expand?additional.map(source=>source.source_id):selectedSources;
@@ -187,8 +188,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     }).catch(error=>onError(messageOf(error)));
   }
   return <div className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
-    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || enabled.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
-    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||enabled.length===0} onClick={()=>void search(undefined,undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
+    <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || attemptable.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
+    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     <div className="search-status-line" role="status"><span title={statusText}>{statusText}</span><details ref={statusMenuRef} className="search-status-menu"><summary>来源详情</summary><div className="search-menu-content">
       <p>{searching?`本轮请求 ${activeRequest.current?.sourceIds.length||0} 个来源；岗位在每个来源保存后加入结果。`:resultRequest?`结果对应「${resultRequest.intent||"简历关键词"}」和当时选择的 ${coveredSources.length} 个来源。`:"勾选会在下次检索时使用。"}</p>
