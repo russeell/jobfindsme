@@ -23,7 +23,7 @@ import {
   passiveSourceObservationScript, type PassiveSourceObservation,
 } from "../sources/source-actions";
 
-type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
+type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; searchTarget?:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;
 
 export class SourceBrowserManager {
@@ -384,8 +384,11 @@ export class SourceBrowserManager {
       try{validateZhilianSearchScope(active.view.webContents.getURL(),input.keyword,input.city,input.page);reuseVisible=true;}catch{/* A different visible page cannot satisfy this query. */}
     }
     const foreground=sourceId==="zhilian";
-    if(foreground&&!reuseVisible&&this.tabs.length>=MAX_BROWSER_TABS)throw Error(`最多打开${MAX_BROWSER_TABS}个标签，请先关闭不需要的页面。`);
-    const searchTab=foreground&&!reuseVisible?this.createForegroundTab("zhilian",searchUrl):undefined;
+    // Reuse only a task-owned search tab that the user has not navigated elsewhere.
+    const owned=foreground&&!reuseVisible?this.tabs.find(tab=>tab.sourceId==="zhilian"&&tab.searchTarget===tab.view.webContents.getURL()&&!tab.view.webContents.isDestroyed()):undefined;
+    if(foreground&&!reuseVisible&&!owned&&this.tabs.length>=MAX_BROWSER_TABS)throw Error(`最多打开${MAX_BROWSER_TABS}个标签，请先关闭不需要的页面。`);
+    const searchTab=foreground&&!reuseVisible?(owned||this.createForegroundTab("zhilian",searchUrl)):undefined;
+    if(searchTab){searchTab.searchTarget=searchUrl;searchTab.error=undefined;this.selectTab(searchTab.id);}
     const view=reuseVisible?active!.view:searchTab?.view||this.backgroundView(sourceId);
     if(searchTab)this.window.webContents?.send("desktop:source-browser-opened",this.state());
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);

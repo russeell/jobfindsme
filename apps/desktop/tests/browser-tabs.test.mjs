@@ -167,14 +167,14 @@ test('cancelling a loading background source stops and releases its renderer',as
 });
 
 test('a cancelled DOM read exits promptly without caching its late result or cancelling another source',async()=>{
- const {m}=setup();let started,finish,zhilianViews=0;
+ const {m}=setup();let started,finish,zhilianViews=0,zhilianReads=0;
  const reading=new Promise(resolve=>{started=resolve;});
  const job=(url)=>({jobs:[{title:'工程师',company:'示例',url}],hasNext:false});
  FakeView.onCreate=view=>{if(!view.options.webPreferences?.partition)return;
   const id=view.options.webPreferences.partition.includes('zhilian')?'zhilian':'wuyou';
   if(id==='zhilian')zhilianViews++;
   view.webContents.executeJavaScript=()=>id==='wuyou'?Promise.resolve(job('https://www.51job.com/job/123')):
-    zhilianViews===1?new Promise(resolve=>{finish=resolve;started();}):Promise.resolve(job('https://www.zhaopin.com/jobdetail/123.htm'));
+    zhilianReads++===0?new Promise(resolve=>{finish=resolve;started();}):Promise.resolve(job('https://www.zhaopin.com/jobdetail/123.htm'));
  };
  try{
   const first=m.searchPage('zhilian',{keyword:'工程师',city:'',page:1,forceRefresh:true});
@@ -184,7 +184,7 @@ test('a cancelled DOM read exits promptly without caching its late result or can
   assert.equal((await second).records.length,1);
   finish(job('https://www.zhaopin.com/jobdetail/late.htm'));
   const retried=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1});
-  assert.equal(retried.records.length,1);assert.equal(zhilianViews,2);
+  assert.equal(retried.records.length,1);assert.equal(zhilianViews,1);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
@@ -273,5 +273,16 @@ test('cancelling an auto-opened Zhaopin search stops only its owned navigation; 
  FakeView.onCreate=view=>{view.webContents.isLoadingMainFrame=()=>true;view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;started();return new Promise(()=>{});};view.webContents.stop=()=>{stops++;};};
  try{const work=m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1});await loading;m.cancelCareerSearch('zhilian');await assert.rejects(work,/cancelled/);assert.equal(stops,1);assert.equal(original.webContents.isDestroyed(),false);assert.equal(m.state().tabs.length,2);
  await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,2);}
+ finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+
+test('successive Zhaopin queries reuse only owned search tabs and preserve user navigation',async()=>{
+ const {m,w}=setup();await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/user.htm');const original=w.children[0];
+ FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],empty:true});};
+ try{await m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1});const search=w.children[0];
+ await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(m.state().tabs.length,2);assert.equal(w.children[0],search);assert.match(search.webContents.getURL(),/kw=Java/);
+ await search.webContents.loadURL('https://www.zhaopin.com/jobdetail/user-clicked.htm');
+ await m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1});assert.equal(m.state().tabs.length,3);assert.equal(search.webContents.getURL(),'https://www.zhaopin.com/jobdetail/user-clicked.htm');assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/user.htm');}
  finally{FakeView.onCreate=undefined;m.destroy();}
 });
