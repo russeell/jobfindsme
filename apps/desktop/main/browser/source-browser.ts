@@ -305,7 +305,13 @@ export class SourceBrowserManager {
   private careerCache=new Map<string,{time:number;page:SourceActionPage}>();
   private careerBlocked=new Map<SourceBrowserId,number>();
   private careerEpoch=0;
-  cancelCareerSearch(){this.careerEpoch++;for(const id of ["zhilian","wuyou"] as const){const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}}
+  private careerSourceEpoch=new Map<"zhilian"|"wuyou",number>();
+  private careerControllers=new Map<"zhilian"|"wuyou",Set<AbortController>>();
+  cancelCareerSearch(sourceId?:"zhilian"|"wuyou"){
+    if(sourceId)this.careerSourceEpoch.set(sourceId,(this.careerSourceEpoch.get(sourceId)||0)+1);
+    else this.careerEpoch++;
+    for(const id of sourceId?[sourceId]:["zhilian","wuyou"] as const){for(const controller of this.careerControllers.get(id)||[])controller.abort();const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}
+  }
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
   private platformPending=new Map<string,Promise<SourceActionPage>>();
@@ -326,8 +332,13 @@ export class SourceBrowserManager {
     const key=JSON.stringify([sourceId,input]),cached=this.careerCache.get(key),now=Date.now();
     if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
-    const view=this.backgroundView(sourceId),epoch=this.careerEpoch,deadline=now+18000;
-    const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;try{return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));})]);}finally{if(timer)clearTimeout(timer);}};
+    const view=this.backgroundView(sourceId),epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=now+18000;
+    const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
+    const current=()=>!controller.signal.aborted&&epoch===this.careerEpoch&&sourceEpoch===(this.careerSourceEpoch.get(sourceId)||0);
+    const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;let onAbort:()=>void=()=>{};try{
+      if(!current())throw Error('cancelled:检索已停止');
+      return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));}),new Promise<T>((_,reject)=>{onAbort=()=>reject(Error('cancelled:检索已停止'));controller.signal.addEventListener('abort',onAbort,{once:true});})]);
+    }finally{if(timer)clearTimeout(timer);controller.signal.removeEventListener('abort',onAbort);}};
     const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
     try {
       // The SPA can render usable listings before ad/analytics resources finish.
@@ -337,11 +348,13 @@ export class SourceBrowserManager {
       const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
       try{await bounded(Promise.race([loaded,ready]));}
       finally{view.webContents.removeListener("dom-ready",onReady);}
+      if(!current())throw Error('cancelled:检索已停止');
       let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean}|undefined;
       for(let attempt=0;attempt<12;attempt++){
-        if(epoch!==this.careerEpoch)throw Error('cancelled:检索已停止');
+        if(!current())throw Error('cancelled:检索已停止');
         if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:来源页面跳转不受支持');
         raw=await bounded(view.webContents.executeJavaScript(sourceListExtractionScript(sourceId)));
+        if(!current())throw Error('cancelled:检索已停止');
         if(raw?.blocked){this.careerBlocked.set(sourceId,Date.now()+300000);throw Error('risk_control:'+raw.blocked);}
         if(raw?.loginRequired){
           // SSO can briefly render a login document before its redirect ends.
@@ -352,13 +365,15 @@ export class SourceBrowserManager {
         await new Promise(r=>setTimeout(r,250));
       }
       if(!raw?.jobs?.length&&!raw?.empty)throw Error('source_contract_error:未读取到岗位列表，请在原页确认');
+      if(!current())throw Error('cancelled:检索已停止');
       const result=sanitizeSourceActionPage(sourceId,searchUrl,input.page,raw!,new Map());
       // Site city parameters use opaque IDs. Apply named cities to observed fields locally.
       if(input.city&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>!r.payload.location||String(r.payload.location).includes(input.city));
+      if(!current())throw Error('cancelled:检索已停止');
       this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
-    } finally {this.releaseBackground(sourceId,view);}
+    } finally {controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);this.releaseBackground(sourceId,view);}
   }
 
   destroy(): void {

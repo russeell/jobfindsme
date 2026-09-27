@@ -2,6 +2,13 @@ import type {SourceCapability,SourceCheckResult} from "./contracts.js";
 
 export type SourcePresentation={title:string;detail:string;action:"login"|"check"|"use";available:boolean};
 
+export function sourceCheckFailureOutcome(message:string):SourceCheckResult["outcome"]{
+  if(/risk_control:|captcha|429|安全验证|风控/i.test(message))return "risk_control";
+  if(/login_required:/.test(message))return "login_required";
+  if(/no_matching:|没有读取到匹配岗位/.test(message))return "unverified";
+  return "failed";
+}
+
 export function presentSourceStatus(source:SourceCapability,check?:SourceCheckResult,now=Date.now()):SourcePresentation{
   const stale=Boolean(source.last_verified_at)&&now-Date.parse(source.last_verified_at!)>24*60*60*1000;
   if(check?.outcome==="risk_control"||source.session_status==="blocked"||source.list_status==="blocked")

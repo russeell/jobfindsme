@@ -5,6 +5,10 @@ export function userError(error:unknown):UserError {
  if(chatStorage){const message={sqlite_busy:'本地对话数据库繁忙',sqlite_readonly:'本地对话数据库不可写',sqlite_full:'本地对话数据库空间不足',sqlite_constraint:'本地对话数据库约束冲突',sqlite_error:'本地对话数据库读写失败'}[chatStorage[1]];return {kind:'service',message:`${message}（${chatStorage[1]}）`,action:'retry'};}
  if(/login_required|verified login|登录.*(失效|过期)|请.*登录/.test(text))return {kind:'login',message:'该来源需要重新登录。已读取的岗位会保留。',action:'source'};
  if(/risk_control|验证码|安全验证|限流|过于频繁/.test(text))return {kind:'risk',message:'该来源要求验证或暂时限制访问，采集已暂停。',action:'source'};
+ if(/source_backoff:/.test(text))return {kind:'source',message:'该来源正在检查或刚完成检查，本次没有重复访问。',action:'retry'};
+ if(/source_check_timeout|source_timeout:/.test(text))return {kind:'source',message:'本次来源读取超时，登录和检索能力尚未确认。',action:'retry'};
+ if(/no_matching:/.test(text))return {kind:'source',message:'本次未读到匹配岗位，检索能力仍待验证。',action:'retry'};
+ if(/source_contract_error:/.test(text))return {kind:'source',message:'本次未读到可验证的岗位列表，可能是页面结构变化；登录状态仍待确认。',action:'source'};
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};
  if(/source_contract|来源|continuation_expired/.test(text))return {kind:'source',message:'来源暂时无法读取，请打开对应网站确认状态。',action:'source'};
  if(/500|502|503|fetch failed|API.*(ready|failed)|ECONN|IPC|invoking remote/.test(text))return {kind:'service',message:'本次操作未完成，本地服务暂时异常，请稍后重试。',action:'retry'};

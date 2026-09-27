@@ -68,6 +68,7 @@ let promptSessionId: string | undefined;
 let promptRequestId: string | undefined;
 let sourceBrowserManager: SourceBrowserManager | undefined;
 let sourceCheckController:AbortController|undefined;
+let sourceVerifyActive=false;
 const sourceAutoCheckAt=new Map<string,number>();
 const sourceAutoCheckPending=new Set<string>();
 let researchController: AbortController | undefined;
@@ -265,6 +266,7 @@ ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInp
   }
   if(!Array.isArray(input.source_ids)||!input.source_ids.length)throw new Error("请先选择岗位来源。");
   if(sourceCheckController)throw Error("全部来源检查进行中，请先结束检查");
+  if(sourceVerifyActive)throw Error("单个平台检查进行中，请结束后再检索岗位");
   if(sourceSearchActive)throw Error("岗位检索进行中，请先停止当前检索。");
   sourceSearchActive++;
   try{
@@ -302,7 +304,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
   if(!sourceBrowserManager||!apiClient||!isSourceBrowserId(source.source_id))throw Error("source_contract_error:来源不可检查");
   const sourceId=source.source_id;
   if(!ignorePending&&sourceAutoCheckPending.has(sourceId))throw Error("source_backoff:登录后自动检查正在运行，本次不重复访问来源");
-  const stop=()=>sourceBrowserManager?.cancelCareerSearch();
+  const stop=()=>{if(sourceId==="zhilian"||sourceId==="wuyou")sourceBrowserManager?.cancelCareerSearch(sourceId);};
   if(sourceId==="boss"){
     const abort=()=>sourceBrowserManager?.boss.cancel();
     signal.addEventListener("abort",abort,{once:true});
@@ -339,7 +341,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
     const summary=summarizeSourceVerification(pages);
     summary.session_status=source.login_required?"verified":"anonymous";
     summary.pagination_status="unverified";
-    summary.notes=`批量检查本次仅验证 1 个列表页；JD 与网站续页未在本次重查。${summary.notes}`;
+    summary.notes=`本次检查仅验证 1 个列表页；JD 与网站续页未在本次重查。${summary.notes}`;
     return apiClient.recordSourceVerification(sourceId,summary,signal);
   }catch(error){
     const message=String(error);
@@ -355,7 +357,7 @@ async function recheckPersistedSessions():Promise<void>{
     source.session_status==="verified"&&source.list_status!=="blocked"&&
     (!source.live_search_enabled||!source.last_verified_at||Date.now()-Date.parse(source.last_verified_at)>600000));
   for(const source of sources){
-    if(!apiClient||!sourceBrowserManager||isQuitting||sourceSearchActive||sourceCheckController)break;
+    if(!apiClient||!sourceBrowserManager||isQuitting||sourceSearchActive||sourceCheckController||sourceVerifyActive)break;
     if(sourceAutoCheckPending.has(source.source_id))continue;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
     sourceAutoCheckPending.add(source.source_id);sourceAutoCheckAt.set(source.source_id,Date.now());
@@ -368,6 +370,7 @@ async function recheckPersistedSessions():Promise<void>{
 ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||!sourceBrowserManager||!/^[-a-zA-Z0-9]{8,80}$/.test(runId))throw Error("source verification is not available");
   if(sourceCheckController)throw Error("全部来源检查已在运行");
+  if(sourceVerifyActive)throw Error("单个平台检查进行中，请结束后检查全部来源");
   if(sourceSearchActive)throw Error("岗位检索进行中，请结束后检查全部来源");
   const controller=new AbortController();sourceCheckController=controller;
   try{
@@ -387,19 +390,10 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   }
   if(!isSourceBrowserId(sourceId))throw Error('unknown source');
   if(sourceCheckController)throw Error('全部来源检查进行中，请结束后再单独重试');
-  if(!requiresElectronSourceSearch(sourceId)){
-    let pages:BrowserSourcePage[];
-    try{
-      pages=await apiClient.publicSourcePages(sourceId,{keyword:'工程师',city:'',max_pages:2,seconds:20});
-    }catch(error){throw Error(`source_contract_error:${String(error).slice(0,250)}`);}
-    const first=pages.flatMap(p=>p.records)[0];
-    if(!first)throw Error('未读取到匹配岗位，当前仍为待验证；可在官网手动浏览。');
-    if(first.payload.detail_level!=='detail_page')try{const d=await sourceBrowserManager.readResearchJob(sourceId,String(first.payload.apply_url));first.payload={...first.payload,description:d.description,detail_level:'detail_page'};}catch{}
-    const summary=summarizeSourceVerification(pages);
-    summary.session_status='anonymous';summary.pagination_status='partial';
-    summary.notes='有界检索已读取列表；分页/城市覆盖仍需逐项实测。'+summary.notes;
-    return apiClient.recordSourceVerification(sourceId,summary);
-  }
+  if(sourceSearchActive)throw Error('岗位检索进行中，请结束后再检查来源');
+  if(sourceVerifyActive)throw Error('单个平台检查正在运行，请稍后重试');
+  sourceVerifyActive=true;
+  try{
   if(sourceId==="boss"){
     const page=await sourceBrowserManager.observeBoss(true,false,true);
     if(!page?.authenticated||page.blocked||page.loginRequired)throw Error("请在应用内 BOSS 页面完成登录或平台验证后重试。");
@@ -412,12 +406,13 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
     mainWindow?.webContents.send("desktop:source-status-changed");
     return updated;
   }
-  const first = await sourceBrowserManager.searchPage(sourceId, { keyword: "Python", city: "", page: 1 });
-  const pages = [first];
-  if (first.next_cursor) {
-    pages.push(await sourceBrowserManager.searchPage(sourceId, { keyword: "Python", city: "", page: Number(first.next_cursor) }));
-  }
-  return apiClient.recordSourceVerification(sourceId, summarizeSourceVerification(pages));
+  const current=(await apiClient.bootstrap()).sources.find(source=>source.source_id===sourceId);
+  if(!current)throw Error("source_contract_error:来源记录不存在");
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+  try{return await probeSourceForBulk(current,controller.signal);}
+  catch(error){if(controller.signal.aborted)throw Error('source_check_timeout:单个平台检查超过 8 秒');throw error;}
+  finally{clearTimeout(timer);mainWindow?.webContents.send("desktop:source-status-changed");}
+  }finally{sourceVerifyActive=false;}
 });
 ipcMain.handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceBrowserManager?.boss.cancel();sourceBrowserManager?.cancelCareerSearch();});
 ipcMain.handle("desktop:read-source-detail",async(event,sourceId:string,url:string,workspaceId?:string,jobId?:string)=>{

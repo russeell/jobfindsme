@@ -11,7 +11,7 @@ import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "..
 import { Discovery } from "./search/Discovery";
 import {formatSalary} from "./search/salary";
 import { Workbench, BrowserToggle, useOriginalBrowser } from "./shared/Workbench";
-import {presentSourceStatus} from "../../shared/source-presentation";
+import {presentSourceStatus,sourceCheckFailureOutcome} from "../../shared/source-presentation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
@@ -140,8 +140,10 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
       onRefresh(await window.jobfindsme!.getBootstrap());
     } catch (error) {
       const detail=messageOf(error);
-      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{...row,outcome:/登录|login_required/i.test(detail)?"login_required":/验证|risk_control|429/i.test(detail)?"risk_control":"failed",evidence:"live",attempted_at:new Date().toISOString(),detail}:row)}:current);
-      onError(messageOf(error));
+      const safe=userError(error).message;
+      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{...row,outcome:sourceCheckFailureOutcome(detail),evidence:"live",attempted_at:new Date().toISOString(),detail:safe}:row)}:current);
+      onError(detail);
+      try{onRefresh(await window.jobfindsme!.getBootstrap());}catch{/* Keep the current view if status refresh also fails. */}
     } finally {
       setVerifying(undefined);
     }

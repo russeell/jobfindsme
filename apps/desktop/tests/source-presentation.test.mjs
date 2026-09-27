@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {presentSourceStatus} from '../dist-electron/shared/source-presentation.js';
+import {presentSourceStatus,sourceCheckFailureOutcome} from '../dist-electron/shared/source-presentation.js';
 
 const source={source_id:'sample',source_type:'platform',name:'示例',login_required:false,live_search_enabled:true,session_status:'public',list_status:'verified',detail_status:'verified',fields_status:'verified',pagination_status:'verified',status:'ok',detail:'',last_verified_at:null};
 test('source presentation keeps search capability separate from session and check outcome',()=>{
@@ -13,4 +13,10 @@ test('source presentation keeps search capability separate from session and chec
  assert.equal(presentSourceStatus(source,{outcome:'failed',detail:'本次读取失败'}).title,'本次未确认');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}, {outcome:'failed',detail:'source_contract_error'}).title,'本次未确认');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}).title,'登录状态待确认');
+});
+test('a list parse error is never presented as login or risk',()=>{
+ assert.equal(sourceCheckFailureOutcome('source_contract_error:验证检索没有返回岗位'),'failed');
+ assert.equal(sourceCheckFailureOutcome('source_check_timeout:单个平台检查超过 8 秒'),'failed');
+ assert.equal(sourceCheckFailureOutcome('login_required:登录页'),'login_required');
+ assert.equal(sourceCheckFailureOutcome('risk_control:安全验证'),'risk_control');
 });
