@@ -352,6 +352,8 @@ nav button .nav-label {font-size:13px;}
 .research-history-archive svg {width:13px;height:13px;}
 .research-history-archive:hover,.research-history-archive:focus-visible {background:var(--surface-selected);color:var(--text);}
 @media(hover:hover){.research-history-archive {opacity:0;}.research-history-row:hover .research-history-archive,.research-history-row:focus-within .research-history-archive {opacity:1;}}
+.research-history-sidebar .research-history-item:disabled {opacity:1;cursor:default;}
+.research-history-sidebar .research-history-archive:disabled {opacity:0;pointer-events:none;}
 .research-history-sidebar .research-history-archived-row {display:flex;flex-direction:column;align-items:stretch;margin-bottom:4px;}
 .research-history-archived-title {display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 9px 1px;font-size:13px;color:var(--text);}
 .research-history-archived-actions {display:flex;justify-content:flex-end;gap:6px;padding:0 6px 3px;}
@@ -435,9 +437,12 @@ nav button .nav-label {font-size:13px;}
 .sidebar-bottom {margin-top:auto;min-width:0;}
 .sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:36px;margin:0 0 -12px;padding:7px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
 .sidebar-new-chat:hover,.sidebar-new-chat:focus-visible {background:var(--surface-hover);}
+.sidebar-new-chat:disabled:has(.sidebar-chat-busy) {opacity:1;}
+.sidebar-chat-busy {margin-left:auto;color:var(--text-muted);font-size:10px;white-space:nowrap;}
 .sidebar-new-chat .nav-icon {width:17px;flex:0 0 17px;}
 .sidebar-collapsed .sidebar-new-chat {justify-content:center;margin-bottom:0;padding:8px;}
 .sidebar-collapsed .sidebar-new-chat .nav-label {display:none;}
+.sidebar-collapsed .sidebar-chat-busy {display:none;}
 .research-archive-settings {max-width:760px;}
 .research-archive-list {display:grid;gap:0;margin-top:20px;border-top:1px solid var(--line);}
 .research-archive-item {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;min-height:52px;padding:8px 0;border-bottom:1px solid var(--line);}

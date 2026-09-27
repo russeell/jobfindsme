@@ -25,7 +25,7 @@ type WorkPage = "discover" | "research" | "records";
 type Page = WorkPage | "settings";
 type SettingsTab = "sources" | "models" | "about" | "archive";
 const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["我的岗位", "records"]];
-const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["模型设置", "models"], ["版本更新", "about"], ["对话归档", "archive"]];
+const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["对话归档", "archive"], ["模型设置", "models"], ["版本更新", "about"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
   const hadSourcePreference=useRef(localStorage.getItem("jfm.sources.selected")!==null);
@@ -83,7 +83,7 @@ export function App() {
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
-    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title="新聊天" aria-label="新聊天" onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">新聊天</span></button>
+    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title={researchBusy?"当前对话或保存尚未完成，请稍候":"求职助手"} aria-label={researchBusy?"求职助手：当前对话或保存尚未完成":"求职助手"} onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">请稍候</span>}</button>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
   </>}>
