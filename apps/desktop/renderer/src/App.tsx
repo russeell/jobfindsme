@@ -48,7 +48,7 @@ export function App() {
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
   const [researchBusy,setResearchBusy]=useState(false);
   const [newChatNonce,setNewChatNonce]=useState(0);
-  function openNewChat(){if(researchBusy)return;setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
+  function openNewChat(){if(researchBusy){setPage("research");return;}setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
   const [suggestedSearch,setSuggestedSearch]=useState<{query:string;nonce:number}>();
   useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }); }, [page]);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({ connected: false, message: "本地服务正在启动" });
@@ -83,7 +83,7 @@ export function App() {
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}</nav></div>
-    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected||researchBusy} title={researchBusy?"当前对话或保存尚未完成，请稍候":"求职助手"} aria-label={researchBusy?"求职助手：当前对话或保存尚未完成":"求职助手"} onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">请稍候</span>}</button>
+    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected} title={researchBusy?"返回当前对话":"求职助手"} aria-label={researchBusy?"求职助手：返回当前对话":"求职助手"} onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">进行中</span>}</button>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
   </>}>
