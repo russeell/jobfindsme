@@ -23,7 +23,7 @@ import {
   passiveSourceObservationScript, type PassiveSourceObservation,
 } from "../sources/source-actions";
 
-type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; searchTarget?:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
+type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;
 
 export class SourceBrowserManager {
@@ -383,17 +383,10 @@ export class SourceBrowserManager {
     if(sourceId==="zhilian"&&this.visible&&active?.sourceId==="zhilian"&&!active.view.webContents.isDestroyed()){
       try{validateZhilianSearchScope(active.view.webContents.getURL(),input.keyword,input.city,input.page);reuseVisible=true;}catch{/* A different visible page cannot satisfy this query. */}
     }
-    const foreground=sourceId==="zhilian";
-    // Reuse only a task-owned search tab that the user has not navigated elsewhere.
-    const owned=foreground&&!reuseVisible?this.tabs.find(tab=>tab.sourceId==="zhilian"&&tab.searchTarget===tab.view.webContents.getURL()&&!tab.view.webContents.isDestroyed()):undefined;
-    if(foreground&&!reuseVisible&&!owned&&this.tabs.length>=MAX_BROWSER_TABS)throw Error(`最多打开${MAX_BROWSER_TABS}个标签，请先关闭不需要的页面。`);
-    const searchTab=foreground&&!reuseVisible?(owned||this.createForegroundTab("zhilian",searchUrl)):undefined;
-    if(searchTab){searchTab.searchTarget=searchUrl;searchTab.error=undefined;this.selectTab(searchTab.id);}
-    const view=reuseVisible?active!.view:searchTab?.view||this.backgroundView(sourceId);
-    if(searchTab)this.window.webContents?.send("desktop:source-browser-opened",this.state());
+    const view=reuseVisible?active!.view:this.backgroundView(sourceId);
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
     const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
-    const stopOwnedNavigation=()=>{if(searchTab&&!view.webContents.isDestroyed()&&view.webContents.isLoadingMainFrame())view.webContents.stop();};
+    const stopOwnedNavigation=()=>{if(!reuseVisible&&!view.webContents.isDestroyed()&&view.webContents.isLoadingMainFrame())view.webContents.stop();};
     controller.signal.addEventListener("abort",stopOwnedNavigation,{once:true});
     const current=()=>!controller.signal.aborted&&epoch===this.careerEpoch&&sourceEpoch===(this.careerSourceEpoch.get(sourceId)||0);
     const bounded=async <T>(work:Promise<T>):Promise<T>=>{let timer:ReturnType<typeof setTimeout>|undefined;let onAbort:()=>void=()=>{};try{
@@ -449,7 +442,7 @@ export class SourceBrowserManager {
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
     } catch(error){throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}]`);}
-    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!foreground)this.releaseBackground(sourceId,view);}
+    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible)this.releaseBackground(sourceId,view);}
   }
 
   destroy(): void {

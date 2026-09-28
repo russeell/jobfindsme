@@ -118,7 +118,6 @@ export type DesktopBridge = {
   secureStorageAvailable(): Promise<boolean>;
   getServiceStatus(): Promise<ServiceStatus>;
   onSourceBrowserFocus(listener:()=>void):()=>void;
-  onSourceBrowserOpen(listener:(state:SourceBrowserState)=>void):()=>void;
   onServiceStatus(listener: (status: ServiceStatus) => void): () => void;
 };
 

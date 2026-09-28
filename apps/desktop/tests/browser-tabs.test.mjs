@@ -149,7 +149,7 @@ test('source search reads at DOM readiness without waiting for late resources',a
   view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;queueMicrotask(()=>view.webContents.emit('dom-ready'));return new Promise(()=>{});};
   view.webContents.executeJavaScript=async()=>({jobs:[{title:'工程师',company:'示例',url:'https://www.zhaopin.com/jobdetail/example.htm'}],hasNext:false});}};
  try{const began=Date.now();const page=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1,forceRefresh:true});
-  assert.equal(page.records.length,1);assert.ok(Date.now()-began<1000);assert.equal(background.webContents.isDestroyed(),false);
+  assert.equal(page.records.length,1);assert.ok(Date.now()-began<1000);assert.equal(background.webContents.isDestroyed(),true);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
@@ -184,7 +184,7 @@ test('a cancelled DOM read exits promptly without caching its late result or can
   assert.equal((await second).records.length,1);
   finish(job('https://www.zhaopin.com/jobdetail/late.htm'));
   const retried=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1});
-  assert.equal(retried.records.length,1);assert.equal(zhilianViews,1);
+  assert.equal(retried.records.length,1);assert.equal(zhilianViews,2);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
@@ -252,37 +252,18 @@ test('an exact visible Zhaopin search is reused without navigation, duplicate re
  view.webContents.loadURL=async()=>{navigation++;};view.webContents.executeJavaScript=async()=>({searchKeyword:'AI Agent',jobs:[{title:'AI应用员',company:'示例',location:'深圳',url:'http://www.zhaopin.com/jobdetail/real.htm'}]});
  const page=await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(page.records.length,1);assert.equal(navigation,0);assert.equal(m.backgrounds.size,0);assert.equal(view.webContents.isDestroyed(),false);
  let backgroundReads=0;FakeView.onCreate=v=>{v.webContents.executeJavaScript=async()=>{backgroundReads++;return {jobs:[],empty:true};};};
- await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(backgroundReads,1);assert.equal(m.state().tabs.length,2);
+ await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(backgroundReads,1);assert.equal(m.state().tabs.length,1);
  m.hide();await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1,forceRefresh:true});assert.equal(backgroundReads,2);assert.equal(view.webContents.isDestroyed(),false);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
 
-test('Zhaopin user searches open a new source tab and retain its failed page for diagnosis',async()=>{
+test('Zhaopin searches never open the browser, add tabs, or change the active user page',async()=>{
  const {m,w}=setup();const events=[];w.webContents={send:(...args)=>events.push(args)};
- await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');const original=w.children[0];
  FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],empty:true,searchKeyword:'AI Agent'});};
- try{await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(m.state().tabs.length,2);assert.equal(original.webContents.isDestroyed(),false);assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/original.htm');assert.equal(events[0][0],'desktop:source-browser-opened');assert.equal(m.backgrounds.size,0);assert.match(m.state().url,/jl=765/);}
- finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
-
-test('cancelling an auto-opened Zhaopin search stops only its owned navigation; expired work opens nothing',async()=>{
- const {m,w}=setup();await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');const original=w.children[0];let started,stops=0;
- const loading=new Promise(resolve=>{started=resolve;});
- FakeView.onCreate=view=>{view.webContents.isLoadingMainFrame=()=>true;view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;started();return new Promise(()=>{});};view.webContents.stop=()=>{stops++;};};
- try{const work=m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1});await loading;m.cancelCareerSearch('zhilian');await assert.rejects(work,/cancelled/);assert.equal(stops,1);assert.equal(original.webContents.isDestroyed(),false);assert.equal(m.state().tabs.length,2);
- await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,2);}
- finally{FakeView.onCreate=undefined;m.destroy();}
-});
-
-
-test('successive Zhaopin queries reuse only owned search tabs and preserve user navigation',async()=>{
- const {m,w}=setup();await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/user.htm');const original=w.children[0];
- FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],empty:true});};
- try{await m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1});const search=w.children[0];
- await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(m.state().tabs.length,2);assert.equal(w.children[0],search);assert.match(search.webContents.getURL(),/kw=Java/);
- await search.webContents.loadURL('https://www.zhaopin.com/jobdetail/user-clicked.htm');
- await m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1});assert.equal(m.state().tabs.length,3);assert.equal(search.webContents.getURL(),'https://www.zhaopin.com/jobdetail/user-clicked.htm');assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/user.htm');}
- finally{FakeView.onCreate=undefined;m.destroy();}
+ try{await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(m.state().tabs.length,0);assert.equal(w.children.length,0);assert.equal(events.length,0);
+ await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');m.layout(bounds);const original=w.children[0],active=m.state().activeTabId;
+ await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1,forceRefresh:true});assert.equal(m.state().tabs.length,1);assert.equal(m.state().activeTabId,active);assert.equal(w.children[0],original);assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/original.htm');assert.equal(events.length,0);
+ await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,1);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
 });

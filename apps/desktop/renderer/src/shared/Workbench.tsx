@@ -102,9 +102,6 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   useEffect(()=>{localStorage.setItem("jfm.browser.bookmarks",JSON.stringify(bookmarks));},[bookmarks]);
   const activeTab=browserState.tabs.find(t=>t.id===browserState.activeTabId);
   const slot = useRef<HTMLDivElement>(null);
-  useEffect(()=>window.jobfindsme?.onSourceBrowserOpen(state=>{
-    setBrowserState(state);setPanelOpen(true);setNewTab(false);setMode("browser");setTabError("");
-  }),[]);
   const splitterContext = `${hasBrowser}:${effectiveCollapsed}:${narrow}:${mode}:${browserExpanded}:${newTab}:${browserState.activeTabId}:${windowWidth}`;
   const visible = hasBrowser && !newTab && !!activeTab && (browserExpanded || !narrow || mode === "browser");
   useEffect(() => { localStorage.setItem("jfm.sidebar.width", String(sidebarWidth)); }, [sidebarWidth]);
