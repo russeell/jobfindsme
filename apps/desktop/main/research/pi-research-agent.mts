@@ -115,7 +115,7 @@ export function explainResearchGap(originals:number,actions:Array<Record<string,
   const next=/(?:待遇|薪资|薪酬|福利|加班|工作强度)/u.test(question)?"员工待遇的方向已明确；可重试公开检索，或提供具体团队、岗位与年份帮助缩小范围。":/(?:经营|业绩|财报|年报|披露|收入|利润)/u.test(question)?"可以指定财报年份或报告期后重试。":/(?:岗位|招聘|求职|工作|投递)/u.test(question)?"可以缩小到具体岗位或地区后重试；如需查看当前岗位，请到“找工作”输入关键词。":"可以补充想了解的具体方向后重试。";
   return `${reason}\n我暂时不能给出事实性结论。${next}`;
 }
-export async function runPiResearchAgent(context:AgentResearchContext,connection:ModelConnection,apiKey:string,tools:ResearchTools,onDelta:(delta:string)=>void,signal:AbortSignal,onProgress?:(progress:{tool:string;status:"started"|"completed"|"failed"})=>void):Promise<AgentResearchResult>{
+export async function runPiResearchAgent(context:AgentResearchContext,connection:ModelConnection,apiKey:string,tools:ResearchTools,onDelta:(delta:string,status:"direct"|"checked")=>void,signal:AbortSignal,onProgress?:(progress:{tool:string;status:"started"|"completed"|"failed"})=>void):Promise<AgentResearchResult>{
   if(!context.workspaceId||!context.question.trim()||context.question.length>12000)throw Error("invalid research input");
   if(connection.status!=="verified")throw Error("请先在模型设置中测试连接。");
   if(connection.auth_mode!=="none"&&!apiKey)throw Error("当前模型缺少系统安全存储中的密钥。");
@@ -321,9 +321,9 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
     if(event.type==="tool_execution_end"&&["find_evidence","search_web","read_page","read_browser_page","read_job"].includes(event.toolName))onProgress?.({tool:event.toolName,status:event.isError?"failed":"completed"});
     if(event.type==="message_update"&&event.assistantMessageEvent.type==="text_delta"){
     const delta=event.assistantMessageEvent.delta;raw+=delta;
-    if(directChat&&!runController.signal.aborted){onDelta(delta);directStreamed=true;}
+    if(directChat&&!runController.signal.aborted){onDelta(delta,"direct");directStreamed=true;}
   }});
-  const emitFinal=(value:string)=>{if(!directStreamed&&!finalEmitted){onDelta(value);finalEmitted=true;}};
+  const emitFinal=(value:string)=>{if(!directStreamed&&!finalEmitted){onDelta(value,"checked");finalEmitted=true;}};
   const prompt=JSON.stringify({current_question:context.question,company,title:context.title,job_id:context.jobId,research_requested:context.research});
   const abort=()=>{runController.abort();agent.abort();};signal.addEventListener("abort",abort,{once:true});
   let deadline:ReturnType<typeof setTimeout>|undefined;

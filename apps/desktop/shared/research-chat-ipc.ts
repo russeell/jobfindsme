@@ -16,7 +16,7 @@ export function modelHistoryWithinBudget(history:ResearchChatTurn[],maxChars=200
   const selected:ResearchChatTurn[]=[];let used=0;
   for(let index=history.length-1;index>=0;index--){
     if(selected.length>=200)break;
-    const turn=history[index],text=turn.text.slice(-8000),remaining=maxChars-used;
+    const turn=history[index],text=(turn.interrupted?`（上条回复已停止，内容未完成）\n${turn.text}`:turn.text).slice(-8000),remaining=maxChars-used;
     if(remaining<=0)break;
     if(text.length>remaining){if(!selected.length)selected.unshift({role:turn.role,text:text.slice(-remaining)});break;}
     selected.unshift({role:turn.role,text});used+=text.length;

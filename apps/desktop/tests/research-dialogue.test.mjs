@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,stopChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
@@ -22,6 +22,23 @@ test('a broad explicit company question can begin finite Agent research',()=>{
 test('a transient chat database lock retries the same snapshot once',async()=>{
  const calls=[];await saveResearchChatWithRetry({id:'chat-a'},async item=>{calls.push(item.id);if(calls.length===1)throw Error('research_chat_storage:sqlite_busy');});
  assert.deepEqual(calls,['chat-a','chat-a']);
+});
+
+test('stopping retains only approved direct text, without promoting research drafts',()=>{
+ const started=beginChat(undefined,'chat-stop','总结这份JD','2026-01-01').chat;
+ const stopped=stopChat(started,'已生成的普通回复','direct','2026-01-02');
+ assert.equal(stopped.turns.at(-1).text,'已生成的普通回复');
+ assert.equal(stopped.turns.at(-1).interrupted,true);
+ assert.equal(stopped.draft,undefined);
+ const restored=fromStoredResearchChat(toStoredResearchChat('w1',stopped));
+ assert.deepEqual(restored.turns,stopped.turns);
+ assert.match(modelHistoryWithinBudget(restored.turns).at(-1).text,/已停止/);
+ for(const status of [undefined,'checked']){
+  const hidden=stopChat(started,'未经核验的公司结论',status,'2026-01-02');
+  assert.deepEqual(hidden.turns,started.turns);
+  assert.equal(hidden.draft,started.draft);
+ }
+ assert.equal(stopChat(started,'','direct','2026-01-02').turns.length,1);
 });
 
 test('agent role exploration keeps its intent when a company is added and uses the existing job search',()=>{

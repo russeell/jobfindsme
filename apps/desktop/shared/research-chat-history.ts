@@ -17,6 +17,12 @@ export function finishChat(chat:SavedResearchChat,text:string,reportId:string|un
   return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text,...(reportId?{reportId}:{}),...(details?.evidence?.length?{evidence:details.evidence}:{}),...(details?.process?.length?{process:details.process}:{})}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
 }
 
+export function stopChat(chat:SavedResearchChat,text:string,status:ResearchChatDelta["content_status"],at:string):SavedResearchChat{
+  if(status!=="direct"||!text.trim())return chat;
+  const finished=finishChat(chat,text,undefined,at);
+  return {...finished,turns:[...finished.turns.slice(0,-1),{role:"assistant",text,interrupted:true}]};
+}
+
 export function finishJobSearchChat(chat:SavedResearchChat,text:string,query:string,pending:PendingResearch|undefined,at:string):SavedResearchChat{
   const finished=finishChat(chat,text,undefined,at);
   return {...finished,turns:[...finished.turns.slice(0,-1),{role:"assistant",text,searchQuery:query}],pendingResearch:pending};

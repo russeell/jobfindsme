@@ -12,7 +12,7 @@ import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,legacyChatsForMigration,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,legacyChatsForMigration,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
 type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
@@ -42,6 +42,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   const [liveProcess,setLiveProcess]=useState("");
   const [focusedCitation,setFocusedCitation]=useState<{turn:number;number:number}|null>(null);
   const streamingRef=useRef("");
+  const streamingStatus=useRef<"direct"|"checked"|undefined>(undefined);
   const requestRef=useRef<ActiveResearchRequest|null>(null);
   const workspaceRef=useRef(workspaceId);
   workspaceRef.current=workspaceId;
@@ -67,7 +68,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     const cached=loadResearchChats(workspaceId);
     const migrationKey=`jobfindsme:research-chat-migrated:${workspaceId}`;
     const alreadyMigrated=localStorage.getItem(migrationKey)==="1";
-    savedChats.current.clear();setLoadedWorkspace(null);setChats(alreadyMigrated?[]:cached);setArchivedChats([]);setReports([]);setChatId(null);setChatBusy(false);setStreaming("");streamingRef.current="";setModelId(getCurrentModel(workspaceId));
+    savedChats.current.clear();setLoadedWorkspace(null);setChats(alreadyMigrated?[]:cached);setArchivedChats([]);setReports([]);setChatId(null);setChatBusy(false);setStreaming("");streamingRef.current="";streamingStatus.current=undefined;setModelId(getCurrentModel(workspaceId));
     void Promise.all([window.jobfindsme!.listResearchChats(workspaceId),window.jobfindsme!.listArchivedResearchChats(workspaceId)]).then(async([rows,archivedRows])=>{
       if(cancelled)return;
       const remote=rows.map(fromStoredResearchChat),archived=archivedRows.map(fromStoredResearchChat);
@@ -87,7 +88,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   useEffect(()=>{if(!active)return;void window.jobfindsme!.listModelConnections().then(values=>{setConnections(values);const saved=getCurrentModel(workspaceId);setModelId(saved&&values.some(value=>value.connection_id===saved&&value.status==="verified")?saved:null);}).catch(error=>onError(userError(error).message));},[active,workspaceId]);
   useEffect(()=>window.jobfindsme!.onResearchChatDelta(event=>{if(!acceptsResearchDelta(requestRef.current,event,workspaceRef.current))return;
     if(event.progress){const label=({find_evidence:"核对已存材料",search_web:"搜索公开来源",read_page:"读取原页",read_browser_page:"浏览器读取原页",read_job:"读取已存岗位"} as Record<string,string>)[event.progress.tool]||"处理来源";setLiveProcess(`${label}${event.progress.status==="started"?"中…":event.progress.status==="failed"?"失败":"完成"}`);return;}
-    if(event.delta){streamingRef.current+=event.delta;setStreaming(streamingRef.current);}
+    if(event.delta){streamingStatus.current=event.content_status;streamingRef.current+=event.delta;setStreaming(streamingRef.current);}
   }),[]);
   useEffect(()=>{if(!target)return;sequence.current++;lastOpened.current=undefined;setChatId(null);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
   const lastNewChatNonce=useRef(newChatNonce);
@@ -134,17 +135,17 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     const companyHint=decision.kind==="research"?decision.company:decision.kind==="clarify"&&"company" in decision.pending?decision.pending.company:currentCompany;
     const startedChat={...started.chat,subjectCompany:companyHint||current?.subjectCompany,subjectTitle:decision.kind==="research"?decision.title:current?.subjectTitle,jobId:activeJobId,researchMode:decision.kind!=="chat"};
     setChats(items=>[startedChat,...items.filter(item=>item.id!==id)]);
-    setQuestion("");streamingRef.current="";setStreaming("");setLiveProcess("");setMessage("");setChatBusy(true);
+    setQuestion("");streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");setMessage("");setChatBusy(true);
     try{
       const result=await window.jobfindsme!.runResearchChat({request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:decision.kind==="research"?decision.question:value,research:decision.kind==="research",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
       if(requestRef.current?.id!==requestId||workspaceRef.current!==workspaceId)return;
       setChats(items=>items.map(item=>{if(item.id!==id)return item;const finished=finishChat(item,result.text,result.report?.report_id,new Date().toISOString(),{evidence:result.evidence,process:result.process});return {...finished,subjectCompany:result.company||finished.subjectCompany,researchMode:!!result.researched||finished.researchMode,pendingResearch:decision.kind==="clarify"&&!result.researched?decision.pending:undefined};}));
       if(result.report){const values=await window.jobfindsme!.listResearchReports(workspaceId);if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){keepReports(values);lastOpened.current=result.report.report_id;setReport(result.report);}}
-      streamingRef.current="";setStreaming("");setLiveProcess("");
+      streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");
     }catch(error){if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){setChats(items=>items.map(item=>item.id===id?failChat(item,userError(error).message,new Date().toISOString()):item));setQuestion(value);setMessage(`本次对话未完成：${userError(error).message}。提问已保留，可直接重试。`);try{keepReports(await window.jobfindsme!.listResearchReports(workspaceId));}catch{}}}
-    finally{if(requestRef.current?.id===requestId){requestRef.current=null;setChatBusy(false);setStreaming("");setLiveProcess("");streamingRef.current="";}}
+    finally{if(requestRef.current?.id===requestId){requestRef.current=null;setChatBusy(false);setStreaming("");setLiveProcess("");streamingRef.current="";streamingStatus.current=undefined;}}
   }
-  async function cancelChat(){const active=requestRef.current;if(!active)return;requestRef.current=null;setChatBusy(false);setStreaming("");setLiveProcess("");streamingRef.current="";setQuestion(chats.find(item=>item.id===active.sessionId)?.draft||"");try{if(active.kind==="model")await window.jobfindsme!.cancelResearchChat(active.id);else await window.jobfindsme!.cancelResearch();setMessage("已停止；当前提问会保留。");}catch(error){setMessage(userError(error).message);}}
+  async function cancelChat(){const active=requestRef.current;if(!active)return;const current=chats.find(item=>item.id===active.sessionId);const stopped=current?stopChat(current,streamingRef.current,streamingStatus.current,new Date().toISOString()):undefined;const retained=!!stopped&&stopped!==current;requestRef.current=null;if(stopped)setChats(items=>items.map(item=>item.id===stopped.id?stopped:item));setChatBusy(false);setStreaming("");setLiveProcess("");streamingRef.current="";streamingStatus.current=undefined;setQuestion(stopped?.draft||"");try{if(active.kind==="model")await window.jobfindsme!.cancelResearchChat(active.id);else await window.jobfindsme!.cancelResearch();setMessage(retained?"已停止；已生成的回复已保留，内容未完成。":"已停止；当前提问会保留。");}catch(error){setMessage(userError(error).message);}}
   async function refreshChatHistory(id:string){
     const [activeRows,archivedRows]=await Promise.all([window.jobfindsme!.listResearchChats(id),window.jobfindsme!.listArchivedResearchChats(id)]);
     if(workspaceRef.current!==id)return;
@@ -214,6 +215,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
           const attachedReport=attached?reportsById.get(attached):undefined;
           return <article className={`research-chat-turn ${item.role}`} aria-label={item.role==="user"?"你":"求职助手"} key={`${activeChat.id}-${index}`}>
             {item.role==="assistant"?<MessageContent text={item.text} sources={attachedReport?.evidence||item.evidence} onCitation={number=>showCitation(index,number)}/>:<p>{item.text}</p>}
+            {item.interrupted&&<small className="note" role="status">已停止 · 内容未完成</small>}
             {attachedReport?<details id={`research-sources-${index}`}><summary>来源与核验详情（{attachedReport.evidence.length}）</summary><ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})} focusedEvidenceId={focusedCitation?.turn===index?attachedReport.evidence[focusedCitation.number-1]?.evidence_id:undefined}/></details>:item.evidence?.length?<details id={`research-sources-${index}`}><summary>来源片段（{item.evidence.length}）</summary>{item.evidence.map((source,sourceIndex)=><article id={`research-source-${index}-${sourceIndex+1}`} tabIndex={-1} className={`evidence-card${focusedCitation?.turn===index&&focusedCitation.number===sourceIndex+1?" research-source-focused":""}`} key={source.evidence_id}><strong>原文片段 [{sourceIndex+1}] · {source.platform}</strong><small>{source.context?.page?`第 ${source.context.page} 页 · `:""}{source.published_at||"发布时间未知"}</small><blockquote>{source.excerpt}</blockquote><p className="note">{source.limitations} · 读取于 {source.retrieved_at}</p>{source.url&&<button type="button" onClick={()=>openBrowser({sourceId:"web",url:source.url!,title:"研究来源"})}>查看原页 ↗</button>}</article>)}</details>:null}
             {!!item.process?.length&&<details className="research-diagnostics"><summary>检索与阅读过程（{item.process.length}）</summary><ol>{item.process.map((step,stepIndex)=><li key={stepIndex}>{({find_evidence:"核对已存材料",search_web:"发现网页",read_page:"读取原页",read_browser_page:"浏览器读取原页",answer_check:"核对陈述",completion_check:"补查缺口"} as Record<string,string>)[step.tool]||step.tool}{step.site?` · ${step.site}`:""} · {step.status}{typeof step.count==="number"?` · ${step.count} 条`:""}</li>)}</ol></details>}
             {item.searchQuery&&<button type="button" className="research-search-action" onClick={()=>onSearchJobs(item.searchQuery!)}>去找工作 · {item.searchQuery}</button>}

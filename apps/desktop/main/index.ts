@@ -751,7 +751,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
         saveExecution:state=>apiClient!.saveAgentExecution(state),
         saveReport:state=>apiClient!.saveAgentReport(state),
       },
-      delta=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta});},run.signal,
+      (delta,content_status)=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta,content_status});},run.signal,
       progress=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,progress});});
   }finally{chatRuns.finish(run);}
 });
