@@ -23,7 +23,7 @@ import {
   passiveSourceObservationScript, type PassiveSourceObservation,
 } from "../sources/source-actions";
 
-type BrowserTab = { id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
+type BrowserTab = { navigation?:number; id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;
 
 export class SourceBrowserManager {
@@ -202,14 +202,16 @@ export class SourceBrowserManager {
   }
 
   private async loadTab(tab:BrowserTab,target:string) {
-    const view=tab.view;
-    try {await view.webContents.loadURL(target);if(!view.webContents.isDestroyed() && !isPublicWebUrl(view.webContents.getURL()))tab.error="页面未返回有效招聘内容，请刷新或尝试岗位详情链接。";}
+    const view=tab.view,revision=tab.navigation=(tab.navigation??0)+1;
+    const current=()=>this.tabs.includes(tab)&&tab.navigation===revision&&!view.webContents.isDestroyed();
+    try {await view.webContents.loadURL(target);if(current() && !isPublicWebUrl(view.webContents.getURL()))tab.error="页面未返回有效招聘内容，请刷新或尝试岗位详情链接。";}
     catch(error){
-      if(view.webContents.isDestroyed())return;
+      if(!current())return;
       const aborted=error && typeof error === "object" && "code" in error && error.code === "ERR_ABORTED";
       let completed=false;
-      if(aborted)for(let i=0;i<80;i++){if(view.webContents.isDestroyed())return;if(!view.webContents.isLoadingMainFrame()&&isPublicWebUrl(view.webContents.getURL())){completed=true;break;}await new Promise(r=>setTimeout(r,100));}
-      if(!completed){tab.error=String(error);throw error;}
+      if(aborted)for(let i=0;i<80;i++){if(!current())return;if(!view.webContents.isLoadingMainFrame()&&isPublicWebUrl(view.webContents.getURL())){completed=true;break;}await new Promise(r=>setTimeout(r,100));}
+      if(!current())return;
+      if(!completed){tab.error="网页加载失败，请刷新或检查网络连接。";throw new Error("browser_navigation_failed");}
     }
   }
 

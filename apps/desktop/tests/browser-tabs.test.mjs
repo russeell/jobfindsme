@@ -267,3 +267,22 @@ test('Zhaopin searches never open the browser, add tabs, or change the active us
  await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,1);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
+
+test('closing a loading tab discards its late failure even before native destruction',async()=>{
+ const {w,m}=setup();await m.show('liepin',bounds,a);const id=m.state().activeTabId,wc=w.children[0].webContents;
+ let reject;wc.loadURL=()=>new Promise((_,r)=>{reject=r;});wc.close=()=>{};
+ const pending=m.navigateTab(id,b);m.closeTab(id);reject(Error('ERR_CONNECTION_RESET'));
+ await assert.doesNotReject(pending);assert.equal(m.state().tabs.length,0);m.destroy();
+});
+test('a superseded navigation cannot overwrite the current page with its late error',async()=>{
+ const {w,m}=setup();await m.show('liepin',bounds,a);const id=m.state().activeTabId,wc=w.children[0].webContents;
+ let reject;const load=wc.loadURL;wc.loadURL=url=>url===b?new Promise((_,r)=>{reject=r;}):load(url);
+ const old=m.navigateTab(id,b);await m.navigateTab(id,a+'?new=1');reject(Error('ERR_CONNECTION_RESET'));
+ await assert.doesNotReject(old);assert.equal(m.state().tabs[0].error,undefined);m.destroy();
+});
+test('a current navigation failure is reported as a page error',async()=>{
+ const {w,m}=setup();await m.show('liepin',bounds,a);const id=m.state().activeTabId;
+ w.children[0].webContents.loadURL=async()=>{throw Error('ERR_CONNECTION_RESET');};
+ await assert.rejects(m.navigateTab(id,b),/browser_navigation_failed/);
+ assert.match(m.state().tabs[0].error,/网页加载失败/);m.destroy();
+});

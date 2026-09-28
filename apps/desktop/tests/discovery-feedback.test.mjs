@@ -22,3 +22,7 @@ test('an explicitly selected unverified platform can start a bounded search, whi
  assert.deepEqual(selectedAttemptableSources(sources,['zhilian','wuyou']).map(s=>s.source_id),['zhilian']);
  assert.deepEqual(selectedAttemptableSources(sources,['wuyou']),[]);
 });
+test('browser load failure is not presented as a backend outage',()=>{
+ const result=userError('Error invoking remote method: browser_navigation_failed');
+ assert.equal(result.kind,'source');assert.match(result.message,/网页加载失败/);assert.doesNotMatch(result.message,/本地服务|remote/);
+});
