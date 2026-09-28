@@ -136,12 +136,12 @@ test('canonical-link fallback reads company fields and rejects visible login ove
 
 test('observed split-layout JobCard uses only its matched public job prop for the canonical URL',async()=>{
  const {runInNewContext}=await import('node:vm');
- const title='AI agent BD',company='进迭时空(杭州)科技有限公司';
+ let clamped=false;const title='AI agent BD',company='进迭时空(杭州)科技有限公司';
  const job={name:title,companyName:company,positionUrl:'http://www.zhaopin.com/jobdetail/CCL1378359190J000000001.htm'};
  const vue={$props:{job}};
  for(const key of ['$data','$store','user','cookiesData'])Object.defineProperty(vue,key,{get(){throw Error('must not read private Vue state');}});
  const card={__vue__:vue,matches:s=>s==='.job-card',getBoundingClientRect:()=>({width:300,height:200}),querySelector(s){
-  if(s==='.job-card__title-clamp .vue-clamp__text')return {textContent:title};
+  if(s==='.job-card__title-clamp .vue-clamp__text')return {textContent:clamped?'AI…':title,getAttribute:key=>key==='aria-label'?title:null};
   if(s==='.job-card__company-name')return {textContent:company};
   if(s==='.job-card__location')return {textContent:'深圳 宝安 新安'};
   if(s.includes('salary'))return {textContent:'1.5-3万'};
@@ -150,6 +150,7 @@ test('observed split-layout JobCard uses only its matched public job prop for th
  const ctx={location:{hostname:'www.zhaopin.com',href:'https://www.zhaopin.com/jobs/?pageMode=search&jl=765&kw=AI+Agent'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'职位 消息 AI Agent'},querySelector:s=>s.startsWith('input')?{value:'AI Agent'}:null,querySelectorAll:s=>s==='.job-list-panel .job-card'?[card]:[]}};
  const raw=runInNewContext(sourceListExtractionScript('zhilian'),ctx);assert.equal(raw.jobs.length,1);assert.equal(raw.jobs[0].url,job.positionUrl);assert.equal(raw.searchKeyword,'AI Agent');
  const normalized=sanitizeSourceActionPage('zhilian',ctx.location.href,1,raw);assert.equal(normalized.records.length,1);assert.equal(normalized.records[0].payload.url,job.positionUrl.replace('http:','https:'));
+ clamped=true;assert.equal(runInNewContext(sourceListExtractionScript('zhilian'),ctx).jobs[0]?.title,title,'clamped display text must use its complete aria label');
  job.name='另一个岗位';assert.equal(runInNewContext(sourceListExtractionScript('zhilian'),ctx).jobs.length,0);
 });
 

@@ -149,7 +149,7 @@ test('source search reads at DOM readiness without waiting for late resources',a
   view.webContents.loadURL=url=>{view.webContents.getURL=()=>url;queueMicrotask(()=>view.webContents.emit('dom-ready'));return new Promise(()=>{});};
   view.webContents.executeJavaScript=async()=>({jobs:[{title:'工程师',company:'示例',url:'https://www.zhaopin.com/jobdetail/example.htm'}],hasNext:false});}};
  try{const began=Date.now();const page=await m.searchPage('zhilian',{keyword:'工程师',city:'',page:1,forceRefresh:true});
-  assert.equal(page.records.length,1);assert.ok(Date.now()-began<1000);assert.equal(background.webContents.isDestroyed(),true);
+  assert.equal(page.records.length,1);assert.ok(Date.now()-began<1000);assert.equal(background.webContents.isDestroyed(),false);m.cancelCareerSearch("zhilian");assert.equal(background.webContents.isDestroyed(),true);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
@@ -285,4 +285,26 @@ test('a current navigation failure is reported as a page error',async()=>{
  w.children[0].webContents.loadURL=async()=>{throw Error('ERR_CONNECTION_RESET');};
  await assert.rejects(m.navigateTab(id,b),/browser_navigation_failed/);
  assert.match(m.state().tabs[0].error,/网页加载失败/);m.destroy();
+});
+
+test('Zhaopin reuses its background renderer across searches without touching foreground tabs',async()=>{
+ const {m,w}=setup();const created=[];
+ FakeView.onCreate=view=>{created.push(view);view.webContents.executeJavaScript=async()=>({jobs:[],empty:true});};
+ try{await m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1});
+ const first=created[0];assert.equal(first.webContents.isDestroyed(),false);
+ await m.searchPage('zhilian',{keyword:'SQL',city:'深圳',page:1});
+ assert.equal(created.length,1);assert.equal(m.state().tabs.length,0);assert.equal(w.children.length,0);
+ m.cancelCareerSearch('zhilian');assert.equal(first.webContents.isDestroyed(),true);
+ await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(created.length,2);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+test('Zhaopin extraction failures include safe rendering diagnostics without URL secrets',async()=>{
+ const {m}=setup();FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],diagnostics:{readyState:'complete',visibility:'hidden',cards:0}});};
+ try{await assert.rejects(m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1,deadline:Date.now()+25}),error=>/source_stage=extract/.test(error.message)&&/visibility=hidden/.test(error.message)&&/cards=0/.test(error.message)&&!error.message.includes('https://'));}
+ finally{FakeView.onCreate=undefined;m.destroy();}
+});
+test('cancelling before a queued Zhaopin search starts prevents its navigation',async()=>{
+ const {m}=setup();let created=0;FakeView.onCreate=()=>{created++;};
+ try{const pending=m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1});m.cancelCareerSearch('zhilian');await assert.rejects(pending,/cancelled/);assert.equal(created,0);}
+ finally{FakeView.onCreate=undefined;m.destroy();}
 });

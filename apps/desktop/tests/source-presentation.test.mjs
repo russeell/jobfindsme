@@ -26,3 +26,7 @@ test('current foreground evidence supersedes an older failed check without claim
  const status=presentSourceStatus(visible,{outcome:'failed',detail:'超时',attempted_at:'2026-09-28T10:00:00Z'});
  assert.equal(status.title,'已登录，列表可读');assert.equal(status.available,false);assert.match(status.detail,/2 条/);
 });
+test('a confirmed login with a failed background search stays distinct from login failure',()=>{
+ const result=presentSourceStatus({...source,source_id:'zhilian',session_status:'verified',live_search_enabled:false,list_status:'partial',detail:'后台有界检索未通过：source_timeout [source_stage=extract]'});
+ assert.equal(result.title,'已登录，后台检索待修复');assert.equal(result.action,'check');assert.equal(result.available,false);
+});

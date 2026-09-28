@@ -12,7 +12,7 @@ import { saveModelConnectionWithSecret } from "./backend/model-connection-servic
 import { PythonService, type ServiceStatus } from "./backend/python-service";
 import { SecureSecretStore } from "./security/secure-secret-store";
 import { SourceBrowserManager } from "./browser/source-browser";
-import {runSourceCheckQueue} from "./sources/source-check-queue";
+import {runSourceCheckQueue,shouldAutoCheckSource} from "./sources/source-check-queue";
 import {executeBoundedSourceSearch} from "./sources/source-search-execution";
 import {readIsolatedResearchPage} from "./research/browser-page";
 import {ResearchRunController} from "./research/run-controller";
@@ -183,34 +183,28 @@ async function createWindow(): Promise<void> {
       if(current.session_status==="blocked")return;
       if(current.session_status==="verified")await apiClient.recordSourceRuntimeFailure(sourceId,"login_required","当前平台页显示登录表单；会话可能已失效，请重新登录。");
       else await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:"当前页面显示登录表单；会话有效性与检索能力仍需分别确认。"});
-    } else if(sourceId==="zhilian"&&(page.kind==="list"||page.kind==="account")) {
-      // Observing an already rendered page never starts an unrelated search.
-      if(current.session_status!=="blocked"&&current.list_status!=="blocked")
-        await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(current,page));
     } else if(page.kind==="list"||page.kind==="account") {
+      if(sourceSearchActive||sourceCheckController||sourceVerifyActive)return false;
       if(current.session_status==="blocked"||current.list_status==="blocked"){
         mainWindow?.webContents.send("desktop:source-status-changed");return;
       }
+      if(sourceId==="zhilian")await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(current,page));
       if(!page.authenticated){
-        if(page.kind==="list")await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页可见 ${page.cardCount} 个岗位卡片，但未确认登录身份；自动检索仍待验证。`});
+        if(page.kind==="list"&&sourceId!=="zhilian")await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页可见 ${page.cardCount} 个岗位卡片，但未确认登录身份；自动检索仍待验证。`});
         mainWindow?.webContents.send("desktop:source-status-changed");return;
       }
-      const recent=current.live_search_enabled&&current.session_status==="verified"&&current.list_status==="verified"&&current.last_verified_at && Date.now()-Date.parse(current.last_verified_at)<600000;
       const verified=current.session_status==="verified"&&current.list_status==="verified";
-      if(!verified)await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:page.kind==="list"?`原页可见 ${page.cardCount} 个岗位卡片；自动检索尚待有界验证。`:"当前平台页显示已登录；自动检索尚待有界验证。"});
+      if(!verified&&sourceId!=="zhilian")await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:page.kind==="list"?`原页可见 ${page.cardCount} 个岗位卡片；自动检索尚待有界验证。`:"当前平台页显示已登录；自动检索尚待有界验证。"});
       const last=sourceAutoCheckAt.get(sourceId)||0;
-      if(!sourceAutoCheckPending.has(sourceId)&&!recent&&Date.now()-last>600000){
+      if(shouldAutoCheckSource(current,page.authenticated,Date.now(),last,sourceAutoCheckPending.has(sourceId),isQuitting)){
         sourceAutoCheckAt.set(sourceId,Date.now());sourceAutoCheckPending.add(sourceId);
         void (async()=>{try{
-          const result=await sourceBrowserManager!.searchPage(sourceId,{keyword:"工程师",city:"",page:1});
-          const summary=summarizeSourceVerification([result]);
-          const latest=(await apiClient!.bootstrap()).sources.find(source=>source.source_id===sourceId);
-          if(latest?.session_status==="expired"||latest?.session_status==="blocked")return;
-          await apiClient!.recordSourceVerification(sourceId,{...summary,session_status:"verified",detail_status:current.detail_status==="verified"?"verified":"unverified",pagination_status:"partial",notes:`登录后一次有界检索：${result.records.length} 条、1 个网站页。详情与网站续页仍单独待验。`});
-        }catch(error){const failure=String(error);
+          const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+          try{await verifyPlatformBackground(current,controller.signal);}finally{clearTimeout(timer);}
+
+        }catch(error){if(!apiClient||isQuitting)return;const failure=String(error);
           if(/risk_control:|login_required:/.test(failure))await apiClient!.recordSourceRuntimeFailure(sourceId,failure.includes("risk_control:")?"risk_control":"login_required",failure.slice(0,500));
-          else {const latest=(await apiClient!.bootstrap()).sources.find(source=>source.source_id===sourceId);
-            if(latest?.session_status!=="blocked"&&latest?.session_status!=="expired")await apiClient!.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:`原页有列表，后台有界检索未通过：${failure.slice(0,350)}`});}
+
         }finally{sourceAutoCheckPending.delete(sourceId);mainWindow?.webContents.send("desktop:source-status-changed");}})();
       }
     }
@@ -306,6 +300,26 @@ ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bo
   if(sourceId==="zhilian")sourceBrowserManager.prepareZhilianCheck(bounds);
   else await sourceBrowserManager.show(sourceId, bounds);
 });
+async function verifyPlatformBackground(source:SourceCapability,signal:AbortSignal):Promise<SourceCapability>{
+  if(!apiClient||!sourceBrowserManager||(source.source_id!=="zhilian"&&source.source_id!=="wuyou"))throw Error("source_contract_error:来源不可检查");
+  const id=source.source_id,abort=()=>sourceBrowserManager?.cancelCareerSearch(id);
+  signal.addEventListener("abort",abort,{once:true});
+  try{
+    if(signal.aborted)throw Error("source_check_cancelled");
+    const result=await sourceBrowserManager.searchPage(id,{keyword:"工程师",city:"",page:1,forceRefresh:true,deadline:Date.now()+8000});
+    if(signal.aborted)throw Error("source_check_cancelled");
+    const summary=summarizeSourceVerification([result]);
+    const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===id);
+    if(latest?.session_status==="expired"||latest?.session_status==="blocked")throw Error("source_check_cancelled:会话状态已经变化");
+    return apiClient.recordSourceVerification(id,{...summary,session_status:"verified",detail_status:source.detail_status==="verified"?"verified":"unverified",pagination_status:"unverified",notes:`后台有界检索通过：${result.records.length} 条、1 个网站页；JD和网站续页仍待验证。`},signal);
+  }catch(error){
+    if(apiClient&&!signal.aborted&&!/risk_control:|login_required:|cancelled/.test(String(error))){
+      const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===id);
+      if(latest&&latest.session_status!=="expired"&&latest.session_status!=="blocked")await apiClient.recordSourceVerification(id,{session_status:latest.session_status,list_status:"partial",detail_status:latest.detail_status,fields_status:latest.fields_status,pagination_status:"unverified",enabled:false,notes:`后台有界检索未通过：${String(error).replace(/https?:\/\/[^\s]+/g,"[URL]").slice(0,500)}`}).catch(()=>{});
+    }
+    throw error;
+  }finally{signal.removeEventListener("abort",abort);}
+}
 async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ignorePending=false):Promise<SourceCapability>{
   if(!sourceBrowserManager||!apiClient||!isSourceBrowserId(source.source_id))throw Error("source_contract_error:来源不可检查");
   const sourceId=source.source_id;
@@ -334,12 +348,13 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
   try{
     let pages:BrowserSourcePage[];
     if(sourceId==="zhilian"){
-      const visible=await sourceBrowserManager.waitForVisibleZhilian(signal);
+      const visible=await sourceBrowserManager.readVisibleZhilian();
       if(signal.aborted)throw Error("source_check_cancelled");
-      if(!visible)throw Error("source_visible_page_required:请打开智联岗位列表；检查只读取当前页面，输入关键词后可直接尝试搜索");
-      if(visible.kind==="challenge")throw Error("risk_control:当前页要求平台验证");
-      if(visible.kind==="login")throw Error("login_required:当前页显示登录表单");
-      return apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(source,visible),signal);
+      if(visible?.kind==="challenge")throw Error("risk_control:当前页要求平台验证");
+      if(visible?.kind==="login")throw Error("login_required:当前页显示登录表单");
+      if(!visible?.authenticated&&source.session_status!=="verified")throw Error("source_visible_page_required:请在内置浏览器登录智联；确认账号后将自动验证后台搜索");
+      if(visible?.authenticated)await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(source,visible),signal);
+      return verifyPlatformBackground(source,signal);
     }else if(sourceId==="wuyou"){
       const page=await sourceBrowserManager.searchPage(sourceId,{keyword:"工程师",city:"",page:1,forceRefresh:true});
       pages=[page];
@@ -366,7 +381,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
 }
 async function recheckPersistedSessions():Promise<void>{
   if(!apiClient||!sourceBrowserManager||isQuitting)return;
-  const sources=(await apiClient.bootstrap()).sources.filter(source=>source.source_id!=="zhilian"&&requiresElectronSourceSearch(source.source_id)&&
+  const sources=(await apiClient.bootstrap()).sources.filter(source=>requiresElectronSourceSearch(source.source_id)&&
     source.session_status==="verified"&&source.list_status!=="blocked"&&
     (!source.live_search_enabled||!source.last_verified_at||Date.now()-Date.parse(source.last_verified_at)>600000));
   for(const source of sources){
@@ -374,7 +389,7 @@ async function recheckPersistedSessions():Promise<void>{
     if(sourceAutoCheckPending.has(source.source_id))continue;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
     sourceAutoCheckPending.add(source.source_id);sourceAutoCheckAt.set(source.source_id,Date.now());
-    try{await probeSourceForBulk(source,controller.signal,true);}
+    try{if(source.source_id==="zhilian"||source.source_id==="wuyou")await verifyPlatformBackground(source,controller.signal);else await probeSourceForBulk(source,controller.signal,true);}
     catch(error){const message=String(error);
       if(!controller.signal.aborted&&/risk_control:|login_required:/.test(message))await apiClient.recordSourceRuntimeFailure(source.source_id,message.includes("risk_control:")?"risk_control":"login_required",message.slice(0,500)).catch(()=>{});
     }finally{clearTimeout(timer);sourceAutoCheckPending.delete(source.source_id);mainWindow?.webContents.send("desktop:source-status-changed");}
@@ -421,9 +436,9 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   }
   const current=(await apiClient.bootstrap()).sources.find(source=>source.source_id===sourceId);
   if(!current)throw Error("source_contract_error:来源记录不存在");
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
   try{return await probeSourceForBulk(current,controller.signal);}
-  catch(error){if(controller.signal.aborted)throw Error('source_check_timeout:单个平台检查超过 8 秒');throw error;}
+  catch(error){if(controller.signal.aborted)throw Error('source_check_timeout:单个平台检查超过 10 秒');throw error;}
   finally{clearTimeout(timer);mainWindow?.webContents.send("desktop:source-status-changed");}
   }finally{sourceVerifyActive=false;}
 });

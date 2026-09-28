@@ -78,3 +78,12 @@ test("explicit all-source check probes an old unverified login state while retai
   assert.deepEqual(results.map(item=>item.outcome),["login_required","skipped_cooldown"]);
   assert.deepEqual(results.map(item=>item.evidence),["live","history"]);
 });
+
+test('a confirmed Zhaopin login triggers one bounded check while busy, recent and blocked sessions do not',async()=>{
+ const {shouldAutoCheckSource}=await import('../dist-electron/main/sources/source-check-queue.js');
+ const now=2000000,s=source('zhilian',{session_status:'verified',list_status:'partial'});
+ assert.equal(shouldAutoCheckSource(s,true,now,0,false,false),true);
+ for(const args of [[false,0,false,false],[true,now-1000,false,false],[true,0,true,false],[true,0,false,true]])assert.equal(shouldAutoCheckSource(s,args[0],now,...args.slice(1)),false);
+ assert.equal(shouldAutoCheckSource({...s,session_status:'blocked'},true,now,0,false,false),false);
+ assert.equal(shouldAutoCheckSource({...s,list_status:'verified',live_search_enabled:true,last_verified_at:new Date(now-1000).toISOString()},true,now,0,false,false),false);
+});

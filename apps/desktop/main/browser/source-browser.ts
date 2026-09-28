@@ -52,7 +52,7 @@ export class SourceBrowserManager {
   private observingBoss=false;
   private bossDocumentTime=0;
   private bossSawLogin=false;
-  constructor(private readonly window: BrowserWindow, private readonly onBossPage?:(page:BossPage,explicit?:boolean,revisit?:boolean,probeOnly?:boolean)=>Promise<void>, private readonly onSourcePage?:(sourceId:"zhilian"|"wuyou",page:PassiveSourceObservation)=>Promise<void>) {
+  constructor(private readonly window: BrowserWindow, private readonly onBossPage?:(page:BossPage,explicit?:boolean,revisit?:boolean,probeOnly?:boolean)=>Promise<void>, private readonly onSourcePage?:(sourceId:"zhilian"|"wuyou",page:PassiveSourceObservation)=>Promise<void|boolean>) {
     window.on("resize", () => this.applyBounds());
     // Local reads only while the user is looking at this platform; no periodic requests.
     if(onBossPage)this.bossObservation=setInterval(()=>{void this.observeBoss();},2500);
@@ -133,7 +133,7 @@ export class SourceBrowserManager {
       if(id==="zhilian")page.records=sanitizeSourceActionPage(id,page.url,1,{jobs:page.jobs}).records;
       const key=JSON.stringify([page.url,page.kind,page.cardCount,page.formCount,page.authenticated,page.records]);
       if(!force&&this.lastObservations.get(tab.id)===key)return;
-      this.lastObservations.set(tab.id,key);await this.onSourcePage(id,page);
+      this.lastObservations.set(tab.id,key);if(await this.onSourcePage(id,page)===false)this.lastObservations.delete(tab.id);
     } catch {/* A page can navigate while its DOM is being read. */}
   }
 
@@ -315,6 +315,7 @@ export class SourceBrowserManager {
   }
 
   private releaseBackground(sourceId:SourceBrowserId,view:WebContentsView):void {
+    const timer=this.careerIdle.get(sourceId);if(timer)clearTimeout(timer);this.careerIdle.delete(sourceId);
     // Close the task's renderer, never the persistent session or foreground tab.
     if(this.backgrounds.get(sourceId)===view)this.backgrounds.delete(sourceId);
     if(!view.webContents.isDestroyed())view.webContents.close();
@@ -348,6 +349,7 @@ export class SourceBrowserManager {
     } finally {if(timeout)clearTimeout(timeout);if(!view.webContents.isDestroyed())view.webContents.close();}
   }
 
+  private careerIdle=new Map<SourceBrowserId,ReturnType<typeof setTimeout>>();
   private careerCache=new Map<string,{time:number;page:SourceActionPage}>();
   private careerBlocked=new Map<SourceBrowserId,number>();
   private careerEpoch=0;
@@ -356,7 +358,7 @@ export class SourceBrowserManager {
   cancelCareerSearch(sourceId?:"zhilian"|"wuyou"){
     if(sourceId)this.careerSourceEpoch.set(sourceId,(this.careerSourceEpoch.get(sourceId)||0)+1);
     else this.careerEpoch++;
-    for(const id of sourceId?[sourceId]:["zhilian","wuyou"] as const){for(const controller of this.careerControllers.get(id)||[])controller.abort();const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}
+    for(const id of sourceId?[sourceId]:["zhilian","wuyou"] as const){const idle=this.careerIdle.get(id);if(idle){const view=this.backgrounds.get(id);if(view)this.releaseBackground(id,view);}for(const controller of this.careerControllers.get(id)||[])controller.abort();const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}
   }
 
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
@@ -365,7 +367,8 @@ export class SourceBrowserManager {
     if(sourceId==="boss")return Promise.reject(Error("请使用 BOSS 有界采集入口"));
     const key=JSON.stringify([sourceId,input]),existing=this.platformPending.get(key);if(existing)return existing;
     const tail=this.platformTail.get(sourceId)||Promise.resolve();
-    const work=tail.then(()=>this.searchPageRun(sourceId,input));
+    const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0;
+    const work=tail.then(()=>{if(epoch!==this.careerEpoch||sourceEpoch!==(this.careerSourceEpoch.get(sourceId)||0))throw Error("cancelled:检索已停止");return this.searchPageRun(sourceId,input);});
     const settled=work.catch(()=>{});this.platformTail.set(sourceId,settled);this.platformPending.set(key,work);
     void work.finally(()=>{this.platformPending.delete(key);if(this.platformTail.get(sourceId)===settled)this.platformTail.delete(sourceId);}).catch(()=>{});
     return work;
@@ -385,6 +388,7 @@ export class SourceBrowserManager {
     if(sourceId==="zhilian"&&this.visible&&active?.sourceId==="zhilian"&&!active.view.webContents.isDestroyed()){
       try{validateZhilianSearchScope(active.view.webContents.getURL(),input.keyword,input.city,input.page);reuseVisible=true;}catch{/* A different visible page cannot satisfy this query. */}
     }
+    const idle=this.careerIdle.get(sourceId);if(idle)clearTimeout(idle);this.careerIdle.delete(sourceId);
     const view=reuseVisible?active!.view:this.backgroundView(sourceId);
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
     const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
@@ -395,7 +399,7 @@ export class SourceBrowserManager {
       if(!current())throw Error('cancelled:检索已停止');
       return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));}),new Promise<T>((_,reject)=>{onAbort=()=>reject(Error('cancelled:检索已停止'));controller.signal.addEventListener('abort',onAbort,{once:true});})]);
     }finally{if(timer)clearTimeout(timer);controller.signal.removeEventListener('abort',onAbort);}};
-    let stage="load";
+    let stage="load",successful=false,jobCount=0,keywordMatch="unknown",diagnostics:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}|undefined;
     try {
       // The SPA can render usable listings before ad/analytics resources finish.
       // Start reading at DOM readiness while the normal load promise remains handled.
@@ -407,13 +411,14 @@ export class SourceBrowserManager {
         finally{view.webContents.removeListener("dom-ready",onReady);}
       }
       if(!current())throw Error('cancelled:检索已停止');
-      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string}|undefined;
+      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string;diagnostics?:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}}|undefined;
       stage="extract";
       while(Date.now()<deadline){
         if(!current())throw Error('cancelled:检索已停止');
         if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:来源页面跳转不受支持');
         raw=await bounded(view.webContents.executeJavaScript(sourceListExtractionScript(sourceId)));
         if(!current())throw Error('cancelled:检索已停止');
+        diagnostics=raw?.diagnostics;jobCount=raw?.jobs?.length||0;keywordMatch=raw?.searchKeyword===undefined?"unknown":raw.searchKeyword.trim()===input.keyword.trim()?"yes":"no";
         if(raw?.blocked){this.careerBlocked.set(sourceId,Date.now()+300000);throw Error('risk_control:'+raw.blocked);}
         if(raw?.loginRequired){
           // SSO can briefly render a login document before its redirect ends.
@@ -421,7 +426,7 @@ export class SourceBrowserManager {
           throw Error('login_required:登录状态已失效');
         }
         if(sourceId==="zhilian"&&raw?.searchKeyword!==undefined&&raw.searchKeyword.trim()!==input.keyword.trim()){
-          await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));continue;
+          stage="query";await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));continue;
         }
         if(raw?.jobs?.length||raw?.empty)break;
         await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));
@@ -440,15 +445,18 @@ export class SourceBrowserManager {
       // Site city parameters use opaque IDs. Apply named cities to observed fields locally.
       if(input.city&&input.city!=="全国"&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>Boolean(r.payload.location)&&String(r.payload.location).includes(input.city));
       if(!current())throw Error('cancelled:检索已停止');
-      this.careerCache.set(key,{time:Date.now(),page:result});
+      successful=true;this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
-    } catch(error){throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}]`);}
-    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible)this.releaseBackground(sourceId,view);}
+    } catch(error){const safeState=/^(loading|interactive|complete)$/.test(diagnostics?.readyState||"")?diagnostics!.readyState:"unknown";const safeVisibility=/^(hidden|visible)$/.test(diagnostics?.visibility||"")?diagnostics!.visibility:"unknown";const count=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(10000,Math.floor(value))):0;
+      throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility}; cards=${count(diagnostics?.cards)}; visible_cards=${count(diagnostics?.visibleCards)}; jobs=${jobCount}; keyword_match=${keywordMatch}; props=${count(diagnostics?.props)}; titles=${count(diagnostics?.titleMatches)}; companies=${count(diagnostics?.companyMatches)}; urls=${count(diagnostics?.urls)}]`);}
+    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible){if(sourceId==="zhilian"&&successful&&current()){
+      const timer=setTimeout(()=>{if(this.careerIdle.get(sourceId)===timer){this.careerIdle.delete(sourceId);this.releaseBackground(sourceId,view);}},120000);timer.unref?.();this.careerIdle.set(sourceId,timer);
+    }else this.releaseBackground(sourceId,view);}}
   }
 
   destroy(): void {
-    this.boss.cancel();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
+    this.boss.cancel();for(const timer of this.careerIdle.values())clearTimeout(timer);this.careerIdle.clear();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
     for(const timer of this.observationTimers.values())clearTimeout(timer);this.observationTimers.clear();
     if(this.bossDetailView&&!this.bossDetailView.webContents.isDestroyed())this.bossDetailView.webContents.close();
     // The BrowserWindow closed event may run after its native contentView died.

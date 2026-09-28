@@ -110,7 +110,9 @@ export function sourceListExtractionScript(
     const pick = (root, selectors) => {
       for (const selector of selectors) {
         const node = root.querySelector(selector);
-        const value = (node?.textContent || "").replace(/\\s+/g, " ").trim();
+        // VueClamp displays ellipsized text; its aria-label retains the full title.
+        const fullTitle=${JSON.stringify(sourceId)}==='zhilian' && selector==='.job-card__title-clamp .vue-clamp__text' ? node?.getAttribute?.('aria-label') : undefined;
+        const value = (fullTitle || node?.textContent || "").replace(/\\s+/g, " ").trim();
         if (value) return value;
       }
       return "";
@@ -169,7 +171,7 @@ export function sourceListExtractionScript(
       }
     }
     const searchKeyword=${JSON.stringify(sourceId)}==='zhilian' ? document.querySelector('input[placeholder="搜索职位、公司"]')?.value : undefined;
-    return { jobs, hasNext, searchKeyword, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
+    return { jobs, hasNext, searchKeyword, diagnostics:{readyState:document.readyState,visibility:document.visibilityState,cards:cards.length,visibleCards:cards.filter(visible).length,props:cards.filter(c=>!!c.__vue__?.$props?.job).length,titleMatches:cards.filter(c=>c.__vue__?.$props?.job?.name?.trim()===pick(c,spec.title)).length,companyMatches:cards.filter(c=>c.__vue__?.$props?.job?.companyName?.trim()===pick(c,spec.company)).length,urls:cards.filter(c=>typeof c.__vue__?.$props?.job?.positionUrl==='string').length}, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
   })()`;
 }
 

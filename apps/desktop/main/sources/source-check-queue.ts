@@ -67,3 +67,11 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
   }
   return results;
 }
+
+/** Login identity and background search capability are verified separately. */
+export function shouldAutoCheckSource(source:SourceCapability,authenticated:boolean,now:number,lastAttempt:number,pending:boolean,busy:boolean):boolean{
+  if(!authenticated||pending||busy||source.session_status==="blocked"||source.list_status==="blocked")return false;
+  if(now-lastAttempt<600000)return false;
+  const age=now-Date.parse(source.last_verified_at||"");
+  return !(source.live_search_enabled&&source.session_status==="verified"&&source.list_status==="verified"&&age>=0&&age<600000);
+}
