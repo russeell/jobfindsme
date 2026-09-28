@@ -147,8 +147,8 @@ class ResearchAgentStore:
             or len(turns) > 1000
         ):
             raise ValueError("invalid conversation")
-        if item.get("draft") and len(str(item["draft"])) > 700:
-            raise ValueError("conversation draft exceeds 700 characters")
+        if item.get("draft") and len(str(item["draft"])) > 12000:
+            raise ValueError("conversation draft exceeds 12000 characters")
         if any(
             not isinstance(turn, dict)
             or turn.get("role") not in {"user", "assistant"}

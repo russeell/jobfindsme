@@ -22,6 +22,44 @@ def setup_store(tmp_path):
     return ResearchAgentStore(database), workspace.workspace_id
 
 
+@pytest.mark.parametrize("length", [701, 880, 12000])
+def test_long_chat_draft_survives_restart_without_changing_activity(tmp_path, length):
+    path = tmp_path / "long-chat.db"
+    headers = {"Authorization": "Bearer offline"}
+    client = TestClient(create_app(token="offline", database_path=path))
+    workspace = client.get("/v1/bootstrap", headers=headers).json()["workspaces"][0][
+        "workspace_id"
+    ]
+    question = "测" * length
+    activity = "2026-01-01T00:00:00+00:00"
+    item = {
+        "workspace_id": workspace,
+        "id": "long-draft",
+        "updated_at": activity,
+        "turns": [{"role": "user", "text": question}],
+        "draft": question,
+    }
+    response = client.put(
+        "/v1/research-agent/conversations", headers=headers, json=item
+    )
+    assert response.status_code == 200, response.text
+    reopened = TestClient(create_app(token="offline", database_path=path))
+    restored = reopened.get(
+        "/v1/research-agent/conversations",
+        headers=headers,
+        params={"workspace_id": workspace},
+    ).json()[0]
+    assert restored["draft"] == question
+    assert restored["turns"] == item["turns"]
+    assert restored["updated_at"] == activity
+    rejected = reopened.put(
+        "/v1/research-agent/conversations",
+        headers=headers,
+        json={**item, "draft": "测" * 12001},
+    )
+    assert rejected.status_code == 400
+
+
 def evidence(
     url="https://www.zhihu.com/p/123",
     text="示例公司在上海设立了研发团队，并公开介绍了产品方向。",
@@ -172,9 +210,9 @@ def test_long_conversation_and_binding_round_trip_without_truncation(tmp_path):
         saved["subject_title"],
         saved["research_mode"],
     ) == ("job-a", "A公司", "A岗位", True)
-    with pytest.raises(ValueError, match="700"):
+    with pytest.raises(ValueError, match="12000"):
         store.save_conversation(
-            workspace, {"id": "too-long", "turns": [], "draft": "问" * 701}
+            workspace, {"id": "too-long", "turns": [], "draft": "问" * 12001}
         )
 
 
