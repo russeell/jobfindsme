@@ -10,6 +10,8 @@ export function userError(error:unknown):UserError {
  if(/source_check_timeout|source_timeout:/.test(text))return {kind:'source',message:'本次来源读取超时，登录和检索能力尚未确认。',action:'retry'};
  if(/no_matching:/.test(text))return {kind:'source',message:'本次未读到匹配岗位，检索能力仍待验证。',action:'retry'};
  if(/source_visible_page_required:/.test(text))return {kind:'source',message:'请在内置浏览器登录智联；确认账号后会自动验证后台搜索。',action:'source'};
+ if(/source_scope_unconfirmed:/.test(text))return {kind:'source',message:'尚未确认列表属于本次搜索，未返回推荐或上一轮岗位。登录状态保留，可重试。',action:'retry'};
+ if(/source_query_unconfirmed:/.test(text))return {kind:'source',message:'平台返回了无法确认关键词匹配的扩展岗位，已排除。上次成功结果和登录状态保留；请换一个明确的岗位关键词。',action:'retry'};
  if(/source_scope_mismatch:/.test(text))return {kind:'source',message:'站内页面未保留本次关键词、城市或页码，未将推荐岗位计作搜索结果。',action:'retry'};
  if(/source_contract_error:/.test(text))return {kind:'source',message:'本次未读到可验证的岗位列表，可能是页面结构变化；登录状态仍待确认。',action:'source'};
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};

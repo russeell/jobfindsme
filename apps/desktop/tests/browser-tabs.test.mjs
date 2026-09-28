@@ -7,7 +7,19 @@ import vm from 'node:vm';
 const file=new URL('../dist-electron/main/browser/source-browser.js',import.meta.url);
 const nativeRequire=createRequire(file);
 class FakeView {
-  constructor(options){this.options=options;this.visible=false;const wc=new EventEmitter();this.webContents=wc;let urls=[],index=-1,closed=false;wc.getURL=()=>urls[index]||'';wc.getTitle=()=>wc.getURL();wc.isLoading=wc.isLoadingMainFrame=()=>false;wc.isDestroyed=()=>closed;wc.close=()=>{closed=true;};wc.setWindowOpenHandler=handler=>{wc.popup=handler;};wc.loadURL=async url=>{urls=urls.slice(0,index+1);urls.push(url);index++;};wc.reload=()=>{};let zoom=1;wc.setZoomFactor=v=>{zoom=v;};wc.getZoomFactor=()=>zoom;wc.getUserAgent=()=>wc.userAgent||'Mozilla/5.0 Chrome/152';wc.setUserAgent=value=>{wc.userAgent=value;};wc.executeJavaScript=async()=>({width:Math.max(1280,640/zoom),viewport:640/zoom});wc.navigationHistory={canGoBack:()=>index>0,canGoForward:()=>index<urls.length-1,goBack:()=>index--,goForward:()=>index++};FakeView.onCreate?.(this);}
+  constructor(options){this.options=options;this.visible=false;const wc=new EventEmitter();this.webContents=wc;let urls=[],index=-1,closed=false;wc.getURL=()=>urls[index]||'';wc.getTitle=()=>wc.getURL();wc.isLoading=wc.isLoadingMainFrame=()=>false;wc.isDestroyed=()=>closed;wc.close=()=>{closed=true;};wc.setWindowOpenHandler=handler=>{wc.popup=handler;};wc.loadURL=async url=>{urls=urls.slice(0,index+1);urls.push(url);index++;};wc.reload=()=>{};let zoom=1;wc.setZoomFactor=v=>{zoom=v;};wc.getZoomFactor=()=>zoom;wc.getUserAgent=()=>wc.userAgent||'Mozilla/5.0 Chrome/152';wc.setUserAgent=value=>{wc.userAgent=value;};wc.executeJavaScript=async()=>({width:Math.max(1280,640/zoom),viewport:640/zoom});wc.navigationHistory={canGoBack:()=>index>0,canGoForward:()=>index<urls.length-1,goBack:()=>index--,goForward:()=>index++};const debug=new EventEmitter();let attached=false,responseBody='';debug.isAttached=()=>attached;debug.attach=()=>{attached=true;};debug.detach=()=>{attached=false;};debug.sendCommand=async(method)=>method==='Network.getResponseBody'?{body:responseBody,base64Encoded:false}:{};wc.debugger=debug;
+    let execute=wc.executeJavaScript;
+    Object.defineProperty(wc,'executeJavaScript',{get:()=>options.webPreferences?.partition!=='persist:jobfindsme-source-zhilian'?execute:async(...args)=>{
+      const raw=await execute(...args);
+      if(attached&&FakeView.proof!==false&&(raw?.jobs?.length||raw?.empty)){
+        const url=new URL(wc.getURL());const id='fixture';
+        debug.emit('message',{},'Network.requestWillBeSent',{requestId:id,request:{url:'https://fe-api.zhaopin.com/c/i/search/positions',method:'POST',postData:JSON.stringify({eventScenario:'pcSearchedSouSearch',S_SOU_FULL_INDEX:url.searchParams.get('kw'),S_SOU_WORK_CITY:url.searchParams.get('jl'),pageIndex:Number(url.searchParams.get('p')||1)})}});
+        const list=(raw.jobs||[]).map(j=>({name:j.title,companyName:j.company,positionUrl:j.url}));responseBody=JSON.stringify({code:200,data:{list,count:list.length}});
+        debug.emit('message',{},'Network.loadingFinished',{requestId:id});
+      }
+      return raw;
+    },set:value=>{execute=value;}});
+    FakeView.onCreate?.(this);}
   setVisible(value){this.visible=value;}setBounds(bounds){this.bounds=bounds;}
 }
 const module={exports:{}};
@@ -203,7 +215,7 @@ test('Zhaopin search keeps synonymous titles, rejects redirected recommendations
  const {m}=setup();let redirect=false;
  FakeView.onCreate=view=>{const original=view.webContents.loadURL;view.webContents.loadURL=url=>original(redirect?'https://www.zhaopin.com/jobs':url);view.webContents.executeJavaScript=async()=>({jobs:[{title:'大模型应用研发',company:'示例',location:'上海',url:'https://www.zhaopin.com/jobdetail/abc.htm'},{title:'算法工程师',company:'示例',location:'',url:'https://www.zhaopin.com/jobdetail/def.htm'}]});};
  try{const result=await m.searchPage('zhilian',{keyword:'AI Agent',city:'上海',page:1,forceRefresh:true});assert.equal(result.records.length,1);assert.equal(result.records[0].payload.title,'大模型应用研发');
- redirect=true;await assert.rejects(m.searchPage('zhilian',{keyword:'AI Agent',city:'上海',page:1,forceRefresh:true}),/未保留本次关键词/);
+ redirect=true;await assert.rejects(m.searchPage('zhilian',{keyword:'AI Agent',city:'上海',page:1,forceRefresh:true,deadline:Date.now()+80}),/未确认|source_stage=provenance/);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
@@ -241,22 +253,20 @@ test('Zhaopin async cards arriving after the old three-second cutoff are still r
 
 test('Zhaopin list polling respects the caller deadline and identifies the failure stage',async()=>{
  const {m}=setup();FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[]});};
- try{const start=Date.now();await assert.rejects(m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1,deadline:start+80}),/source_timeout:.*source_stage=extract/);assert.ok(Date.now()-start<500);}
+ try{const start=Date.now();await assert.rejects(m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1,deadline:start+80}),/source_(timeout|scope_unconfirmed):.*source_stage=provenance/);assert.ok(Date.now()-start<500);}
  finally{FakeView.onCreate=undefined;m.destroy();}
 });
 
 
-test('an exact visible Zhaopin search is reused without navigation, duplicate renderer or bypassing scope',async()=>{
+test('a visible URL match alone cannot establish current list provenance and is not navigated',async()=>{
  const {m,w}=setup();const target='https://www.zhaopin.com/jobs/?pageMode=search&jl=765&kw=AI+Agent';
- try{await m.show('zhilian',bounds,target);m.layout(bounds);const view=w.children[0];let navigation=0;
- view.webContents.loadURL=async()=>{navigation++;};view.webContents.executeJavaScript=async()=>({searchKeyword:'AI Agent',jobs:[{title:'AI应用员',company:'示例',location:'深圳',url:'http://www.zhaopin.com/jobdetail/real.htm'}]});
- const page=await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(page.records.length,1);assert.equal(navigation,0);assert.equal(m.backgrounds.size,0);assert.equal(view.webContents.isDestroyed(),false);
- let backgroundReads=0;FakeView.onCreate=v=>{v.webContents.executeJavaScript=async()=>{backgroundReads++;return {jobs:[],empty:true};};};
- await m.searchPage('zhilian',{keyword:'Java',city:'深圳',page:1});assert.equal(backgroundReads,1);assert.equal(m.state().tabs.length,1);
- m.hide();await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1,forceRefresh:true});assert.equal(backgroundReads,2);assert.equal(view.webContents.isDestroyed(),false);
+ FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({empty:true,jobs:[]});};
+ try{await m.show('zhilian',bounds,target);m.layout(bounds);const foreground=w.children[0];let navigation=0;
+ foreground.webContents.loadURL=async()=>{navigation++;};
+ const page=await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});
+ assert.equal(page.records.length,0);assert.equal(navigation,0);assert.equal(m.backgrounds.size,1);assert.equal(foreground.webContents.isDestroyed(),false);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
-
 
 test('Zhaopin searches never open the browser, add tabs, or change the active user page',async()=>{
  const {m,w}=setup();const events=[];w.webContents={send:(...args)=>events.push(args)};
@@ -300,11 +310,30 @@ test('Zhaopin reuses its background renderer across searches without touching fo
 });
 test('Zhaopin extraction failures include safe rendering diagnostics without URL secrets',async()=>{
  const {m}=setup();FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],diagnostics:{readyState:'complete',visibility:'hidden',cards:0}});};
- try{await assert.rejects(m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1,deadline:Date.now()+25}),error=>/source_stage=extract/.test(error.message)&&/visibility=hidden/.test(error.message)&&/cards=0/.test(error.message)&&!error.message.includes('https://'));}
+ try{await assert.rejects(m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1,deadline:Date.now()+25}),error=>/source_stage=provenance/.test(error.message)&&/visibility=hidden/.test(error.message)&&/cards=0/.test(error.message)&&!error.message.includes('https://'));}
  finally{FakeView.onCreate=undefined;m.destroy();}
 });
 test('cancelling before a queued Zhaopin search starts prevents its navigation',async()=>{
  const {m}=setup();let created=0;FakeView.onCreate=()=>{created++;};
  try{const pending=m.searchPage('zhilian',{keyword:'Python',city:'深圳',page:1});m.cancelCareerSearch('zhilian');await assert.rejects(pending,/cancelled/);assert.equal(created,0);}
+ finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('correct URL and input with recommended or stale cards but no matching response are rejected',async()=>{
+ const {m}=setup();FakeView.proof=false;
+ FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({searchKeyword:'AI',jobs:[{title:'推荐岗位',company:'示例',location:'深圳',url:'https://www.zhaopin.com/jobdetail/recommended.htm'}]});};
+ try{await assert.rejects(m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1,deadline:Date.now()+40}),/source_stage=provenance/);assert.equal(m.careerCache.size,0);}
+ finally{FakeView.proof=true;FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('observer enablement may wait for renderer initialization and must not block navigation',async()=>{
+ const {m}=setup();let navigated=false;
+ FakeView.onCreate=view=>{
+   const command=view.webContents.debugger.sendCommand;let ready;
+   view.webContents.debugger.sendCommand=method=>method==='Network.enable'?new Promise(resolve=>{ready=resolve;}):command(method);
+   const load=view.webContents.loadURL;view.webContents.loadURL=async url=>{navigated=true;await load(url);ready({});};
+   view.webContents.executeJavaScript=async()=>({empty:true,jobs:[],hasNext:true});
+ };
+ try{const result=await m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1,deadline:Date.now()+200});assert.equal(navigated,true);assert.equal(result.records.length,0);assert.equal(result.next_cursor,null,'zero matches must not inherit recommendation pagination');}
  finally{FakeView.onCreate=undefined;m.destroy();}
 });

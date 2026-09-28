@@ -14,7 +14,7 @@ import {mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelecte
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 const blockedReason=(value:string)=>/login|登录/i.test(value)?"需登录后重试":/risk|captcha|验证/i.test(value)?"需完成网站验证":"暂不可检索，请到岗位来源检查";
-const runReason=(value:string)=>({complete:"本次范围已读完",time_budget:"本轮时间已用完",cancelled:"已停止",page_budget:"可继续读取",batch_budget:"可继续读取",record_budget:"可继续读取",no_growth:"暂无新增",risk_control:"需完成网站验证",login_required:"需重新登录",save_failed:"保存失败",browser_session_error:"浏览器读取失败，可重试",source_contract_error:"读取未完成"} as Record<string,string>)[value]||"读取未完成，可检查来源";
+const runReason=(value:string)=>/^invalid_cards:\d+$/.test(value)?`已跳过 ${value.split(":")[1]} 张异常或不属于本次搜索的卡片，正常岗位已保留`:({complete:"本次范围已读完",time_budget:"本轮时间已用完",cancelled:"已停止",page_budget:"可继续读取",batch_budget:"可继续读取",record_budget:"可继续读取",no_growth:"暂无新增",risk_control:"需完成网站验证",login_required:"需重新登录",save_failed:"保存失败",browser_session_error:"浏览器读取失败，可重试",source_contract_error:"读取未完成"} as Record<string,string>)[value]||"读取未完成，可检查来源";
 
 export function Discovery({ active, data, onError, onResearch,selectedSources,onSelectSource,onSelectAllSources,reports,suggestedIntent }: {selectedSources:string[];onSelectSource(id:string,selected:boolean):void;onSelectAllSources(selected:boolean):void;reports:ResearchReport[];suggestedIntent?:{query:string;nonce:number}; active:boolean; data?: BootstrapData; onError(message?: string): void; onResearch(job:SearchResultItem["job"]):void }) {
   const sources = useMemo(() => data?.sources ?? [], [data]);

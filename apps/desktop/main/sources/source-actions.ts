@@ -1,3 +1,4 @@
+import {zhilianListExtractionScript} from './zhilian-page';
 import {bossSearchUrl} from "./boss-page";
 import { isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
 
@@ -29,7 +30,7 @@ const sourceNames: Record<string, string> = {
   wuyou: "前程无忧",
 };
 
-const extractionSpecs: Record<BrowserSearchSourceId, {
+const extractionSpecs: Record<Exclude<BrowserSearchSourceId,"zhilian">, {
   cards: string[];
   title: string[];
   company: string[];
@@ -46,15 +47,6 @@ const extractionSpecs: Record<BrowserSearchSourceId, {
     salary: [".salary", "[class*='salary']"],
     link: ["a[href*='/job_detail/']", "a[href]"],
     next: [".options-pages a.next", "[class*='pagination'] [class*='next']"],
-  },
-  zhilian: {
-    cards: [".job-list-panel .job-card", ".joblist-box__item", ".positionlist__item", "[class*='joblist'] article", "[class*='job-list'] [class*='item']", "[class*='position-list'] [class*='item']"],
-    title: [".job-card__title-clamp .vue-clamp__text", ".job-card__name", ".jobinfo__name", "[class*='job-name']", "[class*='position-name']", "h3"],
-    company: [".job-card__company-name", ".companyinfo__name", "[class*='company-name']", "[class*='company']"],
-    location: [".job-card__location", ".jobinfo__other-info-item", "[class*='location']", "[class*='address']"],
-    salary: ["[class*='salary']"],
-    link: ["a[href*='/jobdetail/']", "a[href*='jobs.zhaopin.com']", "a[href]"],
-    next: ["[class*='pagination'] [class*='next']", "li.next"],
   },
   wuyou: {
     cards: [".joblist-item", "[class*='joblist-item']", ".joblist li"],
@@ -98,6 +90,7 @@ export function buildSourceSearchUrl(
 export function sourceListExtractionScript(
   sourceId: BrowserSearchSourceId,
 ): string {
+  if(sourceId==="zhilian")return zhilianListExtractionScript();
   const spec = JSON.stringify(extractionSpecs[sourceId]);
   return `(() => {
     const spec = ${spec};
@@ -110,22 +103,12 @@ export function sourceListExtractionScript(
     const pick = (root, selectors) => {
       for (const selector of selectors) {
         const node = root.querySelector(selector);
-        // VueClamp displays ellipsized text; its aria-label retains the full title.
-        const fullTitle=${JSON.stringify(sourceId)}==='zhilian' && selector==='.job-card__title-clamp .vue-clamp__text' ? node?.getAttribute?.('aria-label') : undefined;
-        const value = (fullTitle || node?.textContent || "").replace(/\\s+/g, " ").trim();
+        const value = (node?.textContent || "").replace(/\\s+/g, " ").trim();
         if (value) return value;
       }
       return "";
     };
     const href = (root) => {
-      if (${JSON.stringify(sourceId)} === 'zhilian' && root.matches?.('.job-card')) {
-        // Public JobCard props observed in the site's loaded component (2026-09-28).
-        // Read only this rendered card's job link; never enumerate Vue state/user/cookies.
-        const job=root.__vue__?.$props?.job;
-        if(job && typeof job.name==='string' && typeof job.companyName==='string' &&
-          job.name.trim()===pick(root,spec.title) && job.companyName.trim()===pick(root,spec.company) &&
-          typeof job.positionUrl==='string') return job.positionUrl;
-      }
       if (root.matches?.('a[href]')) return root.href;
       for (const selector of spec.link) {
         const node = root.querySelector(selector);
@@ -152,12 +135,6 @@ export function sourceListExtractionScript(
       cards = Array.from(document.querySelectorAll(selector));
       if (cards.length) break;
     }
-    if (${JSON.stringify(sourceId)} === 'zhilian' && !cards.length) {
-      // New layouts retain canonical job links even when card class names change.
-      cards = Array.from(document.querySelectorAll('a[href*="/jobdetail/"],a[href*="jobs.zhaopin.com/"]'))
-        .filter(visible).map(link=>link.closest('article,li,[class*="job-card"],[class*="job-item"],[class*="position-item"]') || link);
-      cards = [...new Set(cards)];
-    }
     const jobs = cards.filter(visible).slice(0, 60).map((card) => ({
       title: pick(card, spec.title) || (card.matches?.('a[href]') ? (card.textContent||'').trim() : ''), company: pick(card, spec.company),
       location: pick(card, spec.location), salary: pick(card, spec.salary),
@@ -170,8 +147,8 @@ export function sourceListExtractionScript(
         hasNext = true; break;
       }
     }
-    const searchKeyword=${JSON.stringify(sourceId)}==='zhilian' ? document.querySelector('input[placeholder="搜索职位、公司"]')?.value : undefined;
-    return { jobs, hasNext, searchKeyword, diagnostics:{readyState:document.readyState,visibility:document.visibilityState,cards:cards.length,visibleCards:cards.filter(visible).length,props:cards.filter(c=>!!c.__vue__?.$props?.job).length,titleMatches:cards.filter(c=>c.__vue__?.$props?.job?.name?.trim()===pick(c,spec.title)).length,companyMatches:cards.filter(c=>c.__vue__?.$props?.job?.companyName?.trim()===pick(c,spec.company)).length,urls:cards.filter(c=>typeof c.__vue__?.$props?.job?.positionUrl==='string').length}, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
+    const searchKeyword=undefined;
+    return { jobs, hasNext, searchKeyword, diagnostics:{readyState:document.readyState,visibility:document.visibilityState,cards:cards.length,visibleCards:cards.filter(visible).length}, empty:/暂无相关职位|没有找到相关职位|没有符合条件的职位/.test(text), blocked: blocked || null, loginRequired: Boolean(loginHost||loginForm) };
   })()`;
 }
 

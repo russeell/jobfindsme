@@ -1,3 +1,5 @@
+import {ZhilianSearchEvidence,type ZhilianInitialSearch} from '../sources/zhilian-search-evidence';
+import {zhilianSubmitSearchScript} from '../sources/zhilian-page';
 import {validateZhilianSearchScope} from "../sources/source-actions";
 import {BossCollector} from "../sources/boss-collector";
 import {bossPageScript,bossScrollScript,type BossPage} from "../sources/boss-page";
@@ -385,9 +387,8 @@ export class SourceBrowserManager {
     const searchUrl=buildSourceSearchUrl(sourceId,input.keyword,input.city,input.page);
     const active=this.tabs.find(tab=>tab.id===this.activeId);
     let reuseVisible=false;
-    if(sourceId==="zhilian"&&this.visible&&active?.sourceId==="zhilian"&&!active.view.webContents.isDestroyed()){
-      try{validateZhilianSearchScope(active.view.webContents.getURL(),input.keyword,input.city,input.page);reuseVisible=true;}catch{/* A different visible page cannot satisfy this query. */}
-    }
+    // URL/input equality cannot prove that a foreground list is current.
+    // Until it has request/response provenance, read the background page instead.
     const idle=this.careerIdle.get(sourceId);if(idle)clearTimeout(idle);this.careerIdle.delete(sourceId);
     const view=reuseVisible?active!.view:this.backgroundView(sourceId);
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
@@ -399,20 +400,43 @@ export class SourceBrowserManager {
       if(!current())throw Error('cancelled:检索已停止');
       return await Promise.race([work,new Promise<T>((_,reject)=>{timer=setTimeout(()=>reject(Error('source_timeout:来源读取超时')),Math.max(1,deadline-Date.now()));}),new Promise<T>((_,reject)=>{onAbort=()=>reject(Error('cancelled:检索已停止'));controller.signal.addEventListener('abort',onAbort,{once:true});})]);
     }finally{if(timer)clearTimeout(timer);controller.signal.removeEventListener('abort',onAbort);}};
+    let evidence:ZhilianSearchEvidence|undefined;let enableEvidence:Promise<unknown>|undefined;let detachEvidence:(()=>void)|undefined;
     let stage="load",successful=false,jobCount=0,keywordMatch="unknown",diagnostics:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}|undefined;
     try {
+      if(sourceId==='zhilian'){
+        evidence=new ZhilianSearchEvidence(input);
+        const debug=view.webContents.debugger;
+        if(!debug||debug.isAttached())throw Error('source_contract_error:无法确认当前搜索响应');
+        debug.attach('1.3');
+        const tracked=new Set<string>();const proof=evidence;
+        const listener=(_event:Electron.Event,method:string,params:Record<string,any>)=>{
+          if(!current())return;
+          if(method==='Network.requestWillBeSent'){
+            const request=params.request;
+            if(request&&proof.request(params.requestId,request.url,request.method,request.postData))tracked.add(params.requestId);
+          }else if(method==='Network.loadingFinished'&&tracked.delete(params.requestId)){
+            void debug.sendCommand('Network.getResponseBody',{requestId:params.requestId}).then(value=>{
+              if(current()&&!value.base64Encoded)proof.response(params.requestId,value.body);
+            }).catch(()=>{});
+          }
+        };
+        debug.on('message',listener);
+        detachEvidence=()=>{debug.removeListener('message',listener);if(debug.isAttached())debug.detach();};
+        enableEvidence=debug.sendCommand('Network.enable',{maxResourceBufferSize:2000000,maxTotalBufferSize:4000000});
+        void enableEvidence.catch(()=>{});
+      }
       // The SPA can render usable listings before ad/analytics resources finish.
       // Start reading at DOM readiness while the normal load promise remains handled.
       if(!reuseVisible){
         let onReady:()=>void=()=>{};
         const ready=new Promise<void>(resolve=>{onReady=resolve;view.webContents.once("dom-ready",onReady);});
         const loaded=view.webContents.loadURL(searchUrl);void loaded.catch(()=>{});
-        try{await bounded(Promise.race([loaded,ready]));}
+        try{await bounded(Promise.all([enableEvidence,Promise.race([loaded,ready])]));}
         finally{view.webContents.removeListener("dom-ready",onReady);}
       }
       if(!current())throw Error('cancelled:检索已停止');
-      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string;diagnostics?:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}}|undefined;
-      stage="extract";
+      let raw:{jobs?:ExtractedSourceJob[];hasNext?:boolean;blocked?:string|null;loginRequired?:boolean;empty?:boolean;searchKeyword?:string;skippedCards?:number;initialSearch?:ZhilianInitialSearch;diagnostics?:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}}|undefined;
+      stage="extract";let submittedSearch=false;
       while(Date.now()<deadline){
         if(!current())throw Error('cancelled:检索已停止');
         if(!isAllowedSourceUrl(sourceId,view.webContents.getURL()))throw Error('source_contract_error:来源页面跳转不受支持');
@@ -428,9 +452,26 @@ export class SourceBrowserManager {
         if(sourceId==="zhilian"&&raw?.searchKeyword!==undefined&&raw.searchKeyword.trim()!==input.keyword.trim()){
           stage="query";await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));continue;
         }
-        if(raw?.jobs?.length||raw?.empty)break;
+        if(evidence){
+          evidence.initial(raw?.initialSearch,view.webContents.getURL());
+          if(evidence.responseStatus==='echo_mismatch'||evidence.responseStatus==='empty_keyword_expansion')throw Error('source_query_unconfirmed:平台返回了无法确认关键词匹配的扩展岗位，未计入本次结果');
+          if(evidence.ready){
+            const all=raw?.jobs||[],accepted=evidence.records(all),matched=all.filter(job=>evidence!.matches(job));
+            if(evidence.empty){raw={...raw,jobs:[],empty:true,hasNext:false,skippedCards:0};break;}
+            if(accepted.length){raw={...raw,jobs:accepted,empty:false,skippedCards:evidence.invalidRecords+(raw?.skippedCards||0)+all.length-matched.length};break;}
+            raw={...raw,jobs:[],empty:false};
+          }
+          if(input.page===1&&!submittedSearch&&diagnostics?.readyState==='complete'){
+            submittedSearch=true;
+            validateZhilianSearchScope(view.webContents.getURL(),input.keyword,input.city,input.page);
+            await bounded(view.webContents.executeJavaScript(zhilianSubmitSearchScript(input.keyword)));
+            if(!current())throw Error('cancelled:检索已停止');
+          }
+          stage='provenance';
+        }else if(raw?.jobs?.length||raw?.empty)break;
         await bounded(new Promise(r=>setTimeout(r,Math.min(250,Math.max(1,deadline-Date.now())))));
       }
+      if(evidence&&!evidence.ready)throw Error('source_scope_unconfirmed:本轮搜索响应尚未确认，不能返回推荐或旧岗位');
       if(!raw?.jobs?.length&&!raw?.empty&&Date.now()>=deadline)throw Error('source_timeout:本轮时间内未出现岗位列表');
       if(!raw?.jobs?.length&&!raw?.empty)throw Error('source_contract_error:未读取到岗位列表，请在原页确认');
       if(!current())throw Error('cancelled:检索已停止');
@@ -444,13 +485,15 @@ export class SourceBrowserManager {
       }
       // Site city parameters use opaque IDs. Apply named cities to observed fields locally.
       if(input.city&&input.city!=="全国"&&!/^\d+$/.test(input.city))result.records=result.records.filter(r=>Boolean(r.payload.location)&&String(r.payload.location).includes(input.city));
+      if(raw?.skippedCards){result.collection={batches:1,elapsed_seconds:(Date.now()-now)/1000,stop_reason:`invalid_cards:${raw.skippedCards}`,cursor:result.next_cursor,complete:false,failure:null};}
+      else if(sourceId==='zhilian')result.collection={batches:1,elapsed_seconds:(Date.now()-now)/1000,stop_reason:result.next_cursor?'page_budget':'complete',cursor:result.next_cursor,complete:!result.next_cursor,failure:null};
       if(!current())throw Error('cancelled:检索已停止');
       successful=true;this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
     } catch(error){const safeState=/^(loading|interactive|complete)$/.test(diagnostics?.readyState||"")?diagnostics!.readyState:"unknown";const safeVisibility=/^(hidden|visible)$/.test(diagnostics?.visibility||"")?diagnostics!.visibility:"unknown";const count=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(10000,Math.floor(value))):0;
-      throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility}; cards=${count(diagnostics?.cards)}; visible_cards=${count(diagnostics?.visibleCards)}; jobs=${jobCount}; keyword_match=${keywordMatch}; props=${count(diagnostics?.props)}; titles=${count(diagnostics?.titleMatches)}; companies=${count(diagnostics?.companyMatches)}; urls=${count(diagnostics?.urls)}]`);}
-    finally {controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible){if(sourceId==="zhilian"&&successful&&current()){
+      throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility}; cards=${count(diagnostics?.cards)}; visible_cards=${count(diagnostics?.visibleCards)}; jobs=${jobCount}; keyword_match=${keywordMatch}; search_requests=${evidence?.searchRequests||0}; matched_requests=${evidence?.matchedRequests||0}; response_ready=${evidence?.ready?"yes":"no"}; initial=${evidence?.initialStatus||"absent"}]`);}
+    finally {detachEvidence?.();controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible){if(sourceId==="zhilian"&&successful&&current()){
       const timer=setTimeout(()=>{if(this.careerIdle.get(sourceId)===timer){this.careerIdle.delete(sourceId);this.releaseBackground(sourceId,view);}},120000);timer.unref?.();this.careerIdle.set(sourceId,timer);
     }else this.releaseBackground(sourceId,view);}}
   }

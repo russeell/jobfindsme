@@ -77,7 +77,7 @@ test('current Zhaopin jobs template keeps footer login prompts separate from ses
  const avatar={...visible};
  const header=(avatarVisible=true)=>({...visible,innerText:'职位 消息 我要招人 账户',querySelectorAll:selector=>selector.includes('alt*="头像"')?avatarVisible?[avatar]:[{...avatar,getBoundingClientRect:()=>({width:0,height:0})}]:[]});
  const anonymousHeader={...visible,innerText:'职位 消息 我要招人',querySelectorAll:()=>[]};
- const card={...visible,querySelector(selector){if(selector==='h3')return {textContent:'工程师'};if(selector.includes('/jobdetail/'))return {href:'https://www.zhaopin.com/jobdetail/example.htm'};return null;}};
+ const card={...visible,querySelector(selector){if(selector==='h3')return {textContent:'工程师'};if(selector==='.job-card__company-name')return {textContent:'示例公司'};if(selector.includes('/jobdetail/'))return {href:'https://www.zhaopin.com/jobdetail/example.htm'};return null;}};
  const context=(authenticated,loginHost=false,options={})=>({
   location:{href:loginHost?'https://passport.zhaopin.com/login':'https://www.zhaopin.com/jobs',hostname:loginHost?'passport.zhaopin.com':'www.zhaopin.com'},
   getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),
@@ -138,13 +138,15 @@ test('observed split-layout JobCard uses only its matched public job prop for th
  const {runInNewContext}=await import('node:vm');
  let clamped=false;const title='AI agent BD',company='进迭时空(杭州)科技有限公司';
  const job={name:title,companyName:company,positionUrl:'http://www.zhaopin.com/jobdetail/CCL1378359190J000000001.htm'};
- const vue={$props:{job}};
+ const vue={$options:{name:'JobCard'},$props:{job}};
  for(const key of ['$data','$store','user','cookiesData'])Object.defineProperty(vue,key,{get(){throw Error('must not read private Vue state');}});
  const card={__vue__:vue,matches:s=>s==='.job-card',getBoundingClientRect:()=>({width:300,height:200}),querySelector(s){
+  if(s==='.job-card__title-clamp')throw Error('complete DOM title must not read compatibility component');
   if(s==='.job-card__title-clamp .vue-clamp__text')return {textContent:clamped?'AI…':title,getAttribute:key=>key==='aria-label'?title:null};
   if(s==='.job-card__company-name')return {textContent:company};
   if(s==='.job-card__location')return {textContent:'深圳 宝安 新安'};
   if(s.includes('salary'))return {textContent:'1.5-3万'};
+  if(s==='a[href]')return {href:'https://www.zhaopin.com/companydetail/CZ123.htm'};
   return null;
  }};
  const ctx={location:{hostname:'www.zhaopin.com',href:'https://www.zhaopin.com/jobs/?pageMode=search&jl=765&kw=AI+Agent'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'职位 消息 AI Agent'},querySelector:s=>s.startsWith('input')?{value:'AI Agent'}:null,querySelectorAll:s=>s==='.job-list-panel .job-card'?[card]:[]}};
@@ -166,4 +168,44 @@ test('observed HTTP official detail links upgrade only their transport, never an
  const {normalizeZhilianJobUrl}=await import('../dist-electron/main/sources/source-actions.js');
  assert.equal(normalizeZhilianJobUrl('http://www.zhaopin.com/jobdetail/CC000374740J40791423406.htm'),'https://www.zhaopin.com/jobdetail/CC000374740J40791423406.htm');
  for(const url of ['http://evil.example/jobdetail/1.htm','http://www.zhaopin.com/companydetail/1.htm','http://www.zhaopin.com:8080/jobdetail/1.htm','http://user@www.zhaopin.com/jobdetail/1.htm'])assert.equal(normalizeZhilianJobUrl(url),null);
+});
+
+test('one broken card does not discard valid cards; verified clamp props can recover an unpainted title',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const title='软件工程师',company='示例';
+ const card={__vue__:{$options:{name:'JobCard'},$props:{job:{name:title,companyName:company,positionUrl:'https://www.zhaopin.com/jobdetail/one.htm'}}},matches:s=>s==='.job-card',getBoundingClientRect:()=>({width:300,height:200}),querySelector(s){
+  if(s==='.job-card__title-clamp')return {__vue__:{$options:{name:'VueClamp'},$props:{content:title}}};
+  if(s==='.job-card__company-name')return {textContent:company};return null;
+ }};
+ const broken={...card,querySelector(){throw Error('layout changed');}};
+ const ctx={location:{hostname:'www.zhaopin.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'职位'},querySelector:()=>null,querySelectorAll:s=>s==='.job-list-panel .job-card'?[broken,card]:[]}};
+ const raw=runInNewContext(sourceListExtractionScript('zhilian'),ctx);assert.equal(raw.jobs.length,1);assert.equal(raw.jobs[0].title,title);assert.equal(raw.skippedCards,1);
+ card.__vue__.$options.name='ChangedComponent';assert.equal(runInNewContext(sourceListExtractionScript('zhilian'),ctx).jobs.length,0);
+});
+
+test('Zhilian server bootstrap reads observed kw/jl aliases without touching account fields',async()=>{
+ const {runInNewContext}=await import('node:vm');const initial={pageMode:'search',queryParams:{kw:'AI',jl:'765'},pageIndex:1,positionCount:0,positionList:[],loadingStatus:false};
+ for(const key of ['user','cookiesData','resumeNumber'])Object.defineProperty(initial,key,{get(){throw Error('private field');}});
+ const raw=runInNewContext(sourceListExtractionScript('zhilian'),{window:{__INITIAL_STATE__:initial},location:{hostname:'www.zhaopin.com'},getComputedStyle:()=>({}),document:{body:{innerText:''},querySelector:()=>null,querySelectorAll:()=>[]}});
+ assert.equal(raw.initialSearch.keyword,'AI');assert.equal(raw.initialSearch.city,'765');assert.equal(raw.initialSearch.loading,false);
+});
+test('other platform extraction retains DOM text priority and does not read Zhilian compatibility state',async()=>{
+ const {runInNewContext}=await import('node:vm');
+ const card={matches:()=>false,getBoundingClientRect:()=>({width:100,height:100}),querySelector(selector){if(selector==='.jname')return {textContent:'原方案标题',getAttribute:()=>{throw Error('new attribute path');}};if(selector==="a[href*='jobs.51job.com']:not([href*='/co'])")return {href:'https://jobs.51job.com/shenzhen/123.html'};return null;}};
+ Object.defineProperty(card,'__vue__',{get(){throw Error('other platform Vue access');}});
+ const raw=runInNewContext(sourceListExtractionScript('wuyou'),{location:{hostname:'www.51job.com'},getComputedStyle:()=>({display:'block',visibility:'visible',opacity:1}),document:{body:{innerText:'岗位'},querySelector:()=>null,querySelectorAll:s=>s==='.joblist-item'?[card]:[]}});
+ assert.equal(raw.jobs.length,1);assert.equal(raw.jobs[0].title,'原方案标题');
+});
+
+test('Zhilian fallback submits only the normal QuerySug search button',async()=>{
+ const {zhilianSubmitSearchScript}=await import('../dist-electron/main/sources/zhilian-page.js');
+ const {runInNewContext}=await import('node:vm');
+ let clicks=0,typed='',event='';
+ class Input {set value(value){typed=value;}}
+ const button={disabled:false,click(){clicks++;}};
+ const input=new Input();input.dispatchEvent=e=>{event=e.type;};input.closest=s=>s==='.query-sug'?{querySelector:s=>s==='button.query-sug__button'?button:null}:null;
+ const context={HTMLInputElement:Input,Event:class{constructor(type){this.type=type;}},document:{querySelector:s=>s==='input.query-sug__input[placeholder="搜索职位、公司"]'?input:null}};
+ assert.equal(runInNewContext(zhilianSubmitSearchScript('AI Agent'),context),true);
+ assert.equal(typed,'AI Agent');assert.equal(event,'input');assert.equal(clicks,1);
+ button.disabled=true;assert.equal(runInNewContext(zhilianSubmitSearchScript('Java'),context),false);assert.equal(clicks,1);
 });
