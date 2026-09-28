@@ -436,7 +436,7 @@ nav button .nav-label {font-size:13px;}
 
 /* The daily work pages stay in the sidebar; configuration is one level deep. */
 .sidebar-bottom {margin-top:auto;min-width:0;}
-.sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:36px;margin:0 0 -12px;padding:7px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
+.sidebar-new-chat {display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:38px;margin:0;padding:9px 11px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);font-size:13px;}
 .sidebar-new-chat:hover,.sidebar-new-chat:focus-visible {background:var(--surface-hover);}
 .sidebar-new-chat:disabled:has(.sidebar-chat-busy) {opacity:1;}
 .sidebar-chat-busy {margin-left:auto;color:var(--text-muted);font-size:10px;white-space:nowrap;}
