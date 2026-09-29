@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-09-29",
+  "updated_at": "2026-09-30",
   "status_values": [
     "pending",
     "in_progress",
@@ -2197,6 +2197,18 @@
       ],
       "verification": "待定位应用公开搜索连接失败，并用行业、公司、技术主题及真实简历/面试样例验证；不能用模拟模型工具链通过代替效果验收。",
       "blocker": "真实行业查询在剔除招聘首页与城市岗位页面后出现Connection refused；未运行付费模型，尚无真实技能输出质量证据。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "D104",
+      "title": "确定性搜索意图、本地相关性与通用 Pi 技能闭环",
+      "status": "done",
+      "depends_on": [
+        "D102"
+      ],
+      "verification": "Python457、Node265、类型构建、Ruff、diff检查；无模型与模拟失效模型搜索0调用；固定延迟2/4并发首批128/87ms、总383/228ms，仅离线样例。简历提案显式接受保存、面试状态持久化与技术主题报告验证。真实来源、provider质量、模型效果和原生UI未验收；未推送发布。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
