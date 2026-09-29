@@ -187,7 +187,9 @@ nav button .nav-label {font-size:13px;}
 .discovery-page .job-detail p {font-size:12px;}
 .discovery-page .job-jd {margin-top:18px;border-top:1px solid var(--line);padding-top:12px;}
 .discovery-page .job-jd h4 {margin:0 0 8px;font-size:13px;}
-.discovery-page .job-description {font-size:12px;line-height:1.7;color:var(--text);}
+.discovery-page .job-description {font-size:15px;line-height:1.95;color:var(--text);overflow-wrap:anywhere;white-space:normal;}
+.discovery-page .job-description p {font-size:inherit;line-height:inherit;margin:0 0 14px;}
+.discovery-page .job-description p:last-child {margin-bottom:0;}
 .discovery-page .job-jd .note button {min-height:0;margin-left:5px;padding:3px 5px;}
 .discovery-page .workspace.no-selection {flex:0 0 auto;display:block;overflow:visible;}
 .discovery-page .workspace.no-selection .detail-pane {display:none;}

@@ -2150,6 +2150,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D99",
+      "title": "改善检索详情JD字号与保留原文的分段阅读",
+      "status": "done",
+      "verification": "Node245/类型构建/正常包审计通过；隔离原生默认和窄窗密集JD分段、原文内容保持、版本小数与正文末尾核对。只改呈现，不修改保存内容；未进行真实来源/模型/Python全套/Windows原生验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }
