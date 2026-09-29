@@ -20,6 +20,7 @@ export async function executeBoundedSourceSearch(
   const runStarted=Date.now();
   const preflight=await client.searchPreflight({...input,attempt_unverified_login:true});
   if(isCancelled())throw Error("cancelled:预检期间已停止检索");
+  if(preflight.search_intent)input={...input,intent:preflight.search_intent.query,filters:preflight.search_intent.filters};
   const clientRunId=input.client_run_id||randomUUID();
   let runId=input.existing_run_id;
   const responses:SourceSearchResponse[]=[];
@@ -31,7 +32,7 @@ export async function executeBoundedSourceSearch(
     const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
     let response:SourceSearchResponse;
     try{
-      response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,source_ids:[sourceId],existing_run_id:runId,
+      response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,allow_cache_fallback:false,source_ids:[sourceId],existing_run_id:runId,
         resume_version_id:preflight.resume_version_id||undefined,
         browser_pages:pages.length?{[sourceId]:pages}:{},browser_errors:error?{[sourceId]:error}:{}});
     }catch(saveError){failures.push({source_id:sourceId,stage:"save",message:messageOf(saveError).slice(0,300)});return;}
@@ -67,6 +68,13 @@ export async function executeBoundedSourceSearch(
     const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
     response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,source_ids:[],existing_run_id:runId,resume_version_id:preflight.resume_version_id||undefined});
   }
+  // Restore cache only after the whole run failed, never during a partial batch.
+  if(!isCancelled() && !response.result_page.total && responses.every(batch=>batch.source_runs.every(run=>run.status==="failed")) && !failures.some(item=>item.stage==="save")){
+    response=await client.runSourceSearch({...input,source_ids:input.source_ids,existing_run_id:runId,attempt_unverified_login:true,allow_cache_fallback:true,
+      browser_pages:{},browser_errors:Object.fromEntries(input.source_ids.map(id=>[id,browser.errors[id]||"source_contract_error:本次来源未刷新"]))});
+    runId=response.result_page.run_id;
+  }
+  if(runId&&client.finalizeSearch){await client.finalizeSearch(input.workspace_id,runId);response={...response,result_page:await client.getSearchPage(input.workspace_id,runId,1,input.page_size||20)};}
   onSourceStatusChanged?.();
   const query={keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||""};
   const failedRuns:SourceSearchRun[]=failures.filter(item=>item.stage==="save").map(item=>({source_id:item.source_id,
@@ -78,7 +86,7 @@ export async function executeBoundedSourceSearch(
     .sort((a,b)=>(runOrder.get(a.source_id)??Infinity)-(runOrder.get(b.source_id)??Infinity));
   return {...response,allowed_source_ids:preflight.allowed_source_ids,blocked_sources:preflight.blocked_sources,
     source_runs:sourceRuns,batch_failures:failures,
-    source_diagnostics:{...browser.diagnostics,first_usable_ms:firstUsableMs},
+    source_diagnostics:{...browser.diagnostics,first_usable_ms:firstUsableMs,total_elapsed_ms:Date.now()-runStarted,concurrency:Math.min(4,preflight.allowed_source_ids.length)},
     planned_queries:preflight.allowed_source_ids.map(source_id=>({source_id,...query})),
     executed_queries:preflight.allowed_source_ids.filter(source_id=>{
       const source=browser.diagnostics.sources[source_id];return !!source&&

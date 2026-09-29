@@ -4,10 +4,11 @@ import {browserSiteNames} from "../../shared/browser-search";
 import {isSourceBrowserId,requiresElectronSourceSearch} from "../../shared/source-browser-policy";
 import type {BrowserSourcePage,SourceSearchInput,SourceSearchPreflight} from "../../shared/contracts";
 
+export const SOURCE_SEARCH_CONCURRENCY = 4;
 export async function collectBrowserSourcePages(
   input: SourceSearchInput,
   preflight: SourceSearchPreflight,
-  deps: {client:DesktopApiClient;manager?:SourceBrowserManager;isCancelled:()=>boolean;onProgress?:(value:unknown)=>void;onSourceCompleted?:(sourceId:string,pages:BrowserSourcePage[],error?:string)=>Promise<void>},
+  deps: {concurrency?:number;client:DesktopApiClient;manager?:SourceBrowserManager;isCancelled:()=>boolean;onProgress?:(value:unknown)=>void;onSourceCompleted?:(sourceId:string,pages:BrowserSourcePage[],error?:string)=>Promise<void>},
 ): Promise<{
   pages: Record<string, BrowserSourcePage[]>;
   errors: Record<string, string>;
@@ -75,12 +76,12 @@ export async function collectBrowserSourcePages(
   };
   // Different sources have independent views; a small worker pool limits load.
   const sourceIds=[...preflight.allowed_source_ids];let nextSource=0;
-  await Promise.all(Array.from({length:Math.min(2,sourceIds.length)},async()=>{
+  await Promise.all(Array.from({length:Math.min(Math.max(1,Math.min(SOURCE_SEARCH_CONCURRENCY,deps.concurrency??SOURCE_SEARCH_CONCURRENCY)),sourceIds.length)},async()=>{
     while(nextSource<sourceIds.length){
       const sourceId=sourceIds[nextSource++],start=Date.now();
       try{await collectOne(sourceId);}catch(error){browserErrors[sourceId]=`source_contract_error:${String(error).slice(0,500)}`;}
       const pages=browserPages[sourceId]||[],records=pages.reduce((count,page)=>count+page.records.length,0);
-      diagnostics.sources[sourceId]={elapsed_ms:Date.now()-start,records,site_pages:pages.length,read_at:new Date().toISOString(),status:browserErrors[sourceId]?"partial_or_failed":"completed"};
+      diagnostics.sources[sourceId]={elapsed_ms:Date.now()-start,records,site_pages:pages.length,read_at:new Date().toISOString(),status:browserErrors[sourceId]||pages.some(page=>page.collection?.failure||["risk_control","login_required","source_contract_error","unsupported_city"].includes(page.collection?.stop_reason||""))?"partial_or_failed":"completed"};
       if(records&&diagnostics.first_source_ms===null)diagnostics.first_source_ms=Date.now()-started;
       if(onSourceCompleted)try{await onSourceCompleted(sourceId,pages,browserErrors[sourceId]);}
       catch(error){browserErrors[sourceId]=`save_failed:${String(error).slice(0,500)}`;}

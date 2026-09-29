@@ -1,3 +1,4 @@
+import {ResumeProposal} from "./ResumeProposal";
 import {attachmentLimits,type ChatAttachment} from "../../../shared/chat-attachments";
 import {assistantSkills,assistantSkill,skillDraft,isAssistantSkillId,type AssistantSkillId} from "../../../shared/assistant-skills";
 import {useEffect,useRef,useState} from "react";
@@ -151,9 +152,9 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     setChats(items=>[startedChat,...items.filter(item=>item.id!==id)]);
     setQuestion("");streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");setMessage("");setChatBusy(true);
     try{
-      const result=await window.jobfindsme!.runResearchChat({attachments,skill_id:skillId,request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:!skillId&&decision.kind==="research"?decision.question:value,research:skillId?skillId==="deep-research":decision.kind==="research",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
+      const result=await window.jobfindsme!.runResearchChat({interview_state:current?.turns.slice().reverse().find(turn=>turn.interviewState)?.interviewState,attachments,skill_id:skillId,request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:!skillId&&decision.kind==="research"?decision.question:value,research:skillId?skillId==="deep-research":decision.kind==="research",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
       if(requestRef.current?.id!==requestId||workspaceRef.current!==workspaceId)return;
-      setChats(items=>items.map(item=>{if(item.id!==id)return item;const finished=finishChat(item,result.text,result.report?.report_id,new Date().toISOString(),{evidence:result.evidence,process:result.process});return {...finished,subjectCompany:result.company||finished.subjectCompany,researchMode:!!result.researched||finished.researchMode,pendingResearch:!skillId&&decision.kind==="clarify"&&!result.researched?decision.pending:undefined};}));
+      setChats(items=>items.map(item=>{if(item.id!==id)return item;const finished=finishChat(item,result.text,result.report?.report_id,new Date().toISOString(),{resumeProposalId:result.resumeProposalId,interviewState:result.interviewState,evidence:result.evidence,process:result.process});return {...finished,subjectCompany:result.company||finished.subjectCompany,researchMode:!!result.researched||finished.researchMode,pendingResearch:!skillId&&decision.kind==="clarify"&&!result.researched?decision.pending:undefined};}));
       if(result.report){const values=await window.jobfindsme!.listResearchReports(workspaceId);if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){keepReports(values);lastOpened.current=result.report.report_id;setReport(result.report);}}
       setAttachments([]);streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");
     }catch(error){if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){setChats(items=>items.map(item=>item.id===id?failChat(item,userError(error).message,new Date().toISOString()):item));setQuestion(value);setMessage(`本次对话未完成：${userError(error).message}。提问已保留，可直接重试。`);try{keepReports(await window.jobfindsme!.listResearchReports(workspaceId));}catch{}}}
@@ -196,7 +197,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     if(busy||chatBusy||attachmentBusy)return;
     const parsed=splitResearchInput(question);
     if(parsed.error){setCandidate(undefined);setMessage(parsed.error);return;}
-    if(parsed.url){void readLink(parsed.url);return;}
+    if(parsed.url){if(Object.keys(sourceBrowserSpecs).some(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,parsed.url!)))void readLink(parsed.url);else void sendChat(question.trim());return;}
     if(candidate){setMessage("请先确认读取到的岗位，再开始研究。");return;}
     if(!parsed.question&&!attachments.length){setMessage("请输入消息，或粘贴岗位链接。");return;}
     void sendChat(parsed.question||"请阅读我附上的材料。");
@@ -236,6 +237,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
           return <article className={`research-chat-turn ${item.role}`} aria-label={item.role==="user"?"你":"求职助手"} key={`${activeChat.id}-${index}`}>
             {item.role==="user"&&!!item.attachments?.length&&<div className="research-attachment-list">{item.attachments.map(file=><span key={file.id}>{file.image?<img src={`data:${file.image.mimeType};base64,${file.image.data}`} alt="图片附件"/>:<Icon name="attachment"/>}<span>{file.name}</span>{file.truncated?" · 部分文本":""}</span>)}</div>}
             {item.role==="user"&&assistantSkill(item.skillId)&&<small className="research-skill-badge">{assistantSkill(item.skillId)!.title}</small>}
+            {item.resumeProposalId&&workspaceId&&<ResumeProposal workspaceId={workspaceId} sessionId={item.resumeProposalId}/>}
             {item.role==="assistant"?<MessageContent text={item.text} sources={attachedReport?.evidence||item.evidence} onCitation={number=>showCitation(index,number)}/>:<p>{item.text}</p>}
             {item.interrupted&&<small className="note" role="status">已停止 · 内容未完成</small>}
             {attachedReport?<details id={`research-sources-${index}`}><summary>来源与核验详情（{attachedReport.evidence.length}）</summary><ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})} focusedEvidenceId={focusedCitation?.turn===index?attachedReport.evidence[focusedCitation.number-1]?.evidence_id:undefined}/></details>:item.evidence?.length?<details id={`research-sources-${index}`}><summary>来源片段（{item.evidence.length}）</summary>{item.evidence.map((source,sourceIndex)=><article id={`research-source-${index}-${sourceIndex+1}`} tabIndex={-1} className={`evidence-card${focusedCitation?.turn===index&&focusedCitation.number===sourceIndex+1?" research-source-focused":""}`} key={source.evidence_id}><strong>原文片段 [{sourceIndex+1}] · {source.platform}</strong><small>{source.context?.page?`第 ${source.context.page} 页 · `:""}{source.published_at||"发布时间未知"}</small><blockquote>{source.excerpt}</blockquote><p className="note">{source.limitations} · 读取于 {source.retrieved_at}</p>{source.url&&<button type="button" onClick={()=>openBrowser({sourceId:"web",url:source.url!,title:"研究来源"})}>查看原页 ↗</button>}</article>)}</details>:null}

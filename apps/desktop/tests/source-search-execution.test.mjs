@@ -78,3 +78,17 @@ test('cancel after a saved fast source retains its batch and skips queued source
  assert.ok(saved.includes('zhilian'));
  assert.equal(final.result_page.run_id,'run-cancel');
 });
+
+test('one failed source cannot inject old cache into a successful run',async()=>{
+ const writes=[];
+ const client={searchPreflight:async()=>preflight,runSourceSearch:async request=>{writes.push(request);const id=request.source_ids[0];return response(id,'partial-run',id==='zhilian'?0:1,id==='zhilian'?'failed':'success');}};
+ const result=await executeBoundedSourceSearch(input,{client,manager:{searchPage:async id=>{if(id==='zhilian')throw Error('source_contract_error:fixture');return {records:[record(id)],next_cursor:null};}},getCancellationEpoch:()=>0});
+ assert.equal(writes.length,2);assert(writes.every(request=>request.allow_cache_fallback===false));assert.equal(result.result_page.total,1);
+});
+
+test('all failed sources restore local cache once after collection without repeating website requests',async()=>{
+ const writes=[];let reads=0;
+ const client={searchPreflight:async()=>preflight,runSourceSearch:async request=>{writes.push(request);if(request.allow_cache_fallback)return {...response('zhilian','cached-run',2,'failed'),cache_fallback_used:true};return response(request.source_ids[0],'cached-run',0,'failed');}};
+ const result=await executeBoundedSourceSearch(input,{client,manager:{searchPage:async()=>{reads++;throw Error('source_contract_error:fixture');}},getCancellationEpoch:()=>0});
+ assert.equal(reads,2);assert.equal(writes.length,3);assert.deepEqual(writes.at(-1).source_ids,input.source_ids);assert.equal(Object.keys(writes.at(-1).browser_errors).length,2);assert.equal(result.cache_fallback_used,true);assert.equal(result.source_runs.length,2);
+});

@@ -1,8 +1,10 @@
+import {sourceBrowserSpecs,isAllowedSourceUrl,type SourceBrowserId} from "./source-browser-policy";
 export type ResearchInput = {url?:string;question:string;error?:string};
 
 export function splitResearchInput(raw:string):ResearchInput {
   const value=raw.trim();
   const matches=[...value.matchAll(/https?:\/\/[^\s<>"“”]+/gi)];
+  if(matches.length>1 && value.length<=12000 && matches.every(match=>match[0].startsWith("https://")&&!Object.keys(sourceBrowserSpecs).some(key=>isAllowedSourceUrl(key as SourceBrowserId,match[0]))))return {question:value};
   if(matches.length>1)return {question:value,error:"一次只能读取一个岗位链接，请保留一个链接后重试。"};
   if(!matches.length){
     if(value.length>12000)return {question:value,error:"问题最多 12000 字，请缩短后重试。"};

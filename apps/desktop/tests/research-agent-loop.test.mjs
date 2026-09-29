@@ -307,12 +307,12 @@ test('ordinary answer streams before completion and stores one final assistant t
  }finally{release();server.close();}
 });
 
-test('a direct-chat route blocks later source tools in the same Pi run',async()=>{
+test('optional direct-chat marker does not block later source tools',async()=>{
  let turn=0,searches=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
   sse(response,turn===1?tool('answer_in_chat',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司'},turn):{role:'assistant',content:'继续普通交流。'},turn<=2?'tool_calls':'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const tools={findEvidence:async()=>[],searchWeb:async()=>{searches++;return [];},readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>null};
- try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_direct_gate',question:'你好',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(searches,0);}finally{server.close();}
+ try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_direct_gate',question:'你好',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(searches,1);}finally{server.close();}
 });
 test('resume drafting reads only a confirmed redacted copy and creates no research report',async()=>{
  let turn=0,reads=0,researchCalls=0;
@@ -440,13 +440,13 @@ test('explicit research executes bounded acquisition even when the model never c
  }finally{server.close();}
 });
 
-test('an explicit company overview does not stall at a scope question',async()=>{
+test('generic research does not force a fixed acquisition after a model final',async()=>{
  let turn=0,finds=0,searches=0;
  const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
   sse(response,{role:'assistant',content:turn===1?JSON.stringify({message:'你更关注哪个方向？',claims:[]}):JSON.stringify({claims:[],limitations:['当前没有可核对的原文']})},'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_huawei_overview',question:'调研华为',company:'华为',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>{finds++;return [];},searchWeb:async()=>{searches++;return [];},readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>{throw Error('overview must not save a report');}},()=>{},new AbortController().signal);
-  assert.equal(finds,1);assert.equal(searches,1);assert.notEqual(result.text,'你更关注哪个方向？');assert.equal(result.report,undefined);
+  assert.equal(finds,0);assert.equal(searches,0);assert.equal(result.text,'你更关注哪个方向？');assert.equal(result.report,undefined);
  }finally{server.close();}
 });
 
@@ -462,7 +462,7 @@ test('readable evidence repairs a malformed answer without another search',async
  }finally{server.close();}
 });
 
-test('an ordinary company answer keeps supported claims, repairs only bad ones, and saves no report',async()=>{
+test('formal report keeps supported claims and repairs only bad ones',async()=>{
  let turn=0,saved=0;const actions=[];
  const valid={statement:'示例公司在上海设立了研发团队',quote:'示例公司在上海设立了研发团队',evidence_ids:[source.evidence_id],category:'business',scope:'上海'};
  const invalid={statement:'示例公司已在全球上市',quote:'示例公司已在全球上市',evidence_ids:['ev_fake'],category:'listing',scope:'全球'};
@@ -470,8 +470,8 @@ test('an ordinary company answer keeps supported claims, repairs only bad ones, 
   const next=turn===1?tool('find_evidence',{},turn):turn===2?{role:'assistant',content:JSON.stringify({claims:[valid,invalid]})}:{role:'assistant',content:JSON.stringify({claims:[],limitations:['上市信息没有可核验原文']})};
   sse(response,next,next.tool_calls?'tool_calls':'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_partial_claim',question:'示例公司怎么样',company:'示例公司',history:[],research:true,reportRequested:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[source],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async row=>actions.push(row.actions),saveReport:async()=>{saved++;return null;}},()=>{},new AbortController().signal);
-  assert.equal(turn,3);assert.equal(saved,0);assert.equal(result.report,undefined);assert.match(result.text,/示例公司在上海设立了研发团队 \[1\]/);assert.doesNotMatch(result.text,/全球上市/);assert.match(result.text,/尚缺依据/);assert.equal(result.evidence?.[0].evidence_id,source.evidence_id);
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_partial_claim',question:'示例公司怎么样',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[source],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async row=>actions.push(row.actions),saveReport:async()=>{saved++;return null;}},()=>{},new AbortController().signal);
+  assert.equal(turn,3);assert.equal(saved,1);assert.equal(result.report,undefined);assert.match(result.text,/示例公司在上海设立了研发团队 \[1\]/);assert.doesNotMatch(result.text,/全球上市/);assert.match(result.text,/尚缺依据/);assert.equal(result.evidence?.[0].evidence_id,source.evidence_id);
   assert(actions.at(-1).some(item=>item.tool==='answer_check'&&item.retained===1&&item.rejected===1));
  }finally{server.close();}
 });
@@ -482,7 +482,7 @@ test('a repaired claim joins retained claims without a false missing-evidence no
  const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
   const next=turn===1?tool('find_evidence',{},turn):turn===2?{role:'assistant',content:JSON.stringify({claims:[first,{...repaired,evidence_ids:['ev_fake']}]})}:{role:'assistant',content:JSON.stringify({claims:[repaired]})};sse(response,next,next.tool_calls?'tool_calls':'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_repaired_partial',question:'调研示例公司',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[source],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>{throw Error('must not save');}},()=>{},new AbortController().signal);
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_repaired_partial',question:'调研示例公司',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>[source],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>null},()=>{},new AbortController().signal);
   assert.equal(turn,3);assert.match(result.text,/上海设立了研发团队 \[1\]/);assert.match(result.text,/介绍了产品方向 \[1\]/);assert.doesNotMatch(result.text,/尚缺依据/);
  }finally{server.close();}
 });
@@ -496,7 +496,7 @@ test('a failed correction still returns the previously verified claim',async()=>
   if(turn===3){response.end('model unavailable');return;}
   const next=turn===1?tool('find_evidence',{},turn):{role:'assistant',content:JSON.stringify({claims:[valid,{...valid,statement:'示例公司已上市',evidence_ids:['ev_fake']}]})};sse(response,next,next.tool_calls?'tool_calls':'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
- try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_repair_failure',question:'示例公司怎么样',company:'示例公司',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>sources,searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>{throw Error('must not save');}},()=>{},new AbortController().signal);
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_repair_failure',question:'示例公司怎么样',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:async()=>sources,searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>null},()=>{},new AbortController().signal);
   assert.match(result.text,/示例公司在上海设立了研发团队 \[5\]/);assert.match(result.text,/修复未完成/);assert.equal(result.evidence?.[4].evidence_id,sources[4].evidence_id);
  }finally{server.close();}
 });
@@ -528,20 +528,57 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  try{
   const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
   assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
-  const first=payloads[0];assert.doesNotMatch(first.messages.find(item=>item.role==='system').content,/每轮只问一道题|# 修改简历/);
+  const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改简历/:/准备面试/);
   assert.ok(first.tools.some(item=>item.function.name==='read_skill'));assert.ok(first.tools.some(item=>item.function.name==='search_web'));
   assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
   assert.equal(executions[0].context.skill_id,skillId);assert.equal(executions.at(-1).status,'complete');
  }finally{server.close();}
 });
-test('industry research uses topical anchor, original quotes and structured findings without company report',async()=>{
+test('explicit industry report preserves topic scope and original quotes',async()=>{
  let turn=0;const row={...source,url:'https://example.org/report',company:'招聘',excerpt:'招聘行业报告认为服务模式正在向专业化发展。招聘行业需要改进信息质量。',context:{source_type:'public_web'}};row.evidence_id='ev_'+createHash('sha256').update(`${row.url}\0${row.excerpt}`).digest('hex').slice(0,24);
  const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('read_skill',{skill_id:'deep-research'},turn):turn===2?tool('find_evidence',{},turn):turn===3?tool('search_web',{site:'web',question:'招聘行业报告'},turn):turn===4?tool('read_page',{site:'web',url:row.url},turn):{role:'assistant',content:JSON.stringify({claims:[{quote:'招聘行业报告认为服务模式正在向专业化发展',evidence_ids:[row.evidence_id],category:'business',scope:'招聘行业'}],limitations:['报告期尚未确认']})};sse(res,next,next.tool_calls?'tool_calls':'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));let searchAnchor,readAnchor;const executions=[];
- const unexpected=async()=>{throw Error('unexpected company cache/report');};const tools={findEvidence:unexpected,searchWeb:async anchor=>{searchAnchor=anchor;return [{url:row.url,site:'web',title:'招聘行业报告',status:'candidate'}];},readPage:async anchor=>{readAnchor=anchor;return row;},readJob:unexpected,readBrowserPage:unexpected,saveReport:unexpected,saveExecution:async state=>executions.push(state)};
- try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w1',requestId:'req_industry',question:'研究下招聘行业',company:'招聘行业',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(searchAnchor,'招聘');assert.equal(readAnchor,'招聘');assert.match(result.text,/## 业务与行业/);assert.match(result.text,/报告期尚未确认/);assert.equal(result.evidence[0].context.level,'topic');assert.equal(executions.at(-1).context.subject_kind,'topic');assert.equal(result.report,undefined);}finally{server.close();}
+ const unexpected=async()=>{throw Error('unexpected company cache/report');};const tools={findEvidence:unexpected,searchWeb:async anchor=>{searchAnchor=anchor;return [{url:row.url,site:'web',title:'招聘行业报告',status:'candidate'}];},readPage:async anchor=>{readAnchor=anchor;return row;},readJob:unexpected,readBrowserPage:unexpected,saveReport:async state=>{assert.equal(state.subject_kind,'topic');return {report_id:'industry-report'};},saveExecution:async state=>executions.push(state)};
+ try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w1',requestId:'req_industry',question:'研究下招聘行业',company:'招聘行业',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(searchAnchor,'');assert.equal(readAnchor,'');assert.match(result.text,/## 业务与行业/);assert.match(result.text,/报告期尚未确认/);assert.equal(executions.at(-1).evidence[0].context.level,'topic');assert.equal(executions.at(-1).context.subject_kind,'topic');assert.equal(result.report.report_id,'industry-report');}finally{server.close();}
 });
 test('image attachments enter the actual multimodal model payload without base64 in text JSON',async()=>{
  let turn=0;const payloads=[];const server=http.createServer((req,res)=>{let body='';req.on('data',chunk=>body+=chunk);req.on('end',()=>{payloads.push(JSON.parse(body));res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('answer_in_chat',{},turn):{role:'assistant',content:'这是虚构图片测试，不是识别质量验收。'};sse(res,next,next.tool_calls?'tool_calls':'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const unexpected=async()=>{throw Error('unexpected external request');};const tools={findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readJob:unexpected,readBrowserPage:unexpected,saveReport:unexpected,saveExecution:async()=>{}};
  try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_image123',question:'阅读图片',history:[],research:false,attachments:[{id:'image-1',name:'图片.jpg',text:'图片材料',truncated:false,image:{mimeType:'image/jpeg',data:'/9j/AA=='}}]},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);const content=payloads[0].messages.at(-1).content;assert.ok(content.some(part=>part.type==='image_url'&&part.image_url.url==='data:image/jpeg;base64,/9j/AA=='));assert.doesNotMatch(content.find(part=>part.type==='text').text,/\/9j\/AA/);}finally{server.close();}
+});
+
+test('plain answer uses zero tools and one model turn, regardless of a company hint',async()=>{
+ let calls=0;const server=http.createServer((_req,res)=>{calls++;res.writeHead(200,{'Content-Type':'text/event-stream'});sse(res,{role:'assistant',content:'可以从你自己的项目中挑选一个真实例子。'},'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));const unexpected=async()=>{throw Error('unexpected tool');};
+ try{const result=await runPiResearchAgent({workspaceId:'w',requestId:'plain-test',question:'如何讲好我的项目？',company:'示例公司',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readJob:unexpected,readBrowserPage:unexpected,saveExecution:unexpected,saveReport:unexpected},()=>{},new AbortController().signal);assert.match(result.text,/真实例子/);assert.equal(calls,1);}finally{server.close();}
+});
+
+test('direct English official URL reads without subject or search and returns natural citations',async()=>{
+ const url='https://docs.example.org/framework';const doc={...source,url,company:'',excerpt:'The framework separates retrieval from generation. This document describes the public API.',context:{source_type:'public_web',research_topic:'web'},status:'read_original'};doc.evidence_id='ev_'+createHash('sha256').update(`${url}\0${doc.excerpt}`).digest('hex').slice(0,24);
+ let calls=0,reads=0;const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});calls++;const next=calls===1?tool('read_page',{url,focus:'retrieval API'},calls):{role:'assistant',content:`这份官方资料将检索与生成分开 [${doc.evidence_id}]。这是基于原文的解释。`};sse(res,next,next.tool_calls?'tool_calls':'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));const unexpected=async()=>{throw Error('unnecessary acquisition');};
+ try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w',requestId:'direct-web',question:`比较技术机制 ${url}`,history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:unexpected,searchWeb:unexpected,readPage:async(company,_site,target,_signal,_timeout,focus)=>{assert.equal(company,'');assert.equal(target,url);assert.equal(focus,'retrieval API');reads++;return doc;},readJob:unexpected,readBrowserPage:unexpected,saveExecution:async()=>{},saveReport:unexpected},()=>{},new AbortController().signal);assert.equal(calls,2);assert.equal(reads,1);assert.match(result.text,/\[1\]/);assert.equal(result.report,undefined);assert.equal(result.evidence.length,1);}finally{server.close();}
+});
+
+test('interview state survives stored conversation and is passed into the next turn',async()=>{
+ const state={asked:['解释缓存失效'],weaknesses:['没有说明并发'],follow_up_reason:'检验并发条件',current_question:'如何避免同时重建？'};
+ const finished=finishChat(beginChat(undefined,'interview-session','模拟面试','2026-09-29').chat,'下一题',undefined,'2026-09-29',{interviewState:state});assert.deepEqual(fromStoredResearchChat(toStoredResearchChat('w',finished)).turns.at(-1).interviewState,state);
+ let turn=0;const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{const payload=JSON.parse(body);assert.match(JSON.stringify(payload.messages.find(m=>m.role==='user').content),/检验并发条件/);res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;sse(res,{role:'assistant',content:'你已提到缓存失效，接着说明并发控制。'},'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{await runPiResearchAgent({skillId:'interview-prep',interviewState:state,workspaceId:'w',requestId:'interview-followup',question:'我会先加锁',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(turn,1);}finally{server.close();}
+});
+
+test('an explicitly requested technical report can save without inventing a company',async()=>{
+ const url='https://docs.example.org/architecture',quote='检索层负责获取相关原文，生成层根据原文生成回答。';
+ const doc={...source,url,company:'',excerpt:quote,context:{source_type:'public_web',research_topic:'web'}};doc.evidence_id='ev_'+createHash('sha256').update(`${url}\0${quote}`).digest('hex').slice(0,24);
+ let turn=0,saved;const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('read_page',{url},turn):{role:'assistant',content:JSON.stringify({claims:[{statement:quote,quote,evidence_ids:[doc.evidence_id],category:'business'}]})};sse(res,next,next.tool_calls?'tool_calls':'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const result=await runPiResearchAgent({workspaceId:'w',requestId:'technical-report',question:`比较检索与生成，保存报告 ${url}`,history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{readPage:async()=>doc,saveExecution:async()=>{},saveReport:async value=>{saved=value;return {report_id:'topic-report'};}},()=>{},new AbortController().signal);assert.equal(result.report.report_id,'topic-report');assert.equal(saved.subject_kind,'topic');assert.equal(turn,2);}finally{server.close();}
+});
+
+test('interview tool updates the durable state before answering one next question',async()=>{
+ const state={asked:['解释缓存失效'],weaknesses:['并发处理不完整'],follow_up_reason:'追问用户未覆盖的并发',current_question:'如何防止缓存击穿？'};
+ let turn=0;const executions=[];const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('remember_interview',state,turn):{role:'assistant',content:'接着练习一题：如何防止缓存击穿？'};sse(res,next,next.tool_calls?'tool_calls':'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const result=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'interview-record',question:'开始模拟面试',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async value=>executions.push(value)},()=>{},new AbortController().signal);assert.deepEqual(result.interviewState,state);assert.deepEqual(executions.at(-1).context.interview_state,state);assert.equal(executions.at(-1).status,'complete');assert.equal(turn,2);}finally{server.close();}
+});
+
+test('resume skill hands off a reviewed proposal without applying or invoking a second model',async()=>{
+ let turn=0,proposals=0;const payloads=[];const patch={section:'projects',before:['实现本地工具'],after:['使用 Python 实现本地工具'],rationale:'突出真实技术',evidence_ids:['resume:projects:1','resume:skills:1'],needs_user_input:[]};
+ const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{payloads.push(JSON.parse(body));res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('read_confirmed_resume',{},turn):turn===2?tool('propose_resume_changes',{base_version_id:'confirmed-v1',patches:[patch]},turn):{role:'assistant',content:'已生成项目修改提案，请逐项审阅后再保存。'};sse(res,next,next.tool_calls?'tool_calls':'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const result=await runPiResearchAgent({skillId:'resume-tailor',workspaceId:'w',requestId:'resume-proposal',question:'只修改项目经历',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{readResume:async()=>({source_version_id:'confirmed-v1',text:'实现本地工具，Python',evidence_ids:['resume:projects:1','resume:skills:1']}),proposeResume:async value=>{assert.equal(value.base_version_id,'confirmed-v1');assert.deepEqual(value.patches,[patch]);proposals++;return {session_id:'proposal-v1'};},saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(result.resumeProposalId,'proposal-v1');assert.equal(proposals,1);assert.equal(turn,3);assert(payloads.every(p=>p.messages.filter(m=>m.role==='system').length===1));}finally{server.close();}
 });

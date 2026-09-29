@@ -52,6 +52,8 @@ export type DesktopBridge = {
 
   previewMatching(input:{workspace_id:string;job_id:string;weights:MatchingWeights}):Promise<MatchingPreview>;
   getBootstrap(): Promise<BootstrapData>;
+  searchPreflight(input:SourceSearchInput):Promise<SourceSearchPreflight>;
+  finalizeSearch(workspaceId:string,runId:string):Promise<SearchResultPage>;
   runSourceSearch(input: SourceSearchInput): Promise<SourceSearchResponse>;
   refilterSearch(workspaceId:string,runId:string,filters:SearchFilters,pageSize:number):Promise<SearchResultPage>;
   getSearchPage(workspaceId: string, runId: string, page: number, pageSize: number): Promise<SearchResultPage>;
@@ -131,6 +133,7 @@ export type SourceBrowserBounds = { x: number; y: number; width: number; height:
 
 export type SourceCollectionProgress = {stage:"queued"|"loading"|"listing"|"details"|"cached"|"done";count:number;message:string;titles?:string[];workspace_id?:string;client_run_id?:string;run_id?:string;source_id?:string;batch_id?:string;response?:SourceSearchResponse};
 export type SourceSearchInput = {
+  allow_cache_fallback?:boolean;
   boss_cursor?:string;
   source_cursor?:string;
   source_cursors?:Record<string,string>;
@@ -166,7 +169,9 @@ export type SourceSearchExecutionInput = SourceSearchInput & {
   browser_errors?: Record<string, string>;
 };
 
+export type SearchIntent = {query:string;target_roles:string[];filters:SearchFilters;resume_version:string|null;source_scope:string[];unrecognized:string[];remote_conditions:{query:string;city:string};local_conditions:SearchFilters};
 export type SourceSearchPreflight = {
+  search_intent?:SearchIntent;
   workspace_id: string;
   resume_version_id: string | null;
   keywords: string[];
@@ -177,6 +182,7 @@ export type SourceSearchPreflight = {
 };
 
 export type SearchFilters = {
+  exclusions?:string[];
   cities?: string[];
   salary_min_k?: number;
   salary_max_k?: number;
@@ -206,9 +212,12 @@ export type SearchResultItem = {
     salary?:{raw_text:string;period:"month"|"year"|"day"|"hour"|"unknown";currency?:string|null;months_per_year?:number|null}|null;
     experience_min_years: number | null; experience_max_years: number | null;
     recruitment_track: string; employment_type: string; apply_url: string;
-    source: { source_name: string; liveness: string; detail_level?:string; published_at?:string|null };
+    source: { source_name: string; liveness: string; detail_level?:string;fetched_at?:string; published_at?:string|null };
   };
   model_match?:{score:number|null;evidence:Array<{resume_quote:string;jd_quote:string}>;unknowns:string[]};
+  query_relevance?:{score:number;basis:string};
+  resume_match?:number|null;
+  information_coverage?:{ratio:number;known:string[];unknown:string[]};
   local_score?:number;
   score: number|null;
   snapshot_status?:"exact"|"unknown";
@@ -245,11 +254,13 @@ export type SourceSearchRun = {
 };
 
 export type SourceSearchResponse = {
+  cache_fallback_used?:boolean;
+  search_intent?:SearchIntent;
   batch_failures?:Array<{source_id:string;stage:"save"|"source_status";message:string}>;
   planned_queries?:Array<{source_id:string;keyword:string;city:string}>;
   executed_queries?:Array<{source_id:string;keyword:string;city:string}>;
   local_filters?:SearchFilters;
-  source_diagnostics?: {started_at:string;first_source_ms:number|null;first_usable_ms?:number|null;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>};
+  source_diagnostics?: {started_at:string;first_source_ms:number|null;first_usable_ms?:number|null;total_elapsed_ms?:number;concurrency?:number;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>};
   workspace_id: string;
   resume_version_id: string | null;
   keywords: string[];
@@ -283,7 +294,7 @@ export type ResumeDraft = {
   workspace_id: string;
 };
 
-export type SearchPreferences = {workspace_id:string;target_role:string;cities:string[];salary_min_k:number|null;salary_max_k:number|null};
+export type SearchPreferences = {workspace_id:string;target_role:string;suggested_roles?:string[];cities:string[];salary_min_k:number|null;salary_max_k:number|null};
 
 export type ResumeState = {
   workspace_id: string | null;
@@ -392,10 +403,11 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatProcessStep = {tool:string;status:string;site?:string;count?:number};
-export type ResearchChatTurn = {attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
-export type ResearchChatInput = {attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type InterviewState={asked:string[];weaknesses:string[];follow_up_reason:string;current_question:string};
+export type ResearchChatTurn = {resumeProposalId?:string;interviewState?:InterviewState;attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatInput = {interview_state?:InterviewState;attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};
-export type ResearchChatResult = {text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatResult = {resumeProposalId?:string;interviewState?:InterviewState;text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 
 export type ModelConnectionInput = {
   connection_id?: string;
@@ -446,7 +458,7 @@ export type ResearchReport = {
   canonical_url?:string;
   outcome?:"complete"|"partial"|"failed"|"no_evidence";
   job_snapshot?:SearchResultItem["job"];
-  job_context?: {scope?:"company"|"job";title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{statement?:string;quote:string;evidence_ids:string[];category:string;scope:string;source_type?:"official_disclosure"|"personal_account"|"public_web"|"mixed";support_level?:"direct"|"qualified"}>};
+  job_context?: {scope?:"company"|"job"|"topic";subject_kind?:"company"|"topic";subject_label?:string;title?:string;company?:string;description?:string;interest_question?:string|null;research_topics?:Array<"company"|"job">;research_angles?:string[];development_analysis?:{status:"limited"|"unknown";text:string;basis_evidence_ids:string[]};url?:string;team?:string|null;locations?:string[];supplemented_by_user?:boolean;agent_summary?:string;agent_claims?:Array<{statement?:string;quote:string;evidence_ids:string[];category:string;scope:string;source_type?:"official_disclosure"|"personal_account"|"public_web"|"mixed";support_level?:"direct"|"qualified"}>};
   directions?: ResearchDirection[];
   disclaimer?: string;
   corrections?: Array<ResearchCorrectionInput & {correction_id:string;created_at:string}>;

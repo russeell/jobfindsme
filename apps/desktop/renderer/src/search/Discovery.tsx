@@ -24,6 +24,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const attemptable = selectedAttemptableSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
   const [intent, setIntent] = useState("");
+  const [roleSuggestions,setRoleSuggestions]=useState<string[]>([]);
   useEffect(()=>{if(suggestedIntent)setIntent(suggestedIntent.query);},[suggestedIntent?.nonce]);
   const [searching, setSearching] = useState(false);
   const [showingPrevious,setShowingPrevious]=useState(false);
@@ -79,6 +80,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   }),[workspaceId]);
   const [matchingMessage,setMatchingMessage]=useState("");
   const searchEpoch=useRef(0);
+  const searchStarting=useRef(false);
+  const confirmTargetRole=useRef(false);
   const [result, setResult] = useState<SourceSearchResponse>();
   const [latestAttempt,setLatestAttempt]=useState<SourceSearchResponse>();
   const feedbackResult=showingPrevious?latestAttempt:result;
@@ -152,17 +155,31 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   },[active,workspaceId]);
   async function search(event?: FormEvent, continueSelected=false, useResume=false) {
     event?.preventDefault();
-    if (!workspaceId) return;
+    if (!workspaceId || searchStarting.current || searching) return;
+    searchStarting.current=true;
+    try {
     const preserve=continueSelected&&!!result;
     if(preserve&&resultRequest&&remoteSearchScopeChanged(intent,filtersRef.current,resultRequest.intent,resultRequest.filters)){onError("关键词或城市已改变，请点击找岗位开始新搜索。");return;}
-    if(useResume&&!preserve)setIntent("");
-    const requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
-    const requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
+    if(useResume&&!preserve){
+      const preferences=await window.jobfindsme!.getSearchPreferences(workspaceId);
+      if(!preferences.target_role){confirmTargetRole.current=true;setRoleSuggestions(preferences.suggested_roles||[]);onError("请先确认目标岗位方向；可选择下方建议或手动输入后搜索。");return;}
+      setIntent(preferences.target_role);
+    }
+    let requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
+    let requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
     if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
     if (!preserve&&!attemptable.length) {onError("请先选择至少一个可检索或可尝试验证的来源。");return;}
     if (requestFilters.salary_min_k != null && requestFilters.salary_max_k != null && requestFilters.salary_min_k > requestFilters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
     const sourceIds=preserve?continuationPlan?.sourceIds||[]:selectedSources;
     if(!sourceIds.length){onError("已选平台没有可继续读取的结果；请查看来源详情或开始新搜索。");return;}
+    if(!preserve){try{const resolved=await window.jobfindsme!.searchPreflight({workspace_id:workspaceId,intent:requestIntent,source_ids:sourceIds,filters:requestFilters,max_pages:1,time_budget_seconds:15});
+      if(resolved.search_intent){requestIntent=resolved.search_intent.query;requestFilters=resolved.search_intent.filters;setIntent(requestIntent);filtersRef.current=requestFilters;setFilters(requestFilters);}
+    }catch(error){onError(messageOf(error));return;}}
+    if(!preserve&&confirmTargetRole.current){
+      const p=await window.jobfindsme!.getSearchPreferences(workspaceId);
+      await window.jobfindsme!.saveSearchPreferences({workspace_id:workspaceId,target_role:requestIntent,cities:p.cities,salary_min_k:p.salary_min_k,salary_max_k:p.salary_max_k});
+      confirmTargetRole.current=false;
+    }
     activeRequest.current=preserve?{sourceIds:[...new Set([...(resultRequest?.sourceIds||[]),...sourceIds])],intent:requestIntent,filters:requestFilters}:{sourceIds:[...sourceIds],intent:requestIntent,filters:requestFilters};
     preserveSelection.current=preserve;
     const epoch=++searchEpoch.current;filterEpoch.current++;
@@ -193,6 +210,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       setMatchingMessage(response.executed_queries?.length?`已检索：${response.keywords[0]}。远端仅使用首个城市与所列来源；薪资等其余筛选在本地进行。请核对岗位原文。`:`已计划检索「${response.keywords[0]}」，但本次没有完成来源请求。请查看来源状态。`);
       setCollection(undefined);
     } catch (error) { if(epoch===searchEpoch.current)setSearchError(userError(error)); } finally { if(epoch===searchEpoch.current){closeSearchMenus();setSearching(false);} }
+    } catch(error){onError(messageOf(error));} finally {searchStarting.current=false;}
   }
   async function completeDetail() {
     if(!selected)return;const item=selected;setReadingDetail(true);onError(undefined);
@@ -229,7 +247,9 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   }
   return <div ref={pageRef} className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div ref={controlsRef} className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || attemptable.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
-    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
+    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,false,true)}>按我的简历找岗位</button><span>使用已确认岗位方向检索，简历只用于本地匹配。</span></div>}
+    {!!roleSuggestions.length&&<div className="resume-search-action"><span>选择并记住目标岗位：</span>{roleSuggestions.map(role=><button type="button" key={role} onClick={()=>{setIntent(role);setRoleSuggestions([]);void window.jobfindsme!.getSearchPreferences(workspaceId!).then(p=>window.jobfindsme!.saveSearchPreferences({workspace_id:p.workspace_id,target_role:role,cities:p.cities,salary_min_k:p.salary_min_k,salary_max_k:p.salary_max_k})).catch(e=>onError(messageOf(e)));}}>{role}</button>)}</div>}
+    {(result?.cache_fallback_used||showingPrevious)&&<p className="note">本次未刷新，以下为本地保存的岗位；读取时间见原岗位记录，当前是否在招未确认。</p>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     <div className="search-status-line" role="status"><span title={statusText}>{statusText}</span><details ref={statusMenuRef} className="search-status-menu"><summary>来源详情</summary><div className="search-menu-content">
       <p>{searching?`本轮请求 ${activeRequest.current?.sourceIds.length||0} 个来源；岗位在每个来源保存后加入结果。`:resultRequest?`${showingPrevious?"保留的上次结果":"结果"}对应「${resultRequest.intent||"简历关键词"}」和当时选择的 ${coveredSources.length} 个来源。`:"勾选的平台用于本次检索。"}</p>
@@ -244,7 +264,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
 
     </div>
 
-    </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => switchMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => switchMobileView("detail")}>详情</button></div>
+    </div>{latestAttempt&&(latestAttempt.source_runs.every(run=>run.status==="failed")||!latestAttempt.source_runs.length)&&<div className="resume-search-action"><span>本次来源未刷新，可打开原站或粘贴 JD / 岗位链接继续分析：</span>{sources.filter(source=>selectedSources.includes(source.source_id)).map(source=><button key={source.source_id} onClick={()=>openBrowser({sourceId:source.source_id,url:undefined,title:source.name})}>{source.name}</button>)}</div>}<div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => switchMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => switchMobileView("detail")}>详情</button></div>
     <div className={`workspace ${selected?"":"no-selection"}`}><section ref={listRef} className={`list-pane ${mobileView === "detail" ? "mobile-hidden" : ""}`}>
       <div className="section-title"><strong>岗位结果{showingPrevious?" · 上次成功结果":selectionChanged?" · 与当前勾选不同":""}</strong><span>{page?.total ?? 0} 条</span></div>
       {page?.items.length ? <div className="job-list">{page.items.map(item=><article className={selected?.job.job_id===item.job.job_id?"job-card selected":"job-card"} key={item.job.job_id} role="button" tabIndex={0} aria-pressed={selected?.job.job_id===item.job.job_id} onClick={()=>selectItem(item)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectItem(item);}}}>
@@ -255,10 +275,11 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       <div className="pagination"><button disabled={!page||page.page<=1} onClick={()=>void changePage((page?.page??1)-1)}>上一页</button><span>{page?.page??0} / {page?.page_count??0}</span><button disabled={!page||page.page>=page.page_count} onClick={()=>void changePage((page?.page??1)+1)}>下一页</button><select value={pageSize} onChange={event=>void changePageSize(Number(event.target.value) as 10|20|50)}><option value="10">10/页</option><option value="20">20/页</option><option value="50">50/页</option></select></div>
     </section>
       <aside ref={detailRef} className={`detail-pane ${mobileView==="list"?"mobile-detail":""}`}><div className="detail-heading">岗位详情</div>{selected?<div className="job-detail">
-        <div className="job-detail-top"><div className="heading-row"><div><h3>{selected.job.title}</h3><p>{selected.job.company} · {selected.job.locations.join("/")||"地点未知"} · {formatSalary(selected.job)}</p><small>{selected.job.source.source_name} · 发布：{selected.job.source.published_at?new Date(selected.job.source.published_at).toLocaleDateString():"未知"}</small>{selected.snapshot_status==="unknown"&&<p className="note">这次历史检索的岗位版本无法恢复；下方为当前岗位内容，旧评分和重排不可用。</p>}{selected.score_basis_outdated&&<p className="note">JD 已补充；搜索时的旧评分依据仍保留在原快照，此处不再显示为新 JD 的评分。</p>}</div></div>
+        <div className="job-detail-top"><div className="heading-row"><div><h3>{selected.job.title}</h3><p>{selected.job.company} · {selected.job.locations.join("/")||"地点未知"} · {formatSalary(selected.job)}</p><small>{selected.job.source.source_name}{(result?.cache_fallback_used||showingPrevious)?` · 本地读取：${selected.job.source.fetched_at?new Date(selected.job.source.fetched_at).toLocaleString():"未知"}`:""} · 发布：{selected.job.source.published_at?new Date(selected.job.source.published_at).toLocaleDateString():"未知"}</small>{selected.snapshot_status==="unknown"&&<p className="note">这次历史检索的岗位版本无法恢复；下方为当前岗位内容，旧评分和重排不可用。</p>}{selected.score_basis_outdated&&<p className="note">JD 已补充；搜索时的旧评分依据仍保留在原快照，此处不再显示为新 JD 的评分。</p>}</div></div>
           <JobActions hasReport={reports.some(r=>reportMatchesJob(r,selected.job))} tracking={selected.tracking} onTrack={(event,enabled)=>track(event,enabled)} onOpen={openOriginal} researchDisabledReason={!selected.job.apply_url?"该岗位没有可研究的来源链接":undefined} onResearch={()=>onResearch(selected.job)} onError={onError}/>
         </div>
         {hasFullDescription(selected.job)?<section className="job-jd"><h4>岗位职责</h4><div className="job-description">{jobDescriptionParagraphs(selected.job.description).map((paragraph,index)=><p key={index}>{paragraph}</p>)}</div></section>:<section className="job-jd"><p className="note">完整岗位职责尚未读取；可查看岗位原页。{sourceBrowserIdForSourceName(selected.job.source.source_name)&&<button type="button" disabled={readingDetail||searching} onClick={()=>void completeDetail()}>{readingDetail?"读取中…":"尝试补全 JD"}</button>}</p></section>}
+        {selected.query_relevance&&<p className="note">查询相关性：{selected.query_relevance.score} / 100 · 信息完整度：{Math.round((selected.information_coverage?.ratio||0)*100)}%。这是当前证据下的线索，不是录用概率。</p>}
         {page?.resume_version_id&&<details className="scoring-details"><summary>岗位与简历的对应线索</summary><p className="note">依据岗位描述和已确认简历；请核对原文，未知条件不视为满足。</p>{Object.entries(selected.details||{}).map(([key,value])=><p key={key}>{({skills:"技能",projects:"项目经历",education:"学历",experience:"工作经验"} as Record<string,string>)[key]||key}：{value.explanation.replaceAll("暂不计分","仍需核对").replace("，按达成比例计分","")}</p>)}</details>}
         {selected.model_match&&<details className="model-evidence"><summary>历史模型分析记录</summary>{selected.model_match.evidence.map((entry,index)=><p className="note" key={index}>简历：{entry.resume_quote}<br/>JD：{entry.jd_quote}</p>)}<p className="note">未知：{selected.model_match.unknowns.join("；")||"未列出"}</p></details>}
       </div>:<div className="empty"><strong>选择一个岗位</strong><p>从左侧列表查看岗位职责与原页。</p></div>}

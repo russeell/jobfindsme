@@ -27,7 +27,7 @@ export function checkResearchClaim(input:unknown,evidence:Map<string,ResearchEvi
   const row=evidence.get(ids[0]);
   if(!row||row.verification_status!=="independently_retrieved"||!row.excerpt.includes(quote)||!row.url?.startsWith("https://"))return;
   const body=row.excerpt;
-  if(!company||!body.includes(company)||!statement.includes(company)||!quote.includes(company))return;
+  if(company&&(!body.includes(company)||!statement.includes(company)||!quote.includes(company)))return;
   if(negative(statement)!==negative(quote))return;
   const sensitive=/\d|[一二三四五六七八九十百千万亿]+(?:年|月|日|人|倍|元|小时|%)/u.test(statement)||[...statement.matchAll(geographic)].length>0||negative(statement)||!!status(statement)||current(statement);
   // Sensitive relations are accepted only as a continuous original excerpt.

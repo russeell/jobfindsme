@@ -112,6 +112,9 @@ export class DesktopApiClient {
     }, 125_000);
   }
 
+  finalizeSearch(workspaceId:string,runId:string):Promise<SearchResultPage>{return this.json(`/v1/search-runs/${runId}/finalize`,{method:"POST",body:JSON.stringify({workspace_id:workspaceId})});}
+  agentResume(workspaceId:string):Promise<{source_version_id:string;text:string;limitations:string}>{return this.json(`/v1/research-agent/resume?${new URLSearchParams({workspace_id:workspaceId})}`);}
+  proposeAgentResume(input:unknown):Promise<{session_id:string}>{return this.json("/v1/research-agent/resume-proposal",{method:"POST",body:JSON.stringify(input)});}
   refilterSearch(workspaceId:string,runId:string,filters:unknown,pageSize:number):Promise<SearchResultPage>{return this.json(`/v1/search-runs/${runId}/refilter`,{method:"POST",body:JSON.stringify({workspace_id:workspaceId,filters,page_size:pageSize})});}
   getSearchPage(workspaceId: string, runId: string, page: number, pageSize: number): Promise<SearchResultPage> {
     const query = new URLSearchParams({ workspace_id: workspaceId, page: String(page), page_size: String(pageSize) });

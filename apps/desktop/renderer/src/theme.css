@@ -611,3 +611,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .research-composer:focus-within {box-shadow:0 2px 14px #1767d907;border-color:#abc5eb;}
 .research-chat-turn.assistant {font-size:15px;line-height:1.8;}
 .research-add-control .research-menu-dismiss,.research-add-control .research-menu-dismiss:hover,.research-add-control .research-menu-dismiss:focus-visible,.research-add-control .research-menu-dismiss:active {background:transparent!important;box-shadow:none;outline:none;border:0;border-radius:0;padding:0;cursor:default;}
+
+.resume-proposal{margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:12px}.proposal-diff{display:grid;grid-template-columns:1fr 1fr;gap:16px}.proposal-diff p{white-space:pre-wrap;line-height:1.8}.resume-proposal details{padding:12px 0}.resume-proposal button{margin:6px 8px 0 0}@media(max-width:720px){.proposal-diff{grid-template-columns:1fr}}

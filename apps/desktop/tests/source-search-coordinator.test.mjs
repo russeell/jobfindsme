@@ -39,13 +39,13 @@ test('a failed public continuation never falls back to a first-page browser sear
  assert.equal(result.pages.liepin,undefined);
 });
 
-test('four explicitly selected sources retain budget-unstarted identities after two slow readers',async()=>{
+test('four explicitly selected sources start together even with a short budget',async()=>{
  const ids=['boss','liepin','zhilian','wuyou'],seen=[];
  const result=await collectBrowserSourcePages({source_ids:ids,workspace_id:'w1',intent:'Agent'},
    {allowed_source_ids:ids,keywords:['Agent'],max_pages:1,time_budget_seconds:.15},
    {manager:{boss:{collect:async()=>{seen.push("boss");await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},searchPage:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return {records:[],next_cursor:null};}},client:{publicSourcePages:async id=>{seen.push(id);await new Promise(resolve=>setTimeout(resolve,250));return [{records:[],next_cursor:null}];}},isCancelled:()=>false});
- assert.deepEqual(seen,ids.slice(0,2));
- assert.deepEqual(ids.slice(2).map(id=>result.errors[id]),['time_budget:本次总时间预算已用完','time_budget:本次总时间预算已用完']);
+ assert.deepEqual(seen,ids);
+ assert.deepEqual(result.errors,{});
  assert.deepEqual(Object.keys(result.diagnostics.sources).sort(),[...ids].sort());
 });
 
@@ -55,4 +55,11 @@ test('selected platforms use their own continuation cursor while a newly selecte
   {allowed_source_ids:['boss','liepin','zhilian','wuyou'],keywords:['Java'],max_pages:1,time_budget_seconds:10},
   {isCancelled:()=>false,client:{publicSourcePages:async(id,input)=>{seen[id]=input.cursor;return [{records:[],next_cursor:null}];}},manager:{boss:{collect:async input=>{seen.boss=input.cursor;return {records:[],next_cursor:null};}},searchPage:async(id,input)=>{seen[id]=input.page;return {records:[],next_cursor:null};}}});
  assert.deepEqual(seen,{boss:'boss-next',liepin:'2',zhilian:3,wuyou:1});
+});
+
+test('same platform pages stay sequential while four sources start independently',async()=>{
+ const active=new Set(),starts=[];let overlap=false;
+ const page=async(id,input)=>{if(active.has(id))overlap=true;active.add(id);starts.push([id,input.page]);await new Promise(r=>setTimeout(r,8));active.delete(id);return {records:[],next_cursor:input.page===1?'2':null};};
+ await collectBrowserSourcePages({workspace_id:'w',intent:'Agent',source_ids:['boss','liepin','zhilian','wuyou']},{allowed_source_ids:['boss','liepin','zhilian','wuyou'],keywords:['Agent'],max_pages:2,time_budget_seconds:5},{client:{publicSourcePages:async()=>[]},manager:{boss:{collect:async()=>({records:[],next_cursor:null})},searchPage:page},isCancelled:()=>false});
+ assert.equal(overlap,false);assert.deepEqual(starts.filter(([id])=>id==='zhilian').map(([,p])=>p),[1,2]);assert.deepEqual(starts.filter(([id])=>id==='wuyou').map(([,p])=>p),[1,2]);
 });

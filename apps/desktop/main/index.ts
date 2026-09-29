@@ -279,6 +279,8 @@ ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInp
 });
 
 let sourceSearchEpoch=0;
+ipcMain.handle("desktop:search-preflight",(event,input)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.searchPreflight(input);});
+ipcMain.handle("desktop:finalize-search",(event,workspaceId:string,runId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.finalizeSearch(workspaceId,runId);});
 ipcMain.handle("desktop:refilter-search",(event,workspaceId:string,runId:string,filters,pageSize:number)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.refilterSearch(workspaceId,runId,normalizeDiscoveryFilters(filters),pageSize);});
 ipcMain.handle("desktop:get-search-page", (event, workspaceId: string, runId: string, page: number, pageSize: number) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
@@ -765,9 +767,10 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
     if(run.signal.aborted)throw Error("cancelled");
-    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
+    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
       {
-        readResume:()=>apiClient!.previewAnalysisCopy({workspace_id:input.workspace_id,privacy_mode:"redact"}),
+        readResume:()=>apiClient!.agentResume(input.workspace_id),
+        proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),
         findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
         searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,original_question:originalQuestion,search_query:searchQuery,site,timeout_ms:timeoutMs},signal,timeoutMs),
