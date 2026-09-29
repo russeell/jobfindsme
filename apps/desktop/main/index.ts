@@ -457,7 +457,7 @@ ipcMain.handle("desktop:layout-source-browser", (event, bounds: SourceBrowserBou
   sourceBrowserManager?.layout(bounds);
 });
 ipcMain.handle("desktop:source-browser-command", (event, command: string) => {
-  if (event.sender !== mainWindow?.webContents || !["back", "forward", "reload", "state", "zoom-in", "zoom-out", "zoom-reset", "fit-width"].includes(command)) throw new Error("unauthorized browser command");
+  if (event.sender !== mainWindow?.webContents || !["back", "forward", "reload", "stop", "state", "zoom-in", "zoom-out", "zoom-reset", "fit-width"].includes(command)) throw new Error("unauthorized browser command");
   return sourceBrowserManager?.command(command);
 });
 ipcMain.handle("desktop:select-browser-tab", (event,id:string) => {

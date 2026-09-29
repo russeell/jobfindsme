@@ -71,7 +71,7 @@ export type DesktopBridge = {
   closeBrowserTab(id:string):Promise<SourceBrowserState>;
   closeSourceBrowser(): Promise<void>;
   layoutSourceBrowser(bounds: SourceBrowserBounds | null): Promise<void>;
-  sourceBrowserCommand(command: "back" | "forward" | "reload" | "state" | "zoom-in" | "zoom-out" | "zoom-reset" | "fit-width"): Promise<SourceBrowserState>;
+  sourceBrowserCommand(command: "back" | "forward" | "reload" | "stop" | "state" | "zoom-in" | "zoom-out" | "zoom-reset" | "fit-width"): Promise<SourceBrowserState>;
   getResumeState(): Promise<ResumeState>;
   clearCurrentResume(workspaceId:string):Promise<ResumeState>;
   getSearchPreferences(workspaceId:string):Promise<SearchPreferences>;
@@ -117,6 +117,7 @@ export type DesktopBridge = {
   legacyTaskStatus(workspaceId: string): Promise<LegacyTaskStatus>;
   secureStorageAvailable(): Promise<boolean>;
   getServiceStatus(): Promise<ServiceStatus>;
+  onSourceBrowserStateChanged(listener:(state:SourceBrowserState)=>void):()=>void;
   onSourceBrowserFocus(listener:()=>void):()=>void;
   onServiceStatus(listener: (status: ServiceStatus) => void): () => void;
 };

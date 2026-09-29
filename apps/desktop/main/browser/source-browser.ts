@@ -25,7 +25,7 @@ import {
   passiveSourceObservationScript, type PassiveSourceObservation,
 } from "../sources/source-actions";
 
-type BrowserTab = { navigation?:number; id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
+type BrowserTab = { stoppedNavigation?:number; navigation?:number; id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;
 
 export class SourceBrowserManager {
@@ -96,19 +96,28 @@ export class SourceBrowserManager {
     await this.loadTab(tab,target);
   }
 
+  private publishState():void {
+    if(!this.window.isDestroyed()&&!this.window.webContents?.isDestroyed?.())this.window.webContents?.send("desktop:source-browser-state",this.state());
+  }
+
   private createForegroundTab(sourceId:ForegroundBrowserId,target:string,popupOptions?:Electron.BrowserWindowConstructorOptions):BrowserTab {
     const id=`tab-${this.nextId++}`;
     const view=this.createView(sourceId,true,popupOptions);
     const tab:BrowserTab={id,sourceId,view,initialUrl:target,zoom:1};
     this.tabs.push(tab);
-    view.webContents.on("did-start-navigation",(_event,_url,_inPlace,isMain)=>{if(isMain)tab.error=undefined;});
-    view.webContents.on("did-fail-load",(_event,code,description,_url,isMain)=>{if(isMain && code!==-3)tab.error=`页面加载失败：${description}`;});
-    view.webContents.on("render-process-gone",()=>{tab.error="页面进程已退出，请刷新或关闭标签。";});
+    view.webContents.on("did-start-navigation",(_event,_url,_inPlace,isMain)=>{if(isMain){tab.error=undefined;this.publishState();}});
+    view.webContents.on("did-fail-load",(_event,code,description,_url,isMain)=>{if(isMain && code!==-3){tab.error=`页面加载失败：${description}`;this.publishState();}});
+    view.webContents.on("render-process-gone",()=>{tab.error="页面进程已退出，请刷新或关闭标签。";this.publishState();});
     if(sourceId==="zhilian"||sourceId==="wuyou") {
       view.webContents.on("did-finish-load",()=>this.scheduleSourceObservation(tab));
       view.webContents.on("did-stop-loading",()=>this.scheduleSourceObservation(tab));
       view.webContents.on("did-navigate-in-page",()=>this.scheduleSourceObservation(tab));
     }
+    view.webContents.on("did-start-loading",()=>this.publishState());
+    view.webContents.on("did-stop-loading",()=>this.publishState());
+    view.webContents.on("did-navigate",()=>this.publishState());
+    view.webContents.on("did-navigate-in-page",()=>this.publishState());
+    view.webContents.on("page-title-updated",()=>this.publishState());
     this.selectTab(id);
     return tab;
   }
@@ -206,14 +215,15 @@ export class SourceBrowserManager {
   private async loadTab(tab:BrowserTab,target:string) {
     const view=tab.view,revision=tab.navigation=(tab.navigation??0)+1;
     const current=()=>this.tabs.includes(tab)&&tab.navigation===revision&&!view.webContents.isDestroyed();
+    tab.stoppedNavigation=undefined;
     try {await view.webContents.loadURL(target);if(current() && !isPublicWebUrl(view.webContents.getURL()))tab.error="页面未返回有效招聘内容，请刷新或尝试岗位详情链接。";}
     catch(error){
-      if(!current())return;
+      if(!current()||tab.stoppedNavigation===revision)return;
       const aborted=error && typeof error === "object" && "code" in error && error.code === "ERR_ABORTED";
       let completed=false;
-      if(aborted)for(let i=0;i<80;i++){if(!current())return;if(!view.webContents.isLoadingMainFrame()&&isPublicWebUrl(view.webContents.getURL())){completed=true;break;}await new Promise(r=>setTimeout(r,100));}
+      if(aborted)for(let i=0;i<80;i++){if(!current()||tab.stoppedNavigation===revision)return;if(!view.webContents.isLoadingMainFrame()&&isPublicWebUrl(view.webContents.getURL())){completed=true;break;}await new Promise(r=>setTimeout(r,100));}
       if(!current())return;
-      if(!completed){tab.error="网页加载失败，请刷新或检查网络连接。";throw new Error("browser_navigation_failed");}
+      if(!completed){tab.error??="网页加载失败，请刷新或检查网络连接。";this.publishState();throw new Error("browser_navigation_failed");}
     }
   }
 
@@ -225,7 +235,7 @@ export class SourceBrowserManager {
       if(this.attached){this.attached.setVisible(false);this.window.contentView.removeChildView(this.attached);}
       this.attached=tab.view;this.window.contentView.addChildView(tab.view);
     }
-    this.activeId=id;tab.view.webContents.setZoomFactor(tab.zoom);this.notice="";this.applyBounds();this.attached.setVisible(this.visible);
+    this.activeId=id;tab.view.webContents.setZoomFactor(tab.zoom);this.notice="";this.applyBounds();this.attached.setVisible(this.visible);this.publishState();
     if(returning&&this.visible){
       if(tab.sourceId==="boss")void this.observeBoss(false,true);
       else if(tab.sourceId==="zhilian"||tab.sourceId==="wuyou")void this.observeSourcePage(tab,true);
@@ -239,7 +249,7 @@ export class SourceBrowserManager {
     if(this.attached===tab.view){tab.view.setVisible(false);this.window.contentView.removeChildView(tab.view);this.attached=undefined;this.activeId=undefined;}
     if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();
     if(!this.activeId && this.tabs.length)this.selectTab(this.tabs[Math.min(index,this.tabs.length-1)].id);
-    return this.state();
+    this.publishState();return this.state();
   }
 
   state() {
@@ -268,6 +278,7 @@ export class SourceBrowserManager {
       if(command==="back"&&wc.navigationHistory.canGoBack())wc.navigationHistory.goBack();
       if(command==="forward"&&wc.navigationHistory.canGoForward())wc.navigationHistory.goForward();
       if(command==="reload")wc.reload();
+      if(command==="stop"&&tab){tab.stoppedNavigation=tab.navigation;wc.stop();tab.notice="已停止加载，可刷新继续。";this.publishState();}
       if(tab && ["zoom-in","zoom-out","zoom-reset","fit-width"].includes(command)) {
         let zoom=command==="zoom-reset"?1:tab.zoom+(command==="zoom-in"?.1:command==="zoom-out"?-.1:0);
         if(command==="fit-width") {
@@ -506,8 +517,8 @@ export class SourceBrowserManager {
     // Release web contents directly; never select a replacement tab during teardown.
     if(this.attached && !this.window.isDestroyed())this.window.contentView.removeChildView(this.attached);
     this.attached=undefined;this.activeId=undefined;this.requestedBounds=undefined;this.visible=false;
-    for(const tab of this.tabs)if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();
-    this.tabs.length=0;
+    const closingTabs=this.tabs.splice(0);
+    for(const tab of closingTabs)if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();
     for(const view of this.backgrounds.values())if(!view.webContents.isDestroyed())view.webContents.close();
     this.backgrounds.clear();
     for(const [session,handler] of this.downloadHandlers)session.removeListener("will-download",handler);

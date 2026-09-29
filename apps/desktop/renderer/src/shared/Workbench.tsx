@@ -91,6 +91,8 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
 
   const hasBrowser = panelOpen;
   const [newTab,setNewTab]=useState(false);
+  const [opening,setOpening]=useState(false);
+  const [slowLoading,setSlowLoading]=useState(false);
   const [tabError,setTabError]=useState("");
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const autoCollapsed=panelOpen && !browserExpanded && !manualExpanded && windowWidth>=944 && windowWidth<sidebarWidth+880;
@@ -101,9 +103,16 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   const [bookmarks,setBookmarks]=useState(()=>readBrowserBookmarks(localStorage.getItem("jfm.browser.bookmarks")));
   useEffect(()=>{localStorage.setItem("jfm.browser.bookmarks",JSON.stringify(bookmarks));},[bookmarks]);
   const activeTab=browserState.tabs.find(t=>t.id===browserState.activeTabId);
+  useEffect(()=>setTabError(""),[browserState.activeTabId,newTab]);
+  useEffect(()=>{
+    setSlowLoading(false);
+    if(newTab||!browserState.loading)return;
+    const timer=setTimeout(()=>setSlowLoading(true),15000);
+    return()=>clearTimeout(timer);
+  },[newTab,browserState.loading,browserState.url,browserState.activeTabId]);
   const slot = useRef<HTMLDivElement>(null);
   const splitterContext = `${hasBrowser}:${effectiveCollapsed}:${narrow}:${mode}:${browserExpanded}:${newTab}:${browserState.activeTabId}:${windowWidth}`;
-  const visible = hasBrowser && !newTab && !!activeTab && (browserExpanded || !narrow || mode === "browser");
+  const visible = hasBrowser && !newTab && !!activeTab && !activeTab.error && (browserExpanded || !narrow || mode === "browser");
   useEffect(() => { localStorage.setItem("jfm.sidebar.width", String(sidebarWidth)); }, [sidebarWidth]);
   useEffect(() => { localStorage.setItem("jfm.sidebar.collapsed", String(collapsed)); }, [collapsed]);
   useEffect(() => { localStorage.setItem("jfm.browser.width", String(browserWidth)); }, [browserWidth]);
@@ -111,18 +120,18 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   // Opening a target creates/reuses a tab. Restoring the panel only restores layout.
   useEffect(() => {
     if (!target || !slot.current) return;
+    let stale=false;setOpening(true);
     const r=slot.current.getBoundingClientRect(),bounds={x:r.x,y:r.y,width:r.width,height:r.height};setTabError("");
     void (async()=>{
       try{
         if(target.checkSource){
           await window.jobfindsme!.openSourceBrowser(target.sourceId,bounds);
-          setBrowserState(await window.jobfindsme!.sourceBrowserCommand("state"));
-          await window.jobfindsme!.layoutSourceBrowser(bounds);
           await window.jobfindsme!.verifySource(target.sourceId);
         }else await window.jobfindsme!.openJobOriginal(target.sourceId,target.url??"",bounds);
-      }catch(e){setTabError(String(e));}
-      finally{target.onComplete?.();void window.jobfindsme!.sourceBrowserCommand("state").then(setBrowserState);}
+      }catch(e){if(!stale&&!String(e).includes("browser_navigation_failed"))setTabError(String(e));}
+      finally{target.onComplete?.();if(!stale)setOpening(false);}
     })();
+    return()=>{stale=true;};
   }, [target]);
   useEffect(() => {
     let frame=0,lastLayout="";
@@ -138,7 +147,7 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
         });
         const bounds=r&&visible&&!browserIsOccluded(r,current)?{x:r.x,y:r.y,width:r.width,height:r.height}:null;
         const key=JSON.stringify(bounds);
-        if(key!==lastLayout){lastLayout=key;void window.jobfindsme?.layoutSourceBrowser(bounds);}
+        if(key!==lastLayout){lastLayout=key;void window.jobfindsme?.layoutSourceBrowser(bounds).catch(error=>{lastLayout="";setTabError(String(error));});}
       });
     };
     const observer=new ResizeObserver(update),observed=new Set<Element>();
@@ -153,7 +162,12 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
     window.addEventListener("resize",update);window.addEventListener("focus",update);window.addEventListener("scroll",update,true);
     return()=>{cancelAnimationFrame(frame);observer.disconnect();mutation.disconnect();window.removeEventListener("resize",update);window.removeEventListener("focus",update);window.removeEventListener("scroll",update,true);};
   }, [target, visible, sidebarWidth, collapsed, browserWidth, narrow, mode, browserExpanded, browserState.activeTabId]);
-  useEffect(() => { if (!panelOpen) return; const refresh = () => void window.jobfindsme?.sourceBrowserCommand("state").then(setBrowserState); refresh(); const timer = setInterval(refresh, 700); return () => clearInterval(timer); }, [panelOpen]);
+  useEffect(() => {
+    let changed=false,disposed=false;
+    const unsubscribe=window.jobfindsme?.onSourceBrowserStateChanged(state=>{changed=true;if(!disposed)setBrowserState(state);});
+    void window.jobfindsme?.sourceBrowserCommand("state").then(state=>{if(!disposed&&!changed)setBrowserState(state);}).catch(error=>{if(!disposed)setTabError(String(error));});
+    return()=>{disposed=true;unsubscribe?.();};
+  }, []);
   useEffect(() => () => { void window.jobfindsme?.closeSourceBrowser(); }, []);
   function openDestination(destination:Extract<BrowserDestination,{url:string}>) {
     setTarget({sourceId:destination.sourceId,url:destination.url,title:"浏览网页"});setNewTab(false);setTabError("");
@@ -164,7 +178,7 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
     const id=activeTab.id;
     void window.jobfindsme!.navigateBrowserTab(id,destination.url).then(setBrowserState).catch(async error=>{
       const state=await window.jobfindsme!.sourceBrowserCommand("state");setBrowserState(state);
-      if(state.activeTabId===id)setTabError(String(error));
+      if(state.activeTabId===id&&!String(error).includes("browser_navigation_failed"))setTabError(String(error));
     });
   }
   function command(value: Parameters<NonNullable<typeof window.jobfindsme>["sourceBrowserCommand"]>[0]) { setTabError(""); void window.jobfindsme!.sourceBrowserCommand(value).then(setBrowserState).catch(e=>setTabError(String(e))); }
@@ -177,6 +191,6 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
     {!effectiveCollapsed && <Splitter label="侧边栏宽度" value={sidebarWidth} min={220} max={320} onChange={setSidebarWidth} cancelKey={splitterContext} />}
     {hasBrowser && narrow && <div className="work-mode-switch"><button className={mode === "work" ? "active" : ""} onClick={() => { setMode("work"); setBrowserExpanded(false); }}>工作区</button><button className={mode === "browser" ? "active" : ""} onClick={() => setMode("browser")}>岗位原页</button><button onClick={close} aria-label="关闭原页">×</button></div>}
     <div className="work-content">{children}</div>
-    {hasBrowser && <><div className="browser-divider"><Splitter label="原页面板宽度" value={browserWidth} min={520} max={Math.min(1200, Math.max(520, windowWidth - (effectiveCollapsed ? 64 : sidebarWidth) - 360))} reverse onChange={setBrowserWidth} cancelKey={splitterContext} /></div><aside className="browser-panel"><div className="browser-tabbar" role="tablist" aria-label="浏览器标签">{browserState.tabs.map(tab=><div key={tab.id} className={tab.id===browserState.activeTabId&&!newTab?"browser-tab active":"browser-tab"}><button role="tab" aria-selected={tab.id===browserState.activeTabId&&!newTab} title={tab.url} onClick={()=>{setNewTab(false);void window.jobfindsme!.selectBrowserTab(tab.id).then(setBrowserState).catch(e=>setTabError(String(e)));}}>{tab.loading?"◌ ":""}{tab.title}</button><button aria-label={`关闭标签 ${tab.title}`} onClick={()=>void window.jobfindsme!.closeBrowserTab(tab.id).then(state=>{setBrowserState(state);if(!state.tabs.length)setNewTab(true);})}>×</button></div>)}<button className="new-browser-tab" aria-label="新建标签" disabled={browserState.tabs.length>=12} onClick={()=>{setNewTab(true);setTabError("");}}>＋</button></div><div className="browser-toolbar"><div className="browser-nav"><button aria-label="返回" disabled={newTab || !browserState.canGoBack} onClick={() => command("back")}>←</button><button aria-label="前进" disabled={newTab || !browserState.canGoForward} onClick={() => command("forward")}>→</button><button aria-label="刷新" disabled={newTab} onClick={() => command("reload")}>↻</button><BrowserAddressBar url={browserState.url} tabId={browserState.activeTabId} newTab={newTab} onNavigate={navigateAddress} onError={setTabError}/>{!newTab&&activeTab&&<button type="button" className="browser-bookmark-toggle" aria-label={bookmarks.some(item=>item.url===activeTab.url)?"已收藏网站":"收藏当前网站"} title={bookmarks.some(item=>item.url===activeTab.url)?"已收藏":"收藏当前网站"} disabled={bookmarks.some(item=>item.url===activeTab.url)} onClick={bookmarkActive}>{bookmarks.some(item=>item.url===activeTab.url)?"★":"☆"}</button>}{!newTab && activeTab && <div className="browser-zoom"><button aria-label="缩小网页" disabled={browserState.zoom<=.3} onClick={()=>command("zoom-out")}>−</button><button aria-label="恢复100%" title="恢复100%" onClick={()=>command("zoom-reset")}>{Math.round(browserState.zoom*100)}%</button><button aria-label="放大网页" disabled={browserState.zoom>=2} onClick={()=>command("zoom-in")}>＋</button><button disabled={browserState.loading||browserState.fitting} onClick={()=>command("fit-width")}>{browserState.fitting?"适应中…":"适应宽度"}</button></div>}<button className="browser-expand" aria-label={browserExpanded ? "返回分栏" : "放大浏览器"} title={browserExpanded ? "返回分栏，恢复面板宽度" : "放大浏览器，使用主工作区"} onClick={() => {setBrowserExpanded(!browserExpanded);setMode("browser");}}><Icon name={browserExpanded ? "split" : "expand"} /></button><button aria-label="关闭原页" onClick={close}>×</button></div>{(tabError || browserState.notice || activeTab?.error)&&<div className="browser-error" role="alert"><p>{userError(tabError || browserState.notice || activeTab?.error).message}</p>{!newTab && activeTab && <button onClick={()=>command("reload")}>重试</button>}{!newTab && browserState.canGoBack && <button onClick={()=>command("back")}>返回上一页</button>}</div>}</div><div className="native-browser-slot" ref={slot}>{newTab||!activeTab?<BrowserStartPage onOpen={openDestination} onDeleteBookmark={url=>setBookmarks(items=>removeBrowserBookmark(items,url))} bookmarks={bookmarks} limitReached={browserState.tabs.length>=12}/>:<p>平台原页面 · 共享来源登录会话</p>}</div></aside></>}
+    {hasBrowser && <><div className="browser-divider"><Splitter label="原页面板宽度" value={browserWidth} min={520} max={Math.min(1200, Math.max(520, windowWidth - (effectiveCollapsed ? 64 : sidebarWidth) - 360))} reverse onChange={setBrowserWidth} cancelKey={splitterContext} /></div><aside className="browser-panel"><div className="browser-tabbar" role="tablist" aria-label="浏览器标签">{browserState.tabs.map(tab=><div key={tab.id} className={tab.id===browserState.activeTabId&&!newTab?"browser-tab active":"browser-tab"}><button role="tab" aria-selected={tab.id===browserState.activeTabId&&!newTab} title={tab.url} onClick={()=>{setNewTab(false);void window.jobfindsme!.selectBrowserTab(tab.id).then(setBrowserState).catch(e=>setTabError(String(e)));}}>{tab.loading?"◌ ":""}{tab.title}</button><button aria-label={`关闭标签 ${tab.title}`} onClick={()=>void window.jobfindsme!.closeBrowserTab(tab.id).then(state=>{setBrowserState(state);if(!state.tabs.length)setNewTab(true);})}>×</button></div>)}<button className="new-browser-tab" aria-label="新建标签" disabled={browserState.tabs.length>=12} onClick={()=>{setNewTab(true);setTabError("");}}>＋</button></div><div className="browser-toolbar"><div className="browser-nav"><button aria-label="返回" disabled={newTab || !browserState.canGoBack} onClick={() => command("back")}>←</button><button aria-label="前进" disabled={newTab || !browserState.canGoForward} onClick={() => command("forward")}>→</button><button aria-label={browserState.loading&&!newTab?"停止加载":"刷新"} disabled={newTab} onClick={() => command(browserState.loading?"stop":"reload")}>{browserState.loading&&!newTab?"×":"↻"}</button><BrowserAddressBar url={browserState.url} tabId={browserState.activeTabId} newTab={newTab} onNavigate={navigateAddress} onError={setTabError}/>{!newTab&&activeTab&&<button type="button" className="browser-bookmark-toggle" aria-label={bookmarks.some(item=>item.url===activeTab.url)?"已收藏网站":"收藏当前网站"} title={bookmarks.some(item=>item.url===activeTab.url)?"已收藏":"收藏当前网站"} disabled={bookmarks.some(item=>item.url===activeTab.url)} onClick={bookmarkActive}>{bookmarks.some(item=>item.url===activeTab.url)?"★":"☆"}</button>}{!newTab && activeTab && <div className="browser-zoom"><button aria-label="缩小网页" disabled={browserState.zoom<=.3} onClick={()=>command("zoom-out")}>−</button><button aria-label="恢复100%" title="恢复100%" onClick={()=>command("zoom-reset")}>{Math.round(browserState.zoom*100)}%</button><button aria-label="放大网页" disabled={browserState.zoom>=2} onClick={()=>command("zoom-in")}>＋</button><button disabled={browserState.loading||browserState.fitting} onClick={()=>command("fit-width")}>{browserState.fitting?"适应中…":"适应宽度"}</button></div>}<button className="browser-expand" aria-label={browserExpanded ? "返回分栏" : "放大浏览器"} title={browserExpanded ? "返回分栏，恢复面板宽度" : "放大浏览器，使用主工作区"} onClick={() => {setBrowserExpanded(!browserExpanded);setMode("browser");}}><Icon name={browserExpanded ? "split" : "expand"} /></button><button aria-label="关闭原页" onClick={close}>×</button></div>{!newTab&&((opening&&!activeTab)||browserState.loading)&&<div className="browser-loading-status" role="status">{slowLoading?"加载较慢，你可以停止加载或换个网址。":"正在加载网页…"}</div>}{((tabError&&!activeTab?.error) || browserState.notice)&&<div className="browser-error" role="alert"><p>{userError(tabError || browserState.notice).message}</p>{!newTab && activeTab && <button onClick={()=>command("reload")}>重试</button>}{!newTab && browserState.canGoBack && <button onClick={()=>command("back")}>返回上一页</button>}</div>}</div><div className="native-browser-slot" ref={slot}>{newTab||!activeTab&&!opening?<BrowserStartPage onOpen={openDestination} onDeleteBookmark={url=>setBookmarks(items=>removeBrowserBookmark(items,url))} bookmarks={bookmarks} limitReached={browserState.tabs.length>=12}/>:activeTab?.error?<div className="browser-page-failure" role="alert"><h3>网页未能打开</h3><p>{activeTab.error}</p><button onClick={()=>command("reload")}>重新加载</button>{browserState.canGoBack&&<button onClick={()=>command("back")}>返回上一页</button>}</div>:null}</div></aside></>}
   </main></ToggleContext.Provider></BrowserContext.Provider>;
 }

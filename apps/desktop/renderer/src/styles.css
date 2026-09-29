@@ -518,3 +518,9 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 .shell:not(.has-browser) .topbar { padding-right:64px; }
 .shell.has-browser .browser-tabbar { padding-right:64px; }
 .narrow-shell.has-browser .work-mode-switch { padding-right:64px; }
+
+.browser-loading-status { padding:3px 12px; color:var(--text-muted); font-size:11px; border-top:1px solid var(--line); }
+.browser-page-failure { max-width:360px; padding:24px; color:var(--text); text-align:center; }
+.browser-page-failure h3 { font-size:16px; margin:0 0 8px; }
+.browser-page-failure p { color:var(--text-muted); overflow-wrap:anywhere; }
+.browser-page-failure button { margin:4px; }

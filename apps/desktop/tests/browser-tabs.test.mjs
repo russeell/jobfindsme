@@ -272,7 +272,7 @@ test('Zhaopin searches never open the browser, add tabs, or change the active us
  const {m,w}=setup();const events=[];w.webContents={send:(...args)=>events.push(args)};
  FakeView.onCreate=view=>{view.webContents.executeJavaScript=async()=>({jobs:[],empty:true,searchKeyword:'AI Agent'});};
  try{await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1});assert.equal(m.state().tabs.length,0);assert.equal(w.children.length,0);assert.equal(events.length,0);
- await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');m.layout(bounds);const original=w.children[0],active=m.state().activeTabId;
+ await m.show('zhilian',bounds,'https://www.zhaopin.com/jobdetail/original.htm');m.layout(bounds);const original=w.children[0],active=m.state().activeTabId;events.length=0;
  await m.searchPage('zhilian',{keyword:'AI Agent',city:'深圳',page:1,forceRefresh:true});assert.equal(m.state().tabs.length,1);assert.equal(m.state().activeTabId,active);assert.equal(w.children[0],original);assert.equal(original.webContents.getURL(),'https://www.zhaopin.com/jobdetail/original.htm');assert.equal(events.length,0);
  await assert.rejects(m.searchPage('zhilian',{keyword:'expired',city:'深圳',page:1,deadline:Date.now()-1}),/source_timeout/);assert.equal(m.state().tabs.length,1);
  }finally{FakeView.onCreate=undefined;m.destroy();}
@@ -336,4 +336,60 @@ test('observer enablement may wait for renderer initialization and must not bloc
  };
  try{const result=await m.searchPage('zhilian',{keyword:'AI',city:'深圳',page:1,deadline:Date.now()+200});assert.equal(navigated,true);assert.equal(result.records.length,0);assert.equal(result.next_cursor,null,'zero matches must not inherit recommendation pagination');}
  finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('new foreground tabs publish their state before a slow navigation finishes',async()=>{
+ const {w,m}=setup(),updates=[];w.webContents={send:(channel,state)=>updates.push({channel,state})};
+ let finish;FakeView.onCreate=view=>{view.webContents.loadURL=()=>new Promise(resolve=>{finish=resolve;});};
+ try{
+  const loading=m.show('web',bounds,'https://example.com/');
+  assert.ok(updates.some(({channel,state})=>channel==='desktop:source-browser-state'&&state.tabs.length===1&&state.activeTabId===state.tabs[0].id));
+  m.layout(bounds);assert.equal(w.children[0].visible,true);
+  finish();await loading;
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+test('native loading, title and renderer failure updates remain bound to the active tab',async()=>{
+ const {w,m}=setup(),updates=[];w.webContents={send:(channel,state)=>updates.push({channel,state})};
+ await m.show('web',bounds,'https://example.com/');const first=w.children[0];
+ await m.show('web',bounds,'https://example.org/');const active=m.state().activeTabId;
+ const foreground=w.children[0];foreground.webContents.isLoading=()=>true;foreground.webContents.emit('did-start-loading');
+ assert.equal(updates.at(-1).state.loading,true);
+ foreground.webContents.isLoading=()=>false;foreground.webContents.emit('did-stop-loading');
+ assert.equal(updates.at(-1).state.loading,false);
+ first.webContents.emit('did-fail-load',{},-105,'ERR_NAME_NOT_RESOLVED','https://example.com/',true);
+ assert.equal(updates.at(-1).state.activeTabId,active);
+ assert.equal(updates.at(-1).state.tabs.find(t=>t.id===active).error,undefined);
+ w.children[0].webContents.emit('render-process-gone',{});
+ assert.match(updates.at(-1).state.tabs.find(t=>t.id===active).error,/进程已退出/);
+ m.destroy();
+});
+
+test('stopping an unfinished navigation preserves the tab and never turns abort into failure',async()=>{
+ const {w,m}=setup();let reject;FakeView.onCreate=view=>{
+  view.webContents.loadURL=()=>new Promise((_,r)=>{reject=r;});
+  view.webContents.stop=()=>reject(Object.assign(Error('stopped'),{code:'ERR_ABORTED'}));
+ };
+ try{
+  const load=m.show('web',bounds,'https://example.com/');const id=m.state().activeTabId;
+  await m.command('stop');await load;
+  assert.equal(m.state().activeTabId,id);assert.equal(m.state().tabs[0].error,undefined);
+  assert.match(m.state().notice,/已停止加载/);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('load rejection retains the specific native failure instead of replacing it with a generic message',async()=>{
+ const {m}=setup();FakeView.onCreate=view=>{view.webContents.loadURL=async()=>{
+  view.webContents.emit('did-fail-load',{},-105,'ERR_NAME_NOT_RESOLVED','https://check.invalid/',true);
+  throw Error('network failure');
+ };};
+ try{await assert.rejects(m.show('web',bounds,'https://check.invalid/'),/browser_navigation_failed/);
+  assert.match(m.state().tabs[0].error,/ERR_NAME_NOT_RESOLVED/);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('teardown state events cannot read already-destroyed tab contents',async()=>{
+ const {w,m}=setup();w.webContents={send:()=>{}};
+ await m.show('web',bounds,'https://example.com/');const wc=w.children[0].webContents;
+ wc.close=()=>{wc.getURL=()=>{throw Error('contents destroyed');};wc.emit('did-stop-loading');};
+ assert.doesNotThrow(()=>m.destroy());assert.equal(m.state().tabs.length,0);
 });
