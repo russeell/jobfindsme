@@ -12,7 +12,7 @@ import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
 type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
@@ -161,11 +161,14 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     setBusy("history");setMessage("");
     try{
       await saveQueue.current;
+      if(action!=="restore"){
+        if(pendingResearchChats(workspaceId).some(chat=>chat.id===item.id))throw Error("该对话仍有未保存更新，请先保存成功后再归档或删除。");
+        removeResearchChatRecovery(workspaceId,item.id);
+      }
       if(action==="archive")await window.jobfindsme!.archiveResearchChat(workspaceId,item.id);
       else if(action==="restore")await window.jobfindsme!.restoreResearchChat(workspaceId,item.id);
       else await window.jobfindsme!.deleteArchivedResearchChat(workspaceId,item.id);
       if(workspaceRef.current!==workspaceId)return;
-      if(action!=="restore")removeResearchChatRecovery(workspaceId,item.id);
       await refreshChatHistory(workspaceId);
       if(action==="archive"&&chatId===item.id){setChatId(null);setReport(undefined);setMode("start");}
       if(action==="delete")setDeleteId("");
