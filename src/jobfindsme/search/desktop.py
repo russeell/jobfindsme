@@ -29,6 +29,7 @@ class SearchPreflight:
     blocked_sources: dict[str, str]
     max_pages: int
     time_budget_seconds: float
+    search_intent: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -166,6 +167,7 @@ class DesktopSearchService:
         time_budget_seconds: float = 15,
         resume_version_id: str | None = None,
         attempt_unverified_login: bool = False,
+        filters=None,
     ) -> SearchPreflight:
         if self.profiles.active_draft_profile_id(workspace_id=workspace_id):
             raise SearchPreflightError(
@@ -187,7 +189,45 @@ class DesktopSearchService:
                 raise SearchPreflightError(
                     "the requested resume version does not belong to this workspace"
                 )
-        keywords = build_search_keywords(intent=intent, resume=current)
+        import json
+
+        from jobfindsme.search.intent import parse_intent, suggested_roles
+
+        with self.profiles.database.connect() as db:
+            row = db.execute(
+                "SELECT * FROM desktop_search_preferences WHERE workspace_id=?",
+                (workspace_id,),
+            ).fetchone()
+        preferences = (
+            {
+                "target_role": row["target_role"],
+                "cities": json.loads(row["cities_json"]),
+                "salary_min_k": row["salary_min_k"],
+                "salary_max_k": row["salary_max_k"],
+            }
+            if row
+            else {}
+        )
+        try:
+            parsed = parse_intent(
+                intent,
+                filters=filters,
+                preferences=preferences,
+                resume_version=current.version_id if current else None,
+                source_scope=source_ids,
+            )
+        except ValueError as error:
+            suggestions = suggested_roles(current.content) if current else ()
+            raise SearchPreflightError(
+                str(error)
+                + ("；可选方向：" + " / ".join(suggestions) if suggestions else "")
+            ) from error
+        if parsed.unrecognized:
+            raise SearchPreflightError(
+                "未能确认这些条件，请在筛选栏核对后再搜："
+                + "；".join(parsed.unrecognized)
+            )
+        keywords = build_search_keywords(intent=parsed.query, resume=current)
         allowed: list[str] = []
         blocked: dict[str, str] = {}
         for source_id in dict.fromkeys(source_ids):
@@ -226,6 +266,7 @@ class DesktopSearchService:
             blocked_sources=blocked,
             max_pages=max_pages,
             time_budget_seconds=time_budget_seconds,
+            search_intent=parsed.payload(),
         )
 
 
@@ -247,29 +288,7 @@ def build_search_keywords(*, intent: str, resume) -> tuple[str, ...]:
     if clean_intent:
         return (clean_intent,)
 
-    terms: list[str] = []
-    for value in resume.content.get("skills", ()):
-        safe = create_analysis_copy(
-            source_version_id=resume.version_id,
-            text=value,
-        ).text
-        for term in _TERM_SPLIT.split(safe):
-            normalized = term.strip()
-            if 1 < len(normalized) <= 30 and "[已过滤:" not in normalized:
-                terms.append(normalized)
-    for section in ("projects", "experience"):
-        for value in resume.content.get(section, ()):
-            safe = create_analysis_copy(
-                source_version_id=resume.version_id,
-                text=value,
-            ).text
-            terms.extend(_TECH_TERM.findall(safe))
-    unique_terms = tuple(dict.fromkeys(terms))[:1]
-    if not unique_terms:
-        raise SearchPreflightError(
-            "confirmed resume has no usable skill or experience keywords"
-        )
-    return unique_terms
+    raise SearchPreflightError("请先确认目标岗位方向；简历技能不能代替求职意向")
 
 
 def connector_adapter_for(*, source_id: str, keyword: str, city: str):

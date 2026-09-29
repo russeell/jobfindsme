@@ -43,6 +43,12 @@ def _confirmed_resume(tmp_path: Path):
         profile_id=draft.profile_id,
         accepted_fact_ids=[fact.fact_id for fact in draft.facts],
     )
+    with database.connect() as db:
+        db.execute(
+            "INSERT INTO desktop_search_preferences "
+            "(workspace_id,target_role,updated_at) VALUES (?, ?, ?)",
+            (workspace.workspace_id, "Python工程师", "2026-09-29T00:00:00Z"),
+        )
     return database, workspace, profiles
 
 
@@ -172,10 +178,12 @@ def test_confirmed_resume_can_search_without_manual_keywords_then_clear(
     )
     assert "数据工程师" in manual.keywords[0]
     profiles.clear_current(workspace_id=workspace.workspace_id)
-    with pytest.raises(SearchPreflightError, match="enter a job keyword"):
-        service.preflight(
-            workspace_id=workspace.workspace_id, intent="", source_ids=["liepin"]
-        )
+    after_clear = service.preflight(
+        workspace_id=workspace.workspace_id, intent="", source_ids=["liepin"]
+    )
+    assert after_clear.resume_version_id is None
+    assert after_clear.keywords == ("Python工程师",)
+
     assert service.preflight(
         workspace_id=workspace.workspace_id, intent="数据工程师", source_ids=["liepin"]
     ).keywords == ("数据工程师",)
@@ -270,7 +278,8 @@ def test_no_resume_keywords_use_only_explicit_intent() -> None:
         content={"skills": ["Python、RAG、SQL"], "experience": ["FastAPI 项目"]},
     )
     assert build_search_keywords(intent="AI 工程师", resume=resume) == ("AI 工程师",)
-    assert build_search_keywords(intent="", resume=resume) == ("Python",)
+    with pytest.raises(SearchPreflightError, match="目标岗位方向"):
+        build_search_keywords(intent="", resume=resume)
 
 
 def test_source_search_api_applies_backend_gates_before_adapter(tmp_path) -> None:
@@ -1030,3 +1039,285 @@ def test_refilter_after_append_keeps_current_salary_and_frozen_score_versions(tm
     assert view["rule_version_id"] == first["rule_version_id"]
     assert view["resume_version_id"] == first["resume_version_id"]
     assert last["total"] == 3
+
+
+def test_intent_conditions_are_local_and_unknowns_require_review():
+    from jobfindsme.search.intent import parse_intent
+
+    result = parse_intent("广州深圳 Agent 岗，20K以上，不要外包")
+    assert result.query == "Agent"
+    assert result.filters.cities == ("广州", "深圳")
+    assert result.filters.salary_min_k == 20
+    assert result.filters.salary_mode == "contained"
+    assert result.filters.exclusions == ("外包",)
+    assert not result.unrecognized
+    assert result.payload()["remote_conditions"] == {"query": "Agent", "city": "广州"}
+    assert parse_intent("广州 Agent工程师，双休").unrecognized
+    assert parse_intent("Java 20-30K").unrecognized
+
+
+def test_role_suggestions_do_not_follow_skill_order():
+    from jobfindsme.search.intent import suggested_roles
+
+    assert suggested_roles({"skills": ["Python", "Agent", "RAG"]}) == suggested_roles(
+        {"skills": ["RAG", "Python", "Agent"]}
+    )
+    with pytest.raises(SearchPreflightError, match="目标岗位方向"):
+        build_search_keywords(
+            intent="",
+            resume=SimpleNamespace(
+                version_id="v", content={"skills": ["Python", "Agent"]}
+            ),
+        )
+
+
+def test_no_model_no_resume_search_ranking_changes_with_query_and_late_results(
+    tmp_path,
+):
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    profiles.clear_current(workspace_id=workspace.workspace_id)
+    app = create_app(token="test-secret", database_path=database.path)
+    client = TestClient(app)
+    headers = {"Authorization": "Bearer test-secret"}
+
+    def record(identifier, title):
+        return {
+            "external_id": identifier,
+            "source_name": "猎聘",
+            "source_url": "https://www.liepin.com/zhaopin/",
+            "payload": {
+                "title": title,
+                "company": "样例公司",
+                "description": title + " 岗位开发及团队协作。",
+                "url": f"https://www.liepin.com/job/{identifier}.shtml",
+            },
+        }
+
+    def search(query, records, run=None):
+        response = client.post(
+            "/v1/source-searches",
+            headers=headers,
+            json={
+                "workspace_id": workspace.workspace_id,
+                "intent": query,
+                "source_ids": ["liepin"],
+                "browser_pages": {
+                    "liepin": [{"records": records, "next_cursor": None}]
+                },
+                **({"existing_run_id": run} if run else {}),
+            },
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["result_page"]
+
+    records = [
+        record("a", "Java工程师"),
+        record("b", "Agent工程师"),
+        record("c", "JavaScript前端工程师"),
+    ]
+    agent = search("Agent工程师", records)
+    java = search("Java工程师", records)
+    assert agent["resume_version_id"] is None
+    assert agent["items"][0]["job"]["title"] == "Agent工程师"
+    assert java["items"][0]["job"]["title"] == "Java工程师"
+    assert agent["items"][0]["resume_match"] is None
+    assert (
+        "query_relevance" in agent["items"][0]
+        and "information_coverage" in agent["items"][0]
+    )
+    initial = search("Agent工程师", [record("d", "Java工程师")])
+    appended = search("Agent工程师", [record("e", "智能体工程师")], initial["run_id"])
+    assert appended["items"][0]["job"]["title"] == "Java工程师"
+    finalized = client.post(
+        "/v1/search-runs/" + initial["run_id"] + "/finalize",
+        headers=headers,
+        json={"workspace_id": workspace.workspace_id},
+    ).json()
+    assert finalized["items"][0]["job"]["title"] == "智能体工程师"
+    assert finalized["items"][0]["query_relevance"]["score"] == 100
+
+
+def test_confirmed_target_survives_skill_order_without_model(tmp_path):
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    service = DesktopSearchService(
+        profiles=profiles, sources=DesktopSourceService(database)
+    )
+    first = service.preflight(
+        workspace_id=workspace.workspace_id, intent="", source_ids=["liepin"]
+    )
+    assert first.keywords == ("Python工程师",)
+    current = profiles.current_version(workspace_id=workspace.workspace_id)
+    original = profiles.current_version
+    profiles.current_version = lambda **kwargs: current.model_copy(
+        update={
+            "content": {
+                **current.content,
+                "skills": list(reversed(current.content["skills"])),
+            }
+        },
+    )
+    assert (
+        service.preflight(
+            workspace_id=workspace.workspace_id, intent="", source_ids=["liepin"]
+        ).keywords
+        == first.keywords
+    )
+    profiles.current_version = original
+
+
+def test_all_failed_sources_restore_matching_local_jobs_without_model(tmp_path):
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    profiles.clear_current(workspace_id=workspace.workspace_id)
+
+    def unavailable(*args):
+        raise RuntimeError("source unavailable")
+
+    client = TestClient(
+        create_app(
+            token="fixture",
+            database_path=database.path,
+            source_adapter_factory_override=unavailable,
+        )
+    )
+    headers = {"Authorization": "Bearer fixture"}
+    payload = {
+        "workspace_id": workspace.workspace_id,
+        "intent": "Agent工程师",
+        "source_ids": ["liepin"],
+    }
+    record = {
+        "source_name": "猎聘",
+        "external_id": "retained",
+        "source_url": "https://www.liepin.com/zhaopin/",
+        "payload": {
+            "title": "Agent工程师",
+            "company": "样例",
+            "description": "开发智能体应用。",
+            "url": "https://www.liepin.com/job/retained.shtml",
+        },
+    }
+    success = client.post(
+        "/v1/source-searches",
+        headers=headers,
+        json={
+            **payload,
+            "browser_pages": {"liepin": [{"records": [record], "next_cursor": None}]},
+        },
+    )
+    assert success.status_code == 200, success.text
+    failed = client.post("/v1/source-searches", headers=headers, json=payload)
+    assert failed.status_code == 200, failed.text
+    data = failed.json()
+    assert data["cache_fallback_used"]
+    assert data["result_page"]["total"] == 1
+    assert data["source_runs"][0]["status"] == "failed"
+    assert data["result_page"]["items"][0]["job"]["source"]["fetched_at"]
+
+
+def test_query_lexical_boundaries_do_not_confuse_java_and_javascript():
+    from jobfindsme.search.intent import query_relevance
+
+    job = SimpleNamespace(title="JavaScript前端工程师", description="开发前端界面")
+    assert query_relevance(job, "Java工程师")["score"] == 0
+    assert (
+        query_relevance(
+            SimpleNamespace(title="Java开发工程师", description=""), "Java工程师"
+        )["score"]
+        == 100
+    )
+
+
+@pytest.mark.parametrize("configured", [False, True])
+def test_search_conditions_and_local_resume_matching_never_call_model(
+    tmp_path, configured
+):
+    from jobfindsme.models import ModelConnectionRepository, ModelGateway, ModelProtocol
+
+    database, workspace, _ = _confirmed_resume(tmp_path)
+    calls = []
+
+    class InvalidKeyTransport:
+        def post(self, **kwargs):
+            calls.append(kwargs)
+            raise AssertionError("basic search must not call even an invalid model")
+
+    if configured:
+        connection = ModelConnectionRepository(database).save(
+            provider="Invalid fixture",
+            protocol=ModelProtocol.OPENAI_COMPATIBLE,
+            endpoint="https://model.example/v1",
+            model_id="offline",
+            credential_ref="fixture-only-unavailable-key",
+        )
+        with database.connect() as db:
+            db.execute(
+                "UPDATE model_connections SET status='verified' WHERE connection_id=?",
+                (connection.connection_id,),
+            )
+    client = TestClient(
+        create_app(
+            token="fixture",
+            database_path=database.path,
+            model_gateway_override=ModelGateway(InvalidKeyTransport()),
+        )
+    )
+    records = []
+    for i in range(24):
+        title = "Agent工程师" if i % 2 else "销售工程师"
+        if i == 3:
+            title = "Agent工程师（外包）"
+        records.append(
+            {
+                "source_name": "猎聘",
+                "external_id": f"quality-{i}",
+                "source_url": "https://www.liepin.com/zhaopin/",
+                "payload": {
+                    "title": title,
+                    "company": f"样例{i}",
+                    "location": "广州",
+                    "salary": "25-30K",
+                    "description": title + "使用 Python 开发项目。",
+                    "url": f"https://www.liepin.com/job/quality-{i}.shtml",
+                },
+            }
+        )
+    response = client.post(
+        "/v1/source-searches",
+        headers={"Authorization": "Bearer fixture"},
+        json={
+            "workspace_id": workspace.workspace_id,
+            "intent": "广州 Agent岗，20K以上，不要外包",
+            "source_ids": ["liepin"],
+            "browser_pages": {"liepin": [{"records": records, "next_cursor": None}]},
+        },
+    )
+    assert response.status_code == 200, response.text
+    page = response.json()["result_page"]
+    assert page["resume_version_id"]
+    assert all(item["query_relevance"]["score"] == 100 for item in page["items"][:10])
+    assert all("外包" not in item["job"]["title"] for item in page["items"])
+    assert all(item["job"]["salary_min_k"] >= 20 for item in page["items"])
+    assert all(item["job"]["locations"] == ["广州"] for item in page["items"])
+    assert all(item["resume_match"] is not None for item in page["items"])
+    assert not calls
+
+
+def test_explicit_intent_conditions_override_saved_preferences():
+    from jobfindsme.search.intent import parse_intent
+
+    preferences = {
+        "target_role": "Java工程师",
+        "cities": ["深圳"],
+        "salary_min_k": 10,
+        "salary_max_k": 40,
+    }
+    explicit = parse_intent("北京 Agent岗，20K以上", preferences=preferences)
+    assert explicit.filters.cities == ("北京",)
+    assert explicit.filters.salary_min_k == 20
+    assert explicit.filters.salary_max_k is None
+    inherited = parse_intent("Agent工程师", preferences=preferences)
+    assert inherited.filters.cities == ("深圳",)
+    assert inherited.filters.salary_min_k == 10
+    unlimited = parse_intent("城市不限 Agent工程师 薪资不限", preferences=preferences)
+    assert unlimited.query == "Agent工程师"
+    assert not unlimited.filters.cities and unlimited.filters.salary_min_k is None

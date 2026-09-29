@@ -471,3 +471,90 @@ def test_new_education_employer_and_chinese_adjacent_numbers_need_evidence(tmp_p
             patch_id=session.patches[0].patch_id,
             decision="accepted",
         )
+
+
+def test_agent_proposal_requires_acceptance_and_explicit_save(tmp_path):
+    _, workspace, current, connection, editor, service, transport = _context(
+        tmp_path, []
+    )
+    proposal = {
+        "patches": [
+            {
+                "section": "projects",
+                "before": ["实现本地求职工具"],
+                "after": ["使用 Python 实现本地求职工具"],
+                "rationale": "突出已确认技术",
+                "evidence_ids": ["resume:projects:1", "resume:skills:1"],
+                "needs_user_input": [],
+            }
+        ]
+    }
+    session = service.propose_from_agent(
+        workspace_id=workspace.workspace_id,
+        connection=connection,
+        base_version_id=current.version_id,
+        structured=proposal,
+        user_prompt="只改项目",
+    )
+    assert not transport.prompts
+    assert session.patches[0].status == "proposed"
+    assert editor.get_version(
+        workspace_id=workspace.workspace_id, version_id=current.version_id
+    ).is_current
+    with pytest.raises(PromptResumeError, match="accept at least"):
+        service.save_as_version(session_id=session.session_id)
+    service.decide_patch(
+        session_id=session.session_id,
+        patch_id=session.patches[0].patch_id,
+        decision="accepted",
+    )
+    assert editor.get_version(
+        workspace_id=workspace.workspace_id, version_id=current.version_id
+    ).is_current
+    saved = service.save_as_version(session_id=session.session_id)
+    assert saved.version_id != current.version_id
+    assert saved.content["projects"] == ("使用 Python 实现本地求职工具",)
+    with pytest.raises(PromptResumeError, match="version conflict"):
+        service.propose_from_agent(
+            workspace_id=workspace.workspace_id,
+            connection=connection,
+            base_version_id=current.version_id,
+            structured=proposal,
+            user_prompt="过期请求",
+        )
+
+
+def test_agent_proposal_cannot_turn_jd_into_candidate_facts(tmp_path):
+    _, workspace, current, connection, _, service, transport = _context(tmp_path, [])
+    patch = {
+        "section": "projects",
+        "before": ["实现本地求职工具"],
+        "after": ["使用 Java 主导上线本地求职工具，性能提升 40%"],
+        "rationale": "满足 JD",
+        "evidence_ids": ["jd:1"],
+        "needs_user_input": [],
+    }
+    with pytest.raises(PromptResumeError, match="unknown evidence"):
+        service.propose_from_agent(
+            workspace_id=workspace.workspace_id,
+            connection=connection,
+            base_version_id=current.version_id,
+            structured={"patches": [patch]},
+            user_prompt="满足 JD",
+        )
+    patch["evidence_ids"] = ["resume:projects:1"]
+    session = service.propose_from_agent(
+        workspace_id=workspace.workspace_id,
+        connection=connection,
+        base_version_id=current.version_id,
+        structured={"patches": [patch]},
+        user_prompt="修改",
+    )
+    assert session.patches[0].needs_user_input
+    with pytest.raises(PromptResumeError, match="unsupported claims"):
+        service.decide_patch(
+            session_id=session.session_id,
+            patch_id=session.patches[0].patch_id,
+            decision="accepted",
+        )
+    assert not transport.prompts

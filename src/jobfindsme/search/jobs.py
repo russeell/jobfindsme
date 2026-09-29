@@ -35,6 +35,7 @@ LEGACY_WEIGHTS = {
 @dataclass(frozen=True)
 class DesktopJobFilters:
     cities: tuple[str, ...] = ()
+    exclusions: tuple[str, ...] = ()
     salary_min_k: int | None = None
     salary_max_k: int | None = None
     salary_mode: SalaryMode = "overlap"
@@ -116,7 +117,9 @@ class DesktopJobService:
         ranked: list[tuple[float, str]] = []
         for job in eligible:
             if set(normalized_weights) == set(DEFAULT_WEIGHTS):
-                payload = evaluate(job, resume_version, normalized_weights)
+                payload = self._evaluate(
+                    job, resume_version, normalized_weights, intent
+                )
             else:
                 score, components, coverage = self._score(
                     job,
@@ -129,10 +132,19 @@ class DesktopJobService:
                     "components": components,
                     "coverage": coverage,
                 }
+            payload = self._signals(payload, job, resume_version, intent)
             score_payload[job.job_id] = payload
             score = payload["score"]
             ranked.append((score, job.job_id))
-        ranked.sort(key=lambda item: (-item[0], item[1]))
+        ranked.sort(
+            key=lambda item: (
+                -score_payload[item[1]].get("query_relevance", {}).get("score", 0),
+                -item[0],
+                -score_payload[item[1]]["information_coverage"]["ratio"]
+                if resume_version
+                else 0,
+            )
+        )
         ordered_ids = [job_id for _score, job_id in ranked]
         run_id = f"search_{uuid4().hex}"
         now = datetime.now(UTC).isoformat()
@@ -214,7 +226,9 @@ class DesktopJobService:
                 if not self._matches(job, filters=filters, read_ids=read_ids):
                     continue
                 if set(weights) == set(DEFAULT_WEIGHTS):
-                    scores[job_id] = evaluate(job, resume_version, weights)
+                    scores[job_id] = self._evaluate(
+                        job, resume_version, weights, row["intent"]
+                    )
                 else:
                     score, components, coverage = self._score(
                         job,
@@ -227,6 +241,9 @@ class DesktopJobService:
                         "components": components,
                         "coverage": coverage,
                     }
+                scores[job_id] = self._signals(
+                    scores[job_id], job, resume_version, row["intent"]
+                )
                 ordered.append(job_id)
             connection.execute(
                 "UPDATE desktop_search_runs SET ordered_job_ids_json=?, "
@@ -488,6 +505,11 @@ class DesktopJobService:
             return False
         if filters.read == "unread" and job.job_id in read_ids:
             return False
+        if any(
+            term.casefold() in f"{job.title} {job.company} {job.description}".casefold()
+            for term in filters.exclusions
+        ):
+            return False
         if filters.cities:
             known = bool(job.locations)
             matched = any(
@@ -603,6 +625,48 @@ class DesktopJobService:
                 ),
             )
         return rule_id
+
+    @staticmethod
+    def _evaluate(job, resume_version, weights, intent):
+        return DesktopJobService._signals(
+            evaluate(job, resume_version, weights), job, resume_version, intent
+        )
+
+    @staticmethod
+    def _signals(result, job, resume_version, intent):
+        from jobfindsme.search.intent import information_coverage, query_relevance
+
+        result["query_relevance"] = query_relevance(job, intent)
+        result["resume_match"] = result["score"] if resume_version else None
+        result["information_coverage"] = information_coverage(job)
+        return result
+
+    def finalize_snapshot(self, *, workspace_id, run_id):
+        # Incremental append order remains stable until this explicit boundary.
+        with self.database.connect() as db:
+            row = db.execute(
+                "SELECT scores_json,ordered_job_ids_json FROM "
+                "desktop_search_runs WHERE workspace_id=? AND run_id=?",
+                (workspace_id, run_id),
+            ).fetchone()
+            if row is None:
+                raise LookupError(run_id)
+            scores = json.loads(row["scores_json"])
+            ids = json.loads(row["ordered_job_ids_json"])
+            ids.sort(
+                key=lambda key: (
+                    -scores.get(key, {}).get("query_relevance", {}).get("score", 0),
+                    -scores.get(key, {}).get("score", 0),
+                    -scores.get(key, {}).get("information_coverage", {}).get("ratio", 0)
+                    if scores.get(key, {}).get("resume_match") is not None
+                    else 0,
+                )
+            )
+            db.execute(
+                "UPDATE desktop_search_runs SET ordered_job_ids_json=? WHERE "
+                "workspace_id=? AND run_id=?",
+                (json.dumps(ids), workspace_id, run_id),
+            )
 
     @staticmethod
     def _score(job, *, intent: str, resume_version, weights: dict[str, int]):

@@ -144,6 +144,7 @@ def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) 
         "cities": ["上海", "北京"],
         "salary_min_k": 25,
         "salary_max_k": 40,
+        "suggested_roles": [],
     }
     assert (
         client.put(
@@ -181,7 +182,7 @@ def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) 
     )
     assert generated.status_code == 200
     assert generated.json()["resume_version_id"] == version_id
-    assert "Python" in " ".join(generated.json()["keywords"])
+    assert generated.json()["keywords"] == ["AI 工程师"]
     cleared = client.post("/v1/resumes/clear-current", headers=headers, json=params)
     assert cleared.status_code == 200
     assert cleared.json()["search_profile_state"] == "no_resume"
@@ -222,7 +223,9 @@ def test_search_preferences_persist_and_clearing_resume_keeps_history(tmp_path) 
         headers=headers,
         json={"workspace_id": workspace_id, "intent": "", "source_ids": ["liepin"]},
     )
-    assert missing.status_code == 409
+    assert missing.status_code == 200
+    assert missing.json()["keywords"] == ["AI 工程师"]
+    assert missing.json()["resume_version_id"] is None
 
 
 def test_resume_editor_api_saves_and_restores_versions(tmp_path) -> None:

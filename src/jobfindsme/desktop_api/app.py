@@ -8,6 +8,7 @@ import re
 import sqlite3
 import ssl
 import threading
+import time
 import urllib.error
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
@@ -95,6 +96,7 @@ class BootstrapResponse(StrictResponse):
 
 
 class DesktopSearchFilters(StrictResponse):
+    exclusions: list[str] = Field(default_factory=list, max_length=20)
     cities: list[str] = Field(default_factory=list, max_length=20)
     salary_min_k: int | None = Field(default=None, ge=0, le=1000)
     salary_max_k: int | None = Field(default=None, ge=0, le=1000)
@@ -149,8 +151,9 @@ class BrowserSourcePage(StrictResponse):
 
 
 class SearchPreflightRequest(StrictResponse):
+    allow_cache_fallback: bool = True
     workspace_id: str
-    intent: str = Field(default="", max_length=80)
+    intent: str = Field(default="", max_length=500)
     source_ids: list[str] = Field(default_factory=lambda: ["liepin"], max_length=20)
     attempt_unverified_login: bool = False
     city: str = Field(default="", max_length=30)
@@ -193,6 +196,7 @@ class SourceRuntimeFailureRequest(StrictResponse):
 
 
 class SearchPreflightResponse(StrictResponse):
+    search_intent: dict | None = None
     workspace_id: str
     resume_version_id: str | None
     keywords: list[str]
@@ -253,6 +257,7 @@ class SourceSearchJobResponse(StrictResponse):
 
 
 class SourceSearchResponse(SearchPreflightResponse):
+    cache_fallback_used: bool = False
     jobs: list[SourceSearchJobResponse]
     source_runs: list[SourceSearchRunResponse]
     result_page: dict
@@ -801,6 +806,7 @@ def create_app(
                 time_budget_seconds=request.time_budget_seconds,
                 resume_version_id=request.resume_version_id,
                 attempt_unverified_login=request.attempt_unverified_login,
+                filters=DesktopJobFilters(**request.filters.model_dump()),
             )
         except SearchPreflightError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
@@ -821,12 +827,15 @@ def create_app(
                 time_budget_seconds=request.time_budget_seconds,
                 resume_version_id=request.resume_version_id,
                 attempt_unverified_login=request.attempt_unverified_login,
+                filters=DesktopJobFilters(**request.filters.model_dump()),
             )
         except SearchPreflightError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
         jobs: list[SourceSearchJobResponse] = []
         snapshot_job_ids: list[str] = []
         runs: list[SourceSearchRunResponse] = []
+        request.filters = DesktopSearchFilters(**preflight.search_intent["filters"])
+        request.city = next(iter(request.filters.cities), request.city)
         for source_id in preflight.allowed_source_ids:
             browser_error = request.browser_errors.get(source_id)
             if browser_error and not request.browser_pages.get(source_id):
@@ -941,8 +950,30 @@ def create_app(
                     failure=failure or collection.failure,
                     notes="平台要求重新登录或验证；已保留本次读取的岗位。",
                 )
+        cache_fallback_used = False
+        if (
+            request.allow_cache_fallback
+            and not snapshot_job_ids
+            and (runs or preflight.blocked_sources)
+            and not any(run.status != "failed" for run in runs)
+        ):
+            from jobfindsme.search.intent import query_relevance
+
+            allowed_names = {
+                desktop_sources.get(source_id).name
+                for source_id in request.source_ids
+                if source_id in {"boss", "liepin", "zhilian", "wuyou"}
+            }
+            snapshot_job_ids = [
+                job.job_id
+                for job in core.jobs.list(request.workspace_id)
+                if job.source.source_name in allowed_names
+                and query_relevance(job, preflight.keywords[0])["score"] > 0
+            ]
+            cache_fallback_used = bool(snapshot_job_ids)
         try:
             filters = DesktopJobFilters(
+                exclusions=tuple(request.filters.exclusions),
                 cities=tuple(request.filters.cities),
                 salary_min_k=request.filters.salary_min_k,
                 salary_max_k=request.filters.salary_max_k,
@@ -971,13 +1002,13 @@ def create_app(
                     run_id=request.existing_run_id,
                     job_ids=snapshot_job_ids,
                     resume_version=current_resume,
-                    expected_intent=request.intent.strip() or preflight.keywords[0],
+                    expected_intent=preflight.keywords[0],
                     expected_filters=filters,
                 )
             else:
                 run_id = desktop_jobs.create_snapshot(
                     workspace_id=request.workspace_id,
-                    intent=request.intent.strip() or preflight.keywords[0],
+                    intent=preflight.keywords[0],
                     job_ids=snapshot_job_ids,
                     resume_version=current_resume,
                     filters=filters,
@@ -998,10 +1029,27 @@ def create_app(
             ) from error
         return SourceSearchResponse(
             **_preflight_payload(preflight).model_dump(),
+            cache_fallback_used=cache_fallback_used,
             jobs=jobs,
             source_runs=runs,
             result_page=result_page,
         )
+
+    @app.post(
+        "/v1/search-runs/{run_id}/finalize", dependencies=[Depends(require_token)]
+    )
+    def finalize_search(run_id: str, request: WorkspaceRequest) -> dict:
+        try:
+            desktop_jobs.finalize_snapshot(
+                workspace_id=request.workspace_id, run_id=run_id
+            )
+            return desktop_jobs.page(
+                workspace_id=request.workspace_id, run_id=run_id, page=1, page_size=20
+            )
+        except LookupError as error:
+            raise HTTPException(
+                status_code=404, detail="search run not found"
+            ) from error
 
     @app.get("/v1/matching-rules", dependencies=[Depends(require_token)])
     def matching_rules(workspace_id: str) -> dict:
@@ -1306,7 +1354,13 @@ def create_app(
                 "SELECT * FROM desktop_search_preferences WHERE workspace_id=?",
                 (workspace_id,),
             ).fetchone()
+        from jobfindsme.search.intent import suggested_roles
+
+        current = core.profiles.current_version(workspace_id=workspace_id)
         return {
+            "suggested_roles": list(suggested_roles(current.content))
+            if current
+            else [],
             "workspace_id": workspace_id,
             "target_role": row["target_role"] if row else "",
             "cities": json.loads(row["cities_json"]) if row else [],
@@ -1911,6 +1965,56 @@ def create_app(
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
+    @app.get("/v1/research-agent/providers", dependencies=[Depends(require_token)])
+    def research_provider_status() -> dict:
+        from jobfindsme.research.web_providers import provider_status
+
+        return provider_status()
+
+    @app.get("/v1/research-agent/resume", dependencies=[Depends(require_token)])
+    def agent_resume(workspace_id: str) -> dict:
+        from jobfindsme.privacy import create_analysis_copy
+        from jobfindsme.resume_editor.prompt import _evidence_map
+
+        current = core.profiles.current_version(workspace_id=workspace_id)
+        if current is None:
+            raise HTTPException(status_code=409, detail="no confirmed resume")
+        content = {
+            key: [
+                create_analysis_copy(
+                    source_version_id=current.version_id, text=value
+                ).text
+                for value in values
+            ]
+            for key, values in current.content.items()
+            if key != "basic_information"
+        }
+        return {
+            "source_version_id": current.version_id,
+            "content": content,
+            "evidence_ids": list(
+                _evidence_map(current, [], include_basic_information=False)
+            ),
+            "text": json.dumps(content, ensure_ascii=False),
+            "limitations": "脱敏且已确认简历；只能提出修改，不会自动保存。",
+        }
+
+    @app.post(
+        "/v1/research-agent/resume-proposal", dependencies=[Depends(require_token)]
+    )
+    def agent_resume_proposal(request: dict) -> dict:
+        try:
+            session = prompt_editor.propose_from_agent(
+                workspace_id=str(request["workspace_id"]),
+                connection=model_connections.get(str(request["connection_id"])),
+                base_version_id=str(request["base_version_id"]),
+                structured={"patches": request["patches"]},
+                user_prompt=str(request["question"]),
+            )
+            return _prompt_session_payload(session).model_dump()
+        except (KeyError, LookupError, ValueError, PromptResumeError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
     @app.get("/v1/research-agent/evidence", dependencies=[Depends(require_token)])
     def find_agent_evidence(workspace_id: str, company: str) -> list[dict]:
         try:
@@ -1980,25 +2084,44 @@ def create_app(
             research_agent_store.list_conversations(str(request["workspace_id"]))
             timeout_ms = request.get("timeout_ms")
             if timeout_ms is None:
-                return read_original_page(
-                    str(request["url"]),
-                    str(request["company"]),
-                    str(request["site"]),
-                    question=str(request.get("question") or "")[:700],
-                )
+                timeout_ms = 4000
             if (
                 not isinstance(timeout_ms, (int, float))
                 or isinstance(timeout_ms, bool)
                 or not 100 <= timeout_ms <= 4000
             ):
                 raise ValueError("invalid research request timeout")
-            return read_original_page(
+            started_read = time.monotonic()
+            row = read_original_page(
                 str(request["url"]),
                 str(request["company"]),
                 str(request["site"]),
                 question=str(request.get("question") or "")[:700],
                 timeout=timeout_ms / 1000,
             )
+            # Never use a Reader to circumvent restriction/captcha/TLS/redirect safety.
+            if (
+                row.get("status") == "read_failed"
+                and row.get("limit") != "TLS certificate failure"
+                and request.get("site") == "web"
+                and not request.get("company")
+            ):
+                from jobfindsme.research.agent_sources import _research_opener
+                from jobfindsme.research.web_providers import jina_read
+
+                started_reader = time.monotonic()
+                # HTTP and Reader share the caller's deadline (no fresh timeout).
+                remaining = timeout_ms / 1000 - (started_reader - started_read)
+                if remaining > 0.1:
+                    row = (
+                        jina_read(
+                            str(request["url"]),
+                            opener=_research_opener(search=False),
+                            timeout=remaining,
+                        )
+                        or row
+                    )
+            return row
         except (KeyError, ValueError, LookupError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -2375,6 +2498,7 @@ def _preflight_payload(preflight) -> SearchPreflightResponse:
         blocked_sources=preflight.blocked_sources,
         max_pages=preflight.max_pages,
         time_budget_seconds=preflight.time_budget_seconds,
+        search_intent=preflight.search_intent,
     )
 
 

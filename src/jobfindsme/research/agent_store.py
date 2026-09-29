@@ -471,6 +471,7 @@ class ResearchAgentStore:
     def save_report(self, workspace_id: str, item: dict) -> str | None:
         """Commit a checked Agent result only when it adds original evidence."""
         company = str(item.get("company") or "").strip()
+        topic = item.get("subject_kind") == "topic"
         question = str(item.get("question") or "")
         evidence = item.get("evidence") or []
         claims = item.get("claims") or []
@@ -548,7 +549,9 @@ class ResearchAgentStore:
             ):
                 raise ValueError("claim references unknown evidence")
             checked_claims.append(
-                _claim_basis(claim, by_id[claim["evidence_ids"][0]], company)
+                _claim_basis(
+                    claim, by_id[claim["evidence_ids"][0]], "" if topic else company
+                )
             )
         if not checked_claims:
             return None
@@ -627,7 +630,9 @@ class ResearchAgentStore:
             ):
                 return None
             context = {
-                "scope": "job" if job_id else "company",
+                "scope": "topic" if topic else "job" if job_id else "company",
+                "subject_kind": "topic" if topic else "company",
+                "subject_label": company,
                 "company": company,
                 "title": str(
                     item.get("title") or (job_snapshot or {}).get("title") or ""

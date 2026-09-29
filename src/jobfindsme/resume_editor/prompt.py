@@ -292,6 +292,74 @@ class PromptResumeEditor:
             )
         return self.get_session(session_id)
 
+    def propose_from_agent(
+        self, *, workspace_id, connection, base_version_id, structured, user_prompt
+    ):
+        """Accept a Pi proposal, never apply it. Reuse editor evidence/version gates."""
+        base = self.resume_editor.get_version(
+            workspace_id=workspace_id, version_id=base_version_id
+        )
+        if not base.is_current:
+            raise PromptResumeError("resume version conflict")
+        if (
+            not isinstance(structured, dict)
+            or not isinstance(structured.get("patches"), list)
+            or not 1 <= len(structured["patches"]) <= 5
+        ):
+            raise PromptResumeError("invalid proposal size")
+        proposed = _validate_response(
+            structured, base, _evidence_map(base, [], include_basic_information=False)
+        )
+        if any(item["section"] == "basic_information" for item in proposed):
+            raise PromptResumeError("identity fields require manual editing")
+        session = self.create_session(
+            workspace_id=workspace_id,
+            base_version_id=base_version_id,
+            connection=connection,
+        )
+        now = datetime.now(UTC).isoformat()
+        with self.database.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = db.execute(
+                "SELECT is_current FROM resume_versions WHERE workspace_id=? AND "
+                "version_id=?",
+                (workspace_id, base_version_id),
+            ).fetchone()
+            if not current or not current["is_current"]:
+                raise PromptResumeError("resume version conflict")
+            db.execute(
+                "INSERT INTO resume_edit_messages "
+                "(message_id,session_id,turn_number,user_prompt,optional_jd,"
+                "project_facts_json,redacted_fields_json,created_at) "
+                "VALUES (?,?,1,?,'','[]','[]',?)",
+                (
+                    f"resume_message_{uuid4().hex}",
+                    session.session_id,
+                    user_prompt[:4000],
+                    now,
+                ),
+            )
+            for item in proposed:
+                db.execute(
+                    "INSERT INTO resume_patches "
+                    "(patch_id,session_id,turn_number,section_name,before_json,"
+                    "after_json,rationale,evidence_ids_json,"
+                    "needs_user_input_json,status,created_at) "
+                    "VALUES (?,?,1,?,?,?,?,?,?,'proposed',?)",
+                    (
+                        f"resume_patch_{uuid4().hex}",
+                        session.session_id,
+                        item["section"],
+                        json.dumps(item["before"], ensure_ascii=False),
+                        json.dumps(item["after"], ensure_ascii=False),
+                        item["rationale"],
+                        json.dumps(item["evidence_ids"]),
+                        json.dumps(item["needs_user_input"], ensure_ascii=False),
+                        now,
+                    ),
+                )
+        return self.get_session(session.session_id)
+
     def decide_patch(
         self, *, session_id: str, patch_id: str, decision: str
     ) -> PromptSession:

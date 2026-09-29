@@ -351,7 +351,9 @@ def _fallback_discovery(
     if remaining <= 0:
         raise TimeoutError("research discovery time budget exhausted")
     domain, label, source_type = SITES[site]
-    query = f'"{company}" {question}' + (f" site:{domain}" if domain else "")
+    query = (f'"{company}" {question}' if company else question) + (
+        f" site:{domain}" if domain else ""
+    )
     endpoint = "https://html.duckduckgo.com/html/?" + urllib.parse.urlencode(
         {"q": query}
     )
@@ -380,7 +382,7 @@ def _fallback_discovery(
         if (
             target in seen
             or not _company_relevant(row, company)
-            or not _topic_relevant(row, question)
+            or (company and not _topic_relevant(row, question))
         ):
             continue
         seen.add(target)
@@ -411,12 +413,21 @@ def discover_sources(
 ) -> list[dict]:
     if (
         site not in SITES
-        or not company.strip()
         or len(company) > 100
         or not question.strip()
         or len(question) > 700
     ):
         raise ValueError("invalid research discovery")
+    if not company and site == "web":
+        from .web_providers import exa_search
+
+        optional = exa_search(
+            question,
+            opener=_research_opener(search=False),
+            timeout=max(0.1, min(timeout, 10)),
+        )
+        if optional is not None:
+            return optional
     deadline = time.monotonic() + max(0.1, min(timeout, 10))
     if site in {"hkex", "web"} and re.search(
         r"经营|业绩|财报|年报|披露|收入|利润|results|report|revenue", question, re.I
@@ -500,8 +511,10 @@ def discover_sources(
                 break
         return hits
 
-    hits = rss_hits(f'"{company.strip()}" {question.strip()}')
-    if hits and not any(_company_relevant(row, company) for row in hits):
+    hits = rss_hits(
+        f'"{company.strip()}" {question.strip()}' if company else question.strip()
+    )
+    if company and hits and not any(_company_relevant(row, company) for row in hits):
         # A noisy broad query gets one shorter request to the same provider.
         # Any HTTP or verification error propagates; there is no bypass.
         hits = rss_hits(f'"{company.strip()}"')
@@ -509,13 +522,13 @@ def discover_sources(
             row
             for row in hits
             if _company_relevant(row, company)
-            and _topic_relevant(row, original_question or question)
+            and (not company or _topic_relevant(row, original_question or question))
         ]
     relevant = [
         row
         for row in hits
         if _company_relevant(row, company)
-        and _topic_relevant(row, original_question or question)
+        and (not company or _topic_relevant(row, original_question or question))
     ]
     if relevant:
         return relevant
@@ -533,8 +546,8 @@ def read_original_page(
 ) -> dict:
     """Only bounded same-host HTTPS HTML or text-layer PDF becomes evidence."""
     _source_url(url, site)
-    if not company.strip() or len(company) > 100:
-        raise ValueError("company is required")
+    if len(company) > 100:
+        raise ValueError("subject is too long")
     domain, label, source_type = SITES[site]
     if site == "web" and is_tencent_disclosure_url(url, company):
         label, source_type = "腾讯投资者关系", "official_disclosure"
@@ -594,6 +607,15 @@ def read_original_page(
             "site": site,
             "status": status,
             "limit": f"HTTP {error.code}",
+        }
+    except urllib.error.URLError as error:
+        return {
+            "url": url,
+            "site": site,
+            "status": "read_failed",
+            "limit": "TLS certificate failure"
+            if isinstance(error.reason, ssl.SSLError)
+            else "original page unavailable",
         }
     except (OSError, TimeoutError):
         return {
@@ -658,13 +680,15 @@ def read_original_page(
         parser.feed(body.decode(charset, errors="replace"))
         text = " ".join((parser.article_text or parser.text).split())
         title = parser.title[:300]
-        anchored = bool(parser.article_text) or _normalized(company) in _normalized(
-            title
+        anchored = (
+            not company
+            or bool(parser.article_text)
+            or _normalized(company) in _normalized(title)
         )
     if (
         len(text) < 50
         or not anchored
-        or (not pdf_hint and _normalized(company) not in _normalized(text))
+        or (company and not pdf_hint and _normalized(company) not in _normalized(text))
     ):
         return {
             "url": final_url,
@@ -688,10 +712,8 @@ def read_original_page(
         "excerpt": excerpt,
         "evidence_kind": "public_source",
         "verification_status": "independently_retrieved",
-        "relevance": "company",
-        "limitations": (
-            "原文已读取；主体仅按页面名称匹配，集团、子公司和团队范围仍需核对。"
-        )
+        "relevance": "company" if company else "web",
+        "limitations": ("原文已读取；主体与时间范围需核对。")
         + (" 页面未提供可核验发布日期。" if not published_at else ""),
         "context": {
             "source_type": source_type,
@@ -703,10 +725,13 @@ def read_original_page(
                 f"{final_url}\0{page_number}\0{passage_start}".encode()
             ).hexdigest()[:20],
             "source_id": hashlib.sha256(final_url.encode()).hexdigest()[:20],
-            "company_match": "name_in_document" if pdf_hint else "name_in_article",
+            "company_match": ("name_in_document" if pdf_hint else "name_in_article")
+            if company
+            else "not_requested",
             "entity_scope": "brand_or_legal_entity_unresolved",
             "link_status": "reachable",
-            "research_topic": "company",
+            "research_topic": "company" if company else "web",
+            "retrieval_method": "http",
             "role": None,
             "region": None,
             "original_title": title,

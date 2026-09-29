@@ -1592,3 +1592,50 @@ def test_industry_discovery_rejects_homepages_and_city_jobs():
         },
         "研究招聘行业",
     )
+
+
+def test_explicit_topic_report_keeps_subject_separate_from_company(
+    tmp_path, monkeypatch
+):
+    import hashlib
+
+    import jobfindsme.research.agent_store as store_module
+
+    store, workspace = setup_store(tmp_path)
+    monkeypatch.setattr(store_module, "validate_public_http_url", lambda *a, **kw: None)
+    quote = "检索层负责获取相关原文，生成层根据原文生成回答。"
+    row = evidence(url="https://docs.example.org/framework", text=quote)
+    row["company"] = ""
+    row["evidence_id"] = (
+        "ev_" + hashlib.sha256((row["url"] + "\0" + quote).encode()).hexdigest()[:24]
+    )
+    row["context"] = {"source_type": "public_web", "research_topic": "web"}
+    report_id = store.save_report(
+        workspace,
+        {
+            "company": "检索与生成机制比较",
+            "subject_kind": "topic",
+            "question": "比较检索与生成并保存报告",
+            "evidence": [row],
+            "claims": [
+                {
+                    "statement": quote,
+                    "quote": quote,
+                    "evidence_ids": [row["evidence_id"]],
+                    "category": "business",
+                }
+            ],
+            "limitations": ["仅为此文档范围"],
+        },
+    )
+    assert report_id
+    with store.database.connect() as db:
+        context = json.loads(
+            db.execute(
+                "SELECT job_context_json FROM research_reports WHERE report_id=?",
+                (report_id,),
+            ).fetchone()[0]
+        )
+    assert context["scope"] == "topic"
+    assert context["subject_kind"] == "topic"
+    assert context["subject_label"] == "检索与生成机制比较"
