@@ -2122,6 +2122,16 @@
         "README.md",
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D96",
+      "title": "v0.13.3双平台发行与安装包验收",
+      "status": "done",
+      "verification": "本地Python434/Node243/类型构建/Ruff；发布提交跨平台CI与Windows正式包审计及两次启动通过；macOS正式包审计、默认/窄窗及两次隔离原生启动通过。两ZIP与GitHub大小/哈希一致，已发布并附SHA256SUMS。D71及四平台真实续页、模型、严格性能对照仍未验收，不包含本地用户数据。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.13.3"
+      ]
     }
   ]
 }
