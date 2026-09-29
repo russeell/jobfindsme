@@ -576,8 +576,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @container(max-width:720px){.research-active-skill{flex-wrap:wrap}.research-active-skill span{flex-basis:70%}.research-examples{flex-wrap:wrap}}
 /* Composer: materials and skills on the left, model and send on the right. */
 .research-composer {border-radius:20px;padding:12px 14px;gap:8px;position:relative;}
-.research-active-skill {align-self:flex-start;background:var(--surface-hover);padding:4px 9px;font-weight:500;}
+.research-active-skill {align-self:center;flex-shrink:0;max-width:34%;min-height:30px;background:var(--surface-hover);padding:4px 9px;font-weight:500;white-space:nowrap;}
+.research-active-skill strong {overflow:hidden;text-overflow:ellipsis;}
 .research-active-skill button {margin-left:6px;}
+.research-composer-actions {justify-content:flex-start;}
 .research-send-actions {margin-left:auto;min-width:0;}
 .research-send-actions select {border:0;background:transparent;max-width:260px;min-width:0;font-size:12px;padding:5px;color:var(--text-muted);text-overflow:ellipsis;}
 .research-send-actions .primary-button {border-radius:50%;width:34px;height:34px;min-width:34px;padding:0;font-size:22px;}
