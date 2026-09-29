@@ -1,15 +1,17 @@
 /* Product palette: load after component styles so local additions cannot
-   accidentally replace the approved neutral workbench surfaces. */
+   accidentally replace the shared workbench palette. */
 :root {
   color-scheme: light;
   --surface: #fff;
-  --surface-soft: #fafaf9;
-  --surface-hover: #f1f1ef;
-  --surface-selected: #ececea;
-  --text: #252525;
-  --text-muted: #696969;
-  --line: #eaeae8;
-  --ink: #282828;
+  --surface-soft: #f7f9fc;
+  --surface-hover: #f0f5fc;
+  --surface-selected: #eaf2ff;
+  --text: #202735;
+  --text-muted: #626e80;
+  --line: #e5eaf1;
+  --ink: #202735;
+  --accent: #1767d9;
+  --accent-hover: #1257b8;
   --space-1: 6px;
   --space-2: 12px;
   --space-3: 18px;
@@ -18,7 +20,7 @@
   --radius-panel: 12px;
   color: var(--text);
   background: var(--surface);
-  accent-color: var(--ink);
+  accent-color: var(--accent);
 }
 
 .shell, .content, .browser-panel, .browser-toolbar,
@@ -30,12 +32,12 @@
   background: var(--surface-soft);
   border-color: var(--line);
 }
-.sidebar {background:#fbfbfa;}
+.sidebar {background:#f8fafc;}
 .filter-option, .status-option { background: var(--surface); color: var(--text); }
 .filter-option:hover, .status-option:hover, .filter-option.selected {
   background: var(--surface-hover);
 }
-.popover-trigger.chosen { background: var(--surface-selected); color: var(--text); }
+.popover-trigger.chosen { background: var(--surface-selected); color: var(--accent-hover); border-color:#d9e6f9; }
 .warning, .blocked, .banner, .browser-toolbar .browser-error {
   background: var(--surface-soft);
   border-color: var(--line);
@@ -45,9 +47,9 @@
 .evidence-card a { color: var(--text); text-decoration: underline; }
 .weight-meter span:nth-child(2) { background: #777; }
 .weight-meter span:nth-child(3) { background: #aaa; }
-input, select, textarea { color-scheme: light; accent-color: var(--ink); }
+input, select, textarea { color-scheme: light; accent-color: var(--accent); }
 
-/* Public statements retain source context and use the approved neutral palette. */
+/* Evidence keeps its source context on quiet reading surfaces. */
 .research-directions {border:1px solid #e5e5e5;border-radius:10px;padding:12px;display:flex;flex-wrap:wrap;gap:10px 18px;margin:16px 0;}
 .research-directions label {display:flex;align-items:center;gap:6px;font-size:13px;}
 .evidence-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px;align-items:start;}
@@ -148,8 +150,8 @@ nav button .nav-label {font-size:13px;}
 .content {padding:22px 22px 18px;}
 .heading-row h1 {font-size:23px;letter-spacing:-.04em;}
 .heading-row p,.note,.muted {font-size:12px;line-height:1.6;}
-.primary-button {background:#282828!important;color:#fff!important;border-color:#282828!important;font-size:12px!important;font-weight:600;}
-.primary-button:hover:not(:disabled) {background:#111!important;}
+.primary-button {background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;font-size:12px!important;font-weight:600;}
+.primary-button:hover:not(:disabled) {background:var(--accent-hover)!important;border-color:var(--accent-hover)!important;}
 .discovery-resume-state {margin-top:3px!important;color:var(--text-muted);}
 .discovery-resume-state button,.discovery-next-step button {border:0;background:transparent;text-decoration:underline;padding:2px 4px;color:var(--text);min-height:0;}
 .discovery-next-step {font-size:12px;color:var(--text-muted);margin:6px 0;}
@@ -170,7 +172,7 @@ nav button .nav-label {font-size:13px;}
 .source-audit-rows {margin-top:8px;}
 .discovery-page .job-card {padding:12px 14px!important;border-bottom:1px solid var(--line);}
 .discovery-page .job-card:hover {background:var(--surface-soft);}
-.discovery-page .job-card.selected {box-shadow:inset 3px 0 0 var(--ink);background:var(--surface-soft);}
+.discovery-page .job-card.selected {box-shadow:inset 3px 0 0 var(--accent);background:var(--surface-selected);}
 .discovery-page .job-card strong {font-size:14px;line-height:1.4;}
 .discovery-page .job-card p {font-size:12px;margin:5px 0 3px;line-height:1.5;}
 .discovery-page .job-card small {font-size:11px;color:var(--text-muted);}
@@ -395,11 +397,11 @@ nav button .nav-label {font-size:13px;}
 .research-question-result {width:100%;max-width:none;border-bottom:1px solid var(--line);padding:0 0 12px;margin:0 0 22px;}
 .research-question-result h2 {font-size:17px;line-height:1.5;margin:5px 0 9px;overflow-wrap:anywhere;}
 .research-question-result>p {font-size:13px;line-height:1.7;margin:0 0 12px;color:var(--text-muted);}
-.research-composer {display:flex;flex-direction:column;gap:3px;width:min(800px,calc(100% - 40px));min-height:0;flex-shrink:0;border:1px solid #e2e2e0;border-radius:13px;padding:8px 12px;margin:4px auto 0;background:#fff;box-shadow:0 2px 12px #2020200c;}
+.research-composer {display:flex;flex-direction:column;gap:3px;width:min(800px,calc(100% - 40px));min-height:0;flex-shrink:0;border:1px solid var(--line);border-radius:13px;padding:8px 12px;margin:4px auto 0;background:#fff;box-shadow:0 2px 12px #2020200c;}
 .research-workbench:has(.research-empty-state) .research-composer {margin-top:18px;}
 .research-examples {display:flex;justify-content:center;flex-wrap:wrap;gap:8px;width:min(800px,calc(100% - 40px));margin:12px auto 0;}
 .research-examples button {border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface);padding:6px 10px;color:var(--text-muted);font-size:12px;}
-.research-composer:focus-within {border-color:#a9a9a6;box-shadow:0 2px 14px #20202012,0 0 0 2px #70707020;}
+.research-composer:focus-within {border-color:#97baf0;box-shadow:0 2px 14px #1767d909,0 0 0 2px #1767d90b;}
 .research-composer textarea {display:block;flex:none;width:100%;height:42px;min-height:40px;max-height:min(108px,18vh);overflow:auto;border:0;border-radius:0;background:transparent;padding:3px 0;resize:none;font-size:15px;line-height:1.55;}
 .research-composer textarea:focus-visible {outline:0;}
 .research-composer-actions {display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;}
@@ -528,3 +530,16 @@ nav button .nav-label {font-size:13px;}
 .resume-modal .resume-page {overflow-y:auto;overscroll-behavior:contain;padding-right:4px;}
 .resume-modal .resume-maintenance .resume-heading {top:0;}
 @media(max-width:860px){.resume-modal-backdrop {padding:12px}.resume-modal {max-height:calc(100dvh - 24px);padding:12px}}
+
+/* A single accent marks actions and selection; reading surfaces stay white. */
+nav button.active, .sidebar-settings.active { color:var(--accent-hover); }
+.sidebar-settings.active { box-shadow:none; }
+.primary-button:disabled { opacity:1; background:#edf2f8!important; border-color:#edf2f8!important; color:#78869b!important; box-shadow:none; }
+.browser-toggle[aria-pressed=true] { background:var(--surface-selected); color:var(--accent-hover); }
+.browser-toggle:hover, .browser-nav>button:hover:not(:disabled) { background:var(--surface-hover); }
+.browser-start-search button { background:var(--accent); }
+.browser-start-search button:hover:not(:disabled) { background:var(--accent-hover); }
+.browser-start-site-icon, .browser-bookmark-icon { background:#edf4ff; color:var(--accent-hover); }
+.browser-start-search:focus-within, .searchbar:focus-within { border-color:#97baf0; box-shadow:0 0 0 3px #1767d90b; }
+.browser-address-form input, .browser-address-form select { background:var(--surface-soft); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [role="button"]:focus-visible { outline-color:var(--accent); }
