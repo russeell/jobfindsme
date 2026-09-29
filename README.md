@@ -1,121 +1,61 @@
 <p align="center">
-  <img src="docs/images/logo.svg" width="80" height="80" alt="JobFindsMe logo">
+  <img src="docs/images/logo.svg" width="72" height="72" alt="JobFindsMe 标志">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>找岗位，读原文，做研究。</strong></p>
-<p align="center">检索 4 个招聘平台，带着简历找机会，带着证据做判断。</p>
-
+<p align="center"><strong>找岗位，读懂 JD，准备下一步。</strong></p>
+<p align="center">一个桌面求职助手，把岗位搜索、求职对话和进展记录放在一起。</p>
 <p align="center">
-  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=27272a" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-27272a?style=flat-square" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/macOS-Apple_Silicon-27272a?style=flat-square" alt="macOS Apple Silicon">
+  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=2563eb" alt="最新发布版"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-2563eb?style=flat-square" alt="MIT 许可证"></a>
+</p>
+<p align="center">
+  <a href="https://github.com/russeell/jobfindsme/releases/latest">下载应用</a> ·
+  <a href="#开始使用">开始使用</a> ·
+  <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a>
 </p>
 
-<div align="center">
+![岗位搜索与详情](docs/images/jobfindsme-search.png)
 
-[下载桌面版](https://github.com/russeell/jobfindsme/releases/latest) · [支持来源](#支持的来源) · [快速上手](#开始使用) · [English](README.en.md)
+<sub>截图来自当前开发版，岗位与对话均为示例数据；下载版本以发布页为准。</sub>
 
-</div>
+## 能帮你做什么
 
-<br>
+- **找岗位**：搜索 BOSS直聘、猎聘、智联招聘和前程无忧，按城市、薪资等条件筛选；导入并确认简历，辅助岗位匹配。
+- **聊求职**：分析 JD、准备面试、整理求职材料；需要了解公司时，再查资料并提供原文引用。
+- **记进展**：收藏岗位，记录已读与投递状态，保留对话，方便下次接着聊。
 
-<p align="center">
-  <img src="docs/images/jobfindsme-search.png" width="100%" alt="JobFindsMe — job search and details">
-</p>
-<p align="center"><sub>实际应用截图 · 隔离版本中的一次检索，岗位数量与来源状态仅代表截图时的结果。</sub></p>
+![求职助手对话](docs/images/jobfindsme-research.png)
 
-## 从找到机会，到了解机会
+## 下载
 
-<table>
-<tr>
-<td width="33%" valign="top"><h3>01 · 找到岗位</h3><p>按岗位、技能和城市检索多个招聘来源。也可以导入并确认简历，让经历参与匹配。</p></td>
-<td width="33%" valign="top"><h3>02 · 了解机会</h3><p>打开招聘原页，继续追问公司与职位。研究回答保留引用，没查到的信息明确说明。</p></td>
-<td width="33%" valign="top"><h3>03 · 留下进展</h3><p>收藏感兴趣的岗位，记录已读与投递状态。重开历史对话，接着上次的问题往下聊。</p></td>
-</tr>
-</table>
-
-## 支持的来源
-
-目前提供 **4 个岗位检索来源**：BOSS直聘、猎聘、智联招聘和前程无忧。公司网页仍可在内置浏览器打开，已保存岗位的原链接仍可查看。
-
-| 招聘平台 | 使用方式 |
+| 系统 | 下载与打开 |
 | --- | --- |
-| BOSS直聘 | 在应用内登录并完成来源检查后检索 |
-| 猎聘 | 可尝试公开岗位检索，无需预先登录 |
-| 智联招聘 | 在应用内登录并完成来源检查后检索 |
-| 前程无忧 | 在应用内登录并完成来源检查后检索 |
+| macOS · Apple Silicon（M 系列） | [下载 mac-arm64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip)，解压后打开 `JobFindsMe.app` |
+| Windows · x64 | [下载 windows-x64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip)，完整解压后运行 `JobFindsMe.exe` |
 
-来源是否能返回岗位、读取完整 JD 或继续翻页，以「设置 → 岗位来源」的检查结果为准。登录失效、验证码、限流和网站改版可能影响检索；这份列表不代表所有来源随时可用，也不代表能获取全部在招岗位。
-
-## 安装
-
-从 **[GitHub Releases](https://github.com/russeell/jobfindsme/releases/latest)** 下载桌面安装包。
-
-| 系统 | 当前安装包 |
-| --- | --- |
-| macOS · Apple Silicon（M 系列） | 下载 `mac-arm64.zip`，解压后将 `JobFindsMe.app` 放入「应用程序」 |
-| Windows · x64 | 下载 `windows-x64.zip`，完整解压后运行 `JobFindsMe.exe`，无需安装 Python 或 Node.js |
-| macOS · Intel / Windows ARM / Linux | 暂未提供安装包 |
-
-Windows 便携包尚未代码签名，可能触发 SmartScreen 提示；请核对发布资源显示的 SHA-256 摘要。不要只拷贝 exe，需保留完整目录。
-
-当前 macOS 包尚未签名、公证，首次打开可能被系统拦截，请按「系统设置 → 隐私与安全性」提示处理。发布资源显示 SHA-256 摘要。后续可在应用的「设置 → 版本更新」检查新版本并前往下载；暂不自动安装。
-
-如果你用过隔离测试版，原有数据仍留在原测试目录，不会自动合并到正式版。
+无需另装 Python 或 Node.js。安装包尚未签名，首次打开可能出现系统安全提示，说明与 SHA-256 校验信息见[发布页](https://github.com/russeell/jobfindsme/releases/latest)。其他系统暂未提供安装包。
 
 ## 开始使用
 
-1. **选来源。** 打开「设置 → 岗位来源」，按需登录并检查，再勾选要检索的平台。
-2. **找岗位。** 回到「找工作」，输入如 `Python 后端`、`Agent 开发`，设置城市等筛选条件。想用简历匹配，可先通过简历按钮导入并确认内容。
-3. **看详情。** 打开感兴趣的岗位，核对 JD 和招聘原页，收藏值得继续了解的机会。
-4. **做研究。** 在「设置 → 模型设置」配置模型，再进入「岗位研究」提问，或从岗位详情带入研究对象。
+1. 在「设置 → 岗位来源」选择平台，需要登录时使用内置浏览器。
+2. 在「找工作」输入岗位方向，例如 `Python 后端` 或 `Agent 开发`，查看详情和招聘原页。
+3. 在「设置 → 模型设置」配置模型，然后打开「求职助手」，粘贴 JD 或直接提问。
 
-可以这样问：
+> 这份 JD 最看重哪些能力？我应该怎样准备面试？
 
-> 帮我了解腾讯的经营与公开披露情况。
->
-> 这个岗位主要要求哪些能力？结合 JD 说明。
->
-> 刚才的结论有哪些原文支持？还有哪些信息没有查到？
+部分平台的检索、详情和翻页会受登录、验证码及网站改版影响，不保证覆盖全部岗位。公司研究也可能缺少材料，请结合引用核对。
 
-<p align="center">
-  <img src="docs/images/jobfindsme-research.png" width="100%" alt="JobFindsMe — research conversation">
-</p>
-<p align="center"><sub>一个输入框，从公司、问题或岗位链接开始。选择模型后，即可发起对话。</sub></p>
-
-## 数据与模型
-
-岗位、简历、对话和报告保存在本机，模型密钥使用系统安全存储。聊天和研究使用你配置的模型服务，相关输入会发送给该服务，并可能产生费用；本地保存不等于全程离线。网页检索也需要联网，请勿把隐私信息写进公开检索问题。
-
-支持导入 PDF、DOCX、Markdown 和 TXT 简历，扫描 PDF 暂不支持 OCR。应用不会自动投递，定时检索目前停用。研究报告保留来源与引用，帮助你核对信息；来源可能过时，引用也不等于结论一定正确。
+岗位、简历和对话保存在本机。使用模型时，相关内容会发送给你配置的服务，并可能产生费用。应用不会自动投递。
 
 <details>
-<summary><strong>开发者 · 从源码运行</strong></summary>
+<summary>开发与贡献</summary>
 
-需要 Python 3.11+、Node.js/npm 和 Git。当前桌面开发流程以 macOS 为主。
+使用 Electron、React、Python、SQLite 和 Pi Agent。需要 Python 3.11+、Node.js/npm；运行方式见[开发说明](docs/desktop/README.md)。
 
-```bash
-git clone https://github.com/russeell/jobfindsme.git
-cd jobfindsme
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev,browser]"
-cd apps/desktop
-npm ci
-npm run build
-npm start
-```
+欢迎提交 [Issue](https://github.com/russeell/jobfindsme/issues) 或 PR。反馈时请附操作步骤和错误提示，勿上传简历、密钥或 Cookie。
 
-默认使用仓库内的 `.venv/bin/python`，其他解释器可通过 `JFM_PYTHON` 指定。
+[贡献指南](CONTRIBUTING.md) · [项目结构](docs/desktop/STRUCTURE.md) · [安全说明](SECURITY.md)
 
 </details>
 
-## 参与开发
-
-项目使用 Electron、React、TypeScript、Python 和 SQLite，研究对话基于 Pi Agent。欢迎通过 [Issues](https://github.com/russeell/jobfindsme/issues) 反馈问题或提交改进；反馈来源异常时，请附上来源名称、操作步骤和错误提示，不要上传密钥、Cookie 或个人简历。
-
-[贡献指南](CONTRIBUTING.md) · [项目结构](docs/desktop/STRUCTURE.md) · [开发说明](docs/desktop/README.md) · [当前进度](docs/desktop/HANDOFF.md) · [安全说明](SECURITY.md)
-
-## 许可证
-
-[MIT](LICENSE) · Copyright © 2026 Russell。第三方依赖保留各自许可证。
+[MIT 许可证](LICENSE)

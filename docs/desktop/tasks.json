@@ -2112,6 +2112,16 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D95",
+      "title": "中文README、当前示例截图与GitHub About",
+      "status": "done",
+      "verification": "GitHub Markdown渲染及19个本地/外部引用结构检查；两张隔离原生示例截图视觉检查；About读回核验。无网站或模型效果验收。",
+      "evidence": [
+        "README.md",
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }
