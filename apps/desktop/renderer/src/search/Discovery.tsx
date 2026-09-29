@@ -85,6 +85,32 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [selected, setSelected] = useState<SearchResultItem>();
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+  const pageRef=useRef<HTMLDivElement>(null);
+  const controlsRef=useRef<HTMLDivElement>(null);
+  const detailRef=useRef<HTMLElement>(null);
+  const listRef=useRef<HTMLElement>(null);
+  const listScroll=useRef(0);
+  // One scroll host for both columns; a tall detail sticks only after its bottom is visible.
+  useEffect(()=>{
+    if(!active)return;
+    const root=pageRef.current,controls=controlsRef.current,detail=detailRef.current,list=listRef.current;
+    const host=root?.closest<HTMLElement>(".content");
+    if(!root||!controls||!detail||!list||!host)return;
+    const update=()=>{
+      root.style.setProperty("--discovery-detail-top",`${Math.min(controls.offsetHeight+12,host.clientHeight-detail.offsetHeight-12)}px`);
+      root.style.setProperty("--discovery-list-top",`${Math.min(controls.offsetHeight+12,host.clientHeight-list.offsetHeight-12)}px`);
+    };
+    const observer=new ResizeObserver(update);
+    [host,controls,detail,list].forEach(element=>observer.observe(element));update();
+    return()=>observer.disconnect();
+  },[active]);
+  function switchMobileView(view:"list"|"detail"){
+    const host=pageRef.current?.closest<HTMLElement>(".content");
+    if(host&&view==="detail"&&mobileView==="list")listScroll.current=host.scrollTop;
+    setMobileView(view);
+    if(host&&host.clientWidth<=720)requestAnimationFrame(()=>{host.scrollTop=view==="list"?listScroll.current:0;});
+  }
+
   const [filters, setFilters] = useState<SearchFilters>(defaultDiscoveryFilters);
   const filtersRef=useRef(filters);filtersRef.current=filters;
   const pageSizeRef=useRef(pageSize);pageSizeRef.current=pageSize;
@@ -178,12 +204,12 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   }
   async function changePage(next: number) {
     if (!workspaceId || !page) return;
-    try { const value = await window.jobfindsme!.getSearchPage(workspaceId, page.run_id, next, pageSize); setPage(value); setSelected(value.items[0]); } catch (error) { onError(messageOf(error)); }
+    try { const value = await window.jobfindsme!.getSearchPage(workspaceId, page.run_id, next, pageSize); setPage(value); setSelected(value.items[0]); pageRef.current?.closest<HTMLElement>(".content")?.scrollTo({top:0}); } catch (error) { onError(messageOf(error)); }
   }
   async function changePageSize(value: 10 | 20 | 50) {
     setPageSize(value);
     if (!workspaceId || !page) return;
-    try { const next = await window.jobfindsme!.getSearchPage(workspaceId, page.run_id, 1, value); setPage(next); setSelected(next.items[0]); } catch (error) { onError(messageOf(error)); }
+    try { const next = await window.jobfindsme!.getSearchPage(workspaceId, page.run_id, 1, value); setPage(next); setSelected(next.items[0]); pageRef.current?.closest<HTMLElement>(".content")?.scrollTo({top:0}); } catch (error) { onError(messageOf(error)); }
   }
   async function track(eventType: "read" | "saved" | "applied" | "apply_opened", enabledValue = true) {
     if (!workspaceId || !selected) return;
@@ -193,14 +219,14 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   }
   async function openOriginal() { if (!selected) return; const sourceId = sourceBrowserIdForSourceName(selected.job.source.source_name) || "web"; try { await track("apply_opened"); openBrowser({ sourceId, url: selected.job.apply_url, title: selected.job.title }); } catch (e) { onError(messageOf(e)); } }
   function selectItem(item:SearchResultItem){
-    setSelected(item);setMobileView("detail");
+    setSelected(item);switchMobileView("detail");
     if(!workspaceId)return;
     void window.jobfindsme!.setJobTracking({workspace_id:workspaceId,job_id:item.job.job_id,event_type:"read",enabled:true}).then(tracking=>{
       setSelected(current=>current?.job.job_id===item.job.job_id?{...current,tracking}:current);
       setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?{...row,tracking}:row)}));
     }).catch(error=>onError(messageOf(error)));
   }
-  return <div className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
+  return <div ref={pageRef} className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div ref={controlsRef} className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || attemptable.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
     {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
@@ -217,8 +243,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
 
     </div>
 
-    </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => setMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => setMobileView("detail")}>详情</button></div>
-    <div className={`workspace ${selected?"":"no-selection"}`}><section className={`list-pane ${mobileView === "detail" ? "mobile-hidden" : ""}`}>
+    </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => switchMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => switchMobileView("detail")}>详情</button></div>
+    <div className={`workspace ${selected?"":"no-selection"}`}><section ref={listRef} className={`list-pane ${mobileView === "detail" ? "mobile-hidden" : ""}`}>
       <div className="section-title"><strong>岗位结果{showingPrevious?" · 上次成功结果":selectionChanged?" · 与当前勾选不同":""}</strong><span>{page?.total ?? 0} 条</span></div>
       {page?.items.length ? <div className="job-list">{page.items.map(item=><article className={selected?.job.job_id===item.job.job_id?"job-card selected":"job-card"} key={item.job.job_id} role="button" tabIndex={0} aria-pressed={selected?.job.job_id===item.job.job_id} onClick={()=>selectItem(item)} onKeyDown={event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();selectItem(item);}}}>
         <div><strong>{item.job.title}</strong></div>
@@ -227,7 +253,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       </article>)}</div> : <div className="empty" role="status"><strong>{searching?"正在检索岗位":searchError?"本次检索未完成":result?"本次没有可展示的岗位":resumeState?.search_profile_state==="ready"?"可按已确认简历搜索":"先输入岗位关键词"}</strong><p>{searching?"请稍候，来源读取情况会显示在上方。":searchError?"请查看上方错误并重试；本次失败不能视为没有岗位。":result?"可调整条件再搜索；来源失败不代表没有岗位。":"选择来源后搜索，结果会显示在这里。"}</p></div>}
       <div className="pagination"><button disabled={!page||page.page<=1} onClick={()=>void changePage((page?.page??1)-1)}>上一页</button><span>{page?.page??0} / {page?.page_count??0}</span><button disabled={!page||page.page>=page.page_count} onClick={()=>void changePage((page?.page??1)+1)}>下一页</button><select value={pageSize} onChange={event=>void changePageSize(Number(event.target.value) as 10|20|50)}><option value="10">10/页</option><option value="20">20/页</option><option value="50">50/页</option></select></div>
     </section>
-      <aside className={`detail-pane ${mobileView==="list"?"mobile-detail":""}`}><div className="detail-heading">岗位详情</div>{selected?<div className="job-detail">
+      <aside ref={detailRef} className={`detail-pane ${mobileView==="list"?"mobile-detail":""}`}><div className="detail-heading">岗位详情</div>{selected?<div className="job-detail">
         <div className="job-detail-top"><div className="heading-row"><div><h3>{selected.job.title}</h3><p>{selected.job.company} · {selected.job.locations.join("/")||"地点未知"} · {formatSalary(selected.job)}</p><small>{selected.job.source.source_name} · 发布：{selected.job.source.published_at?new Date(selected.job.source.published_at).toLocaleDateString():"未知"}</small>{selected.snapshot_status==="unknown"&&<p className="note">这次历史检索的岗位版本无法恢复；下方为当前岗位内容，旧评分和重排不可用。</p>}{selected.score_basis_outdated&&<p className="note">JD 已补充；搜索时的旧评分依据仍保留在原快照，此处不再显示为新 JD 的评分。</p>}</div></div>
           <JobActions hasReport={reports.some(r=>reportMatchesJob(r,selected.job))} tracking={selected.tracking} onTrack={(event,enabled)=>track(event,enabled)} onOpen={openOriginal} researchDisabledReason={!selected.job.apply_url?"该岗位没有可研究的来源链接":undefined} onResearch={()=>onResearch(selected.job)} onError={onError}/>
         </div>

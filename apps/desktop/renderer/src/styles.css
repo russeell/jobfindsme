@@ -329,7 +329,7 @@ h3 { font-size:14px; }
 .brandmark { object-fit:contain; padding:0; display:block; }
 .source-catalog { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr)); gap:16px; width:100%; margin:22px 0; }
 .source-catalog .source-card { min-height:142px; }
-.content:has(> .discovery-mount:not([hidden])) { overflow:hidden; display:flex; flex-direction:column; padding-bottom:14px; }
+.content:has(> .discovery-mount:not([hidden])) { overflow-y:auto; overflow-x:hidden; padding-bottom:24px; }
 .content.research-content {overflow:hidden;display:flex;flex-direction:column;padding:16px 0 12px;}
 .research-mount:not([hidden]) {flex:1;min-height:0;min-width:0;}
 .research-topbar-actions {display:flex;align-items:center;justify-content:flex-end;min-width:0;margin-left:auto;}
@@ -344,23 +344,24 @@ h3 { font-size:14px; }
 .topbar:has(.research-topbar-actions:not(:empty)) > .pill {display:none;}
 .topbar:has(.research-topbar-actions:not(:empty)) > span:first-child {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 @media(max-height:650px){.research-composer {gap:4px;padding:7px 10px}.research-composer textarea {min-height:40px;max-height:72px}.research-scroll-region {padding-bottom:10px}}
-.discovery-mount:not([hidden]), .discovery-page { flex:1; min-height:0; display:flex; flex-direction:column; }
-.discovery-controls { flex-shrink:0; max-height:46%; overflow:auto; overflow-x:hidden; }
+.discovery-mount:not([hidden]), .discovery-page { min-height:100%; display:flex; flex-direction:column; }
+.discovery-controls { position:sticky; top:0; z-index:5; flex-shrink:0; background:var(--surface); box-shadow:0 -24px 0 var(--surface); }
 .discovery-controls .searchbar { margin-top:16px; }
 .discovery-controls .filters { padding-top:10px; }
-.discovery-page .workspace { flex:1; min-height:0; margin-top:14px; overflow:hidden; }
-.discovery-page .list-pane { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
-.discovery-page .list-pane .job-list { flex:1; min-height:0; max-height:none; overflow-y:auto; overscroll-behavior:contain; }
+.discovery-page .workspace { margin-top:14px; align-items:start; overflow:visible; }
+.discovery-page .list-pane { position:sticky; top:var(--discovery-list-top,0px); display:flex; flex-direction:column; min-width:0; }
+.discovery-page .list-pane .job-list { min-height:0; max-height:none; overflow:visible; }
 .discovery-page .pagination { position:static; flex-shrink:0; }
-.discovery-page .detail-pane { position:static; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
+.discovery-page .detail-pane { position:sticky; top:var(--discovery-detail-top,0px); min-height:0; overflow:visible; }
 .discovery-page .job-description { max-height:none; overflow:visible; }
 .discovery-page .section-title { flex-shrink:0; }
 @container (max-width:720px) {
  .discovery-page .workspace { display:flex; flex-direction:column; }
- .discovery-page .list-pane, .discovery-page .detail-pane { flex:1; }
+ .discovery-page .list-pane, .discovery-page .detail-pane { width:100%; }
+ .discovery-page .list-pane, .discovery-page .detail-pane {position:static;}
  .discovery-page .list-pane.mobile-hidden, .discovery-page .detail-pane.mobile-detail { display:none; }
 }
-.discovery-page .workspace { align-items:stretch; grid-template-rows:minmax(0,1fr); }
+
 .city-popover { position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); max-height:85vh; overflow:auto; z-index:100; box-shadow:0 0 0 100vmax #20202026, 0 12px 40px #2020201c; }
 .discovery-page .list-pane > .empty { flex:1; min-height:0; }
 
@@ -419,7 +420,7 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 .browser-toolbar .browser-error p{white-space:normal;overflow-wrap:anywhere;color:#924438;margin:0}
 .browser-toolbar .browser-error button{font-size:11px;margin-top:5px}
 .content:has(> .discovery-mount:not([hidden])){padding-top:20px}
-.discovery-controls{max-height:36%;padding-bottom:8px}
+.discovery-controls{padding-bottom:8px}
 .discovery-controls h1{font-size:23px}
 .discovery-controls .searchbar{margin-top:10px;padding:5px}
 .discovery-controls .filters{padding-top:7px}

@@ -2141,6 +2141,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D98",
+      "title": "检索页统一自然滚动与双列阅读",
+      "status": "done",
+      "verification": "Node243/类型构建/Ruff/正常包审计通过；隔离原生35条样例、长JD到底、列表和详情滚动、翻页、50/页、窄窗位置恢复，正常包启动核对。仅React/CSS，未进行真实来源/模型/Python全套/Windows原生验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }
