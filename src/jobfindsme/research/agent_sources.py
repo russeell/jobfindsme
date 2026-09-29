@@ -361,7 +361,10 @@ def _fallback_discovery(
     request = urllib.request.Request(
         endpoint, headers={"User-Agent": "JobFindsMe/desktop-research"}
     )
-    with _research_opener(search=False).open(request, timeout=remaining) as response:
+    # An unavailable public search page must not consume the entire research run.
+    with _research_opener(search=False).open(
+        request, timeout=min(3, remaining)
+    ) as response:
         body = response.read(1_000_000).decode("utf-8", errors="replace")
     if re.search(r"anomaly\.js|challenge-form|captcha", body, re.I):
         raise urllib.error.HTTPError(

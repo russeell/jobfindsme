@@ -529,10 +529,19 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
   const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
   assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
   const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改简历/:/准备面试/);
-  assert.ok(first.tools.some(item=>item.function.name==='read_skill'));assert.ok(first.tools.some(item=>item.function.name==='search_web'));
+  assert.ok(first.tools.some(item=>item.function.name==='read_skill'));
+  assert.equal(first.tools.some(item=>item.function.name==='search_web'),skillId==='resume-tailor');
   assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
   assert.equal(executions[0].context.skill_id,skillId);assert.equal(executions.at(-1).status,'complete');
  }finally{server.close();}
+});
+test('generic interview questions do not expose public page readers',async()=>{
+ let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'先准备项目背景、个人贡献和技术取舍这三类问题。'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const result=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'generic-interview',question:'有哪些问题',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.match(result.text,/项目背景/);for(const name of ['search_web','read_page','read_browser_page','find_evidence'])assert.equal(toolsSeen.includes(name),false);assert.equal(toolsSeen.includes('read_job'),true);}finally{server.close();}
+});
+test('interview questions with a supplied web link may read public originals',async()=>{
+ let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'可以围绕链接中的岗位要求准备面试。'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'linked-interview',question:'按这个网页准备面试 https://example.org/job',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(toolsSeen.includes('read_page'),true);}finally{server.close();}
 });
 test('explicit industry report preserves topic scope and original quotes',async()=>{
  let turn=0;const row={...source,url:'https://example.org/report',company:'招聘',excerpt:'招聘行业报告认为服务模式正在向专业化发展。招聘行业需要改进信息质量。',context:{source_type:'public_web'}};row.evidence_id='ev_'+createHash('sha256').update(`${row.url}\0${row.excerpt}`).digest('hex').slice(0,24);
