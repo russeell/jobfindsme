@@ -13,13 +13,14 @@ const forbidden = [
   /(^|\/)\.env(?:\.|$)/i,
   /(^|\/)(?:credentials?|secrets?|api[-_]?keys?)(?:\.[^/]*)?$/i,
 ];
+const skillFiles=new Set(["NOTICE.md","licenses/resume-tailoring-MIT.txt","licenses/tech-interview-handbook-MIT.txt","licenses/deep-research-MIT.txt",... ["resume-tailor","interview-prep","deep-research"].map(id=>`${id}/SKILL.md`)].map(file=>`Contents/Resources/app/skills/${file}`));
 const violations = [];
 const visit = (directory) => {
   for (const entry of readdirSync(directory)) {
     const absolute = path.join(directory, entry);
     const relative = path.relative(appRoot, absolute);
     const dependencyCode=relative.startsWith("Contents/Resources/app/node_modules/");
-    if (forbidden.some((rule, index) => !(index === 1 && (relative.startsWith("Contents/Resources/python/jobfindsme-api/_internal/") || relative === "Contents/Resources/third-party/PI_LICENSE.txt" || dependencyCode)) && !(dependencyCode && (index === 2 || index === 4)) && rule.test(relative))) violations.push(relative);
+    if (forbidden.some((rule, index) => !(index === 1 && (relative.startsWith("Contents/Resources/python/jobfindsme-api/_internal/") || relative === "Contents/Resources/third-party/PI_LICENSE.txt" || skillFiles.has(relative) || dependencyCode)) && !(dependencyCode && (index === 2 || index === 4)) && rule.test(relative))) violations.push(relative);
     const stat = lstatSync(absolute);
     if (stat.isSymbolicLink()) {
       const target = realpathSync(absolute);
@@ -33,6 +34,7 @@ const visit = (directory) => {
   }
 };
 visit(appRoot);
+for(const file of skillFiles)if(!existsSync(path.join(appRoot,file)))violations.push(`missing ${file}`);
 if (violations.length) {
   throw new Error(`packaged app contains private or development data: ${violations.join(", ")}`);
 }

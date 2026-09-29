@@ -12,6 +12,8 @@ docs/images/        README 使用的界面截图
 
 桌面端 `main/browser` 管浏览器会话，`main/sources` 管页面提取，`main/backend` 管 Python 进程与通信，`main/security` 管系统密钥；`renderer/src` 管找工作、研究、简历和设置。`main/index.ts` 与 `renderer/src/App.tsx` 负责组装。
 
+桌面端 `skills/` 随包提供简历定制、面试准备和公司深度研究工作流及 MIT 来源说明；`shared/assistant-skills.ts` 是固定注册表，`main/research/assistant-skills.mts` 只加载注册的技能。技能复用同一个 Pi Agent，简历和面试使用本地材料工具，深度研究沿用有界搜索、原文读取及引用校验。
+
 Python `sources/` 是来源目录和检索准入的权威位置，`search/` 负责编排与统一结果，`research/` 管有来源的报告，`profiles/` 与 `resume_editor/` 管简历数据，`desktop_api/` 提供本地接口。`migrations/` 必须保留，以读取已有用户数据。
 
 旧 CLI/MCP、安装器和 Skill 已退役。Python 包内部的旧发行名与数据路径只用于现有桌面打包和用户数据迁移。历史设计和验收文件可从 [重构前提交](https://github.com/russeell/jobfindsme/tree/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop) 查阅，不在当前树重复保存。

@@ -56,7 +56,7 @@ test('search tool passes the full 700 character question and a separate search q
   assert.deepEqual(seen,[{searchQuery:question,originalQuestion:question}]);
  }finally{server.close();}
 });
-test('Pi uses bounded tools and saves only a verified quote',async()=>{
+for(const skillId of [undefined,'deep-research'])test(`Pi ${skillId||'default'} uses bounded tools and saves only a verified quote`,async()=>{
  let turn=0;const server=http.createServer((_request,response)=>{
   response.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
   turn++;
@@ -68,7 +68,7 @@ test('Pi uses bounded tools and saves only a verified quote',async()=>{
  const tools={findEvidence:async()=>{actions.push('find');return [];},searchWeb:async(_company,searchQuery,_site,originalQuestion)=>{actions.push('search');assert.equal(searchQuery,'研发');assert.equal(originalQuestion,'示例公司研发如何');return [{url:source.url,site:'zhihu',title:'原页',status:'search_hint_only'}];},readPage:async()=>{actions.push('read');return source;},readJob:async()=>{throw Error('unexpected job read');},readBrowserPage:async()=>{throw Error('unexpected browser read');},saveExecution:async state=>{executions.push(state);},saveReport:async state=>{reports.push(state);return {...state,report_id:'report_1'};}};
  try{
   const deltas=[],progress=[];
-  const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_12345678',question:'示例公司研发如何',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,value=>deltas.push(value),new AbortController().signal,value=>progress.push(value));
+  const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_12345678',question:'示例公司研发如何',company:'示例公司',history:[],research:true,reportRequested:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,value=>deltas.push(value),new AbortController().signal,value=>progress.push(value));
   assert.deepEqual(actions,['find','search','read']);
   assert.equal(reports.length,1);assert.equal(reports[0].claims.length,1);
   assert.equal(result.report.report_id,'report_1');assert.match(result.text,/示例公司在上海设立了研发团队/);
@@ -512,4 +512,24 @@ test('a job-linked research turn analyzes its saved JD with streaming and no pub
   await sawChunk;await new Promise(resolve=>setTimeout(resolve,15));assert.equal(finished,false);assert.deepEqual(deltas,['这份 JD 主要写了 Python 开发']);
   release();const result=await work;assert.equal(publicReads,0);assert.equal(reports,0);assert.match(result.text,/Python 开发/);assert.equal(deltas.join(''),result.text);assert.equal(result.report,undefined);
  }finally{release();server.close();}
+});
+
+for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads its workflow and reads local material without public tools`,async()=>{
+ let turn=0;const payloads=[],actions=[],executions=[];
+ const server=http.createServer((request,response)=>{
+  let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
+   payloads.push(JSON.parse(body));response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+   const next=turn===1?tool('read_job',{},turn):turn===2?tool('read_confirmed_resume',{},turn):turn===3?tool('answer_in_chat',{},turn):{role:'assistant',content:'根据你的真实 Python 项目，可以准备 API 设计实例。以下是草稿。'};
+   sse(response,next,next.tool_calls?'tool_calls':'stop');
+  });
+ });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const unexpected=async()=>{throw Error('unexpected public source or report');};
+ const tools={readResume:async()=>{actions.push('resume');return {source_version_id:'v1',text:'真实 Python 项目经历',limitations:'脱敏副本'};},readJob:async()=>{actions.push('job');return {title:'Python 工程师',description:'要求 API 开发'};},listSavedJobs:async()=>[],findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readBrowserPage:unexpected,saveReport:unexpected,saveExecution:async state=>executions.push(state)};
+ try{
+  const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
+  const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
+  assert.deepEqual(first.tools.map(item=>item.function.name).sort(),['answer_in_chat','list_saved_jobs','read_confirmed_resume','read_job']);
+  assert.equal(executions[0].context.skill_id,skillId);assert.equal(executions.at(-1).status,'complete');
+ }finally{server.close();}
 });

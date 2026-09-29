@@ -754,7 +754,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
     if(run.signal.aborted)throw Error("cancelled");
-    return await runPiResearchAgent({workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
+    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
       {
         readResume:()=>apiClient!.previewAnalysisCopy({workspace_id:input.workspace_id,privacy_mode:"redact"}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),

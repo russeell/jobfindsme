@@ -1,3 +1,4 @@
+import type {AssistantSkillId} from "./assistant-skills";
 export type MatchingRuleInput = {workspace_id:string;name:string;prompt:string;template_id:string;mode:"local"|"model";connection_id?:string|null;candidate_limit:number;weights:MatchingWeights};
 export type MatchingRule = MatchingRuleInput & {rule_version_id:string;created_at:string;model_snapshot?:{model_id:string;endpoint:string;protocol:string;credential_ref?:string|null;auth_mode:string}};
 export type MatchingRuleState = {templates:Array<{id:string;name:string;prompt:string}>;active_rule_id:string|null;versions:MatchingRule[]};
@@ -389,8 +390,8 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatProcessStep = {tool:string;status:string;site?:string;count?:number};
-export type ResearchChatTurn = {role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
-export type ResearchChatInput = {request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatTurn = {skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatInput = {skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};
 export type ResearchChatResult = {text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 

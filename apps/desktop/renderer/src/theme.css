@@ -563,3 +563,13 @@ nav button.active, .sidebar-settings.active { color:var(--accent-hover); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [role="button"]:focus-visible { outline-color:var(--accent); }
 
 @container(max-width:640px){.settings-page {padding:4px 0 24px;}.settings-heading {margin-bottom:20px;}.settings-heading h1 {font-size:24px;}.source-catalog .source-card,.research-archive-item {padding:16px;}.research-archive-item {gap:12px;}.research-archive-actions {gap:4px;}}
+
+/* Skills use the existing chat input and preserve the user's draft. */
+.research-active-skill {display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-selected);border-radius:9px;font-size:12px;}
+.research-active-skill span {color:var(--text-muted);flex:1;}
+.research-active-skill button {border:0;background:transparent;padding:0 4px;font-size:18px;}
+.research-composer-selectors {display:flex;flex-wrap:wrap;gap:8px;min-width:0;}
+.research-skill-badge {display:block;margin-bottom:7px;color:var(--accent);font-size:11px;}
+.research-examples button {display:flex;flex-direction:column;gap:5px;text-align:left;padding:12px 14px;}
+.research-examples button span {font-size:11px;color:var(--text-muted);font-weight:400;}
+@container(max-width:720px){.research-active-skill{flex-wrap:wrap}.research-active-skill span{flex-basis:70%}.research-examples{flex-wrap:wrap}}

@@ -1,7 +1,7 @@
 import {existsSync,readdirSync,lstatSync} from 'node:fs';
 import path from 'node:path';
 const root=path.resolve('release/windows/JobFindsMe');
-for(const required of ['JobFindsMe.exe','resources/python/jobfindsme-api/jobfindsme-api.exe','resources/app/dist/index.html','resources/app/dist-electron/main/index.js','resources/app/node_modules/@earendil-works/pi-agent-core/dist/index.js','resources/third-party/PI_LICENSE.txt']){
+for(const required of ['JobFindsMe.exe','resources/python/jobfindsme-api/jobfindsme-api.exe','resources/app/dist/index.html','resources/app/dist-electron/main/index.js','resources/app/node_modules/@earendil-works/pi-agent-core/dist/index.js','resources/third-party/PI_LICENSE.txt',...['resume-tailor','interview-prep','deep-research'].map(id=>`resources/app/skills/${id}/SKILL.md`),'resources/app/skills/NOTICE.md',...['resume-tailoring','tech-interview-handbook','deep-research'].map(id=>`resources/app/skills/licenses/${id}-MIT.txt`)]){
  if(!existsSync(path.join(root,required)))throw Error(`Missing ${required}`);
 }
 function visit(directory){

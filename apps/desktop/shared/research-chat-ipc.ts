@@ -1,3 +1,4 @@
+import {isAssistantSkillId} from "./assistant-skills";
 import type {ResearchChatTurn} from "./contracts";
 
 /** Require a direct, affirmative request before storing a separate report. */
@@ -28,7 +29,7 @@ export function validResearchChatInput(input:unknown):boolean{
   if(!input||typeof input!=="object")return false;
   const value=input as Record<string,unknown>;
   const validId=(id:unknown,max:number)=>typeof id==="string"&&new RegExp(`^[-a-zA-Z0-9]{8,${max}}$`).test(id);
-  return validId(value.request_id,80)&&validId(value.session_id,100)&&typeof value.workspace_id==="string"
+  return (value.skill_id===undefined||isAssistantSkillId(value.skill_id))&&validId(value.request_id,80)&&validId(value.session_id,100)&&typeof value.workspace_id==="string"
     &&typeof value.connection_id==="string"&&typeof value.question==="string"&&value.question.length<=12000
     &&!!value.question.trim()&&typeof value.research==="boolean"&&Array.isArray(value.history)
     &&value.history.length<=200&&value.history.every(item=>item&&["user","assistant"].includes(item.role)

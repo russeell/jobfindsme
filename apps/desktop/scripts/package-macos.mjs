@@ -53,6 +53,7 @@ const appRoot = path.join(resources, "app");
 mkdirSync(appRoot, { recursive: true });
 cpSync(path.join(desktopRoot, "dist"), path.join(appRoot, "dist"), { recursive: true });
 cpSync(path.join(desktopRoot, "dist-electron"), path.join(appRoot, "dist-electron"), { recursive: true });
+cpSync(path.join(desktopRoot,"skills"),path.join(appRoot,"skills"),{recursive:true});
 // Renderer libraries are bundled by Vite; only main-process dependencies ship here.
 copyRuntimeDependencies(desktopRoot,path.join(appRoot,"node_modules"),["@earendil-works/pi-agent-core","@earendil-works/pi-ai","typebox"]);
 mkdirSync(path.join(resources,"third-party"),{recursive:true});

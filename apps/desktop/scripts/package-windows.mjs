@@ -12,7 +12,7 @@ cpSync(path.join(root,'node_modules/electron/dist'),output,{recursive:true});
 renameSync(path.join(output,'electron.exe'),path.join(output,'JobFindsMe.exe'));
 const resources=path.join(output,'resources'),app=path.join(resources,'app');
 rmSync(path.join(resources,'default_app.asar'),{force:true});mkdirSync(app,{recursive:true});
-for(const dir of ['dist','dist-electron'])cpSync(path.join(root,dir),path.join(app,dir),{recursive:true});
+for(const dir of ['dist','dist-electron','skills'])cpSync(path.join(root,dir),path.join(app,dir),{recursive:true});
 copyRuntimeDependencies(root,path.join(app,'node_modules'),['@earendil-works/pi-agent-core','@earendil-works/pi-ai','typebox']);
 const {version}=JSON.parse(readFileSync(path.join(root,'package.json'),'utf8'));
 writeFileSync(path.join(app,'package.json'),JSON.stringify({name:'jobfindsme-desktop',version,build:`v${version}`,releaseTag:`v${version}`,main:'dist-electron/main/index.js'}));

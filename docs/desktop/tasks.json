@@ -2159,6 +2159,16 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D100",
+      "title": "求职助手简历定制、面试准备与深度研究技能",
+      "status": "done",
+      "verification": "Node250/类型构建/Ruff/正常包审计通过；本地模拟Agent工具链及隔离正常桌面三入口、切换、草稿、新聊天、取消、模型IPC与三种技能对话落库验证。MIT来源与许可证随包保留。未真实模型质量/Windows原生/窄窗/Python全套验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md",
+        "apps/desktop/skills/NOTICE.md"
+      ]
     }
   ]
 }
