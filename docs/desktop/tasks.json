@@ -2094,6 +2094,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D93",
+      "title": "当前本地筛选与续查追加显示一致",
+      "status": "done",
+      "verification": "最终Python434/Node240、类型/构建/Ruff通过；临时DB追加后薪资过滤与评分版本、前端每批应用当前过滤回归。无原生/真实平台验收。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

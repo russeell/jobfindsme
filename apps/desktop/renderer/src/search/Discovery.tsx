@@ -10,7 +10,7 @@ import {SearchFilters as FilterControls} from "./SearchFilters";
 import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
 import {formatSalary} from "./salary";
 import {ResumePage} from "../resume/ResumePage";
-import {mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelectedSearchJob,sourceRunNeedsAttention,progressBelongsToRun} from "../../../shared/search-scope";
+import {remoteSearchScopeChanged,searchPageForCurrentFilters,mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelectedSearchJob,sourceRunNeedsAttention,progressBelongsToRun} from "../../../shared/search-scope";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 const blockedReason=(value:string)=>/login|登录/i.test(value)?"需登录后重试":/risk|captcha|验证/i.test(value)?"需完成网站验证":"暂不可检索，请到岗位来源检查";
@@ -74,8 +74,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     displayedRun.current=batch.result_page.run_id;
     if(activeRequest.current&&!preserveSelection.current)setResultRequest(activeRequest.current);
     setShowingPrevious(false);
-    setPage(previous=>keepVisibleSearchPage(previous,batch.result_page));
-    setSelected(previous=>keepSelectedSearchJob(previous,sameDisplayedRun?batch.result_page.run_id:undefined,batch.result_page));
+    void displaySearchPage(batch.result_page,activeRequest.current?.filters||defaultDiscoveryFilters(),sameDisplayedRun?batch.result_page.run_id:undefined).catch(error=>setSearchError(userError(error)));
   }),[workspaceId]);
   const [matchingMessage,setMatchingMessage]=useState("");
   const searchEpoch=useRef(0);
@@ -87,6 +86,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [selected, setSelected] = useState<SearchResultItem>();
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const [filters, setFilters] = useState<SearchFilters>(defaultDiscoveryFilters);
+  const filtersRef=useRef(filters);filtersRef.current=filters;
+  const pageSizeRef=useRef(pageSize);pageSizeRef.current=pageSize;
   const pendingSources=result?unstartedSourceIds(result):[];
   const coveredSources=resultRequest?.sourceIds||[];
   const selectionChanged=!!resultRequest&&([...selectedSources].sort().join('|')!==[...coveredSources].sort().join('|'));
@@ -97,11 +98,20 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [filterKey,setFilterKey]=useState(0);
   const filterEpoch=useRef(0);
   const filterBaseRun=useRef<string|undefined>(undefined);
+  async function displaySearchPage(incoming:SearchResultPage,originalFilters:SearchFilters,shownRunId:string|undefined){
+    if(!workspaceId)return;
+    filterBaseRun.current=incoming.run_id;
+    const epoch=++filterEpoch.current;
+    const next=await searchPageForCurrentFilters(incoming,originalFilters,filtersRef.current,pageSizeRef.current,(runId,current,size)=>window.jobfindsme!.refilterSearch(workspaceId,runId,current,size));
+    if(epoch!==filterEpoch.current)return;
+    setPage(previous=>keepVisibleSearchPage(previous,next));
+    setSelected(previous=>keepSelectedSearchJob(previous,shownRunId,next));
+  }
   async function updateFilters(next:SearchFilters) {
-    next=normalizeDiscoveryFilters(next);setFilters(next);const epoch=++filterEpoch.current;
-    if(!result||!workspaceId||searching)return;
+    next=normalizeDiscoveryFilters(next);filtersRef.current=next;setFilters(next);const epoch=++filterEpoch.current;
+    if(!result||!workspaceId)return;
     try {const nextPage=await window.jobfindsme!.refilterSearch(workspaceId,filterBaseRun.current||result.result_page.run_id,next,pageSize);
-      if(epoch!==filterEpoch.current)return;setPage(nextPage);setSelected(nextPage.items[0]);setMatchingMessage("已按当前筛选更新本地候选；未重新请求招聘网站。");
+      if(epoch!==filterEpoch.current)return;setPage(nextPage);setSelected(nextPage.items[0]);setMatchingMessage(resultRequest&&remoteSearchScopeChanged(intent,next,resultRequest.intent,resultRequest.filters)?"已筛选本地候选；关键词或城市已改变，请点击找岗位开始新搜索。":"已按当前筛选更新本地候选；未重新请求招聘网站。");
     }catch(error){setSearchError(userError(error));}
   }
   function resetFilters(){setFilterKey(key=>key+1);void updateFilters(defaultDiscoveryFilters());}
@@ -118,6 +128,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     event?.preventDefault();
     if (!workspaceId) return;
     const preserve=!!(continuation||expand||pending)&&!!result;
+    if(preserve&&resultRequest&&remoteSearchScopeChanged(intent,filtersRef.current,resultRequest.intent,resultRequest.filters)){onError("关键词或城市已改变，请点击找岗位开始新搜索。");return;}
+    if(useResume&&!preserve)setIntent("");
     const requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
     const requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
     if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
@@ -152,7 +164,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
         const batchNotice=response.batch_failures?.map(item=>`${sources.find(source=>source.source_id===item.source_id)?.name||item.source_id}${item.stage==="save"?"的读取结果保存失败":"的来源状态更新失败"}`).join("；");
         setSearchError(batchNotice?{...base,message:`${batchNotice}。已保存的岗位会保留。`}:base);
       }
-      if(response.result_page.total || (!failed.length&&!blocked.length)){setShowingPrevious(false);setPage(previous=>keepVisibleSearchPage(previous,response.result_page));setSelected(previous=>keepSelectedSearchJob(previous,displayedRun.current,response.result_page));}
+      if(response.result_page.total || (!failed.length&&!blocked.length)){setShowingPrevious(false);await displaySearchPage(response.result_page,requestFilters,displayedRun.current);}
+      if(epoch!==searchEpoch.current)return;
       setMatchingMessage(response.executed_queries?.length?`已检索：${response.keywords[0]}。远端仅使用首个城市与所列来源；薪资等其余筛选在本地进行。请核对岗位原文。`:`已计划检索「${response.keywords[0]}」，但本次没有完成来源请求。请查看来源状态。`);
       setCollection(undefined);
     } catch (error) { if(epoch===searchEpoch.current)setSearchError(userError(error)); } finally { if(epoch===searchEpoch.current){closeSearchMenus();setSearching(false);} }
@@ -203,7 +216,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       {!result&&unavailable.map(source=><p key={source.source_id}>{source.name}：{attemptable.some(item=>item.source_id===source.source_id)?"输入关键词即可尝试搜索，无需先检查":"请在原页完成平台验证后重试"}</p>)}
       <button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>管理岗位来源</button>
     </div></details>
-    {searching?<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止</button>:result&&(pendingSources.length||continueRuns.length||canExpand)?<details ref={continueMenuRef} className="search-status-menu continue-menu"><summary>继续查找</summary><div className="search-menu-content"><p>按需选择下一批；已找到的岗位会保留。</p>{pendingSources.length>0&&<button type="button" onClick={()=>void search(undefined,undefined,false,false,true)}>检索未轮到的 {pendingSources.length} 个来源</button>}{continueRuns.map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>读取 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}下一页</button>)}{canExpand&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到其他来源（每次最多 2 个）</button>}</div></details>:null}
+    {searching?<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止</button>:result&&(pendingSources.length||continueRuns.length||canExpand)?<details ref={continueMenuRef} className="search-status-menu continue-menu"><summary>继续查找</summary><div className="search-menu-content"><p>关键词或城市改变后须重新搜索；续查保留岗位并应用当前本地筛选。</p>{pendingSources.length>0&&<button type="button" onClick={()=>void search(undefined,undefined,false,false,true)}>检索未轮到的 {pendingSources.length} 个来源</button>}{continueRuns.map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>读取 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}下一页</button>)}{canExpand&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到其他来源（每次最多 2 个）</button>}</div></details>:null}
     </div>
 
     </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => setMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => setMobileView("detail")}>详情</button></div>

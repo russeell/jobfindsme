@@ -972,3 +972,61 @@ def test_source_search_keeps_valid_first_page_after_later_failure(tmp_path, fail
     assert run["pages_fetched"] == 1
     assert run["error"] == failure
     assert run["can_continue"] is False
+
+
+def test_refilter_after_append_keeps_current_salary_and_frozen_score_versions(tmp_path):
+    database, workspace, _ = _confirmed_resume(tmp_path)
+    client = TestClient(create_app(token="test-secret", database_path=database.path))
+    headers = {"Authorization": "Bearer test-secret"}
+
+    def append(external_id, salary, run_id=None):
+        record = {
+            "external_id": external_id,
+            "source_name": "猎聘",
+            "source_url": "https://www.liepin.com/",
+            "payload": {
+                "title": "Python工程师",
+                "company": f"合成公司{external_id}",
+                "description": "Python",
+                "raw_salary_text": salary,
+                "url": f"https://www.liepin.com/job/{external_id}.shtml",
+            },
+        }
+        response = client.post(
+            "/v1/source-searches",
+            headers=headers,
+            json={
+                "workspace_id": workspace.workspace_id,
+                "intent": "Python",
+                "source_ids": ["liepin"],
+                "max_pages": 1,
+                "existing_run_id": run_id,
+                "browser_pages": {
+                    "liepin": [{"records": [record], "next_cursor": None}]
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["result_page"]
+
+    first = append("low", "10-15K")
+    run_id = first["run_id"]
+    local = {
+        "workspace_id": workspace.workspace_id,
+        "filters": {"salary_min_k": 20, "unknown_policy": "exclude"},
+        "page_size": 10,
+    }
+    initial_view = client.post(
+        f"/v1/search-runs/{run_id}/refilter", headers=headers, json=local
+    ).json()
+    assert initial_view["total"] == 0
+    append("high", "25-30K", run_id)
+    last = append("another-low", "12-16K", run_id)
+    view = client.post(
+        f"/v1/search-runs/{run_id}/refilter", headers=headers, json=local
+    ).json()
+    assert view["total"] == 1
+    assert view["items"][0]["job"]["external_id"] == "high"
+    assert view["rule_version_id"] == first["rule_version_id"]
+    assert view["resume_version_id"] == first["resume_version_id"]
+    assert last["total"] == 3

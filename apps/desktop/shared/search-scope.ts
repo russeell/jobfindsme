@@ -1,4 +1,5 @@
-import type {SearchResultItem,SearchResultPage,SourceCollectionProgress,SourceSearchResponse,SourceSearchRun} from './contracts';
+import {normalizeDiscoveryFilters} from "./discovery-filters.js";
+import type {SearchFilters,SearchResultItem,SearchResultPage,SourceCollectionProgress,SourceSearchResponse,SourceSearchRun} from './contracts';
 
 export function progressBelongsToRun(progress:SourceCollectionProgress,clientRunId:string|undefined,workspaceId:string|undefined):boolean{
   return !!clientRunId&&!!workspaceId&&progress.client_run_id===clientRunId&&progress.workspace_id===workspaceId;
@@ -34,4 +35,12 @@ export function mergeSearchCoverage(previous:SourceSearchResponse|undefined,next
     blocked_sources:{...blocked,...next.blocked_sources},
     source_diagnostics:next.source_diagnostics?{...next.source_diagnostics,sources:{...previous.source_diagnostics?.sources,...next.source_diagnostics.sources}}:previous.source_diagnostics,
   };
+}
+
+export function remoteSearchScopeChanged(intent:string,filters:SearchFilters,originalIntent:string,originalFilters:SearchFilters):boolean{
+  return intent.trim()!==originalIntent.trim()||JSON.stringify(filters.cities||[])!==JSON.stringify(originalFilters.cities||[]);
+}
+export async function searchPageForCurrentFilters(page:SearchResultPage,originalFilters:SearchFilters,currentFilters:SearchFilters,pageSize:number,refilter:(runId:string,filters:SearchFilters,pageSize:number)=>Promise<SearchResultPage>):Promise<SearchResultPage>{
+  const current=normalizeDiscoveryFilters(currentFilters);
+  return JSON.stringify(normalizeDiscoveryFilters(originalFilters))===JSON.stringify(current)?page:refilter(page.run_id,current,pageSize);
 }
