@@ -2132,6 +2132,15 @@
         "docs/desktop/HANDOFF.md",
         "https://github.com/russeell/jobfindsme/releases/tag/v0.13.3"
       ]
+    },
+    {
+      "id": "D97",
+      "title": "来源和归档设置页统一布局与轻量操作",
+      "status": "done",
+      "verification": "Node243/类型构建/Ruff/正常包审计通过；隔离原生宽/默认/窄窗、日期、恢复与删除取消，正常包重启核对通过。仅React/CSS，无真实来源/模型/Windows原生/Python全套验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }
