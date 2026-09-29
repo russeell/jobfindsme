@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
 
 import type { DesktopApiClient } from "./backend/api-client";
 import { saveModelConnectionWithSecret } from "./backend/model-connection-service";
@@ -745,9 +745,12 @@ ipcMain.handle("desktop:cancel-research", async () => {
 ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder")=>{
  if(event.sender!==mainWindow?.webContents||!mainWindow||!apiClient)throw Error("附件读取不可用");
  if(kind!=="files"&&kind!=="folder")throw Error("invalid selection");
- const selected=await dialog.showOpenDialog(mainWindow,{title:kind==="folder"?"选择资料文件夹":"选择文件",properties:kind==="folder"?["openDirectory"]:["openFile","multiSelections"],...(kind==="files"?{filters:[{name:"文本资料",extensions:["pdf","docx","md","txt"]}]}:{})});
+ const selected=await dialog.showOpenDialog(mainWindow,{title:kind==="folder"?"选择资料文件夹":"选择文件",properties:kind==="folder"?["openDirectory"]:["openFile","multiSelections"],...(kind==="files"?{filters:[{name:"文本资料",extensions:["pdf","docx","md","txt","png","jpg","jpeg","webp"]}]}:{})});
  if(selected.canceled)return {attachments:[],warnings:[]};
- return collectChatAttachments(selected.filePaths,(name,content)=>apiClient!.extractChatAttachment(name,content));
+ return collectChatAttachments(selected.filePaths,async(name,content)=>{
+  if(/\.(png|jpe?g|webp)$/i.test(name)){const image=nativeImage.createFromBuffer(Buffer.from(content,"base64"));const size=image.getSize();if(image.isEmpty()||size.width*size.height>40_000_000)throw Error("图片无法读取或尺寸过大");const resized=size.width>1600||size.height>1600?image.resize(size.width>=size.height?{width:1600}:{height:1600}):image;const data=resized.toJPEG(85).toString("base64");if(data.length>2_000_000)throw Error("图片过大");return {text:`图片附件：${name}。使用视觉能力读取；无法识别的文字不要猜测。`,truncated:false,image:{mimeType:"image/jpeg" as const,data}};}
+  return apiClient!.extractChatAttachment(name,content);
+ });
 });
 ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");

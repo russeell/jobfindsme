@@ -2178,6 +2178,28 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D102",
+      "title": "紧凑技能菜单、图片材料与主题研究边界",
+      "status": "done",
+      "verification": "Node255、相关Python49、类型构建、Ruff、正常包审计通过；隔离原生最终菜单、图片多模态传入、read_skill及重启图片恢复核对。真实公开搜索仍Connection refused，真实模型效果/Windows/窄窗/Python全套未验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "D103",
+      "title": "公开研究检索连接失败与真实技能效果验收",
+      "status": "in_progress",
+      "depends_on": [
+        "D102"
+      ],
+      "verification": "待定位应用公开搜索连接失败，并用行业、公司、技术主题及真实简历/面试样例验证；不能用模拟模型工具链通过代替效果验收。",
+      "blocker": "真实行业查询在剔除招聘首页与城市岗位页面后出现Connection refused；未运行付费模型，尚无真实技能输出质量证据。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

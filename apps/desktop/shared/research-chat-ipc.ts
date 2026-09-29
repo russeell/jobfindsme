@@ -15,13 +15,13 @@ export function explicitReportRequest(question:string):boolean{
 
 // Only the model copy is bounded; saved conversation turns remain complete.
 export function modelHistoryWithinBudget(history:ResearchChatTurn[],maxChars=20000):ResearchChatTurn[]{
-  const selected:ResearchChatTurn[]=[];let used=0;
+  const selected:ResearchChatTurn[]=[];let used=0,imageChars=0;
   for(let index=history.length-1;index>=0;index--){
     if(selected.length>=200)break;
     const turn=history[index],base=turn.interrupted?`（上条回复已停止，内容未完成）\n${turn.text}`:turn.text,text=turn.role==="user"&&turn.attachments?.length?`${base.slice(0,4000)}\n\n${attachmentContext(turn.attachments).slice(0,4000)}`.slice(0,8000):base.slice(-8000),remaining=maxChars-used;
     if(remaining<=0)break;
     if(text.length>remaining){if(!selected.length)selected.unshift({role:turn.role,text:text.slice(-remaining)});break;}
-    selected.unshift({role:turn.role,text});used+=text.length;
+    const images=turn.attachments?.filter(item=>{if(!item.image||imageChars+item.image.data.length>8_000_000)return false;imageChars+=item.image.data.length;return true;}).slice(0,2);selected.unshift({role:turn.role,text,...(images?.length?{attachments:images}:{})});used+=text.length;
   }
   return selected;
 }
@@ -34,5 +34,5 @@ export function validResearchChatInput(input:unknown):boolean{
     &&typeof value.connection_id==="string"&&typeof value.question==="string"&&value.question.length<=12000
     &&!!value.question.trim()&&typeof value.research==="boolean"&&Array.isArray(value.history)
     &&value.history.length<=200&&value.history.every(item=>item&&["user","assistant"].includes(item.role)
-      &&typeof item.text==="string"&&item.text.length<=8000);
+      &&typeof item.text==="string"&&item.text.length<=8000&&(item.attachments===undefined||validChatAttachments(item.attachments)))&&value.history.reduce((sum,item)=>sum+(item.attachments||[]).reduce((n:number,file:{image?:{data:string}})=>n+(file.image?.data.length||0),0),0)<=8_000_000;
 }

@@ -1557,3 +1557,38 @@ def test_search_rate_limit_never_triggers_alternative_channel(monkeypatch):
     with pytest.raises(urllib.error.HTTPError):
         agent_sources.discover_sources("腾讯", "员工待遇", "web")
     assert len(calls) == 1
+
+
+def test_industry_discovery_rejects_homepages_and_city_jobs():
+    assert not agent_sources._topic_relevant(
+        {
+            "url": "https://www.zhaopin.com/",
+            "title": "招聘网",
+            "summary_hint": "行业报告",
+        },
+        "研究招聘行业",
+    )
+    assert not agent_sources._topic_relevant(
+        {
+            "url": "https://www.zhipin.com/xian-city/c123/",
+            "title": "城市招聘",
+            "summary_hint": "人才市场行业报告",
+        },
+        "研究招聘行业",
+    )
+    assert agent_sources._topic_relevant(
+        {
+            "url": "https://example.org/reports/industry",
+            "title": "招聘行业研究报告",
+            "summary_hint": "市场规模与发展趋势",
+        },
+        "研究招聘行业",
+    )
+    assert not agent_sources._topic_relevant(
+        {
+            "url": "https://example.org/jobs/123",
+            "title": "工程师招聘",
+            "summary_hint": "薪资福利",
+        },
+        "研究招聘行业",
+    )

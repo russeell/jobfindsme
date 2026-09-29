@@ -12,7 +12,7 @@ docs/images/        README 使用的界面截图
 
 桌面端 `main/browser` 管浏览器会话，`main/sources` 管页面提取，`main/backend` 管 Python 进程与通信，`main/security` 管系统密钥；`renderer/src` 管找工作、研究、简历和设置。`main/index.ts` 与 `renderer/src/App.tsx` 负责组装。
 
-桌面端 `skills/` 随包提供简历定制、面试准备和公司深度研究工作流及 MIT 来源说明；`shared/assistant-skills.ts` 是固定注册表，`main/research/assistant-skills.mts` 只加载注册的技能。技能复用同一个 Pi Agent，通过 `read_skill` 按需读取，不自动注入整段工作流或改写用户提问。文件/文件夹由主进程原生选择，只读取支持的资料；Python复用文本提取器解析，不导入或覆盖简历。附件文本随对话保存在本机，点击发送才进入所选模型上下文。深度研究沿用有界搜索、原文读取及引用校验。
+桌面端 `skills/` 随包提供简历定制、面试准备和公司/行业/技术主题深度研究工作流及 MIT 来源说明；`shared/assistant-skills.ts` 是固定注册表，`main/research/assistant-skills.mts` 只加载注册的技能。技能复用同一个 Pi Agent，通过 `read_skill` 按需读取，不自动注入整段工作流或改写用户提问。文件/文件夹由主进程原生选择，只读取支持的资料；Python复用文本提取器解析，不导入或覆盖简历。附件文本随对话保存在本机，点击发送才进入所选模型上下文。图片由主进程解码转JPEG，经Pi图片内容传入所选视觉模型，并受大小与历史预算限制。`main/research/research-subject.ts` 区分公司与主题锚点；主题证据不混入公司缓存或公司报告。深度研究沿用有界搜索、原文读取及引用校验。
 
 Python `sources/` 是来源目录和检索准入的权威位置，`search/` 负责编排与统一结果，`research/` 管有来源的报告，`profiles/` 与 `resume_editor/` 管简历数据，`desktop_api/` 提供本地接口。`migrations/` 必须保留，以读取已有用户数据。
 

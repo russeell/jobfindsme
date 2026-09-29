@@ -288,6 +288,19 @@ _BENEFIT_TERMS = re.compile(
 
 def _topic_relevant(row: dict, question: str) -> bool:
     # Discovery relevance only: snippets never become evidence.
+    hint = row.get("title", "") + " " + row.get("summary_hint", "")
+    if re.search(r"行业|市场规模|产业|技术趋势|生态", question):
+        parsed = urllib.parse.urlsplit(row.get("url", ""))
+        if not parsed.path.strip("/") or re.search(
+            r"/(?:xian-city|web/geek|jobs|sou)/", parsed.path
+        ):
+            return False
+        return bool(
+            re.search(
+                r"报告|市场规模|市场研究|产业|行业分析|行业研究|发展趋势|商业模式|人力资源服务业",
+                hint,
+            )
+        )
     if not _BENEFIT_TERMS.search(question):
         return True
     return bool(
