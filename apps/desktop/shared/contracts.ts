@@ -112,7 +112,7 @@ export type DesktopBridge = {
   restoreResearchChat(workspaceId:string,conversationId:string):Promise<void>;
   deleteArchivedResearchChat(workspaceId:string,conversationId:string):Promise<void>;
   cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
-  pickChatAttachments(kind:"files"|"folder"):Promise<ChatAttachmentSelection>;
+  pickChatAttachments(kind:"files"|"folder"|"mixed"):Promise<ChatAttachmentSelection>;
   runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
   cancelResearchChat(requestId:string):Promise<void>;
   onResearchChatDelta(listener:(event:ResearchChatDelta)=>void):()=>void;

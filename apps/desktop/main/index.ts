@@ -744,10 +744,15 @@ ipcMain.handle("desktop:cancel-research", async () => {
   researchController?.abort();
   return cancelled;
 });
-ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder")=>{
+ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder"|"mixed")=>{
  if(event.sender!==mainWindow?.webContents||!mainWindow||!apiClient)throw Error("附件读取不可用");
- if(kind!=="files"&&kind!=="folder")throw Error("invalid selection");
- const selected=await dialog.showOpenDialog(mainWindow,{title:kind==="folder"?"选择资料文件夹":"选择文件",properties:kind==="folder"?["openDirectory"]:["openFile","multiSelections"],...(kind==="files"?{filters:[{name:"文本资料",extensions:["pdf","docx","md","txt","png","jpg","jpeg","webp"]}]}:{})});
+ if(kind!=="files"&&kind!=="folder"&&kind!=="mixed")throw Error("invalid selection");
+ if(kind==="mixed"&&process.platform!=="darwin"){
+  const choice=await dialog.showMessageBox(mainWindow,{type:"question",title:"添加资料",message:"选择要添加的资料",buttons:["文件或图片","文件夹","取消"],defaultId:0,cancelId:2,noLink:true});
+  if(choice.response===2)return {attachments:[],warnings:[]};
+  kind=choice.response===1?"folder":"files";
+ }
+ const selected=await dialog.showOpenDialog(mainWindow,{title:kind==="folder"?"选择资料文件夹":kind==="mixed"?"选择文件、图片或文件夹":"选择文件或图片",properties:kind==="folder"?["openDirectory"]:kind==="mixed"?["openFile","openDirectory","multiSelections"]:["openFile","multiSelections"],...(kind==="files"?{filters:[{name:"资料与图片",extensions:["pdf","docx","md","txt","png","jpg","jpeg","webp"]}]}:{})});
  if(selected.canceled)return {attachments:[],warnings:[]};
  return collectChatAttachments(selected.filePaths,async(name,content)=>{
   if(/\.(png|jpe?g|webp)$/i.test(name)){const image=nativeImage.createFromBuffer(Buffer.from(content,"base64"));const size=image.getSize();if(image.isEmpty()||size.width*size.height>40_000_000)throw Error("图片无法读取或尺寸过大");const resized=size.width>1600||size.height>1600?image.resize(size.width>=size.height?{width:1600}:{height:1600}):image;const data=resized.toJPEG(85).toString("base64");if(data.length>2_000_000)throw Error("图片过大");return {text:`图片附件：${name}。使用视觉能力读取；无法识别的文字不要猜测。`,truncated:false,image:{mimeType:"image/jpeg" as const,data}};}

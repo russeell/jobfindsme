@@ -2212,6 +2212,18 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D105",
+      "title": "求职助手处理中状态、附件入口与主题候选过滤",
+      "status": "done",
+      "depends_on": [
+        "D102"
+      ],
+      "verification": "桌面构建与 Node265、研究 Python50、Ruff、diff 和本地包审计通过；隔离原生 D105 验证合并菜单与 macOS 文件/目录同一选择器，正常 D105 App 与后端已启动。短对话底部排布及进行中状态只经代码/构建核对，未用真实模型原生验证。真实研究资料质量仍属 D103。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

@@ -376,6 +376,7 @@ nav button .nav-label {font-size:13px;}
 .research-scroll-region::-webkit-scrollbar-track {background:transparent;}
 .research-scroll-region::-webkit-scrollbar-thumb {background:#c8cac8;border-radius:8px;}
 .research-reading-column {width:min(800px,calc(100% - 40px));min-height:100%;margin-inline:auto;}
+.research-conversation .research-reading-column {display:flex;flex-direction:column;justify-content:flex-end;}
 .research-workbench:has(.research-empty-state) {justify-content:center;}
 .research-empty-state {flex:0 0 auto;height:auto;overflow:visible;padding:0;}
 .research-empty-state .research-reading-column {min-height:0;}
@@ -601,8 +602,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .research-add-menu button>div {flex:1;}
 .research-add-menu button span {display:block;margin-top:3px;font-size:11px;}
 .research-add-menu .research-selected-check {margin-left:auto;color:var(--accent);}
-.research-file-actions {display:flex;align-items:stretch;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line);}
-.research-file-actions .research-folder-action {width:38px;justify-content:center;align-self:center;flex-shrink:0;}
+.research-file-actions {margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line);}
 .research-attachment-list>span {max-width:240px;}
 .research-attachment-list>span>span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .research-attachment-list img {width:44px;height:48px;object-fit:cover;border-radius:5px;flex-shrink:0;}
