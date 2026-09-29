@@ -10,7 +10,7 @@ import {SearchFilters as FilterControls} from "./SearchFilters";
 import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
 import {formatSalary} from "./salary";
 import {ResumePage} from "../resume/ResumePage";
-import {remoteSearchScopeChanged,searchPageForCurrentFilters,mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelectedSearchJob,sourceRunNeedsAttention,progressBelongsToRun} from "../../../shared/search-scope";
+import {selectedSourceContinuation,remoteSearchScopeChanged,searchPageForCurrentFilters,mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelectedSearchJob,sourceRunNeedsAttention,progressBelongsToRun} from "../../../shared/search-scope";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
 const blockedReason=(value:string)=>/login|登录/i.test(value)?"需登录后重试":/risk|captcha|验证/i.test(value)?"需完成网站验证":"暂不可检索，请到岗位来源检查";
@@ -91,10 +91,9 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const pendingSources=result?unstartedSourceIds(result):[];
   const coveredSources=resultRequest?.sourceIds||[];
   const selectionChanged=!!resultRequest&&([...selectedSources].sort().join('|')!==[...coveredSources].sort().join('|'));
-  const continueRuns=result?.source_runs.filter(run=>run.can_continue&&run.next_cursor)||[];
-  const canExpand=!!result&&sources.some(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id));
+  const continuationPlan=result?selectedSourceContinuation(result,selectedSources,coveredSources):undefined;
   const issueCount=result?(result.batch_failures?.length||0)+result.source_runs.filter(sourceRunNeedsAttention).length:0;
-  const statusText=searching?`正在查找 · 已找到 ${currentFound} 条岗位，已处理 ${processedSourceIds.length} 个来源`:showingPrevious?`本次未完成 · 保留上次找到的 ${page?.total??0} 条岗位`:result?`已找到 ${page?.total??0} 条岗位 · ${result.executed_queries?.length||0} 个来源已检索${Object.keys(result.blocked_sources).length?` · ${Object.keys(result.blocked_sources).length} 个需处理`:""}${pendingSources.length?` · ${pendingSources.length} 个未轮到`:""}${issueCount?" · 部分读取失败":""}${selectionChanged?" · 勾选变更下次生效":""}`:searchError?"本次未完成，已保留上次结果":selectedSources.length?`已选 ${selectedSources.length} 个来源 · ${enabled.length} 个可尝试检索${attemptable.length-enabled.length?` · ${attemptable.length-enabled.length} 个本次可尝试验证`:""}${selectedSources.length-attemptable.length?` · ${selectedSources.length-attemptable.length} 个需处理`:""}`:"请选择岗位来源";
+  const statusText=searching?`正在查找 · 已找到 ${currentFound} 条岗位，已处理 ${processedSourceIds.length} 个来源`:showingPrevious?`本次未完成 · 保留上次找到的 ${page?.total??0} 条岗位`:result?`已找到 ${page?.total??0} 条岗位 · ${result.executed_queries?.length||0} 个来源已检索${Object.keys(result.blocked_sources).length?` · ${Object.keys(result.blocked_sources).length} 个需处理`:""}${pendingSources.length?` · ${pendingSources.length} 个未轮到`:""}${issueCount?" · 部分读取失败":""}${selectionChanged?" · 已选范围已变更":""}`:searchError?"本次未完成，已保留上次结果":selectedSources.length?`已选 ${selectedSources.length} 个来源 · ${enabled.length} 个可尝试检索${attemptable.length-enabled.length?` · ${attemptable.length-enabled.length} 个本次可尝试验证`:""}${selectedSources.length-attemptable.length?` · ${selectedSources.length-attemptable.length} 个需处理`:""}`:"请选择岗位来源";
   const [filterKey,setFilterKey]=useState(0);
   const filterEpoch=useRef(0);
   const filterBaseRun=useRef<string|undefined>(undefined);
@@ -124,10 +123,10 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(cancelled)return;const byId=new Map(rows.map(row=>[row.job.job_id,row.tracking]));const fresh=(item:SearchResultItem)=>({...item,tracking:byId.get(item.job.job_id) ?? item.tracking});setPage(current=>current && {...current,items:current.items.map(fresh)});setSelected(current=>current && fresh(current));}).catch(error=>onError(messageOf(error)));
     return()=>{cancelled=true;};
   },[active,workspaceId]);
-  async function search(event?: FormEvent, continuation?:{sourceId:string;cursor:string}, expand=false, useResume=false, pending=false) {
+  async function search(event?: FormEvent, continueSelected=false, useResume=false) {
     event?.preventDefault();
     if (!workspaceId) return;
-    const preserve=!!(continuation||expand||pending)&&!!result;
+    const preserve=continueSelected&&!!result;
     if(preserve&&resultRequest&&remoteSearchScopeChanged(intent,filtersRef.current,resultRequest.intent,resultRequest.filters)){onError("关键词或城市已改变，请点击找岗位开始新搜索。");return;}
     if(useResume&&!preserve)setIntent("");
     const requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":intent.trim();
@@ -135,10 +134,9 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
     if (!preserve&&!attemptable.length) {onError("请先选择至少一个可检索或可尝试验证的来源。");return;}
     if (requestFilters.salary_min_k != null && requestFilters.salary_max_k != null && requestFilters.salary_min_k > requestFilters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
-    const additional=sources.filter(source=>source.live_search_enabled&&!coveredSources.includes(source.source_id)).slice(0,2);
-    const sourceIds=continuation?[continuation.sourceId]:pending&&result?unstartedSourceIds(result):expand?additional.map(source=>source.source_id):selectedSources;
-    if(!sourceIds.length){onError("没有更多当前可检索的来源。");return;}
-    activeRequest.current=preserve?{sourceIds:expand?[...(resultRequest?.sourceIds||[]),...sourceIds]:resultRequest?.sourceIds||sourceIds,intent:requestIntent,filters:requestFilters}:{sourceIds:[...sourceIds],intent:requestIntent,filters:requestFilters};
+    const sourceIds=preserve?continuationPlan?.sourceIds||[]:selectedSources;
+    if(!sourceIds.length){onError("已选平台没有可继续读取的结果；请查看来源详情或开始新搜索。");return;}
+    activeRequest.current=preserve?{sourceIds:[...new Set([...(resultRequest?.sourceIds||[]),...sourceIds])],intent:requestIntent,filters:requestFilters}:{sourceIds:[...sourceIds],intent:requestIntent,filters:requestFilters};
     preserveSelection.current=preserve;
     const epoch=++searchEpoch.current;filterEpoch.current++;
     const clientRunId=crypto.randomUUID();activeClientRun.current=clientRunId;
@@ -149,8 +147,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     try {
       const response = await window.jobfindsme!.runSourceSearch({ workspace_id: workspaceId,client_run_id:clientRunId,
         existing_run_id:preserve?result?.result_page.run_id:undefined,
-        boss_cursor:continuation?.sourceId==="boss"?continuation.cursor:undefined,
-        source_cursor:continuation?.sourceId!=="boss"?continuation?.cursor:undefined,
+        source_cursors:preserve?continuationPlan?.cursors:undefined,
         intent:requestIntent, source_ids:sourceIds, max_pages:1, time_budget_seconds:15,
         filters:requestFilters, page_size: pageSize });
       if(epoch!==searchEpoch.current)return;
@@ -158,7 +155,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       const failed=response.source_runs.filter(sourceRunNeedsAttention);
       const blocked=Object.values(response.blocked_sources);
       const keepPrevious=!preserve&&!response.result_page.total&&!!page?.items.length&&!!(failed.length||blocked.length);
-      if(!keepPrevious){filterBaseRun.current=response.result_page.run_id;setResult(previous=>preserve?mergeSearchCoverage(previous,response):response);if(!preserve||expand)setResultRequest(activeRequest.current);}
+      if(!keepPrevious){filterBaseRun.current=response.result_page.run_id;setResult(previous=>preserve?mergeSearchCoverage(previous,response):response);setResultRequest(activeRequest.current);}
       if(failed.length||blocked.length||response.batch_failures?.length){
         const base=userError(failed.find(run=>["risk_control","login_required"].includes(run.stop_reason))?.stop_reason || (blocked.length?blocked[0]:failed.length===response.source_runs.length&&!response.result_page.total?(failed[0]?.error||"source_contract_error") :"partial"));
         const batchNotice=response.batch_failures?.map(item=>`${sources.find(source=>source.source_id===item.source_id)?.name||item.source_id}${item.stage==="save"?"的读取结果保存失败":"的来源状态更新失败"}`).join("；");
@@ -205,10 +202,10 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   }
   return <div className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || attemptable.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
-    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
+    {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,false,true)}>按我的简历找岗位</button><span>使用已确认简历中的技能词检索，并在本地匹配。</span></div>}
     <FilterControls key={filterKey} value={filters} onChange={next=>void updateFilters(next)} sources={sources} selectedSources={selectedSources} onSource={onSelectSource} onSelectAllSources={onSelectAllSources} onReset={resetFilters} />
     <div className="search-status-line" role="status"><span title={statusText}>{statusText}</span><details ref={statusMenuRef} className="search-status-menu"><summary>来源详情</summary><div className="search-menu-content">
-      <p>{searching?`本轮请求 ${activeRequest.current?.sourceIds.length||0} 个来源；岗位在每个来源保存后加入结果。`:resultRequest?`${showingPrevious?"保留的上次结果":"结果"}对应「${resultRequest.intent||"简历关键词"}」和当时选择的 ${coveredSources.length} 个来源。`:"勾选会在下次检索时使用。"}</p>
+      <p>{searching?`本轮请求 ${activeRequest.current?.sourceIds.length||0} 个来源；岗位在每个来源保存后加入结果。`:resultRequest?`${showingPrevious?"保留的上次结果":"结果"}对应「${resultRequest.intent||"简历关键词"}」和当时选择的 ${coveredSources.length} 个来源。`:"勾选的平台用于本次检索。"}</p>
       {searchError&&<p className="search-menu-warning">{searchError.message} 已保存的岗位保留。</p>}
       {matchingMessage&&<p>{matchingMessage}</p>}
       {!searching&&feedbackResult?.source_runs.map(run=><p key={run.source_id}>{sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}：{run.status==="success"?"已读取":run.status==="partial"?"部分岗位已读取":"本次未完成"} · {run.error?userError(run.error).message:runReason(run.stop_reason)}</p>)}
@@ -216,7 +213,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       {!result&&unavailable.map(source=><p key={source.source_id}>{source.name}：{attemptable.some(item=>item.source_id===source.source_id)?"输入关键词即可尝试搜索，无需先检查":"请在原页完成平台验证后重试"}</p>)}
       <button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>管理岗位来源</button>
     </div></details>
-    {searching?<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止</button>:result&&(pendingSources.length||continueRuns.length||canExpand)?<details ref={continueMenuRef} className="search-status-menu continue-menu"><summary>继续查找</summary><div className="search-menu-content"><p>关键词或城市改变后须重新搜索；续查保留岗位并应用当前本地筛选。</p>{pendingSources.length>0&&<button type="button" onClick={()=>void search(undefined,undefined,false,false,true)}>检索未轮到的 {pendingSources.length} 个来源</button>}{continueRuns.map(run=><button key={run.source_id} type="button" onClick={()=>void search(undefined,{sourceId:run.source_id,cursor:run.next_cursor!})}>读取 {sources.find(source=>source.source_id===run.source_id)?.name||run.source_id}下一页</button>)}{canExpand&&<button type="button" onClick={()=>void search(undefined,undefined,true)}>扩大到其他来源（每次最多 2 个）</button>}</div></details>:null}
+    {searching?<button type="button" onClick={()=>void window.jobfindsme!.cancelSourceSearch()}>停止</button>:result?<details ref={continueMenuRef} className="search-status-menu continue-menu"><summary>继续查找</summary><div className="search-menu-content"><p>仅检索已选平台，保留现有岗位；有续页的平台从下一页读取，新选或未轮到的平台读取首批。</p><button type="button" disabled={!continuationPlan?.sourceIds.length} onClick={()=>void search(undefined,true)}>继续检索已选平台（{continuationPlan?.sourceIds.length||0} 个可读取）</button>{!!continuationPlan?.unavailableIds.length&&<p>{continuationPlan.unavailableIds.map(id=>sources.find(source=>source.source_id===id)?.name||id).join("、")}：已读完、来源受限或未提供可用续页，请查看来源详情。不会重新读取第一页。</p>}<p>关键词或城市改变后须重新搜索；当前本地筛选继续生效。</p></div></details>:null}
+
     </div>
 
     </div><div className="mobile-switch"><button className={mobileView === "list" ? "selected" : ""} onClick={() => setMobileView("list")}>列表</button><button className={mobileView === "detail" ? "selected" : ""} disabled={!selected} onClick={() => setMobileView("detail")}>详情</button></div>

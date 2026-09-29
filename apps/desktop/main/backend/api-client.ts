@@ -98,7 +98,7 @@ export class DesktopApiClient {
   publicSourcePages(sourceId:string,input:{keyword:string;city:string;max_pages:number;seconds:number;cursor?:string;force_refresh?:boolean},signal?:AbortSignal):Promise<BrowserSourcePage[]>{return this.json(`/v1/sources/${sourceId}/public-pages`,{method:'POST',body:JSON.stringify(input),signal},65000);}
 
   searchPreflight(input: SourceSearchExecutionInput): Promise<SourceSearchPreflight> {
-    const {boss_cursor:_boss,source_cursor:_source,client_run_id:_client,...request}=input;
+    const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,...request}=input;
     return this.json("/v1/search-preflight", {
       method: "POST",
       body: JSON.stringify(request),

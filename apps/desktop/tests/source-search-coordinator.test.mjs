@@ -48,3 +48,11 @@ test('four explicitly selected sources retain budget-unstarted identities after 
  assert.deepEqual(ids.slice(2).map(id=>result.errors[id]),['time_budget:本次总时间预算已用完','time_budget:本次总时间预算已用完']);
  assert.deepEqual(Object.keys(result.diagnostics.sources).sort(),[...ids].sort());
 });
+
+test('selected platforms use their own continuation cursor while a newly selected platform starts once',async()=>{
+ const seen={};
+ await collectBrowserSourcePages({source_ids:['boss','liepin','zhilian','wuyou'],workspace_id:'w',intent:'Java',source_cursors:{boss:'boss-next',liepin:'2',zhilian:'3'}},
+  {allowed_source_ids:['boss','liepin','zhilian','wuyou'],keywords:['Java'],max_pages:1,time_budget_seconds:10},
+  {isCancelled:()=>false,client:{publicSourcePages:async(id,input)=>{seen[id]=input.cursor;return [{records:[],next_cursor:null}];}},manager:{boss:{collect:async input=>{seen.boss=input.cursor;return {records:[],next_cursor:null};}},searchPage:async(id,input)=>{seen[id]=input.page;return {records:[],next_cursor:null};}}});
+ assert.deepEqual(seen,{boss:'boss-next',liepin:'2',zhilian:3,wuyou:1});
+});

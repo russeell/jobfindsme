@@ -2103,6 +2103,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D94",
+      "title": "按全部已选平台继续检索与独立游标",
+      "status": "done",
+      "verification": "Node243、类型/构建/Ruff/包审计通过；模拟四平台不同游标、选中范围、预算未轮到回归。已打本地D94包含D91-D93；未原生/真实平台续页验收。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

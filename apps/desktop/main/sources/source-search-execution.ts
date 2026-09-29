@@ -28,7 +28,7 @@ export async function executeBoundedSourceSearch(
   let saveQueue=Promise.resolve();
   const saveOne=async(sourceId:string,pages:BrowserSourcePage[],error?:string)=>{
     if(isCancelled()&&!pages.length)return;
-    const {boss_cursor:_boss,source_cursor:_source,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
+    const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
     let response:SourceSearchResponse;
     try{
       response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,source_ids:[sourceId],existing_run_id:runId,
@@ -64,7 +64,7 @@ export async function executeBoundedSourceSearch(
   let response=responses.at(-1);
   if(!response){
     if(failures.length)throw Error(`本次岗位保存失败：${failures.map(item=>item.source_id).join("、")}`);
-    const {boss_cursor:_boss,source_cursor:_source,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
+    const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
     response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,source_ids:[],existing_run_id:runId,resume_version_id:preflight.resume_version_id||undefined});
   }
   onSourceStatusChanged?.();

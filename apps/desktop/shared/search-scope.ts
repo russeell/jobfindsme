@@ -44,3 +44,16 @@ export async function searchPageForCurrentFilters(page:SearchResultPage,original
   const current=normalizeDiscoveryFilters(currentFilters);
   return JSON.stringify(normalizeDiscoveryFilters(originalFilters))===JSON.stringify(current)?page:refilter(page.run_id,current,pageSize);
 }
+
+export function selectedSourceContinuation(response:SourceSearchResponse,selectedIds:string[],coveredIds:string[]):{sourceIds:string[];cursors:Record<string,string>;unavailableIds:string[]}{
+  const unstarted=new Set(unstartedSourceIds(response)),covered=new Set(coveredIds);
+  const runs=new Map(response.source_runs.map(run=>[run.source_id,run]));
+  const sourceIds:string[]=[],cursors:Record<string,string>={},unavailableIds:string[]=[];
+  for(const id of [...new Set(selectedIds)]){
+    const run=runs.get(id);
+    if(!covered.has(id)||unstarted.has(id))sourceIds.push(id);
+    else if(run?.can_continue&&run.next_cursor){sourceIds.push(id);cursors[id]=run.next_cursor;}
+    else unavailableIds.push(id);
+  }
+  return {sourceIds,cursors,unavailableIds};
+}

@@ -21,12 +21,13 @@ export async function collectBrowserSourcePages(
   const browserPages: Record<string, BrowserSourcePage[]> = {};
   const browserErrors: Record<string, string> = {};
   const collectOne=async (sourceId:string):Promise<void> => {
+    const cursor=input.source_cursors?.[sourceId]??(sourceId==="boss"?input.boss_cursor:input.source_cursor);
     if(isCancelled()){browserErrors[sourceId]="cancelled:已停止后续来源，保留已读取结果";return;}
     if(remaining()<0.1){browserErrors[sourceId]="time_budget:本次总时间预算已用完";return;}
     onProgress?.({stage:"loading",count:0,message:`正在读取 ${isSourceBrowserId(sourceId)?browserSiteNames[sourceId]:"岗位来源"}`});
     if (!requiresElectronSourceSearch(sourceId)) {
       if(!isSourceBrowserId(sourceId))return;
-      try { browserPages[sourceId]=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',max_pages:Math.min(3,preflight.max_pages),seconds:Math.max(1,Math.min(60,remaining())),cursor:input.source_cursor}); }
+      try { browserPages[sourceId]=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',max_pages:Math.min(3,preflight.max_pages),seconds:Math.max(1,Math.min(60,remaining())),cursor}); }
       catch(primaryError){
         browserErrors[sourceId]=String(primaryError).slice(0,1000);
       }
@@ -37,7 +38,7 @@ export async function collectBrowserSourcePages(
       return;
     }
     if(sourceId==="boss"){
-      try {browserPages.boss=[await manager.boss.collect({keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||"",maxBatches:preflight.max_pages,seconds:remaining(),cursor:input.boss_cursor},progress=>{onProgress?.(progress);})];}
+      try {browserPages.boss=[await manager.boss.collect({keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||"",maxBatches:preflight.max_pages,seconds:remaining(),cursor},progress=>{onProgress?.(progress);})];}
       catch(error){const message=error instanceof Error?error.message:String(error),failure=message.startsWith("risk_control:")?"risk_control":message.startsWith("login_required:")?"login_required":null;
         browserPages.boss=[{records:[],next_cursor:null,collection:{batches:0,elapsed_seconds:0,stop_reason:failure||(message.startsWith("unsupported_city:")?"unsupported_city":"source_contract_error"),cursor:null,complete:false,failure}}];
       }
@@ -46,7 +47,7 @@ export async function collectBrowserSourcePages(
       return;
     }
     const pages: BrowserSourcePage[] = [];
-    let page = input.source_cursor ? Number(input.source_cursor) : 1;
+    let page = cursor ? Number(cursor) : 1;
     if(!Number.isInteger(page)||page<1){browserErrors[sourceId]="unsupported_cursor:来源未提供可用页码";return;}
     try {
       let fetched=0;

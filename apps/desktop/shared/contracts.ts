@@ -130,6 +130,7 @@ export type SourceCollectionProgress = {stage:"queued"|"loading"|"listing"|"deta
 export type SourceSearchInput = {
   boss_cursor?:string;
   source_cursor?:string;
+  source_cursors?:Record<string,string>;
   client_run_id?:string;
   existing_run_id?:string;
   workspace_id: string;
