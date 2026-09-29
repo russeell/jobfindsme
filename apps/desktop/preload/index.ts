@@ -71,6 +71,7 @@ const bridge: DesktopBridge = Object.freeze({
   restoreResearchChat: (workspaceId,conversationId) => ipcRenderer.invoke("desktop:restore-research-chat",workspaceId,conversationId),
   deleteArchivedResearchChat: (workspaceId,conversationId) => ipcRenderer.invoke("desktop:delete-archived-research-chat",workspaceId,conversationId),
   cancelResearch: () => ipcRenderer.invoke("desktop:cancel-research"),
+  pickChatAttachments: kind => ipcRenderer.invoke("desktop:pick-chat-attachments",kind),
   runResearchChat: input => ipcRenderer.invoke("desktop:run-research-chat",input),
   cancelResearchChat: requestId => ipcRenderer.invoke("desktop:cancel-research-chat",requestId),
   onResearchChatDelta: listener => {const handler=(_event:Electron.IpcRendererEvent,payload:import("../shared/contracts").ResearchChatDelta)=>listener(payload);ipcRenderer.on("desktop:research-chat-delta",handler);return ()=>ipcRenderer.removeListener("desktop:research-chat-delta",handler);},

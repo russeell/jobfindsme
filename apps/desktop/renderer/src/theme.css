@@ -573,3 +573,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .research-examples button {display:flex;flex-direction:column;gap:5px;text-align:left;padding:12px 14px;}
 .research-examples button span {font-size:11px;color:var(--text-muted);font-weight:400;}
 @container(max-width:720px){.research-active-skill{flex-wrap:wrap}.research-active-skill span{flex-basis:70%}.research-examples{flex-wrap:wrap}}
+/* Composer: materials and skills on the left, model and send on the right. */
+.research-composer {border-radius:20px;padding:12px 14px;gap:8px;position:relative;}
+.research-active-skill {align-self:flex-start;background:var(--surface-hover);padding:4px 9px;font-weight:500;}
+.research-active-skill button {margin-left:6px;}
+.research-send-actions {margin-left:auto;min-width:0;}
+.research-send-actions select {border:0;background:transparent;max-width:260px;min-width:0;font-size:12px;padding:5px;color:var(--text-muted);text-overflow:ellipsis;}
+.research-send-actions .primary-button {border-radius:50%;width:34px;height:34px;min-width:34px;padding:0;font-size:22px;}
+.research-add-control {position:relative;}
+.research-add-button {width:30px;height:30px;border:0;background:var(--surface-hover);border-radius:50%;padding:0;font-size:22px;}
+.research-menu-dismiss {position:fixed;inset:0;border:0;background:transparent;z-index:30;cursor:default;}
+.research-add-menu {position:absolute;bottom:42px;left:-7px;width:min(430px,calc(100vw - 65px));max-height:min(440px,60vh);overflow:auto;z-index:31;background:#fff;border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:0 10px 40px #18253e18;}
+.research-add-menu small {display:block;margin:5px 9px;color:var(--text-muted);font-size:12px;}
+.research-add-menu button {display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:0;border-radius:10px;background:transparent;text-align:left;font-size:13px;}
+.research-add-menu button:hover,.research-add-menu button[aria-pressed=true] {background:var(--surface-selected);}
+.research-add-menu button span {color:var(--text-muted);font-size:12px;}
+.research-attachment-list {display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px;}
+.research-attachment-list>span {display:flex;align-items:center;gap:7px;max-width:100%;overflow-wrap:anywhere;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#fff;font-size:12px;}
+.research-attachment-list button {border:0;background:transparent;padding:0;font-size:16px;}
+.research-attachment-note {color:var(--text-muted);font-size:11px;}
+@container(max-width:720px){.research-send-actions select{max-width:180px}.research-add-menu button{flex-wrap:wrap}.research-add-menu button span{font-size:11px}}

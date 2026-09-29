@@ -1,3 +1,4 @@
+import {validChatAttachments,attachmentContext} from "./chat-attachments";
 import {isAssistantSkillId} from "./assistant-skills";
 import type {ResearchChatTurn} from "./contracts";
 
@@ -17,7 +18,7 @@ export function modelHistoryWithinBudget(history:ResearchChatTurn[],maxChars=200
   const selected:ResearchChatTurn[]=[];let used=0;
   for(let index=history.length-1;index>=0;index--){
     if(selected.length>=200)break;
-    const turn=history[index],text=(turn.interrupted?`（上条回复已停止，内容未完成）\n${turn.text}`:turn.text).slice(-8000),remaining=maxChars-used;
+    const turn=history[index],base=turn.interrupted?`（上条回复已停止，内容未完成）\n${turn.text}`:turn.text,text=turn.role==="user"&&turn.attachments?.length?`${base.slice(0,4000)}\n\n${attachmentContext(turn.attachments).slice(0,4000)}`.slice(0,8000):base.slice(-8000),remaining=maxChars-used;
     if(remaining<=0)break;
     if(text.length>remaining){if(!selected.length)selected.unshift({role:turn.role,text:text.slice(-remaining)});break;}
     selected.unshift({role:turn.role,text});used+=text.length;
@@ -29,7 +30,7 @@ export function validResearchChatInput(input:unknown):boolean{
   if(!input||typeof input!=="object")return false;
   const value=input as Record<string,unknown>;
   const validId=(id:unknown,max:number)=>typeof id==="string"&&new RegExp(`^[-a-zA-Z0-9]{8,${max}}$`).test(id);
-  return (value.skill_id===undefined||isAssistantSkillId(value.skill_id))&&validId(value.request_id,80)&&validId(value.session_id,100)&&typeof value.workspace_id==="string"
+  return (value.attachments===undefined||validChatAttachments(value.attachments))&&(value.skill_id===undefined||isAssistantSkillId(value.skill_id))&&validId(value.request_id,80)&&validId(value.session_id,100)&&typeof value.workspace_id==="string"
     &&typeof value.connection_id==="string"&&typeof value.question==="string"&&value.question.length<=12000
     &&!!value.question.trim()&&typeof value.research==="boolean"&&Array.isArray(value.history)
     &&value.history.length<=200&&value.history.every(item=>item&&["user","assistant"].includes(item.role)

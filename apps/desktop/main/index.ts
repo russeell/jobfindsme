@@ -1,3 +1,4 @@
+import {collectChatAttachments} from "./research/chat-attachments";
 import {foregroundZhilianVerification} from "./sources/source-actions";
 import {checkForUpdates,releasesUrl} from "./updates";
 import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
@@ -741,6 +742,13 @@ ipcMain.handle("desktop:cancel-research", async () => {
   researchController?.abort();
   return cancelled;
 });
+ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder")=>{
+ if(event.sender!==mainWindow?.webContents||!mainWindow||!apiClient)throw Error("附件读取不可用");
+ if(kind!=="files"&&kind!=="folder")throw Error("invalid selection");
+ const selected=await dialog.showOpenDialog(mainWindow,{title:kind==="folder"?"选择资料文件夹":"选择文件",properties:kind==="folder"?["openDirectory"]:["openFile","multiSelections"],...(kind==="files"?{filters:[{name:"文本资料",extensions:["pdf","docx","md","txt"]}]}:{})});
+ if(selected.canceled)return {attachments:[],warnings:[]};
+ return collectChatAttachments(selected.filePaths,(name,content)=>apiClient!.extractChatAttachment(name,content));
+});
 ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");
   if(!validResearchChatInput(input))throw Error("invalid research chat input");
@@ -754,7 +762,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
     if(run.signal.aborted)throw Error("cancelled");
-    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
+    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history},connection,apiKey,
       {
         readResume:()=>apiClient!.previewAnalysisCopy({workspace_id:input.workspace_id,privacy_mode:"redact"}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),

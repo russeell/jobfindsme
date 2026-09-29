@@ -134,6 +134,8 @@ export class DesktopApiClient {
     return this.json("/v1/resumes/state");
   }
 
+  extractChatAttachment(name:string,content:string):Promise<{text:string;truncated:boolean}>{return this.json("/v1/chat-attachments/extract",{method:"POST",body:JSON.stringify({file_name:name,content_base64:content})});}
+
   async importResume(sourcePath: string): Promise<ResumeDraft> {
     const draft = await this.json<ResumeDraft>("/v1/resumes/import", {
       method: "POST",

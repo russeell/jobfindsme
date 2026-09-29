@@ -519,7 +519,7 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  const server=http.createServer((request,response)=>{
   let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
    payloads.push(JSON.parse(body));response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
-   const next=turn===1?tool('read_job',{},turn):turn===2?tool('read_confirmed_resume',{},turn):turn===3?tool('answer_in_chat',{},turn):{role:'assistant',content:'根据你的真实 Python 项目，可以准备 API 设计实例。以下是草稿。'};
+   const next=turn===1?tool('read_skill',{skill_id:skillId},turn):turn===2?tool('read_job',{},turn):turn===3?tool('read_confirmed_resume',{},turn):turn===4?tool('answer_in_chat',{},turn):{role:'assistant',content:'根据你的真实 Python 项目，可以准备 API 设计实例。以下是草稿。'};
    sse(response,next,next.tool_calls?'tool_calls':'stop');
   });
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -528,8 +528,9 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  try{
   const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
   assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
-  const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
-  assert.deepEqual(first.tools.map(item=>item.function.name).sort(),['answer_in_chat','list_saved_jobs','read_confirmed_resume','read_job']);
+  const first=payloads[0];assert.doesNotMatch(first.messages.find(item=>item.role==='system').content,/每轮只问一道题|# 修改简历/);
+  assert.ok(first.tools.some(item=>item.function.name==='read_skill'));assert.ok(first.tools.some(item=>item.function.name==='search_web'));
+  assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
   assert.equal(executions[0].context.skill_id,skillId);assert.equal(executions.at(-1).status,'complete');
  }finally{server.close();}
 });

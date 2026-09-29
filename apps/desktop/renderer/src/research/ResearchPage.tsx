@@ -1,4 +1,5 @@
-import {assistantSkills,assistantSkill,isAssistantSkillId,type AssistantSkillId} from "../../../shared/assistant-skills";
+import {attachmentLimits,type ChatAttachment} from "../../../shared/chat-attachments";
+import {assistantSkills,assistantSkill,skillDraft,isAssistantSkillId,type AssistantSkillId} from "../../../shared/assistant-skills";
 import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import type {BootstrapData,ModelConnection,ResearchReport,SearchResultItem} from "../../../shared/contracts";
@@ -39,7 +40,15 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   const [loadedWorkspace,setLoadedWorkspace]=useState<string|null>(null);
   const [chatId,setChatId]=useState<string|null>(null);
   const [skillId,setSkillId]=useState<AssistantSkillId>();
-  function chooseSkill(id:AssistantSkillId|undefined){setSkillId(id);if(id&&(!question.trim()||question===assistantSkill(skillId)?.starter))setQuestion(assistantSkill(id)!.starter);inputRef.current?.focus();}
+  const [addMenu,setAddMenu]=useState(false);
+  const [attachments,setAttachments]=useState<ChatAttachment[]>([]);
+  const [attachmentBusy,setAttachmentBusy]=useState(false);
+  function chooseSkill(id:AssistantSkillId|undefined){setSkillId(id);setAddMenu(false);setQuestion(skillDraft(id,question,target&&job?.job_id===target.job_id?job:undefined));inputRef.current?.focus();}
+  async function pickAttachments(kind:"files"|"folder"){
+    if(attachmentBusy||chatBusy)return;const selectionSequence=sequence.current;setAddMenu(false);setAttachmentBusy(true);
+    try{const selected=await window.jobfindsme!.pickChatAttachments(kind);if(selectionSequence!==sequence.current)return;setAttachments(current=>{const combined=[...current];let total=combined.reduce((sum,item)=>sum+item.text.length,0);for(const item of selected.attachments){if(combined.length>=attachmentLimits.files||total+item.text.length>attachmentLimits.totalChars){setMessage("已达到附件数量或文本限制，部分新文件未添加。请移除一些附件后再添加。");break;}combined.push(item);total+=item.text.length;}return combined;});if(selected.warnings.length)setMessage(selected.warnings.join("；"));}
+    catch(error){setMessage(userError(error).message);}finally{setAttachmentBusy(false);}
+  }
   const [chatBusy,setChatBusy]=useState(false);
   const [streaming,setStreaming]=useState("");
   const [liveProcess,setLiveProcess]=useState("");
@@ -56,13 +65,13 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   const [savePending,setSavePending]=useState(false);
   const savedChats=useRef(new Map<string,string>());
   const [busy,setBusy]=useState<"link"|"prepare"|"history"|null>(null);
-  useEffect(()=>onBusyChange(chatBusy||!!busy||savePending),[chatBusy,busy,savePending,onBusyChange]);
+  useEffect(()=>onBusyChange(chatBusy||!!busy||savePending||attachmentBusy),[chatBusy,busy,savePending,attachmentBusy,onBusyChange]);
   const [message,setMessage]=useState("");
   const sequence=useRef(0);
   const lastOpened=useRef<string|undefined>(undefined);
   const openBrowser=useOriginalBrowser();
   function keepReports(values:ResearchReport[]){setReports(values);onReports(values);}
-  function openSaved(value:ResearchReport){sequence.current++;lastOpened.current=value.report_id;scrollRef.current?.scrollTo({top:0});setChatId(null);setSkillId(undefined);setJob(value.job_id?reportJob(value):undefined);setReport(value);setMode("report");setCandidate(undefined);setContextCompany(value.job_id?"":value.job_context?.company||"");setContextTitle(value.job_id?"":value.job_context?.title||"");setQuestion("");setMessage("");setBusy(null);}
+  function openSaved(value:ResearchReport){sequence.current++;lastOpened.current=value.report_id;scrollRef.current?.scrollTo({top:0});setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(value.job_id?reportJob(value):undefined);setReport(value);setMode("report");setCandidate(undefined);setContextCompany(value.job_id?"":value.job_context?.company||"");setContextTitle(value.job_id?"":value.job_context?.title||"");setQuestion("");setMessage("");setBusy(null);}
   useEffect(()=>{setTopbarTarget(document.getElementById("research-topbar-actions"));setSidebarTarget(document.getElementById("research-sidebar-history"));},[]);
   useEffect(()=>{setArchiveTarget(archiveVisible?document.getElementById("research-archive-settings"):null);},[archiveVisible]);
   useEffect(()=>{
@@ -71,7 +80,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     const cached=loadResearchChats(workspaceId);
     const migrationKey=`jobfindsme:research-chat-migrated:${workspaceId}`;
     const alreadyMigrated=localStorage.getItem(migrationKey)==="1";
-    savedChats.current.clear();setLoadedWorkspace(null);setChats(alreadyMigrated?[]:cached);setArchivedChats([]);setReports([]);setChatId(null);setSkillId(undefined);setChatBusy(false);setStreaming("");streamingRef.current="";streamingStatus.current=undefined;setModelId(getCurrentModel(workspaceId));
+    savedChats.current.clear();setLoadedWorkspace(null);setChats(alreadyMigrated?[]:cached);setArchivedChats([]);setReports([]);setChatId(null);setSkillId(undefined);setAttachments([]);setChatBusy(false);setStreaming("");streamingRef.current="";streamingStatus.current=undefined;setModelId(getCurrentModel(workspaceId));
     void Promise.all([window.jobfindsme!.listResearchChats(workspaceId),window.jobfindsme!.listArchivedResearchChats(workspaceId)]).then(async([rows,archivedRows])=>{
       if(cancelled)return;
       const remote=rows.map(fromStoredResearchChat),archived=archivedRows.map(fromStoredResearchChat);
@@ -94,9 +103,9 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     if(event.progress){const label=({find_evidence:"核对已存材料",search_web:"搜索公开来源",read_page:"读取原页",read_browser_page:"浏览器读取原页",read_job:"读取已存岗位"} as Record<string,string>)[event.progress.tool]||"处理来源";setLiveProcess(`${label}${event.progress.status==="started"?"中…":event.progress.status==="failed"?"失败":"完成"}`);return;}
     if(event.delta){streamingStatus.current=event.content_status;streamingRef.current+=event.delta;setStreaming(streamingRef.current);}
   }),[]);
-  useEffect(()=>{if(!target)return;sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
+  useEffect(()=>{if(!target)return;sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
   const lastNewChatNonce=useRef(newChatNonce);
-  useEffect(()=>{if(lastNewChatNonce.current===newChatNonce)return;lastNewChatNonce.current=newChatNonce;scrollRef.current?.scrollTo({top:0});sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setJob(undefined);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);requestAnimationFrame(()=>inputRef.current?.focus());},[newChatNonce]);
+  useEffect(()=>{if(lastNewChatNonce.current===newChatNonce)return;lastNewChatNonce.current=newChatNonce;scrollRef.current?.scrollTo({top:0});sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(undefined);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);requestAnimationFrame(()=>inputRef.current?.focus());},[newChatNonce]);
   useEffect(()=>{const input=inputRef.current;if(!input)return;input.style.height="auto";input.style.height=`${Math.min(input.scrollHeight,window.innerHeight<650?74:112)}px`;},[question,active]);
   useEffect(()=>{if(!workspaceId||(!active&&!archiveVisible))return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspaceId).then(values=>{if(cancelled)return;keepReports(values);if(!active||requestRef.current)return;if(lastOpened.current){const previous=values.find(item=>item.report_id===lastOpened.current);if(previous)return;}if(target){const latest=values.filter(item=>reportMatchesJob(item,target)&&item.outcome!=="failed").sort((a,b)=>(b.version_number??1)-(a.version_number??1)||b.created_at.localeCompare(a.created_at))[0];if(latest)openSaved(latest);}}).catch(error=>onError(userError(error).message));return()=>{cancelled=true;};},[workspaceId,active,archiveVisible,target]);
   async function readLink(value:string){
@@ -120,10 +129,10 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     const id=current?.id||crypto.randomUUID();
     const at=new Date().toISOString();
     const started=beginChat(current,id,value,at);
-    started.chat.turns=started.chat.turns.map((turn,index)=>index===started.chat.turns.length-1?{...turn,skillId}:turn);
+    started.chat.turns=started.chat.turns.map((turn,index)=>index===started.chat.turns.length-1?{...turn,skillId,attachments:attachments.length?attachments:undefined}:turn);
     if((skillId||decision.kind!=="job_search")&&!modelId){setMessage("请先在模型设置中选择一个已测试模型。提问已保留。");return;}
     setChatId(id);
-    if(!skillId&&decision.kind==="job_search"){
+    if(!skillId&&!attachments.length&&decision.kind==="job_search"){
       const guided=finishJobSearchChat(started.chat,decision.reply,decision.query,decision.pending,at);
       if(decision.company)setContextCompany(decision.company);
       setChats(items=>[{...guided,subjectCompany:decision.company||current?.subjectCompany},...items.filter(item=>item.id!==id)]);
@@ -142,11 +151,11 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     setChats(items=>[startedChat,...items.filter(item=>item.id!==id)]);
     setQuestion("");streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");setMessage("");setChatBusy(true);
     try{
-      const result=await window.jobfindsme!.runResearchChat({skill_id:skillId,request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:!skillId&&decision.kind==="research"?decision.question:value,research:skillId?skillId==="deep-research":decision.kind==="research",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
+      const result=await window.jobfindsme!.runResearchChat({attachments,skill_id:skillId,request_id:requestId,session_id:id,workspace_id:workspaceId,connection_id:selected.connection_id,question:!skillId&&decision.kind==="research"?decision.question:value,research:skillId?skillId==="deep-research":decision.kind==="research",job_id:activeJobId,company:companyHint,title:decision.kind==="research"?decision.title:undefined,history:modelHistoryWithinBudget(started.history)});
       if(requestRef.current?.id!==requestId||workspaceRef.current!==workspaceId)return;
       setChats(items=>items.map(item=>{if(item.id!==id)return item;const finished=finishChat(item,result.text,result.report?.report_id,new Date().toISOString(),{evidence:result.evidence,process:result.process});return {...finished,subjectCompany:result.company||finished.subjectCompany,researchMode:!!result.researched||finished.researchMode,pendingResearch:!skillId&&decision.kind==="clarify"&&!result.researched?decision.pending:undefined};}));
       if(result.report){const values=await window.jobfindsme!.listResearchReports(workspaceId);if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){keepReports(values);lastOpened.current=result.report.report_id;setReport(result.report);}}
-      streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");
+      setAttachments([]);streamingRef.current="";streamingStatus.current=undefined;setStreaming("");setLiveProcess("");
     }catch(error){if(requestRef.current?.id===requestId&&workspaceRef.current===workspaceId){setChats(items=>items.map(item=>item.id===id?failChat(item,userError(error).message,new Date().toISOString()):item));setQuestion(value);setMessage(`本次对话未完成：${userError(error).message}。提问已保留，可直接重试。`);try{keepReports(await window.jobfindsme!.listResearchReports(workspaceId));}catch{}}}
     finally{if(requestRef.current?.id===requestId){requestRef.current=null;setChatBusy(false);setStreaming("");setLiveProcess("");streamingRef.current="";streamingStatus.current=undefined;}}
   }
@@ -184,13 +193,13 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   const historyBusy=chatBusy||!!busy||savePending;
   const showingReport=mode==="report"&&!!report;
   function submitInput(){
-    if(busy||chatBusy)return;
+    if(busy||chatBusy||attachmentBusy)return;
     const parsed=splitResearchInput(question);
     if(parsed.error){setCandidate(undefined);setMessage(parsed.error);return;}
     if(parsed.url){void readLink(parsed.url);return;}
     if(candidate){setMessage("请先确认读取到的岗位，再开始研究。");return;}
-    if(!parsed.question){setMessage("请输入消息，或粘贴岗位链接。");return;}
-    void sendChat(parsed.question);
+    if(!parsed.question&&!attachments.length){setMessage("请输入消息，或粘贴岗位链接。");return;}
+    void sendChat(parsed.question||"请阅读我附上的材料。");
   }
   const centeredEmpty=!showingReport&&!chatId&&!job&&!contextCompany&&!message;
   const activeChat=chats.find(item=>item.id===chatId);
@@ -206,7 +215,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   function updateShownReport(value:ResearchReport){setReport(current=>current?.report_id===value.report_id?value:current);keepReports(reports.map(item=>item.report_id===value.report_id?value:item));}
   function selectHistoryChat(item:SavedResearchChat){
     if(historyBusy){if(item.id===requestRef.current?.sessionId)onOpenChat();return;}
-    onOpenChat();
+    onOpenChat();setAttachments([]);setAddMenu(false);
     scrollRef.current?.scrollTo({top:0});setChatId(item.id);
     const lastUser=[...item.turns].reverse().find(turn=>turn.role==="user");setSkillId(isAssistantSkillId(lastUser?.skillId)?lastUser.skillId:undefined);
     const latest=[...item.reportIds].reverse().map(id=>reportsById.get(id)).find(Boolean);
@@ -225,6 +234,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
           const attached=chatReportIds.get(index);
           const attachedReport=attached?reportsById.get(attached):undefined;
           return <article className={`research-chat-turn ${item.role}`} aria-label={item.role==="user"?"你":"求职助手"} key={`${activeChat.id}-${index}`}>
+            {item.role==="user"&&!!item.attachments?.length&&<div className="research-attachment-list">{item.attachments.map(file=><span key={file.id}>▤ {file.name}{file.truncated?" · 部分文本":""}</span>)}</div>}
             {item.role==="user"&&assistantSkill(item.skillId)&&<small className="research-skill-badge">{assistantSkill(item.skillId)!.title}</small>}
             {item.role==="assistant"?<MessageContent text={item.text} sources={attachedReport?.evidence||item.evidence} onCitation={number=>showCitation(index,number)}/>:<p>{item.text}</p>}
             {item.interrupted&&<small className="note" role="status">已停止 · 内容未完成</small>}
@@ -246,11 +256,16 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
     {archiveVisible&&archiveTarget&&createPortal(<div className="research-archive-settings"><div className="heading-row settings-heading"><div><h1>对话归档</h1><p>在这里恢复或删除已归档的对话。</p></div><span className="settings-count">{archivedChats.length} 条对话</span></div>{archivedChats.length?<div className="research-archive-list">{archivedChats.map(item=><div className="research-archive-item" key={item.id}><div className="research-archive-info"><strong title={item.title}>{item.title}</strong><time dateTime={item.updatedAt}>{Number.isFinite(Date.parse(item.updatedAt))?new Date(item.updatedAt).toLocaleString("zh-CN",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"时间未知"}</time></div><div className="button-row research-archive-actions"><button disabled={chatBusy||!!busy} onClick={()=>void changeChatHistory(item,"restore")}>恢复对话</button><button className="archive-delete" title="删除归档对话" aria-label={`删除归档对话：${item.title}`} disabled={chatBusy||!!busy} onClick={()=>setDeleteId(item.id)}><Icon name="trash"/></button></div>{deleteId===item.id&&<div className="history-confirm" role="alert"><p>永久删除这条归档对话？</p><div className="button-row"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"delete")}>确认删除</button><button onClick={()=>setDeleteId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">还没有归档对话。</p>}{history.length>0&&<details className="research-legacy-reports"><summary>旧版研究记录（{history.length}）</summary><p className="note">旧版记录仍保留在本机，可在这里打开。</p>{history.map(item=><button key={item.report_id} type="button" onClick={()=>selectHistoryReport(item)}>{item.job_context?.company||"公司未知"} · {item.job_context?.title||"公司研究"}</button>)}</details>}</div>,archiveTarget)}
     {message&&<p className="research-inline-status" role="status">{message}</p>}
     <form className="research-composer" aria-label="求职助手输入框" onSubmit={event=>{event.preventDefault();submitInput();}}>
-      {skillId&&<div className="research-active-skill"><strong>{assistantSkill(skillId)!.title}</strong><span>{assistantSkill(skillId)!.description}</span><button type="button" aria-label="取消技能，切回普通聊天" disabled={!!busy||chatBusy} onClick={()=>setSkillId(undefined)}>×</button></div>}
+      {!!attachments.length&&<div className="research-attachment-list" aria-label="待发送附件">{attachments.map(file=><span key={file.id} title={file.name}>▤ {file.name}{file.truncated?" · 部分文本":""}<button type="button" aria-label={`移除附件：${file.name}`} disabled={chatBusy} onClick={()=>setAttachments(items=>items.filter(item=>item.id!==file.id))}>×</button></span>)}</div>}
+      {skillId&&<div className="research-active-skill"><strong>{assistantSkill(skillId)!.title}</strong><button type="button" aria-label="取消技能，切回普通聊天" disabled={!!busy||chatBusy} onClick={()=>setSkillId(undefined)}>×</button></div>}
       <textarea ref={inputRef} rows={1} aria-label="向求职助手提问" value={question} maxLength={12000} disabled={!!busy||chatBusy} onChange={event=>{setQuestion(event.target.value);setCandidate(undefined);setMessage("");}} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();submitInput();}}} placeholder={job?"继续聊这个岗位、公司或求职准备":"问求职助手，也可以粘贴 JD 或岗位链接"}/>
       {candidate&&<div className="research-candidate"><strong>{candidate.company} · {candidate.title}</strong><span title={candidate.description}>{candidate.description?candidate.description.slice(0,120):"岗位原文不完整"}</span><button type="button" disabled={!!busy} onClick={()=>void confirmCandidate()}>确认岗位</button></div>}
-      <div className="research-composer-actions"><div className="research-composer-selectors"><select aria-label="求职技能" disabled={!!busy||chatBusy} value={skillId||""} onChange={event=>chooseSkill(isAssistantSkillId(event.target.value)?event.target.value:undefined)}><option value="">普通聊天</option>{assistantSkills.map(skill=><option key={skill.id} value={skill.id}>{skill.title}</option>)}</select><select aria-label="当前使用模型" value={modelId||""} onChange={event=>{const value=event.target.value;setModelId(value||null);if(value)setCurrentModel(workspaceId,value);}}><option value="">选择模型</option>{connections.filter(item=>item.status==="verified").map(item=><option key={item.connection_id} value={item.connection_id}>{item.provider} · {item.model_id}</option>)}</select></div><div className="button-row">{chatBusy&&<button type="button" onClick={()=>void cancelChat()}>停止</button>}<button type="submit" className="primary-button" disabled={!!busy||chatBusy||!!candidate}>{busy==="link"?"读取中…":chatBusy?"处理中…":"发送 ↑"}</button></div></div>
+      <div className="research-composer-actions"><div className="research-add-control">
+        <button className="research-add-button" type="button" aria-label="添加文件和技能" aria-expanded={addMenu} disabled={!!busy||chatBusy||attachmentBusy} onClick={()=>setAddMenu(value=>!value)}>{attachmentBusy?"…":"＋"}</button>
+        {addMenu&&<><button className="research-menu-dismiss" type="button" aria-label="关闭添加菜单" onClick={()=>setAddMenu(false)}/><div className="research-add-menu" role="group" aria-label="添加文件和技能" onKeyDown={event=>{if(event.key==="Escape"){setAddMenu(false);inputRef.current?.focus();}}}><small>添加资料</small><button type="button" onClick={()=>void pickAttachments("files")}>▤ 文件 <span>PDF、Word、Markdown、文本</span></button><button type="button" onClick={()=>void pickAttachments("folder")}>▱ 文件夹 <span>读取支持格式，最多 10 个文件</span></button><small>技能</small><button type="button" onClick={()=>chooseSkill(undefined)}>普通聊天</button>{assistantSkills.map(skill=><button key={skill.id} type="button" aria-pressed={skillId===skill.id} onClick={()=>chooseSkill(skill.id)}>{skill.title}<span>{skill.description}</span></button>)}</div></>}
+      </div><div className="button-row research-send-actions"><select aria-label="当前使用模型" disabled={chatBusy} value={modelId||""} onChange={event=>{const value=event.target.value;setModelId(value||null);if(value)setCurrentModel(workspaceId,value);}}><option value="">选择模型</option>{connections.filter(item=>item.status==="verified").map(item=><option key={item.connection_id} value={item.connection_id}>{item.provider} · {item.model_id}</option>)}</select>{chatBusy&&<button type="button" onClick={()=>void cancelChat()}>停止</button>}<button type="submit" className="primary-button" aria-label="发送消息" disabled={!!busy||chatBusy||!!candidate||attachmentBusy}>{busy==="link"?"读取中…":chatBusy?"处理中…":"↑"}</button></div></div>
+      {!!attachments.length&&<small className="research-attachment-note">附件文本将在发送后交给所选模型，并保存在本机对话中。每个文件最多 5MB；扫描件暂不支持。</small>}
     </form>
-    {centeredEmpty&&<div className="research-examples" aria-label="示例问题">{assistantSkills.map(skill=><button key={skill.id} type="button" onClick={()=>chooseSkill(skill.id)}><strong>{skill.title}</strong><span>{skill.description}</span></button>)}</div>}
+
   </div>;
 }

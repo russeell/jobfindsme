@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hmac
 import json
 import re
@@ -33,7 +35,7 @@ from jobfindsme.models import (
 from jobfindsme.models.gateway import ConnectionStatus, ModelGatewayError
 from jobfindsme.privacy import create_analysis_copy
 from jobfindsme.profiles.models import FactType, ResumeImportMode
-from jobfindsme.profiles.parser import ResumeExtractionError
+from jobfindsme.profiles.parser import ResumeExtractionError, ResumeTextExtractor
 from jobfindsme.profiles.service import ProfileError, ProfileNotFoundError
 from jobfindsme.research import ResearchError, ResearchService
 from jobfindsme.research.agent_sources import discover_sources, read_original_page
@@ -300,6 +302,11 @@ class ResumeStateResponse(StrictResponse):
     search_block_reason: str | None
     active_draft: ResumeResponse | None
     capabilities: ResumeCapabilities
+
+
+class ChatAttachmentRequest(StrictResponse):
+    file_name: str = Field(min_length=1, max_length=300)
+    content_base64: str = Field(min_length=1, max_length=7_000_000)
 
 
 class ResumeImportRequest(StrictResponse):
@@ -1405,6 +1412,17 @@ def create_app(
             ) from error
         core.profiles.clear_current(workspace_id=request.workspace_id)
         return resume_state(request.workspace_id)
+
+    @app.post("/v1/chat-attachments/extract", dependencies=[Depends(require_token)])
+    def extract_chat_attachment(request: ChatAttachmentRequest) -> dict[str, object]:
+        try:
+            content = base64.b64decode(request.content_base64, validate=True)
+            extracted = ResumeTextExtractor().extract(
+                file_name=request.file_name, content=content
+            )
+        except (binascii.Error, ResumeExtractionError) as exc:
+            raise HTTPException(status_code=422, detail="附件未能读取") from exc
+        return {"text": extracted.text[:8000], "truncated": len(extracted.text) > 8000}
 
     @app.post(
         "/v1/resumes/import",

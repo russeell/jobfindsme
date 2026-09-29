@@ -2169,6 +2169,15 @@
         "docs/desktop/HANDOFF.md",
         "apps/desktop/skills/NOTICE.md"
       ]
+    },
+    {
+      "id": "D101",
+      "title": "求职助手添加菜单、按需普通技能及文件文件夹附件",
+      "status": "done",
+      "verification": "Node253/类型构建/相关Python13/Ruff/正常包审计通过；隔离原生菜单、技能不填词与草稿保留、模型位置、文件夹两附件、实际IPC到本地模拟模型及SQLite保存核对。真实输出质量/Windows原生/窄窗/Python全套未验收，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

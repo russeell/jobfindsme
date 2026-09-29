@@ -1,3 +1,4 @@
+import type {ChatAttachment,ChatAttachmentSelection} from "./chat-attachments";
 import type {AssistantSkillId} from "./assistant-skills";
 export type MatchingRuleInput = {workspace_id:string;name:string;prompt:string;template_id:string;mode:"local"|"model";connection_id?:string|null;candidate_limit:number;weights:MatchingWeights};
 export type MatchingRule = MatchingRuleInput & {rule_version_id:string;created_at:string;model_snapshot?:{model_id:string;endpoint:string;protocol:string;credential_ref?:string|null;auth_mode:string}};
@@ -109,6 +110,7 @@ export type DesktopBridge = {
   restoreResearchChat(workspaceId:string,conversationId:string):Promise<void>;
   deleteArchivedResearchChat(workspaceId:string,conversationId:string):Promise<void>;
   cancelResearch(): Promise<ResearchReport | {cancelled:true} | undefined>;
+  pickChatAttachments(kind:"files"|"folder"):Promise<ChatAttachmentSelection>;
   runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
   cancelResearchChat(requestId:string):Promise<void>;
   onResearchChatDelta(listener:(event:ResearchChatDelta)=>void):()=>void;
@@ -390,8 +392,8 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatProcessStep = {tool:string;status:string;site?:string;count?:number};
-export type ResearchChatTurn = {skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
-export type ResearchChatInput = {skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatTurn = {attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatInput = {attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};
 export type ResearchChatResult = {text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 
