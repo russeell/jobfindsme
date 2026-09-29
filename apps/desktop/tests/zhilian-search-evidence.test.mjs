@@ -76,3 +76,14 @@ test('blank keyword echo with unsupported expanded jobs is not accepted as a mat
  const normal=new ZhilianSearchEvidence({keyword:'AI',city:'深圳',page:1});normal.request('r',endpoint,'POST',body());normal.response('r',JSON.stringify({code:200,data:{kw:'',list:[job],count:200}}));assert.equal(normal.ready,true);
  const echoed=new ZhilianSearchEvidence({keyword:'AI',city:'深圳',page:1});echoed.request('r',endpoint,'POST',body());echoed.response('r',JSON.stringify({code:200,data:{kw:'Java',list:[job],count:200}}));assert.equal(echoed.ready,false);assert.equal(echoed.responseStatus,'echo_mismatch');
 });
+
+test('blank-echo mixed expansions require support per job, not one matching sibling for the batch',()=>{
+ const e=new ZhilianSearchEvidence({keyword:'AI Agent',city:'深圳',page:1});e.request('r',endpoint,'POST',body('AI Agent'));
+ e.response('r',JSON.stringify({code:200,data:{kw:'',count:80,list:[job,{...job,name:'翻译标注员',positionUrl:'https://www.zhaopin.com/jobdetail/two.htm'},{...job,name:'软件开发工程师',positionUrl:'https://www.zhaopin.com/jobdetail/three.htm',jobSummary:'参与 Agent 应用开发'}]}}));
+ assert.equal(e.ready,true);assert.deepEqual(e.records([]).map(j=>j.title),['AI工程师','软件开发工程师']);assert.equal(e.invalidRecords,1);
+});
+test('blank echo does not mistake ASCII substrings such as retail for AI evidence',()=>{
+ const e=new ZhilianSearchEvidence({keyword:'AI',city:'深圳',page:1});e.request('r',endpoint,'POST',body());
+ e.response('r',JSON.stringify({code:200,data:{kw:'',count:1,list:[{...job,name:'Retail sales assistant'}]}}));
+ assert.equal(e.ready,false);assert.equal(e.responseStatus,'empty_keyword_expansion');
+});

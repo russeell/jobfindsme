@@ -358,7 +358,7 @@ export class SourceBrowserManager {
         }
         await new Promise(resolve=>setTimeout(resolve,150));
       }
-      throw new Error("没有读取到完整岗位信息，请打开原页确认这是岗位详情，并在需要时登录后重试。");
+      throw new Error("source_detail_unreadable:没有读取到完整岗位信息，请打开原页确认。");
     } finally {if(timeout)clearTimeout(timeout);if(!view.webContents.isDestroyed())view.webContents.close();}
   }
 

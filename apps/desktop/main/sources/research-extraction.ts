@@ -24,6 +24,19 @@ function extractResearchJob(companyHint: string) {
     try {visit(JSON.parse(node.textContent?.slice(0,200000) || '{}'));}catch{}
   }
   if (structured) return structured;
+  if (location.hostname === 'www.zhaopin.com' && /^\/jobdetail\/[^/]+\.htm[l]?$/.test(location.pathname)) {
+    // The observed detail page has semantic section headings, independent of
+    // hashed layout classes. Read only the job section, not similar positions
+    // or the company's introduction below it.
+    const headings=Array.from(document.querySelectorAll('h2,h3'));
+    const heading=headings.find(node=>clean(node.textContent)==='职位描述');
+    const companyHeading=headings.find(node=>clean(node.textContent)==='公司信息');
+    const title=text(['h1']);
+    const section=(node:Element|undefined)=>node?.closest('.seo-card')?.querySelector(':scope > .seo-card__content');
+    const company=clean(section(companyHeading)?.querySelector('a[href*="/companydetail/"]')?.textContent);
+    const description=clean(section(heading)?.textContent);
+    if(title&&company&&description.length>=80&&description.length<=30000)return {title:title.slice(0,300),company:company.slice(0,300),description};
+  }
   if (location.hostname === 'zhaopin.jd.com' && location.pathname === '/web/job-info-detail') {
     const title = text(['.post-top .post-name']);
     const description = clean([...document.querySelectorAll('.main-content .part')].map(n=>n.textContent).join('\n'));

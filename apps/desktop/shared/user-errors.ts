@@ -4,6 +4,7 @@ export function userError(error:unknown):UserError {
  if(/browser_navigation_failed/.test(text))return {kind:'source',message:'网页加载失败，请刷新或检查网络连接。',action:'retry'};
  const chatStorage=text.match(/research_chat_storage:(sqlite_busy|sqlite_readonly|sqlite_full|sqlite_constraint|sqlite_error)/);
  if(chatStorage){const message={sqlite_busy:'本地对话数据库繁忙',sqlite_readonly:'本地对话数据库不可写',sqlite_full:'本地对话数据库空间不足',sqlite_constraint:'本地对话数据库约束冲突',sqlite_error:'本地对话数据库读写失败'}[chatStorage[1]];return {kind:'service',message:`${message}（${chatStorage[1]}）`,action:'retry'};}
+ if(/source_detail_unreadable:|没有读取到完整岗位信息/.test(text))return {kind:'source',message:'未能读取完整岗位详情。列表和登录状态保留，可打开原页查看或重试。',action:'retry'};
  if(/login_required|verified login|登录.*(失效|过期)|请.*登录/.test(text))return {kind:'login',message:'该来源需要重新登录。已读取的岗位会保留。',action:'source'};
  if(/risk_control|验证码|安全验证|限流|过于频繁/.test(text))return {kind:'risk',message:'该来源要求验证或暂时限制访问，采集已暂停。',action:'source'};
  if(/source_backoff:/.test(text))return {kind:'source',message:'该来源正在检查或刚完成检查，本次没有重复访问。',action:'retry'};

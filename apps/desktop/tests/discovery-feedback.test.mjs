@@ -26,3 +26,8 @@ test('browser load failure is not presented as a backend outage',()=>{
  const result=userError('Error invoking remote method: browser_navigation_failed');
  assert.equal(result.kind,'source');assert.match(result.message,/网页加载失败/);assert.doesNotMatch(result.message,/本地服务|remote/);
 });
+test('an unreadable JD with an optional login suggestion is not an expired session',()=>{
+ const error=userError('没有读取到完整岗位信息，请打开原页确认这是岗位详情，并在需要时登录后重试。');
+ assert.equal(error.kind,'source');assert.doesNotMatch(error.message,/重新登录|失效/);
+ assert.equal(userError('login_required:登录状态已失效').kind,'login');
+});

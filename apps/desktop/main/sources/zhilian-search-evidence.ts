@@ -40,19 +40,22 @@ export class ZhilianSearchEvidence {
       if(data.code!==200||!Array.isArray(data.data?.list)||typeof data.data.count!=='number'||data.data.count<0||data.data.list.length>100)return;
       const echoed=typeof data.data.kw==='string'?data.data.kw.trim().toLowerCase():undefined;
       if(echoed&&echoed!==this.input.keyword.trim().toLowerCase()){this.responseStatus='echo_mismatch';return;}
-      if(echoed===''&&data.data.count>0){
-        const terms=this.input.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
-        const hasSupport=data.data.list.some((job:unknown)=>{
-          if(!job||typeof job!=='object')return false;
-          const item=job as Record<string,any>;
-          // These public position fields are already in the site's search response.
-          // No detail requests, account state or model calls. This is a conservative
-          // guard against unannounced expansion, not proof that absent jobs do not exist.
-          const text=[item.name,item.companyName,item.jobSummary,item.jobDetailData?.position?.desc?.description].filter(value=>typeof value==='string').join(' ').slice(0,16000).replace(/<[^>]*>/g,' ').toLowerCase();
-          return terms.some(term=>text.includes(term));
+      const terms=this.input.keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const supported=(job:unknown):boolean=>{
+        if(!job||typeof job!=='object')return false;
+        const item=job as Record<string,any>;
+        // Inspect only public fields already returned by this normal search.
+        // An explicitly blank echo can indicate expansion: each retained job
+        // needs its own lexical support, not a matching sibling's support.
+        const text=[item.name,item.companyName,item.jobSummary,item.jobDetailData?.position?.desc?.description].filter(value=>typeof value==='string').join(' ').slice(0,16000).replace(/<[^>]*>/g,' ').toLowerCase();
+        return terms.some(term=>{
+          if(!/^[a-z0-9+#.]+$/i.test(term))return text.includes(term);
+          const escaped=term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+          return new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`,'i').test(text);
         });
-        if(!hasSupport){this.responseStatus='empty_keyword_expansion';return;}
-      }
+      };
+      const expanded=echoed===''&&data.data.count>0;
+      if(expanded&&!data.data.list.some(supported)){this.responseStatus='empty_keyword_expansion';return;}
       // A zero scoped total must never promote appended suggestions to hits.
       // A positive total smaller than the list cannot establish consistent scope.
       if(data.data.count===0){this.result={sequence,jobs:new Map(),empty:true,invalid:0};return;}
@@ -61,7 +64,7 @@ export class ZhilianSearchEvidence {
       const jobs=new Map<string,ExtractedSourceJob>();let invalid=0;
       for(const job of data.data.list){
         try{
-          if(!job||typeof job!=='object'){invalid++;continue;}
+          if(!job||typeof job!=='object'||(expanded&&!supported(job))){invalid++;continue;}
           const url=identity(job.positionUrl||job.positionURL||'');
           if(url&&typeof job.name==='string'&&typeof job.companyName==='string'&&job.name.trim()&&job.companyName.trim())jobs.set(url,{title:job.name.trim(),company:job.companyName.trim(),url,location:[job.workCity,job.cityDistrict,job.streetName].filter(value=>typeof value==='string'&&value.trim()).join(' ').slice(0,200),salary:typeof job.salary60==='string'?job.salary60.slice(0,100):''});
           else invalid++;
