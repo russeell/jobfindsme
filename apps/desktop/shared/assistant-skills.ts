@@ -1,6 +1,6 @@
 export const assistantSkills=[
  {id:"resume-tailor",title:"修改简历",description:"依据真实材料，生成可审阅修改稿"},
- {id:"interview-prep",title:"准备面试",description:"围绕岗位与经历，准备并模拟面试"},
+ {id:"interview-prep",title:"模拟面试",description:"逐题练习，针对回答追问并反馈"},
  {id:"deep-research",title:"深度研究",description:"研究公司、行业与技术主题"},
 ] as const;
 export type AssistantSkillId=typeof assistantSkills[number]["id"];

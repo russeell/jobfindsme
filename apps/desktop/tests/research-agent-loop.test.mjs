@@ -528,7 +528,7 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  try{
   const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
   assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
-  const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改简历/:/准备面试/);
+  const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改简历/:/模拟面试/);
   assert.ok(first.tools.some(item=>item.function.name==='read_skill'));
   assert.equal(first.tools.some(item=>item.function.name==='search_web'),skillId==='resume-tailor');
   assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);

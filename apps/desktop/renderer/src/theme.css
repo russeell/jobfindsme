@@ -566,19 +566,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @container(max-width:640px){.settings-page {padding:4px 0 24px;}.settings-heading {margin-bottom:20px;}.settings-heading h1 {font-size:24px;}.source-catalog .source-card,.research-archive-item {padding:16px;}.research-archive-item {gap:12px;}.research-archive-actions {gap:4px;}}
 
 /* Skills use the existing chat input and preserve the user's draft. */
-.research-active-skill {display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface-selected);border-radius:9px;font-size:12px;}
-.research-active-skill span {color:var(--text-muted);flex:1;}
-.research-active-skill button {border:0;background:transparent;padding:0 4px;font-size:18px;}
 .research-composer-selectors {display:flex;flex-wrap:wrap;gap:8px;min-width:0;}
 .research-skill-badge {display:block;margin-bottom:7px;color:var(--accent);font-size:11px;}
 .research-examples button {display:flex;flex-direction:column;gap:5px;text-align:left;padding:12px 14px;}
 .research-examples button span {font-size:11px;color:var(--text-muted);font-weight:400;}
-@container(max-width:720px){.research-active-skill{flex-wrap:wrap}.research-active-skill span{flex-basis:70%}.research-examples{flex-wrap:wrap}}
 /* Composer: materials and skills on the left, model and send on the right. */
 .research-composer {border-radius:20px;padding:12px 14px;gap:8px;position:relative;}
-.research-active-skill {align-self:center;flex-shrink:0;max-width:34%;min-height:30px;background:var(--surface-hover);padding:4px 9px;font-weight:500;white-space:nowrap;}
-.research-active-skill strong {overflow:hidden;text-overflow:ellipsis;}
-.research-active-skill button {margin-left:6px;}
+.research-active-skill {display:flex;align-items:center;gap:3px;align-self:center;flex-shrink:1;min-width:0;max-width:34%;height:25px;padding-left:11px;border-left:1px solid var(--line);font-size:12px;white-space:nowrap;}
+.research-active-skill strong {min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600;}
+.research-active-skill button {display:grid;place-items:center;flex:none;width:24px;height:24px;min-height:24px;border:0;border-radius:7px;background:transparent;color:var(--text-muted);padding:0;font-size:16px;line-height:1;}
+.research-active-skill button:hover:not(:disabled) {background:var(--surface-hover);color:var(--text);}
 .research-composer-actions {justify-content:flex-start;}
 .research-send-actions {margin-left:auto;min-width:0;}
 .research-send-actions select {border:0;background:transparent;max-width:260px;min-width:0;font-size:12px;padding:5px;color:var(--text-muted);text-overflow:ellipsis;}
