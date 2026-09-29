@@ -511,3 +511,10 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 /* Reading and list controls use the same visible keyboard affordance. */
 .discovery-page .job-card:hover{background:var(--surface-hover)}
 .discovery-page .job-card:focus-visible,.research-more summary:focus-visible,.research-reading summary:focus-visible{outline:2px solid #737373;outline-offset:-2px}
+
+/* Keep the browser entry at the window edge, independent of split widths. */
+.window-browser-control { position:absolute; top:10px; right:18px; z-index:5; }
+.window-browser-control .browser-toggle { margin:0; width:32px; height:32px; }
+.shell:not(.has-browser) .topbar { padding-right:64px; }
+.shell.has-browser .browser-tabbar { padding-right:64px; }
+.narrow-shell.has-browser .work-mode-switch { padding-right:64px; }

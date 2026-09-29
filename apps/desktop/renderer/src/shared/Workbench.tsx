@@ -12,7 +12,7 @@ type Target = { sourceId: string; url?: string; title: string; checkSource?:bool
 const BrowserContext = createContext<(target: Target) => void>(() => {});
 export const useOriginalBrowser = () => useContext(BrowserContext);
 const ToggleContext = createContext({open:false,toggle:() => {}});
-export function BrowserToggle() { const {open,toggle} = useContext(ToggleContext); return <button className="browser-toggle" aria-label={open ? "收起浏览器" : "打开浏览器"} title={open ? "收起浏览器" : "打开浏览器"} aria-pressed={open} onClick={toggle}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg></button>; }
+function BrowserToggle() { const {open,toggle} = useContext(ToggleContext); return <button className="browser-toggle" aria-label={open ? "收起浏览器" : "打开浏览器"} title={open ? "收起浏览器" : "打开浏览器"} aria-pressed={open} onClick={toggle}><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg></button>; }
 function stored(key: string, fallback: number, min: number, max: number) {
   const value = Number(localStorage.getItem(key) ?? fallback);
   return Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
@@ -172,6 +172,7 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
   function close() { void window.jobfindsme?.layoutSourceBrowser(null); setPanelOpen(false); setBrowserExpanded(false); setMode("work"); }
   function toggle() { if (panelOpen) close(); else { if (!browserState.tabs.length) setNewTab(true); setPanelOpen(true); setMode("browser"); } }
   return <BrowserContext.Provider value={value => { setTarget(value); setNewTab(false); setPanelOpen(true); setMode("browser"); }}><ToggleContext.Provider value={{open:hasBrowser,toggle}}><main className={`shell ${effectiveCollapsed ? "sidebar-collapsed" : ""} ${hasBrowser ? "has-browser" : ""} ${narrow ? "narrow-shell" : ""} ${browserExpanded ? "browser-expanded" : ""} ${narrow && hasBrowser && mode === "browser" ? "browser-mode" : ""}`} style={{ "--sidebar-width": `${effectiveCollapsed ? 64 : sidebarWidth}px`, "--browser-width": `${browserWidth}px` } as CSSProperties}>
+    <div className="window-browser-control"><BrowserToggle/></div>
     <aside className="sidebar" onClick={() => { setMode("work"); setBrowserExpanded(false); }}><button className="collapse-sidebar" title={effectiveCollapsed ? "展开侧边栏" : "收起侧边栏"} aria-label={effectiveCollapsed ? "展开侧边栏" : "收起侧边栏"} onClick={() => { setBrowserExpanded(false); setManualExpanded(effectiveCollapsed); setCollapsed(!effectiveCollapsed); }}><Icon name="panelLeft" /></button>{sidebar}</aside>
     {!effectiveCollapsed && <Splitter label="侧边栏宽度" value={sidebarWidth} min={220} max={320} onChange={setSidebarWidth} cancelKey={splitterContext} />}
     {hasBrowser && narrow && <div className="work-mode-switch"><button className={mode === "work" ? "active" : ""} onClick={() => { setMode("work"); setBrowserExpanded(false); }}>工作区</button><button className={mode === "browser" ? "active" : ""} onClick={() => setMode("browser")}>岗位原页</button><button onClick={close} aria-label="关闭原页">×</button></div>}
