@@ -34,3 +34,17 @@ evaluation/evidence/field_trial/
 evaluation/evidence/chinese_real_*.json
 evaluation/evidence/*_search_*.json
 evaluation/evidence/*_search_*.md
+
+# Local user databases and SQLite sidecar files must never be published.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
