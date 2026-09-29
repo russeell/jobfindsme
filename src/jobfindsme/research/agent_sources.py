@@ -382,7 +382,7 @@ def _fallback_discovery(
         if (
             target in seen
             or not _company_relevant(row, company)
-            or (company and not _topic_relevant(row, question))
+            or not _topic_relevant(row, question)
         ):
             continue
         seen.add(target)
@@ -522,13 +522,13 @@ def discover_sources(
             row
             for row in hits
             if _company_relevant(row, company)
-            and (not company or _topic_relevant(row, original_question or question))
+            and _topic_relevant(row, original_question or question)
         ]
     relevant = [
         row
         for row in hits
         if _company_relevant(row, company)
-        and (not company or _topic_relevant(row, original_question or question))
+        and _topic_relevant(row, original_question or question)
     ]
     if relevant:
         return relevant

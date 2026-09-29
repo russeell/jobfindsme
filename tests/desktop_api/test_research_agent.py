@@ -1594,6 +1594,59 @@ def test_industry_discovery_rejects_homepages_and_city_jobs():
     )
 
 
+def test_topic_discovery_filters_homepages_in_rss_and_fallback(monkeypatch):
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *a, **k: None)
+    monkeypatch.setattr(agent_sources, "_source_url", lambda url, site: url)
+    rss_home = (
+        "<item><link>https://www.zhaopin.com/</link>"
+        "<title>招聘网站首页</title><description>找工作</description></item>"
+    )
+    rss_report = (
+        "<item><link>https://example.org/reports/recruitment</link>"
+        "<title>招聘行业研究报告</title><description>市场规模</description></item>"
+    )
+    bodies = [
+        f"<rss><channel>{rss_home}{rss_report}</channel></rss>".encode(),
+        f"<rss><channel>{rss_home}</channel></rss>".encode(),
+        (
+            '<a class="result__a" href="https://www.zhipin.com/">招聘网站首页</a>'
+            '<a class="result__a" href="https://example.org/reports/recruitment">'
+            "招聘行业研究报告</a>"
+        ).encode(),
+    ]
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self, _size):
+            return bodies.pop(0)
+
+    calls = []
+
+    def open_page(request, timeout):
+        calls.append(request.full_url)
+        return Response()
+
+    monkeypatch.setattr(
+        agent_sources,
+        "_research_opener",
+        lambda **_kwargs: SimpleNamespace(open=open_page),
+    )
+    first = agent_sources.discover_sources(
+        "", "招聘行业", "web", original_question="研究招聘行业"
+    )
+    second = agent_sources.discover_sources(
+        "", "招聘行业", "web", original_question="研究招聘行业"
+    )
+    assert [row["url"] for row in first] == ["https://example.org/reports/recruitment"]
+    assert [row["url"] for row in second] == ["https://example.org/reports/recruitment"]
+    assert len(calls) == 3
+
+
 def test_explicit_topic_report_keeps_subject_separate_from_company(
     tmp_path, monkeypatch
 ):
