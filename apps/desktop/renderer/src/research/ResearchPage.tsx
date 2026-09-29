@@ -12,7 +12,7 @@ import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,legacyChatsForMigration,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
+import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
 type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
@@ -73,18 +73,19 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
       if(cancelled)return;
       const remote=rows.map(fromStoredResearchChat),archived=archivedRows.map(fromStoredResearchChat);
       const archivedIds=new Set(archived.map(item=>item.id));
-      const legacy=legacyChatsForMigration(cached,archivedIds,alreadyMigrated);
+      const legacy=researchChatsForRecovery(workspaceId,cached,remote,archivedIds,alreadyMigrated);
       try{
         const verified=await migrateResearchChats(workspaceId,legacy,remote,item=>window.jobfindsme!.saveResearchChat(item),()=>window.jobfindsme!.listResearchChats(workspaceId));
         if(cancelled)return;
         localStorage.setItem(migrationKey,"1");
+        for(const chat of verified)acknowledgeResearchChat(workspaceId,chat);
         for(const chat of verified)savedChats.current.set(chat.id,JSON.stringify(toStoredResearchChat(workspaceId,chat)));
         setChats(verified);setArchivedChats(archived);setLoadedWorkspace(workspaceId);
-      }catch(error){if(!cancelled){setChats(alreadyMigrated?[]:cached);setArchivedChats(archived);setMessage(`历史迁移未完成，设备缓存已保留：${userError(error).message}`);}}
+      }catch(error){if(!cancelled){for(const chat of remote)savedChats.current.set(chat.id,JSON.stringify(toStoredResearchChat(workspaceId,chat)));setChats(mergeResearchChats(legacy,remote));setArchivedChats(archived);setLoadedWorkspace(workspaceId);setMessage(`历史恢复未完成，待保存版本仍保留：${userError(error).message}`);}}
     }).catch(error=>{if(!cancelled)setMessage(`对话记录暂未从本地服务加载：${userError(error).message}`);});
     return()=>{cancelled=true;const running=requestRef.current;if(running?.workspaceId===workspaceId){requestRef.current=null;void(running.kind==="model"?window.jobfindsme!.cancelResearchChat(running.id):window.jobfindsme!.cancelResearch());}};
   },[workspaceId]);
-  useEffect(()=>{if(!workspaceId||loadedWorkspace!==workspaceId)return;if(!saveResearchChats(workspaceId,chats))setMessage("历史对话未能写入设备缓存，请检查可用空间。");for(const chat of chats){const stored=toStoredResearchChat(workspaceId,chat),serialized=JSON.stringify(stored);if(savedChats.current.get(chat.id)===serialized)continue;savedChats.current.set(chat.id,serialized);const revision=++saveRevision.current;setSavePending(true);saveQueue.current=saveQueue.current.catch(()=>undefined).then(()=>saveResearchChatWithRetry(stored,item=>window.jobfindsme!.saveResearchChat(item))).catch(error=>{if(savedChats.current.get(chat.id)===serialized)savedChats.current.delete(chat.id);setMessage(`对话记录未能写入本地服务：${userError(error).message}。设备缓存仍保留，请重试。`);}).finally(()=>{if(saveRevision.current===revision)setSavePending(false);});}},[workspaceId,loadedWorkspace,chats]);
+  useEffect(()=>{if(!workspaceId||loadedWorkspace!==workspaceId)return;if(!saveResearchChats(workspaceId,chats))setMessage("历史对话未能写入设备缓存，请检查可用空间。");for(const chat of chats){const stored=toStoredResearchChat(workspaceId,chat),serialized=JSON.stringify(stored);if(savedChats.current.get(chat.id)===serialized)continue;if(!stageResearchChat(workspaceId,chat))setMessage("对话的待恢复版本未能写入设备缓存，请检查可用空间。");savedChats.current.set(chat.id,serialized);const revision=++saveRevision.current;setSavePending(true);saveQueue.current=saveQueue.current.catch(()=>undefined).then(async()=>{await saveResearchChatWithRetry(stored,item=>window.jobfindsme!.saveResearchChat(item));acknowledgeResearchChat(workspaceId,chat);}).catch(error=>{if(savedChats.current.get(chat.id)===serialized)savedChats.current.delete(chat.id);setMessage(`对话记录未能写入本地服务：${userError(error).message}。设备缓存仍保留，请重试。`);}).finally(()=>{if(saveRevision.current===revision)setSavePending(false);});}},[workspaceId,loadedWorkspace,chats]);
   useEffect(()=>{if(!active)return;void window.jobfindsme!.listModelConnections().then(values=>{setConnections(values);const saved=getCurrentModel(workspaceId);setModelId(saved&&values.some(value=>value.connection_id===saved&&value.status==="verified")?saved:null);}).catch(error=>onError(userError(error).message));},[active,workspaceId]);
   useEffect(()=>window.jobfindsme!.onResearchChatDelta(event=>{if(!acceptsResearchDelta(requestRef.current,event,workspaceRef.current))return;
     if(event.progress){const label=({find_evidence:"核对已存材料",search_web:"搜索公开来源",read_page:"读取原页",read_browser_page:"浏览器读取原页",read_job:"读取已存岗位"} as Record<string,string>)[event.progress.tool]||"处理来源";setLiveProcess(`${label}${event.progress.status==="started"?"中…":event.progress.status==="failed"?"失败":"完成"}`);return;}
@@ -149,9 +150,10 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   async function refreshChatHistory(id:string){
     const [activeRows,archivedRows]=await Promise.all([window.jobfindsme!.listResearchChats(id),window.jobfindsme!.listArchivedResearchChats(id)]);
     if(workspaceRef.current!==id)return;
-    const activeChats=activeRows.map(fromStoredResearchChat);
+    const remote=activeRows.map(fromStoredResearchChat);
+    const activeChats=mergeResearchChats(researchChatsForRecovery(id,[],remote,new Set(archivedRows.map(item=>String(item.id))),true),remote);
     const archived=archivedRows.map(fromStoredResearchChat);
-    savedChats.current=new Map(activeChats.map(item=>[item.id,JSON.stringify(toStoredResearchChat(id,item))]));
+    savedChats.current=new Map(remote.map(item=>[item.id,JSON.stringify(toStoredResearchChat(id,item))]));
     setChats(activeChats);setArchivedChats(archived);
   }
   async function changeChatHistory(item:SavedResearchChat,action:"archive"|"restore"|"delete"){
@@ -163,6 +165,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
       else if(action==="restore")await window.jobfindsme!.restoreResearchChat(workspaceId,item.id);
       else await window.jobfindsme!.deleteArchivedResearchChat(workspaceId,item.id);
       if(workspaceRef.current!==workspaceId)return;
+      if(action!=="restore")removeResearchChatRecovery(workspaceId,item.id);
       await refreshChatHistory(workspaceId);
       if(action==="archive"&&chatId===item.id){setChatId(null);setReport(undefined);setMode("start");}
       if(action==="delete")setDeleteId("");

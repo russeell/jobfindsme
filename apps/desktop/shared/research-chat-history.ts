@@ -122,3 +122,30 @@ export async function migrateResearchChats(
   }
   return mergeResearchChats(local,verified);
 }
+
+// Separate pending updates from one-time legacy migration. Acknowledgements
+// remove only the exact saved version, never a newer queued update.
+const pendingKey=(workspaceId:string)=>`jobfindsme:research-chat-pending:${workspaceId}`;
+const removedKey=(workspaceId:string)=>`jobfindsme:research-chat-removed:${workspaceId}`;
+export function pendingResearchChats(workspaceId:string):SavedResearchChat[]{
+  try{const value=JSON.parse(localStorage.getItem(pendingKey(workspaceId))||"[]");return Array.isArray(value)?value.filter(chat=>typeof chat?.id==="string"&&Array.isArray(chat.turns)):[];}catch{return [];}
+}
+export function stageResearchChat(workspaceId:string,chat:SavedResearchChat):boolean{
+  try{const pending=pendingResearchChats(workspaceId);localStorage.setItem(pendingKey(workspaceId),JSON.stringify([...pending.filter(item=>item.id!==chat.id),chat]));return true;}catch{return false;}
+}
+export function acknowledgeResearchChat(workspaceId:string,chat:SavedResearchChat):void{
+  const version=JSON.stringify(toStoredResearchChat(workspaceId,chat));
+  const pending=pendingResearchChats(workspaceId).filter(item=>item.id!==chat.id||JSON.stringify(toStoredResearchChat(workspaceId,item))!==version);
+  localStorage.setItem(pendingKey(workspaceId),JSON.stringify(pending));
+}
+export function removeResearchChatRecovery(workspaceId:string,id:string):void{
+  const removed=new Set<string>(JSON.parse(localStorage.getItem(removedKey(workspaceId))||"[]"));removed.add(id);
+  localStorage.setItem(removedKey(workspaceId),JSON.stringify([...removed]));
+  localStorage.setItem(pendingKey(workspaceId),JSON.stringify(pendingResearchChats(workspaceId).filter(item=>item.id!==id)));
+}
+export function researchChatsForRecovery(workspaceId:string,cached:SavedResearchChat[],remote:SavedResearchChat[],archivedIds:Set<string>,alreadyMigrated:boolean):SavedResearchChat[]{
+  const activeIds=new Set(remote.map(chat=>chat.id));
+  let removed=new Set<string>();try{removed=new Set(JSON.parse(localStorage.getItem(removedKey(workspaceId))||"[]"));}catch{}
+  const legacy=alreadyMigrated?cached.filter(chat=>activeIds.has(chat.id)):cached;
+  return mergeResearchChats(pendingResearchChats(workspaceId),legacy).filter(chat=>!archivedIds.has(chat.id)&&(!removed.has(chat.id)||activeIds.has(chat.id)));
+}
