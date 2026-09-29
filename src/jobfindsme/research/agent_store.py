@@ -89,16 +89,29 @@ def _claim_basis(claim: dict, evidence: dict, company: str) -> dict:
         raise ValueError("claim entity or quote is unsupported")
     if claim.get("category") not in _CATEGORIES:
         raise ValueError("invalid claim category")
-    if _negative(statement) != _negative(quote) or re.search(
-        r"目前|现在|当前|至今|如今|仍然|仍在|现已", statement
-    ):
-        raise ValueError("claim polarity or current-time scope is unsupported")
+    if _negative(statement) != _negative(quote):
+        raise ValueError("claim polarity is unsupported")
+    sensitive = (
+        bool(
+            re.search(
+                r"\d|[一二三四五六七八九十百千万亿]+(?:年|月|日|人|倍|元|小时|%)",
+                statement,
+            )
+        )
+        or any(region in statement for region in _REGIONS)
+        or _negative(statement)
+        or bool(_listing_status(statement))
+        or bool(re.search(r"目前|现在|当前|至今|如今|仍然|仍在|现已", statement))
+    )
+    if sensitive and statement not in quote:
+        raise ValueError("sensitive claim requires a continuous original excerpt")
     if _listing_status(statement) and _listing_status(statement) != _listing_status(
         quote
     ):
         raise ValueError("claim listing status is unsupported")
     numbers = re.findall(
-        r"\d+(?:\.\d+)?%?|[一二三四五六七八九十百千万]+(?:年|月|日|人|倍|%)", statement
+        r"\d+(?:\.\d+)?%?|[一二三四五六七八九十百千万亿]+(?:年|月|日|人|倍|元|小时|%)",
+        statement,
     )
     if any(number not in quote for number in numbers) or any(
         region in statement and region not in quote for region in _REGIONS

@@ -29,7 +29,10 @@ export function checkResearchClaim(input:unknown,evidence:Map<string,ResearchEvi
   const body=row.excerpt;
   if(!company||!body.includes(company)||!statement.includes(company)||!quote.includes(company))return;
   if(negative(statement)!==negative(quote))return;
-  if(current(statement))return;
+  const sensitive=/\d|[一二三四五六七八九十百千万亿]+(?:年|月|日|人|倍|元|小时|%)/u.test(statement)||[...statement.matchAll(geographic)].length>0||negative(statement)||!!status(statement)||current(statement);
+  // Sensitive relations are accepted only as a continuous original excerpt.
+  // Character overlap cannot bind a number to its measure or team.
+  if(sensitive&&!quote.includes(statement))return;
   if(status(statement)&&status(statement)!==status(quote))return;
   if(numerals(statement).some(number=>!quote.includes(number)))return;
   if(([...statement.matchAll(geographic)]).some(match=>!quote.includes(match[0])))return;
@@ -39,4 +42,9 @@ export function checkResearchClaim(input:unknown,evidence:Map<string,ResearchEvi
   const scope=proposedScope.length>=2&&proposedScope.length<=60&&quote.includes(proposedScope)?proposedScope:"团队、地区或法律主体未核实";
   const sourceType=row.context?.source_type;
   return {statement,quote,evidence_ids:ids,category:String(value.category),scope,source_type:sourceType==="official_disclosure"?"official_disclosure":sourceType==="public_web"?"public_web":"personal_account",support_level:direct?"direct":"qualified"};
+}
+
+export function researchClaimText(claim:{statement?:string;quote:string}):string{
+  const statement=claim.statement||claim.quote;
+  return current(statement)?`来源当时记载：“${statement}”（当前情况未核实）`:statement;
 }

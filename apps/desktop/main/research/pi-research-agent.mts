@@ -3,7 +3,7 @@ import type {AgentTool,AgentMessage} from "@earendil-works/pi-agent-core";
 import {Type} from "typebox";
 import {createHash} from "node:crypto";
 import type {ModelConnection,ResearchEvidence,ResearchReport,ResearchChatProcessStep} from "../../shared/contracts.js";
-import {checkResearchClaim,type SupportedResearchClaim} from "../../shared/research-claim-support.js";
+import {checkResearchClaim,researchClaimText,type SupportedResearchClaim} from "../../shared/research-claim-support.js";
 import {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
 export {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
 
@@ -339,7 +339,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
     const validClaims=[...retainedClaims,...checked.claims].filter((claim,index,all)=>all.findIndex(item=>item.statement===claim.statement&&item.evidence_ids[0]===claim.evidence_ids[0])===index);
     const originals=[...evidence.values()].filter(row=>row.verification_status==="independently_retrieved");
     const unresolved=rejectedBeforeRepair>checked.claims.length||rejectedClaims(raw,evidence,company).length>0;
-    const lines=validClaims.length?validClaims.map(claim=>`${claim.statement} [${originals.findIndex(item=>item.evidence_id===claim.evidence_ids[0])+1}]`):[explainResearchGap(originals.length,actions,failures,context.question)];
+    const lines=validClaims.length?validClaims.map(claim=>`${researchClaimText(claim)} [${originals.findIndex(item=>item.evidence_id===claim.evidence_ids[0])+1}]`):[explainResearchGap(originals.length,actions,failures,context.question)];
     const limitations=[...checked.limitations,...(unresolved?["原回答有陈述未通过原文校验，已排除；只保留本次核对通过的内容。"]:[]),"来源的法律主体、团队与岗位适用性仍需按原页核对。",...failures];
     if(validClaims.length&&(unresolved||checked.limitations.length))lines.push(`尚缺依据：${checked.limitations[0]||"部分陈述未通过原文校验，已从回答中排除。"}`);
     if(!validClaims.length){
@@ -355,7 +355,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
     status=validClaims.length?"complete":/"claims"\s*:\s*\[\s*\{/u.test(raw)||originals.length?"unsupported_claim":readFailures?"read_failed":entityMismatches?"entity_mismatch":searchErrors&&!emptySearches?"search_service_error":"no_results";await Promise.race([persist(),timedOut]);return {text,report,company:company||undefined,researched:true,evidence:report?undefined:originals,process:visibleProcess()};
   }catch(error){collectUsage();failures.push(String(error).slice(0,200));
     if(retainedClaims.length&&!signal.aborted){const originals=[...evidence.values()].filter(row=>row.verification_status==="independently_retrieved");
-      const text=[...retainedClaims.map(claim=>`${claim.statement} [${originals.findIndex(item=>item.evidence_id===claim.evidence_ids[0])+1}]`),"部分陈述的修复未完成；以上仅保留已经核对通过的内容。"].join("\n");
+      const text=[...retainedClaims.map(claim=>`${researchClaimText(claim)} [${originals.findIndex(item=>item.evidence_id===claim.evidence_ids[0])+1}]`),"部分陈述的修复未完成；以上仅保留已经核对通过的内容。"].join("\n");
       answer=text;status="unsupported_claim";emitFinal(text);await persist();return {text,company:company||undefined,researched:true,evidence:originals,process:visibleProcess()};}
     status=signal.aborted?"cancelled":"failed";await persist();throw error;
   }finally{if(deadline)clearTimeout(deadline);signal.removeEventListener("abort",abort);}

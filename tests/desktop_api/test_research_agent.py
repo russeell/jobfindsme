@@ -361,7 +361,7 @@ def test_new_supported_conclusion_versions_without_new_page(tmp_path):
         "evidence": [evidence()],
         "claims": [
             {
-                "statement": "示例公司在上海设立研发团队",
+                "statement": "示例公司在上海设立了研发团队",
                 "quote": "示例公司在上海设立了研发团队",
                 "evidence_ids": ["ev_test"],
                 "category": "business",

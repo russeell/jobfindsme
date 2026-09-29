@@ -2085,6 +2085,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D92",
+      "title": "敏感陈述引用关系与来源时间约束",
+      "status": "done",
+      "verification": "新增TS2项/Python3项先复现；Node238、研究Python51、类型/构建通过。固定证据验证，无真实模型验收。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }
