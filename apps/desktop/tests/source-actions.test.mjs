@@ -102,6 +102,9 @@ test('current Zhaopin jobs template keeps footer login prompts separate from ses
  assert.equal(extracted.loginRequired,false);assert.equal(extracted.jobs.length,2);
  const login=runInNewContext(sourceListExtractionScript('zhilian'),context(false,true,{cards:false}));
  assert.equal(login.loginRequired,true);
+ const challengeInputContext=context(false,false,{cards:false});
+ challengeInputContext.document.querySelectorAll=selector=>selector.includes('验证码')?[visible]:[];
+ assert.equal(runInNewContext(sourceListExtractionScript('zhilian'),challengeInputContext).loginRequired,false);
 });
 
 test('foreground Zhaopin standardization is distinct from authenticated search capability',async()=>{

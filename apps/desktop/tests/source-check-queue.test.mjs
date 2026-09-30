@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {runSourceCheckQueue} from "../dist-electron/main/sources/source-check-queue.js";
+import {classifyBackgroundLoginPrompt,runSourceCheckQueue} from "../dist-electron/main/sources/source-check-queue.js";
 
 const source=(id,changes={})=>({source_id:id,source_type:id.startsWith("company_")?"company":"platform",name:id,
   login_required:["boss","zhilian","wuyou"].includes(id),live_search_enabled:false,session_status:"unverified",
   list_status:"unverified",detail_status:"unverified",fields_status:"unverified",pagination_status:"unverified",
   status:"unverified",detail:"",last_verified_at:null,...changes});
 const catalog=["boss","liepin","zhilian","wuyou"].map(source);
+
+test("a background login prompt preserves a confirmed session until the visible page disproves it",()=>{
+ const background=Error("login_required:后台搜索页显示登录表单");
+ assert.match(String(classifyBackgroundLoginPrompt(background,true)),/source_contract_error/);
+ assert.doesNotMatch(String(classifyBackgroundLoginPrompt(background,true)),/login_required:/);
+ assert.equal(classifyBackgroundLoginPrompt(background,false),background);
+});
 
 test("all four platforms enter the queue; only eligible sources call the live adapter",async()=>{
   const calls=[],progress=[],selected=["liepin"];

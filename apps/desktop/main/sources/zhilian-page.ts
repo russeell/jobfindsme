@@ -33,7 +33,7 @@ export function zhilianListExtractionScript(): string {
       .find((marker) => text.toLowerCase().includes(marker.toLowerCase()));
     const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
     const loginHost=/passport\\.zhaopin\\.com/.test(location.hostname);
-    const loginForm=Array.from(document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[placeholder*="验证码"]')).some(visible);
+    const loginForm=Array.from(document.querySelectorAll('input[type="password"],input[autocomplete="current-password"]')).some(visible);
     const pick = (root, selectors) => {
       for (const selector of selectors) {
         const node = root.querySelector(selector);

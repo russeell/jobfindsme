@@ -99,7 +99,7 @@ export function sourceListExtractionScript(
       .find((marker) => text.toLowerCase().includes(marker.toLowerCase()));
     const visible=node=>{const rect=node.getBoundingClientRect?.();const style=getComputedStyle(node);return !!rect&&rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0;};
     const loginHost=/passport\\.zhaopin\\.com|login\\.51job\\.com/.test(location.hostname);
-    const loginForm=Array.from(document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[placeholder*="验证码"]')).some(visible);
+    const loginForm=Array.from(document.querySelectorAll('input[type="password"],input[autocomplete="current-password"]')).some(visible);
     const pick = (root, selectors) => {
       for (const selector of selectors) {
         const node = root.querySelector(selector);
@@ -233,7 +233,7 @@ export function passiveSourceObservationScript(sourceId:"zhilian"|"wuyou"):strin
       .some(node=>{const label=(node.innerText||'').slice(0,1000);return /消息/.test(label)&&!/登录\\s*\\/?\\s*注册|立即登录/.test(label)&&Array.from(node.querySelectorAll('img[alt*="头像"],img[class*="avatar"],img[class*="Avatar"],[class*="avatar"] img,[class*="Avatar"] img,[aria-label*="个人"],[title*="个人"]')).some(visible);});
     const account=accountLink||accountHeader||(${JSON.stringify(sourceId)}==='zhilian'&&Array.from(document.querySelectorAll('.c-login__top .c-login__top__img[alt="avatar"]')).some(visible));
     const loginHost=/passport\\.zhaopin\\.com|login\\.51job\\.com/.test(location.hostname);
-    const login=loginHost || (formCount>0&&!cardCount&&!account) || Boolean(extracted?.loginRequired);
+    const login=loginHost || (formCount>0&&!cardCount&&!account&&/登录|注册/.test(text)) || (Boolean(extracted?.loginRequired)&&!account);
     const splash=!cardCount&&!formCount&&/找风口工作|登录|招聘/.test(text)&&text.length<1200;
     const authenticated=!challenge&&!login&&account;
     return {url:location.href,jobs:extracted?.jobs,kind:challenge?'challenge':login?'login':cardCount?'list':authenticated?'account':splash?'splash':'unknown',cardCount,formCount,authenticated};

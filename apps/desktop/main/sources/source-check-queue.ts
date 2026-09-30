@@ -13,6 +13,11 @@ type CheckOptions={
   now?:()=>number;
 };
 
+export function classifyBackgroundLoginPrompt(error:unknown,preserveSession:boolean):unknown{
+  if(!preserveSession||!/login_required:/.test(String(error)))return error;
+  return Error("source_contract_error:后台搜索出现登录提示；此前登录记录保留，检索能力待复查");
+}
+
 export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCheckResult[]>{
   const now=options.now??Date.now;
   const started=now(),deadline=started+(options.totalMs??45000);

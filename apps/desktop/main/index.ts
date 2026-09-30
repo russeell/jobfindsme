@@ -13,7 +13,7 @@ import { saveModelConnectionWithSecret } from "./backend/model-connection-servic
 import { PythonService, type ServiceStatus } from "./backend/python-service";
 import { SecureSecretStore } from "./security/secure-secret-store";
 import { SourceBrowserManager } from "./browser/source-browser";
-import {runSourceCheckQueue,shouldAutoCheckSource} from "./sources/source-check-queue";
+import {classifyBackgroundLoginPrompt,runSourceCheckQueue,shouldAutoCheckSource} from "./sources/source-check-queue";
 import {executeBoundedSourceSearch} from "./sources/source-search-execution";
 import {readIsolatedResearchPage} from "./research/browser-page";
 import {ResearchRunController} from "./research/run-controller";
@@ -201,7 +201,7 @@ async function createWindow(): Promise<void> {
         sourceAutoCheckAt.set(sourceId,Date.now());sourceAutoCheckPending.add(sourceId);
         void (async()=>{try{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
-          try{await verifyPlatformBackground(current,controller.signal);}finally{clearTimeout(timer);}
+          try{await verifyPlatformBackground(current,controller.signal,true);}finally{clearTimeout(timer);}
 
         }catch(error){if(!apiClient||isQuitting)return;const failure=String(error);
           if(/risk_control:|login_required:/.test(failure))await apiClient!.recordSourceRuntimeFailure(sourceId,failure.includes("risk_control:")?"risk_control":"login_required",failure.slice(0,500));
@@ -303,7 +303,7 @@ ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bo
   if(sourceId==="zhilian")sourceBrowserManager.prepareZhilianCheck(bounds);
   else await sourceBrowserManager.show(sourceId, bounds);
 });
-async function verifyPlatformBackground(source:SourceCapability,signal:AbortSignal):Promise<SourceCapability>{
+async function verifyPlatformBackground(source:SourceCapability,signal:AbortSignal,preserveSessionOnBackgroundLogin=false):Promise<SourceCapability>{
   if(!apiClient||!sourceBrowserManager||(source.source_id!=="zhilian"&&source.source_id!=="wuyou"))throw Error("source_contract_error:来源不可检查");
   const id=source.source_id,abort=()=>sourceBrowserManager?.cancelCareerSearch(id);
   signal.addEventListener("abort",abort,{once:true});
@@ -316,11 +316,14 @@ async function verifyPlatformBackground(source:SourceCapability,signal:AbortSign
     if(latest?.session_status==="expired"||latest?.session_status==="blocked")throw Error("source_check_cancelled:会话状态已经变化");
     return apiClient.recordSourceVerification(id,{...summary,detail_status:source.detail_status==="verified"?"verified":"unverified",pagination_status:"unverified",notes:`后台有界检索通过：${result.records.length} 条、1 个网站页；${summary.session_status==="verified"?"沿用此前登录记录，本次未单独核实身份":"登录身份未确认"}，JD和网站续页仍待验证。`},signal);
   }catch(error){
-    if(apiClient&&!signal.aborted&&!/risk_control:|login_required:|cancelled/.test(String(error))){
+    // A background search can show a login prompt while the visible account page
+    // still confirms the same persistent session. Treat that as a search failure.
+    const failure=classifyBackgroundLoginPrompt(error,preserveSessionOnBackgroundLogin);
+    if(apiClient&&!signal.aborted&&!/risk_control:|login_required:|cancelled/.test(String(failure))){
       const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===id);
-      if(latest&&latest.session_status!=="expired"&&latest.session_status!=="blocked")await apiClient.recordSourceVerification(id,{session_status:latest.session_status,list_status:"partial",detail_status:latest.detail_status,fields_status:latest.fields_status,pagination_status:"unverified",enabled:false,notes:`后台有界检索未通过：${String(error).replace(/https?:\/\/[^\s]+/g,"[URL]").slice(0,500)}`}).catch(()=>{});
+      if(latest&&latest.session_status!=="expired"&&latest.session_status!=="blocked")await apiClient.recordSourceVerification(id,{session_status:latest.session_status,list_status:"partial",detail_status:latest.detail_status,fields_status:latest.fields_status,pagination_status:"unverified",enabled:false,notes:`后台有界检索未通过：${String(failure).replace(/https?:\/\/[^\s]+/g,"[URL]").slice(0,500)}`}).catch(()=>{});
     }
-    throw error;
+    throw failure;
   }finally{signal.removeEventListener("abort",abort);}
 }
 async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ignorePending=false):Promise<SourceCapability>{
@@ -348,17 +351,24 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
     }finally{signal.removeEventListener("abort",abort);}
   }
   signal.addEventListener("abort",stop,{once:true});
+  let foregroundAuthenticated=false,foregroundLoginObserved=false;
   try{
     let pages:BrowserSourcePage[];
     if(sourceId==="zhilian"){
       const visible=await sourceBrowserManager.readVisibleZhilian();
       if(signal.aborted)throw Error("source_check_cancelled");
       if(visible?.kind==="challenge")throw Error("risk_control:当前页要求平台验证");
-      if(visible?.kind==="login")throw Error("login_required:当前页显示登录表单");
+      if(visible?.kind==="login"){foregroundLoginObserved=true;throw Error("login_required:当前页显示登录表单");}
       if(!visible?.authenticated&&source.session_status!=="verified")throw Error("source_visible_page_required:请在内置浏览器登录智联；确认账号后将自动验证后台搜索");
+      foregroundAuthenticated=Boolean(visible?.authenticated);
       if(visible?.authenticated)await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(source,visible),signal);
-      return verifyPlatformBackground(source,signal);
+      return verifyPlatformBackground(source,signal,foregroundAuthenticated||source.session_status==="verified");
     }else if(sourceId==="wuyou"){
+      const visible=await sourceBrowserManager.readVisiblePlatform("wuyou");
+      if(visible?.kind==="challenge")throw Error("risk_control:当前页要求平台验证");
+      if(visible?.kind==="login"){foregroundLoginObserved=true;throw Error("login_required:当前页显示登录表单");}
+      foregroundAuthenticated=Boolean(visible?.authenticated);
+      if(foregroundAuthenticated)await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:source.list_status,detail_status:source.detail_status,fields_status:source.fields_status,pagination_status:source.pagination_status,enabled:source.live_search_enabled,notes:"当前平台页显示已登录；后台检索能力另行检查。"},signal);
       const page=await sourceBrowserManager.searchPage(sourceId,{keyword:"工程师",city:"",page:1,forceRefresh:true});
       pages=[page];
     }else if(sourceId==="liepin"){
@@ -369,16 +379,21 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
     if(pages.some(page=>page.collection?.failure==="login_required"))throw Error("login_required:来源要求重新登录");
     const first=pages.flatMap(page=>page.records)[0];
     if(!first)throw Error("no_matching:本次没有读取到匹配岗位；不能判定来源不可用");
-    const summary=sourceSearchVerification(source,pages);
+    const summary=sourceSearchVerification(foregroundAuthenticated?{...source,session_status:"verified"}:source,pages);
     summary.pagination_status="unverified";
     summary.notes=`本次检查仅验证 1 个列表页；${summary.session_status==="verified"?"沿用此前登录记录，本次未单独核实身份":"登录身份未确认"}，JD 与网站续页未在本次重查。${summary.notes}`;
     return apiClient.recordSourceVerification(sourceId,summary,signal);
   }catch(error){
-    const message=String(error);
+    const failure=classifyBackgroundLoginPrompt(error,!foregroundLoginObserved&&(foregroundAuthenticated||source.session_status==="verified"));
+    if(failure!==error){
+      const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===sourceId);
+      if(latest)await apiClient.recordSourceVerification(sourceId,{session_status:foregroundAuthenticated?"verified":latest.session_status,list_status:"partial",detail_status:latest.detail_status,fields_status:latest.fields_status,pagination_status:"unverified",enabled:false,notes:"后台检索提示登录；保留此前登录记录，检索能力待复查。"}).catch(()=>{});
+    }
+    const message=String(failure);
     if(!signal.aborted&&/risk_control:|login_required:/.test(message)){
       await apiClient.recordSourceRuntimeFailure(sourceId,message.includes("risk_control:")?"risk_control":"login_required",message.slice(0,500)).catch(()=>{});
     }
-    throw error;
+    throw failure;
   }finally{signal.removeEventListener("abort",stop);}
 }
 async function recheckPersistedSessions():Promise<void>{
@@ -391,7 +406,7 @@ async function recheckPersistedSessions():Promise<void>{
     if(sourceAutoCheckPending.has(source.source_id))continue;
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
     sourceAutoCheckPending.add(source.source_id);sourceAutoCheckAt.set(source.source_id,Date.now());
-    try{if(source.source_id==="zhilian"||source.source_id==="wuyou")await verifyPlatformBackground(source,controller.signal);else await probeSourceForBulk(source,controller.signal,true);}
+    try{if(source.source_id==="zhilian"||source.source_id==="wuyou")await verifyPlatformBackground(source,controller.signal,true);else await probeSourceForBulk(source,controller.signal,true);}
     catch(error){const message=String(error);
       if(!controller.signal.aborted&&/risk_control:|login_required:/.test(message))await apiClient.recordSourceRuntimeFailure(source.source_id,message.includes("risk_control:")?"risk_control":"login_required",message.slice(0,500)).catch(()=>{});
     }finally{clearTimeout(timer);sourceAutoCheckPending.delete(source.source_id);mainWindow?.webContents.send("desktop:source-status-changed");}
@@ -424,18 +439,6 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   if(sourceVerifyActive.has(sourceId))throw Error('该平台检查正在运行，请稍后重试');
   sourceVerifyActive.add(sourceId);
   try{
-  if(sourceId==="boss"){
-    const page=await sourceBrowserManager.observeBoss(true,false,true);
-    if(!page?.authenticated||page.blocked||page.loginRequired)throw Error("请在应用内 BOSS 页面完成登录或平台验证后重试。");
-    sourceBrowserManager.boss.resume();
-    const result=await sourceBrowserManager.boss.collect({keyword:"工程师",city:"",maxBatches:1,seconds:10});
-    if(result.collection?.failure){await apiClient.recordSourceRuntimeFailure("boss",result.collection.failure,result.collection.failure);throw Error(`${result.collection.failure}:BOSS 有界检索未通过`);}
-    if(!result.records.length)throw Error("本次未读取到 BOSS 岗位列表；检索能力仍待验证。");
-    const summary=summarizeSourceVerification([result]);
-    const updated=await apiClient.recordSourceVerification("boss",{...summary,session_status:"verified",detail_status:"unverified",pagination_status:"partial",notes:`手动有界检索读取 ${result.records.length} 条；完整 JD 与续页仍待验证。`});
-    mainWindow?.webContents.send("desktop:source-status-changed");
-    return updated;
-  }
   const current=(await apiClient.bootstrap()).sources.find(source=>source.source_id===sourceId);
   if(!current)throw Error("source_contract_error:来源记录不存在");
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);

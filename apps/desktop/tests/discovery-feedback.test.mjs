@@ -32,3 +32,8 @@ test('an unreadable JD with an optional login suggestion is not an expired sessi
  assert.equal(error.kind,'source');assert.doesNotMatch(error.message,/重新登录|失效/);
  assert.equal(userError('login_required:登录状态已失效').kind,'login');
 });
+test('a source check that cannot see the account page does not claim the saved login expired',()=>{
+ const result=userError('source_visible_page_required:请在内置浏览器登录智联；确认账号后将自动验证后台搜索');
+ assert.equal(result.kind,'source');assert.doesNotMatch(result.message,/重新登录|失效/);
+ assert.match(result.message,/确认登录状态/);
+});

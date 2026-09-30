@@ -176,15 +176,19 @@ export class SourceBrowserManager {
   }
 
   async readVisibleZhilian():Promise<PassiveSourceObservation|undefined>{
+    return this.readVisiblePlatform("zhilian");
+  }
+
+  async readVisiblePlatform(sourceId:"zhilian"|"wuyou"):Promise<PassiveSourceObservation|undefined>{
     const tab=this.tabs.find(t=>t.id===this.activeId);
-    if(!this.visible||tab?.sourceId!=="zhilian"||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame())return;
-    const url=tab.view.webContents.getURL();if(!isAllowedSourceUrl("zhilian",url))return;
+    if(!this.visible||tab?.sourceId!==sourceId||tab.view.webContents.isDestroyed()||tab.view.webContents.isLoadingMainFrame())return;
+    const url=tab.view.webContents.getURL();if(!isAllowedSourceUrl(sourceId,url))return;
     let timer:ReturnType<typeof setTimeout>|undefined;
     try{
-      const page=await Promise.race([tab.view.webContents.executeJavaScript(passiveSourceObservationScript("zhilian")) as Promise<PassiveSourceObservation>,
+      const page=await Promise.race([tab.view.webContents.executeJavaScript(passiveSourceObservationScript(sourceId)) as Promise<PassiveSourceObservation>,
         new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error("source_timeout:当前页读取超时")),2500);})]);
       if(tab.view.webContents.getURL()!==url||page.url!==url)throw Error("source_contract_error:当前页面已变化，请稍后重试");
-      page.records=sanitizeSourceActionPage("zhilian",url,1,{jobs:page.jobs}).records;
+      if(sourceId==="zhilian")page.records=sanitizeSourceActionPage("zhilian",url,1,{jobs:page.jobs}).records;
       return page;
     }finally{if(timer)clearTimeout(timer);}
   }
