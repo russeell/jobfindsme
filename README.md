@@ -2,8 +2,8 @@
   <img src="docs/images/logo.svg" width="72" height="72" alt="JobFindsMe 标志">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>找岗位，读懂 JD，准备下一步。</strong></p>
-<p align="center">一个桌面求职助手，把岗位搜索、求职对话和进展记录放在一起。</p>
+<p align="center"><strong>找岗位，改简历，准备面试。</strong></p>
+<p align="center">一个桌面AI求职助手，欢迎Star和PR。</p>
 <p align="center">
   <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=2563eb" alt="最新发布版"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-2563eb?style=flat-square" alt="MIT 许可证"></a>
