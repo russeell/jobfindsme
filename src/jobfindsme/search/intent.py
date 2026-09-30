@@ -86,6 +86,8 @@ def parse_intent(
     if salary_unlimited:
         values["salary_min_k"] = values["salary_max_k"] = None
     cities = tuple(city for city in CITIES if city in remaining)
+    if len(cities) > 1:
+        raise ValueError("每次只能选择一个城市；也可以选择城市不限")
     if cities:
         values["cities"] = cities
         for city in cities:
@@ -123,8 +125,14 @@ def parse_intent(
         if re.search(r"不要|排除|远程|双休|学历|以上|以下|以内|至少|最多", part)
         and (part.strip() in remaining or re.search(r"远程|双休|学历|至少|最多", part))
     )
-    if not cities and not city_unlimited and not values.get("cities"):
-        values["cities"] = tuple(prefs.get("cities") or ())
+    if (
+        filters is None
+        and not cities
+        and not city_unlimited
+        and not values.get("cities")
+    ):
+        preferred_cities = tuple(prefs.get("cities") or ())
+        values["cities"] = preferred_cities if len(preferred_cities) <= 1 else ()
     if not salary and not salary_unlimited:
         for key in ("salary_min_k", "salary_max_k"):
             if values.get(key) is None and prefs.get(key) is not None:
@@ -133,6 +141,8 @@ def parse_intent(
         leftovers = tuple(dict.fromkeys((*leftovers, remaining)))
     if not remaining:
         raise ValueError("请补充岗位方向，不能只输入筛选条件")
+    if len(values.get("cities") or ()) > 1:
+        raise ValueError("每次只能选择一个城市；也可以选择城市不限")
     effective = DesktopJobFilters(**values)
     effective.validate()
     return SearchIntent(

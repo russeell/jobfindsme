@@ -1044,9 +1044,11 @@ def test_refilter_after_append_keeps_current_salary_and_frozen_score_versions(tm
 def test_intent_conditions_are_local_and_unknowns_require_review():
     from jobfindsme.search.intent import parse_intent
 
-    result = parse_intent("广州深圳 Agent 岗，20K以上，不要外包")
+    with pytest.raises(ValueError, match="一个城市"):
+        parse_intent("广州深圳 Agent 岗，20K以上，不要外包")
+    result = parse_intent("广州 Agent 岗，20K以上，不要外包")
     assert result.query == "Agent"
-    assert result.filters.cities == ("广州", "深圳")
+    assert result.filters.cities == ("广州",)
     assert result.filters.salary_min_k == 20
     assert result.filters.salary_mode == "contained"
     assert result.filters.exclusions == ("外包",)
@@ -1321,3 +1323,18 @@ def test_explicit_intent_conditions_override_saved_preferences():
     unlimited = parse_intent("城市不限 Agent工程师 薪资不限", preferences=preferences)
     assert unlimited.query == "Agent工程师"
     assert not unlimited.filters.cities and unlimited.filters.salary_min_k is None
+
+
+def test_explicit_unlimited_city_never_inherits_old_single_or_multiple_preferences():
+    from jobfindsme.search.intent import parse_intent
+    from jobfindsme.search.jobs import DesktopJobFilters
+
+    for saved in [["上海"], ["上海", "杭州"]]:
+        parsed = parse_intent(
+            "Python工程师",
+            filters=DesktopJobFilters(cities=()),
+            preferences={"cities": saved},
+        )
+        assert parsed.filters.cities == ()
+    with pytest.raises(ValueError, match="一个城市"):
+        parse_intent("Python工程师", filters=DesktopJobFilters(cities=("上海", "杭州")))

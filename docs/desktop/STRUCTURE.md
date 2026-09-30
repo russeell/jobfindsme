@@ -14,6 +14,12 @@ docs/images/        README 使用的界面截图
 
 桌面端 `skills/` 随包提供简历定制、模拟面试和公司/行业/技术主题深度研究工作流及 MIT 来源说明；`shared/assistant-skills.ts` 是固定注册表，`main/research/assistant-skills.mts` 只加载注册的技能。技能复用同一个 Pi Agent，通过 `read_skill` 按需读取，明确选择的技能由应用加载一次，其余由 Agent 按需读取；不改写用户提问。文件/文件夹由主进程原生选择，只读取支持的资料；Python复用文本提取器解析，不导入或覆盖简历。附件文本随对话保存在本机，点击发送才进入所选模型上下文。图片由主进程解码转JPEG，经Pi图片内容传入所选视觉模型，并受大小与历史预算限制。`main/research/research-subject.ts` 区分公司与主题锚点；主题证据不混入公司缓存，正式报告显式标注主题范围。深度研究沿用有界搜索、原文读取及引用校验。
 
+检索共用底座：`main/sources/source-search-coordinator.ts` 有界读取、`source-search-execution.ts` 每批保存，`shared/search-scope.ts` 维护续查。每次只选一个城市或不限城市；首轮只用用户关键词，不调用模型。选中岗位才补 JD，`SourceBrowserManager.readResearchJob` 按工作区/来源/链接缓存详情。Agent 的 `search_jobs` 调用相同执行入口，返回已保存岗位及真实覆盖记录。
+
+`main/research/public-retrieval.ts` 负责公开发现，`original-reader.ts` 负责有时效/工作区/会话范围的原文缓存及 HTTP → 应用浏览器回退。`browser-snapshot.ts` 生成正文和语义 DOM 元素引用；不是完整可访问性树。每个任务持有自己的标签页，沿用平台分区会话；导航刷新引用，只允许公开读取、同站 GET 搜索与链接翻页，登录/验证交给用户。`public-network.ts` 校验资源公网地址，不能回退绕过 TLS 错误。Python 按实际 MIME/文件签名处理 PDF，语义正文排除导航与验证页面。
+
+Pi 的 `record_research` 保存子问题、连续原文支持的发现及缺口；后续轮次从同会话恢复，重复正文只算一份证据。检索、阅读、浏览器操作与模型调用共用预算及取消信号，末轮预留交付；综合分析失败仍保留已读片段。正式报告继续采用严格事实校验；自然回答的引用与 ID 校验不能替代完整语义事实核验。定时搜索保持原有停用状态，没有自动恢复历史计划。
+
 Python `sources/` 是来源目录和检索准入的权威位置，`search/` 负责编排与统一结果，`research/` 管有来源的报告，`profiles/` 与 `resume_editor/` 管简历数据，`desktop_api/` 提供本地接口。`migrations/` 必须保留，以读取已有用户数据。
 
 旧 CLI/MCP、安装器和 Skill 已退役。Python 包内部的旧发行名与数据路径只用于现有桌面打包和用户数据迁移。历史设计和验收文件可从 [重构前提交](https://github.com/russeell/jobfindsme/tree/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop) 查阅，不在当前树重复保存。

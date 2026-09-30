@@ -1,3 +1,20 @@
+D134–D138 共用检索与单城市搜索（2026-10-01，本地，真实验收仍在进行）：首轮保持用户关键词、所选来源及无模型链路，四来源有限并发，每页/采集批次保存后增量通知。选中岗位自动补齐 JD，缓存按工作区、来源和链接隔离；失败保存不推进游标，取消保留已保存结果。用户最新要求已替换多城市范围：每次一个城市或不限城市，界面单选后收起，后台及 Agent 也拒绝多城市；旧多城市偏好不会偷偷退成只查第一个城市。前程无忧补齐实际远端城市编码；未知编码明确失败。相近关键词仅通过“继续查找”中显式选择，保持原条件。
+
+Agent 新增实时岗位搜索及任务标签的打开、结构读取、搜索、链接点击和翻页工具。结果提供原页、收藏与继续分析入口，继承用户平台选择；返回真实执行查询/来源状态，不能从前十条来源推断整轮覆盖。HTTP 优先、动态/空正文使用应用浏览器；公网 DNS、正常 HTTPS 跳转、页面资源校验和平台会话复用保留安全限制。PDF 以内容类型和签名解析，导航/验证码/登录/乱码/二进制不作为原文。成功缓存有时效和范围，失败不缓存；单渠道故障不停止其他渠道。研究保存子问题、已查查询、发现、原文引用及缺口，同会话继续时恢复；转载正文去重，预留答案预算。
+
+真实 D136 单城市四平台检索：首批可用 1.2 秒、74 条，首屏十条标题关键词相关性 10/10（不是简历匹配分数）。选中岗位后读到对应公司的完整 JD。D133 基线首批 1.4 秒、66 条，但站点内容/缓存时效不同，不能据此宣称稳定速度提升。之前真实续查取得更多岗位；单个来源失败时其他来源结果保留。真实 Agent 已完成岗位工具调用并显示可打开/收藏/分析的岗位卡片；覆盖文字误述已修，修复后仍待重验。真实动态页面取得 JS 渲染正文；五种浏览器操作没有逐项真实验收。
+
+真实研究测试取得多份原文却未生成最终回答，还发现 GitHub 导航正文问题；已修优先 README 选择、提前预留交付、模型失败时保留原文片段。此修复未标为真实通过：当前 Mac 锁屏，computer use 无法操作，已请用户解锁。引用语义准确性、取消/恢复/验证、重试与最新续页仍需真实重验；新安装无模型配置只经自动化测试，未做全新配置的原生验收。简历/面试复用已有材料及岗位读取；本轮没有发送真实简历。定时检索仍停用，历史计划保留，未声称已贯通运行。
+
+Python 全套475、桌面318、类型/构建、Ruff、diff 检查通过；D138 最终正常本地包通过包审计，位置为 `apps/desktop/release/mac-D138/JobFindsMe.app`。Mac 锁屏无法切换运行版本，最后真实观察的是 D136；D138 含单城市执行策略收简及错误恢复，原生复验待解锁。没有推送、发布或制作分享 ZIP；用户资料、原始测试问答、截图、密钥、会话及数据库均不进入仓库。
+
+参考实际源码及对应文件许可证，仅借鉴设计，自行实现，未复制源码或接入重复框架：
+- [agent-browser snapshot](https://github.com/vercel-labs/agent-browser/blob/d01253d9db28d75080e36da3c1c31ef89454731e/cli/src/native/snapshot.rs)：元素引用与动作，[Apache-2.0](https://github.com/vercel-labs/agent-browser/blob/d01253d9db28d75080e36da3c1c31ef89454731e/LICENSE)。
+- [playwright-mcp 点击测试](https://github.com/microsoft/playwright-mcp/blob/f183dad4a52965583e3cc1d59b88cdc279e2e57d/tests/click.spec.ts)：动作前后读取结构，[Apache-2.0](https://github.com/microsoft/playwright-mcp/blob/f183dad4a52965583e3cc1d59b88cdc279e2e57d/LICENSE)。
+- [browser-use session](https://github.com/browser-use/browser-use/blob/4cbe921673b48a488f5415d9159249afd12a625b/browser_use/browser/session.py)：任务标签、会话与等待，[MIT](https://github.com/browser-use/browser-use/blob/4cbe921673b48a488f5415d9159249afd12a625b/LICENSE)。
+- [deep-research](https://github.com/dzhng/deep-research/blob/1f8f3e285bbc23e80b98a66a64effab9069f3ad4/src/deep-research.ts)：发现驱动后续问题、有界并发及去重，[MIT](https://github.com/dzhng/deep-research/blob/1f8f3e285bbc23e80b98a66a64effab9069f3ad4/LICENSE)。
+- [gpt-researcher scraper](https://github.com/assafelovic/gpt-researcher/blob/0957c301ed06c2a5857b834358c7227c739041d4/gpt_researcher/scraper/scraper.py)：正文质量及内容类型，[Apache-2.0](https://github.com/assafelovic/gpt-researcher/blob/0957c301ed06c2a5857b834358c7227c739041d4/LICENSE)。
+
 D133 内置联网检索（2026-10-01，本地）：新增内部 web-retrieval 技能，联网请求/深度研究预加载，普通任务首次调用检索时先加载工作流；用户菜单仍为三个技能且不改写输入。参考 Agent Reach 的来源路由与搜索/原文分层，自行实现 Exa 官方固定只读远程 MCP HTTP 适配；无需安装 Agent Reach/mcporter 或配置 Exa Key，不启动本地 MCP 服务器，也不传递模型 Key。GitHub/论文来源路由保留严格公网/HTTPS/域名/跳转检查；候选没有正文或证据ID，须另读原文。主检索失败使用原预算的既有 Python 后端，403/429 等进入三分钟进程冷却；查询拦截邮箱、手机号、密钥和私人文件路径。配置状态与实际服务状态分开记录。
 
 真实原生测试发现并修复：读取参数自动沿用已发现来源、限量同站具体路径延伸；工具轮次内预留最后一轮交付，移除请求工具声明和执行权限，不扩大时间预算；准确原文ID的圆括号引用也映射为可点击编号。Node308、相关Python61、新增边界Python10、类型/构建、Ruff和最终macOS包审计通过。正常D133在真实用户工作区经Computer Use完成公开研究与普通GitHub检索，分别读取8/3份原文，核对来源片段和引用定位；执行记录确认实际Exa候选与完成终态，无个人资料读取。原始问答、原文内容、截图和用户密钥均不进入仓库。本轮未做论文或Windows原生验收；有界片段、大PDF及受限网页仍限制完整研究，不将原文数量等同全文覆盖。D133已本地打开，未推送、发布或生成ZIP。D128简历/面试的真实效果验收继续独立记录。
