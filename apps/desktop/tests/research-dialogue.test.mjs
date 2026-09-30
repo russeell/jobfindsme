@@ -146,7 +146,7 @@ test('A and B history selection binds the next turn to the selected session',()=
 test('toStored fixture preserves a long answer and migration verifies the backend readback',async()=>{
  const fixture=JSON.parse(readFileSync(new URL('../../../tests/fixtures/research_chat_to_stored.json',import.meta.url),'utf8'));
  const local={id:fixture.id,title:'示例公司研究',updatedAt:'2026-09-25T00:00:00Z',turns:fixture.turns,reportIds:fixture.report_ids,subjectCompany:fixture.subject_company,subjectTitle:fixture.subject_title,jobId:fixture.job_id,researchMode:fixture.research_mode};
- assert.deepEqual(JSON.parse(JSON.stringify(toStoredResearchChat('workspace-fixture',local))),{...fixture,updated_at:local.updatedAt});
+ assert.deepEqual(JSON.parse(JSON.stringify(toStoredResearchChat('workspace-fixture',local))),{...fixture,chat_title:local.title,updated_at:local.updatedAt});
  assert(local.turns[1].text.length>8000);
  const values=new Map();globalThis.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
  assert.equal(saveResearchChats('workspace-fixture',[local]),true);
@@ -158,4 +158,12 @@ test('toStored fixture preserves a long answer and migration verifies the backen
  await assert.rejects(migrateResearchChats('workspace-fixture',[local],[],save,async()=>[{...saved.at(-1),turns:[saved.at(-1).turns[0]],updated_at:'2026-09-26T00:00:00Z'}]),/读回不一致/);
  assert.equal(local.turns[1].text.length,fixture.turns[1].text.length);
  assert.equal(loadResearchChats('workspace-fixture')[0].turns[1].text,local.turns[1].text);
+});
+
+test('renamed chat title survives storage readback and later turns',()=>{
+ const chat={id:'renamed',title:'面试准备',updatedAt:'2026-09-30T00:00:00Z',turns:[{role:'user',text:'原始提问'}],reportIds:[]};
+ const stored=toStoredResearchChat('workspace-fixture',chat);
+ const restored=fromStoredResearchChat(stored);
+ assert.equal(restored.title,'面试准备');
+ assert.equal(beginChat(restored,'renamed','继续追问','2026-09-30T01:00:00Z').chat.title,'面试准备');
 });

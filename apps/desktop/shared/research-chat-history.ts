@@ -72,7 +72,7 @@ export function saveResearchChats(workspaceId:string,chats:SavedResearchChat[]):
 }
 
 export function toStoredResearchChat(workspaceId:string,chat:SavedResearchChat):Record<string,unknown>{
-  return {workspace_id:workspaceId,id:chat.id,updated_at:chat.updatedAt,subject_key:(chat.subjectCompany||"").toLocaleLowerCase().replace(/\s+/g,""),subject_company:chat.subjectCompany,subject_title:chat.subjectTitle,job_id:chat.jobId,research_mode:chat.researchMode,turns:chat.turns,report_ids:chat.reportIds.slice(-30),draft:chat.draft,pending:chat.pendingResearch,failure:chat.failure};
+  return {workspace_id:workspaceId,id:chat.id,chat_title:chat.title,updated_at:chat.updatedAt,subject_key:(chat.subjectCompany||"").toLocaleLowerCase().replace(/\s+/g,""),subject_company:chat.subjectCompany,subject_title:chat.subjectTitle,job_id:chat.jobId,research_mode:chat.researchMode,turns:chat.turns,report_ids:chat.reportIds.slice(-30),draft:chat.draft,pending:chat.pendingResearch,failure:chat.failure};
 }
 export async function saveResearchChatWithRetry(item:Record<string,unknown>,save:(item:Record<string,unknown>)=>Promise<unknown>):Promise<void>{
   try{await save(item);}catch(error){
@@ -84,7 +84,7 @@ export async function saveResearchChatWithRetry(item:Record<string,unknown>,save
 export function fromStoredResearchChat(item:Record<string,unknown>):SavedResearchChat{
   const turns=Array.isArray(item.turns)?item.turns.filter(value=>value&&typeof value==="object"&&["user","assistant"].includes(value.role)&&typeof value.text==="string") as ResearchChatTurn[]:[];
   const first=turns.find(value=>value.role==="user");
-  return {id:String(item.id),title:first?.text.slice(0,40)||"研究对话",updatedAt:String(item.updated_at||new Date().toISOString()),turns,reportIds:Array.isArray(item.report_ids)?item.report_ids.filter((value):value is string=>typeof value==="string"):[],subjectCompany:typeof item.subject_company==="string"?item.subject_company:undefined,subjectTitle:typeof item.subject_title==="string"?item.subject_title:undefined,jobId:typeof item.job_id==="string"?item.job_id:undefined,researchMode:typeof item.research_mode==="boolean"?item.research_mode:undefined,draft:typeof item.draft==="string"?item.draft:undefined,pendingResearch:item.pending&&typeof item.pending==="object"?item.pending as PendingResearch:undefined,failure:typeof item.failure==="string"?item.failure:undefined};
+  return {id:String(item.id),title:typeof item.chat_title==="string"&&item.chat_title.trim()?item.chat_title.trim():first?.text.slice(0,40)||"研究对话",updatedAt:String(item.updated_at||new Date().toISOString()),turns,reportIds:Array.isArray(item.report_ids)?item.report_ids.filter((value):value is string=>typeof value==="string"):[],subjectCompany:typeof item.subject_company==="string"?item.subject_company:undefined,subjectTitle:typeof item.subject_title==="string"?item.subject_title:undefined,jobId:typeof item.job_id==="string"?item.job_id:undefined,researchMode:typeof item.research_mode==="boolean"?item.research_mode:undefined,draft:typeof item.draft==="string"?item.draft:undefined,pendingResearch:item.pending&&typeof item.pending==="object"?item.pending as PendingResearch:undefined,failure:typeof item.failure==="string"?item.failure:undefined};
 }
 export function mergeResearchChats(local:SavedResearchChat[],remote:SavedResearchChat[]):SavedResearchChat[]{
   const byId=new Map(remote.map(chat=>[chat.id,chat]));
@@ -116,7 +116,7 @@ export async function migrateResearchChats(
       (saved.subjectCompany||undefined)!==(chat.subjectCompany||undefined)||
       (saved.subjectTitle||undefined)!==(chat.subjectTitle||undefined)||
       Boolean(saved.researchMode)!==Boolean(chat.researchMode)||
-      saved.draft!==chat.draft||JSON.stringify(saved.reportIds)!==JSON.stringify(chat.reportIds)){
+      saved.draft!==chat.draft||saved.title!==chat.title||JSON.stringify(saved.reportIds)!==JSON.stringify(chat.reportIds)){
       throw Error(`对话 ${chat.title} 写入后读回不一致`);
     }
   }

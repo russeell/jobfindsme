@@ -174,6 +174,7 @@ class ResearchAgentStore:
         if len(turns_json.encode("utf-8")) > 16_000_000:
             raise ValueError("conversation exceeds 16 MB storage limit")
         context = {
+            "chat_title": str(item.get("chat_title") or "").strip()[:80],
             "company": str(item.get("subject_company") or "")[:300],
             "title": str(item.get("subject_title") or "")[:300],
             "job_id": str(item.get("job_id") or "")[:100],
@@ -248,6 +249,7 @@ class ResearchAgentStore:
             {
                 "id": row["conversation_id"],
                 "subject_key": row["subject_key"],
+                "chat_title": json.loads(row["context_json"]).get("chat_title"),
                 "subject_company": json.loads(row["context_json"]).get("company"),
                 "subject_title": json.loads(row["context_json"]).get("title"),
                 "job_id": json.loads(row["context_json"]).get("job_id"),

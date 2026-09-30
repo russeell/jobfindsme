@@ -112,10 +112,12 @@ def test_conversation_execution_and_report_are_workspace_scoped(tmp_path):
         {
             "id": "c1",
             "turns": [{"role": "user", "text": "示例公司如何"}],
+            "chat_title": "公司研究",
             "subject_company": "示例公司",
         },
     )
     assert store.list_conversations(workspace)[0]["turns"] == chat["turns"]
+    assert store.list_conversations(workspace)[0]["chat_title"] == "公司研究"
     assert store.list_conversations(other) == []
     with pytest.raises(PermissionError):
         store.save_conversation(other, {"id": "c1", "turns": []})

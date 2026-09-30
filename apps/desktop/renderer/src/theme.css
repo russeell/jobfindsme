@@ -352,6 +352,19 @@ nav button .nav-label {font-size:13px;}
 .sidebar-history-slot {flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;margin-right:-10px;}
 .sidebar-history-slot[hidden],.sidebar-collapsed .sidebar-history-slot {display:none;}
 .research-history-sidebar {display:flex;flex-direction:column;min-height:0;min-width:0;flex:1;}
+.research-history-toolbar {display:flex;align-items:center;justify-content:space-between;padding:4px 12px 2px;color:var(--text-muted);font-size:11px;}
+.research-history-toolbar>div {display:flex;gap:2px;}
+.research-history-toolbar button {border:0;background:transparent;color:var(--text-muted);font-size:18px;line-height:1;min-height:26px;min-width:26px;border-radius:6px;}
+.research-history-toolbar button svg {width:14px;height:14px;}
+.research-history-toolbar button:hover,.research-history-toolbar button[aria-expanded="true"] {background:var(--surface-hover);color:var(--text);}
+.research-history-search {width:calc(100% - 20px);margin:3px 10px 5px;min-height:30px;padding:5px 8px;font-size:12px;}
+.research-history-menu {display:grid;gap:2px;margin:2px 8px 5px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 8px 24px #1d2a3c12;}
+.research-history-menu>span {font-size:11px;color:var(--text-muted);padding:2px 6px;}
+.research-history-menu button,.research-chat-menu button {border:0;background:transparent;text-align:left;padding:6px 8px;min-height:29px;border-radius:6px;font-size:12px;color:var(--text);}
+.research-history-menu button:hover,.research-chat-menu button:hover {background:var(--surface-hover);}
+.research-history-menu button[aria-pressed="true"] {color:var(--accent);}
+.research-chat-menu {display:grid;gap:1px;margin:1px 4px 5px;padding:4px;border:1px solid var(--line);border-radius:8px;background:var(--surface);}
+.research-history-rename {width:calc(100% - 33px);height:29px;margin:2px 4px;padding:3px 6px;font-size:12px;}
 .research-history-sidebar .research-history-body {flex:1;overflow-x:hidden;margin:4px 0;padding:0 0 14px;scrollbar-width:thin;scrollbar-color:#d3d5d3 transparent;}
 .research-history-sidebar .research-history-body::-webkit-scrollbar {width:5px;}
 .research-history-sidebar .research-history-body::-webkit-scrollbar-thumb {background:#d3d5d3;border-radius:8px;}
