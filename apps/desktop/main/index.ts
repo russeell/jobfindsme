@@ -314,7 +314,7 @@ async function verifyPlatformBackground(source:SourceCapability,signal:AbortSign
     const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===id);
     const summary=sourceSearchVerification(latest||source,[result]);
     if(latest?.session_status==="expired"||latest?.session_status==="blocked")throw Error("source_check_cancelled:会话状态已经变化");
-    return apiClient.recordSourceVerification(id,{...summary,detail_status:source.detail_status==="verified"?"verified":"unverified",pagination_status:"unverified",notes:`后台有界检索通过：${result.records.length} 条、1 个网站页；${summary.session_status==="verified"?"登录已另行确认":"登录身份未确认"}，JD和网站续页仍待验证。`},signal);
+    return apiClient.recordSourceVerification(id,{...summary,detail_status:source.detail_status==="verified"?"verified":"unverified",pagination_status:"unverified",notes:`后台有界检索通过：${result.records.length} 条、1 个网站页；${summary.session_status==="verified"?"沿用此前登录记录，本次未单独核实身份":"登录身份未确认"}，JD和网站续页仍待验证。`},signal);
   }catch(error){
     if(apiClient&&!signal.aborted&&!/risk_control:|login_required:|cancelled/.test(String(error))){
       const latest=(await apiClient.bootstrap()).sources.find(item=>item.source_id===id);
@@ -371,7 +371,7 @@ async function probeSourceForBulk(source:SourceCapability,signal:AbortSignal,ign
     if(!first)throw Error("no_matching:本次没有读取到匹配岗位；不能判定来源不可用");
     const summary=sourceSearchVerification(source,pages);
     summary.pagination_status="unverified";
-    summary.notes=`本次检查仅验证 1 个列表页；${summary.session_status==="verified"?"登录已另行确认":"登录身份未确认"}，JD 与网站续页未在本次重查。${summary.notes}`;
+    summary.notes=`本次检查仅验证 1 个列表页；${summary.session_status==="verified"?"沿用此前登录记录，本次未单独核实身份":"登录身份未确认"}，JD 与网站续页未在本次重查。${summary.notes}`;
     return apiClient.recordSourceVerification(sourceId,summary,signal);
   }catch(error){
     const message=String(error);

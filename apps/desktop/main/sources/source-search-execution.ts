@@ -50,7 +50,7 @@ export async function executeBoundedSourceSearch(
       try{const source=(await client.bootstrap()).sources.find(item=>item.source_id===sourceId);
         if(!source)throw Error("source_contract_error:来源状态不存在");
         const summary=sourceSearchVerification(source,pages,sourceId==="boss");await client.recordSourceVerification(sourceId,{...summary,
-        detail_status:"unverified",pagination_status:"partial",notes:`本次用户检索读取 ${pages.flatMap(page=>page.records).length} 条；${summary.session_status==="verified"?"登录已另行确认":"登录身份未确认"}，详情与网站续页仍单独待验。`});}
+        detail_status:"unverified",pagination_status:"partial",notes:`本次用户检索读取 ${pages.flatMap(page=>page.records).length} 条；${summary.session_status==="verified"?"沿用此前登录记录，本次未单独核实身份":"登录身份未确认"}，详情与网站续页仍单独待验。`});}
       catch(statusError){failures.push({source_id:sourceId,stage:"source_status",message:messageOf(statusError).slice(0,300)});}
     }
   };
