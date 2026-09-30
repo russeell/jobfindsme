@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">JobFindsMe</h1>
 <p align="center"><strong>找岗位，改简历，准备面试。</strong></p>
-<p align="center">一个桌面AI求职助手，欢迎STAR🌟和PR。</p>
+<p align="center">一个桌面AI求职助手，欢迎Star和PR。</p>
 <p align="center">
   <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=2563eb" alt="最新发布版"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-2563eb?style=flat-square" alt="MIT 许可证"></a>
