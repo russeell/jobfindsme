@@ -362,7 +362,6 @@ nav button .nav-label {font-size:13px;}
 .research-history-search {position:absolute;z-index:4;top:33px;left:8px;right:8px;width:calc(100% - 16px);min-height:30px;padding:5px 8px;background:var(--surface);font-size:12px;box-shadow:0 8px 24px #1d2a3c12;}
 .research-history-menu {position:absolute;z-index:4;top:33px;display:grid;gap:2px;min-width:150px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 8px 24px #1d2a3c12;}
 .research-history-menu-sort {left:8px;}
-.research-history-menu-manage {right:8px;}
 .research-history-menu button {border:0;background:transparent;text-align:left;padding:6px 8px;min-height:29px;border-radius:6px;font-size:12px;color:var(--text);}
 .research-history-menu button:hover {background:var(--surface-hover);}
 .research-history-menu button[aria-pressed="true"] {color:var(--accent);}
