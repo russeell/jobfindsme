@@ -26,6 +26,29 @@ const update = {
   api_key: "new-key",
 };
 
+test('unencrypted persistence requires explicit consent and never sends storage policy or keys to SQLite',async()=>{
+ let staged=0;let saved=0;
+ const api={modelConnection:async()=>existing,saveModelConnection:async input=>{
+  saved++;assert.equal('api_key' in input,false);assert.equal('secret_storage' in input,false);assert.equal('allow_unencrypted_storage' in input,false);
+  return {...existing,...input};
+ }};
+ const secrets={set:(ref,key,mode)=>{staged++;assert.equal(mode,'local_file');},delete:()=>{},has:()=>true,storageMode:()=> 'local_file'};
+ const input={...update,secret_storage:'local_file'};
+ await assert.rejects(saveModelConnectionWithSecret(api,secrets,input,()=> 'new-secret'),/明文保存/);
+ await assert.rejects(saveModelConnectionWithSecret(api,secrets,{...input,allow_unencrypted_storage:'true'},()=> 'new-secret'),/明文保存/);
+ await assert.rejects(saveModelConnectionWithSecret(api,secrets,{...input,secret_storage:'invalid',allow_unencrypted_storage:true},()=> 'new-secret'),/无效/);
+ assert.equal(staged,0);assert.equal(saved,0);
+ const result=await saveModelConnectionWithSecret(api,secrets,{...input,allow_unencrypted_storage:true},()=> 'new-secret');
+ assert.equal(staged,1);assert.equal(saved,1);assert.equal(result.secret_storage,'local_file');assert.equal(result.has_api_key,true);
+});
+
+test('changing only storage selector without a new key leaves the existing encoding unchanged',async()=>{
+ const api={modelConnection:async()=>existing,saveModelConnection:async input=>({...existing,...input,credential_ref:existing.credential_ref})};
+ const secrets={set:()=>{throw Error('must not migrate');},delete:()=>{throw Error('must not retire');},has:()=>true,storageMode:()=> 'system'};
+ const result=await saveModelConnectionWithSecret(api,secrets,{...update,api_key:'',secret_storage:'local_file'},()=> 'new-secret');
+ assert.equal(result.secret_storage,'system');assert.equal(result.credential_ref,'old-secret');
+});
+
 test("secret staging failure leaves configuration and old pairing untouched", async () => {
   let saveCalled = false;
   const api = {

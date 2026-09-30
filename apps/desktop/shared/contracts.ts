@@ -410,6 +410,8 @@ export type ResearchChatInput = {interview_state?:InterviewState;attachments?:Ch
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};
 export type ResearchChatResult = {resumeProposalId?:string;interviewState?:InterviewState;text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 
+export type SecretStorageMode = "system" | "local_file";
+
 export type ModelConnectionInput = {
   connection_id?: string;
   provider: string;
@@ -419,9 +421,11 @@ export type ModelConnectionInput = {
   auth_mode?: "api_key" | "none";
   api_key?: string;
   credential_ref?: string | null;
+  secret_storage?: SecretStorageMode;
+  allow_unencrypted_storage?: boolean;
 };
 
-export type ModelConnection = Omit<ModelConnectionInput, "api_key"> & {
+export type ModelConnection = Omit<ModelConnectionInput, "api_key" | "allow_unencrypted_storage"> & {
   connection_id: string;
   status: "unverified" | "testing" | "verified" | "failed" | "cancelled";
   last_error: string | null;

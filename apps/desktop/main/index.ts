@@ -618,6 +618,7 @@ ipcMain.handle("desktop:list-model-connections", async () => {
   const connections = await apiClient.listModelConnections();
   return connections.map((connection) => ({
     ...connection,
+    secret_storage: connection.credential_ref ? secretStore.storageMode(connection.credential_ref) : undefined,
     has_api_key: Boolean(
       connection.credential_ref && secretStore.has(connection.credential_ref),
     ),
@@ -645,7 +646,7 @@ ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: str
   const apiKey = connection.credential_ref
     ? secretStore.get(connection.credential_ref)
     : undefined;
-  if (!apiKey && connection.auth_mode !== "none") throw new Error("请先在系统安全存储中保存 API Key。");
+  if (!apiKey && connection.auth_mode !== "none") throw new Error("请先在模型设置中保存 API Key。");
   modelTestController?.abort();
   const controller = new AbortController();
   const testId = `model-test-${randomUUID()}`;

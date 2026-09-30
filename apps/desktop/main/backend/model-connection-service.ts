@@ -1,16 +1,17 @@
-import type { ModelConnection, ModelConnectionInput } from "../../shared/contracts";
+import type { ModelConnection, ModelConnectionInput, SecretStorageMode } from "../../shared/contracts";
 
 export type ModelConfigurationApi = {
   modelConnection(connectionId: string): Promise<ModelConnection>;
   saveModelConnection(
-    input: Omit<ModelConnectionInput, "api_key">,
+    input: Omit<ModelConnectionInput, "api_key" | "secret_storage" | "allow_unencrypted_storage">,
   ): Promise<ModelConnection>;
 };
 
 export type ModelSecretStore = {
-  set(secretRef: string, secret: string): void;
+  set(secretRef: string, secret: string, mode?: SecretStorageMode): void;
   delete(secretRef: string): void;
   has(secretRef: string): boolean;
+  storageMode?(secretRef: string): SecretStorageMode | undefined;
 };
 
 export async function saveModelConnectionWithSecret(
@@ -24,13 +25,19 @@ export async function saveModelConnectionWithSecret(
     : undefined;
   const {
     api_key: apiKey,
+    secret_storage: storageMode = "system",
+    allow_unencrypted_storage: allowUnencrypted,
     credential_ref: _ignoredCredentialRef,
     ...configuration
   } = input;
+  if (storageMode !== "system" && storageMode !== "local_file") throw new Error("无效的密钥保存方式。");
   let stagedCredentialRef: string | undefined;
   if (apiKey && input.auth_mode !== "none") {
+    if (storageMode === "local_file" && allowUnencrypted !== true) {
+      throw new Error("请先确认：本机文件方式会以明文保存密钥，不使用系统钥匙串加密。");
+    }
     stagedCredentialRef = createSecretRef();
-    secrets.set(stagedCredentialRef, apiKey);
+    secrets.set(stagedCredentialRef, apiKey, storageMode);
   }
   let connection: ModelConnection;
   try {
@@ -55,6 +62,7 @@ export async function saveModelConnectionWithSecret(
   }
   return {
     ...connection,
+    secret_storage: connection.credential_ref ? secrets.storageMode?.(connection.credential_ref) : undefined,
     has_api_key: Boolean(
       connection.credential_ref && secrets.has(connection.credential_ref),
     ),

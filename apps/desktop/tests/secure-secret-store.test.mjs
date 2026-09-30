@@ -5,6 +5,48 @@ import os from 'node:os';
 import path from 'node:path';
 import {SecureSecretStore} from '../dist-electron/main/security/secure-secret-store.js';
 
+test('explicit file storage survives restart without probing a denied keychain and preserves legacy ciphertext',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ const file=path.join(directory,'secrets','model-keys.json');let accesses=0;
+ const encryption={isEncryptionAvailable:()=>{accesses++;return false;},encryptString:()=>{throw Error('must not encrypt');},decryptString:()=>{throw Error('must not decrypt');}};
+ try{
+  fs.mkdirSync(path.dirname(file),{mode:0o700});fs.writeFileSync(file,JSON.stringify({'old':'legacy-cipher'}),{mode:0o600});
+  const store=new SecureSecretStore(directory,encryption);store.set('new','synthetic-key','local_file');
+  const reopened=new SecureSecretStore(directory,encryption);
+  assert.equal(reopened.get('new'),'synthetic-key');assert.equal(reopened.storageMode('new'),'local_file');
+  assert.equal(reopened.storageMode('old'),'system');assert.equal(reopened.has('old'),true);assert.equal(accesses,0);
+  assert.equal(JSON.parse(fs.readFileSync(file,'utf8')).old,'legacy-cipher');
+  if(process.platform!=='win32'){assert.equal(fs.statSync(file).mode&0o777,0o600);assert.equal(fs.statSync(path.dirname(file)).mode&0o777,0o700);}
+  await assert.rejects(reopened.withoutSecret('new',async()=>{throw Error('database failure');}),/database failure/);
+  assert.equal(new SecureSecretStore(directory,encryption).get('new'),'synthetic-key');assert.equal(accesses,0);
+  assert.throws(()=>reopened.set('encrypted','synthetic-key'),/安全存储/);assert.equal(reopened.storageMode('encrypted'),undefined);
+  assert.equal(reopened.get('new'),'synthetic-key');assert.equal(accesses,1);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('unknown credential encodings are rejected rather than interpreted as plaintext',()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ const file=path.join(directory,'secrets','model-keys.json');
+ try{
+  fs.mkdirSync(path.dirname(file));fs.writeFileSync(file,JSON.stringify({fixture:{encoding:'unknown',value:'synthetic-key'}}));
+  const store=new SecureSecretStore(directory,{isEncryptionAvailable:()=>{throw Error('must not probe');}});
+  assert.throws(()=>store.get('fixture'),/无法读取本地密钥/);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('failed file persistence cleans up its temporary plaintext and keeps the old store',()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ const write=fs.writeFileSync;const file=path.join(directory,'secrets','model-keys.json');
+ const provider={isEncryptionAvailable:()=>{throw Error('must not probe');}};
+ try{
+  const store=new SecureSecretStore(directory,provider);store.set('old','synthetic-old','local_file');
+  const before=fs.readFileSync(file,'utf8');
+  fs.writeFileSync=()=>{throw Error('disk failure');};
+  assert.throws(()=>store.set('new','synthetic-new','local_file'),/disk failure/);
+  assert.equal(fs.readFileSync(file,'utf8'),before);assert.deepEqual(fs.readdirSync(path.dirname(file)),['model-keys.json']);
+ }finally{fs.writeFileSync=write;fs.rmSync(directory,{recursive:true,force:true});}
+});
+
 test('successful key access is cached only in memory and invalidated by ciphertext changes and deletion',()=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
  let decryptions=0;
