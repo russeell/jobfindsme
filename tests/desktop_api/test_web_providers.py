@@ -159,3 +159,16 @@ def test_reader_rejects_private_url_before_request(monkeypatch):
         web_providers.jina_read(
             "https://127.0.0.1/", opener=SimpleNamespace(open=unexpected), timeout=1
         )
+
+
+def test_retrieval_specialist_sources_keep_host_boundaries(monkeypatch):
+    monkeypatch.setattr(agent_sources, "validate_public_http_url", lambda *a, **k: None)
+    assert agent_sources._source_url("https://arxiv.org/abs/1234.5678", "papers")
+    assert agent_sources._source_url("https://github.com/example/repo", "github")
+    for site in ("papers", "github"):
+        with pytest.raises(ValueError, match="outside"):
+            agent_sources._source_url("https://example.org/article", site)
+    assert agent_sources._topic_relevant(
+        {"url": "https://example.org/report", "title": "AI Index Report"},
+        "研究人工智能行业",
+    )

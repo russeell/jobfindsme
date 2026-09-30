@@ -110,6 +110,8 @@ SITES = {
     "zhihu": ("zhihu.com", "知乎", "personal_account"),
     "offershow": ("offershow.cn", "OfferShow", "personal_account"),
     "web": ("", "公开网页", "public_web"),
+    "github": ("github.com", "GitHub", "public_web"),
+    "papers": ("", "论文来源", "public_web"),
 }
 
 _TENCENT_RESULTS = "https://www.tencent.com/zh-cn/investors/results/"
@@ -277,7 +279,14 @@ def _source_url(value: str, site: str) -> str:
         or parsed.username
         or parsed.password
         or not parsed.hostname
-        or (site != "web" and not _host_matches(parsed.hostname, SITES[site][0]))
+        or (SITES[site][0] and not _host_matches(parsed.hostname, SITES[site][0]))
+        or (
+            site == "papers"
+            and not any(
+                _host_matches(parsed.hostname, host)
+                for host in ("arxiv.org", "doi.org", "aclanthology.org")
+            )
+        )
     ):
         raise ValueError("research URL is outside the selected source")
     validate_public_http_url(value, resolve_dns=True, require_https=True)
@@ -300,8 +309,10 @@ def _topic_relevant(row: dict, question: str) -> bool:
             return False
         return bool(
             re.search(
-                r"报告|市场规模|市场研究|产业|行业分析|行业研究|发展趋势|商业模式|人力资源服务业",
+                r"报告|市场规模|市场研究|产业|行业分析|行业研究|发展趋势|商业模式|人力资源服务业"
+                r"|report|industry|market|AI Index|outlook|trend",
                 hint,
+                re.I,
             )
         )
     if not _BENEFIT_TERMS.search(question):

@@ -4,6 +4,11 @@ export const assistantSkills=[
  {id:"deep-research",title:"深度研究",description:"研究公司、行业与技术主题"},
 ] as const;
 export type AssistantSkillId=typeof assistantSkills[number]["id"];
+// Internal capabilities are loadable by the Agent, without adding another
+// user-facing mode to the three job skills.
+export const bundledSkills=[...assistantSkills,{id:"web-retrieval",title:"联网检索",description:"按任务选择搜索来源、读取原文并核对引用"}] as const;
+export type BundledSkillId=typeof bundledSkills[number]["id"];
+export const isBundledSkillId=(value:unknown):value is BundledSkillId=>bundledSkills.some(skill=>skill.id===value);
 export const isAssistantSkillId=(value:unknown):value is AssistantSkillId=>assistantSkills.some(skill=>skill.id===value);
 export const assistantSkill=(value:unknown)=>assistantSkills.find(skill=>skill.id===value);
 

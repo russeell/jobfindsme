@@ -1,3 +1,4 @@
+import {createPublicRetrieval} from "./research/public-retrieval";
 import {collectChatAttachments} from "./research/chat-attachments";
 import {foregroundZhilianVerification} from "./sources/source-actions";
 import {checkForUpdates,releasesUrl} from "./updates";
@@ -613,6 +614,7 @@ ipcMain.handle("desktop:save-prompt-session", (_event, sessionId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.savePromptSession(sessionId);
 });
+const publicRetrieval=createPublicRetrieval();
 ipcMain.handle("desktop:list-model-connections", async () => {
   if (!apiClient) throw new Error("desktop API is not ready");
   const connections = await apiClient.listModelConnections();
@@ -793,7 +795,8 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
         proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),
         findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
-        searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company,original_question:originalQuestion,search_query:searchQuery,site,timeout_ms:timeoutMs},signal,timeoutMs),
+        retrievalStatus:()=>publicRetrieval.status(),
+        searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>publicRetrieval.search({company,query:searchQuery,site,originalQuestion},(query,signal,remaining)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company:query.company,original_question:query.originalQuestion,search_query:query.query,site:query.site,timeout_ms:remaining},signal,remaining),signal,timeoutMs),
         readPage:(company,site,url,signal,timeoutMs,question)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url,question,timeout_ms:timeoutMs},signal,timeoutMs),
         readJob:(jobId,signal,timeoutMs)=>apiClient!.readAgentJob(input.workspace_id,jobId,signal,timeoutMs),
         readBrowserPage:(company,site,url,signal,timeoutMs)=>readIsolatedResearchPage(company,site,url,signal,timeoutMs),

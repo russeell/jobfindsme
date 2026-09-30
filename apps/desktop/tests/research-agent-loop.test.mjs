@@ -295,6 +295,46 @@ test('deep research may read a bounded path on a discovered public origin',async
  }finally{server.close();}
 });
 
+for(const readSite of [undefined,'web','papers'])test(`paper retrieval carries discovery site into ${readSite||'default'} reads, with workflow loading and a bounded origin`,async()=>{
+ const abs='https://arxiv.org/abs/1234.56789',pdf='https://arxiv.org/pdf/1234.56789';
+ const quote='This synthetic paper describes retrieval evaluation.';
+ const original={...source,url:pdf,company:'',excerpt:quote,context:{source_type:'public_web',research_topic:'retrieval'},status:'read_original'};
+ original.evidence_id='ev_'+createHash('sha256').update(`${pdf}\0${quote}`).digest('hex').slice(0,24);
+ let turn=0,searches=0;const reads=[],executions=[];
+ const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
+  const messages=JSON.parse(body).messages;
+  response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  if(turn===2){assert(messages.some(item=>item.role==='tool'&&item.content.includes('skill_loaded')));assert.equal(searches,0);}
+  const next=turn<=2?tool('search_web',{site:'papers',query:'retrieval evaluation'},turn):turn===3?tool('read_page',{site:readSite,url:'https://another.example.org/pdf/1234.56789'},turn):turn===4?tool('read_page',{site:readSite,url:pdf},turn):{role:'assistant',content:`原文讨论检索评估 [${original.evidence_id}]。`};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async()=>{searches++;return [{url:abs,site:'papers',title:'Paper',status:'search_hint_only'}];},readPage:async(_company,site,url)=>{assert.equal(site,'papers');reads.push(url);return original;},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_paper_skill',question:'解释检证评估的方法',history:[],research:false},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(searches,1);assert.deepEqual(reads,[pdf]);assert.match(result.text,/\[1\]/);
+  const actions=executions.at(-1).actions;
+  assert.equal(actions.filter(item=>item.tool==='read_skill'&&item.skill_id==='web-retrieval').length,1);
+  assert(actions.some(item=>item.tool==='read_page'&&item.site==='papers'&&item.origin==='same_host'));
+ }finally{server.close();}
+});
+
+test('retrieval reserves its last model turn for a cited answer without expanding tools or budget',async()=>{
+ const original={...source,company:'',context:{source_type:'public_web'},status:'read_original'};
+ let turn=0;const executions=[],requests=[];
+ const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
+  const input=JSON.parse(body);requests.push(input);response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('search_web',{site:'web',query:'public architecture'},turn):turn===2?tool('read_page',{url:source.url},turn):turn<=4?tool('retrieval_status',{},turn):{role:'assistant',content:`公开原文介绍研发团队 (${source.evidence_id})。`};sse(response,next,next.tool_calls?'tool_calls':'stop');
+ });});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={retrievalStatus:()=>({status:'candidates'}),findEvidence:async()=>[],searchWeb:async()=>[{url:source.url,site:'web',title:'Original',status:'search_hint_only'}],readPage:async()=>original,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({workspaceId:'w1',requestId:'req_answer_reserve',question:'检索公开架构资料',history:[],research:false},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(turn,5);assert.equal(requests.at(-1).tools?.length||0,0,JSON.stringify(executions.at(-1).actions));assert(requests.at(-1).messages.some(item=>item.role==='user'&&item.content.includes('最后一轮交付')));assert.match(result.text,/\[1\]/);assert.equal(executions.at(-1).status,'complete');assert.equal(executions.at(-1).budgets.max_turns,5);assert.equal(executions.at(-1).budgets.model_turns,5);
+  assert(executions.at(-1).actions.some(item=>item.status==='answer_reserved'));
+ }finally{server.close();}
+});
+
 test('no-evidence answer states what was attempted and offers a next step',()=>{
  assert.match(explainResearchGap(0,[{tool:'find_evidence'}],[]),/没有发起网页检索/);
  assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'read_failed'}],['read failed']),/原页读取失败/);
@@ -364,7 +404,7 @@ test('ordinary answer streams before completion and stores one final assistant t
 
 test('optional direct-chat marker does not block later source tools',async()=>{
  let turn=0,searches=0;const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
-  sse(response,turn===1?tool('answer_in_chat',{},turn):turn===2?tool('search_web',{site:'web',question:'示例公司'},turn):{role:'assistant',content:'继续普通交流。'},turn<=2?'tool_calls':'stop');
+  sse(response,turn===1?tool('answer_in_chat',{},turn):turn<=3?tool('search_web',{site:'web',question:'示例公司'},turn):{role:'assistant',content:'继续普通交流。'},turn<=3?'tool_calls':'stop');
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const tools={findEvidence:async()=>[],searchWeb:async()=>{searches++;return [];},readPage:async()=>{throw Error('unexpected read');},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>null};
  try{await runPiResearchAgent({workspaceId:'w1',requestId:'req_direct_gate',question:'你好',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);assert.equal(searches,1);}finally{server.close();}

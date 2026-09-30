@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {assistantSkills,isAssistantSkillId,skillDraft} from '../dist-electron/shared/assistant-skills.js';
+import {assistantSkills,bundledSkills,isAssistantSkillId,skillDraft} from '../dist-electron/shared/assistant-skills.js';
 import {loadAssistantSkill} from '../dist-electron/main/research/assistant-skills.mjs';
 import {validResearchChatInput} from '../dist-electron/shared/research-chat-ipc.js';
 import {toStoredResearchChat,fromStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
@@ -21,4 +21,12 @@ test('skills preserve input except empty resume draft entered from an explicit j
  for(const skill of assistantSkills){assert.equal(skillDraft(skill.id,''),'');assert.equal(skillDraft(skill.id,'我的提问',{company:'示例',title:'工程师'}),'我的提问');}
  assert.equal(skillDraft('interview-prep','',{company:'示例',title:'工程师'}),'');
  assert.match(skillDraft('resume-tailor','',{company:'示例',title:'工程师'}),/示例.*工程师/);
+});
+
+test('retrieval workflow is bundled and readable without adding another UI mode',()=>{
+ assert.equal(assistantSkills.length,3);
+ assert.equal(isAssistantSkillId('web-retrieval'),false);
+ assert.ok(bundledSkills.some(skill=>skill.id==='web-retrieval'));
+ assert.match(loadAssistantSkill('web-retrieval'),/search_web.*github/);
+ assert.match(loadAssistantSkill('web-retrieval'),/不发送简历正文/);
 });
