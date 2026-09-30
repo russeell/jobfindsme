@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+import zlib
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from io import BytesIO
@@ -556,7 +557,11 @@ def read_original_page(
         label, source_type = "腾讯投资者关系", "official_disclosure"
     opener = opener or _research_opener(search=False)
     request = urllib.request.Request(
-        url, headers={"User-Agent": "JobFindsMe/desktop-research"}
+        url,
+        headers={
+            "User-Agent": "JobFindsMe/desktop-research",
+            "Accept-Encoding": "identity",
+        },
     )
     retrieved_at = datetime.now(UTC).isoformat()
     try:
@@ -588,6 +593,37 @@ def read_original_page(
                     "status": "unsupported_source",
                     "limit": "source response too large",
                 }
+            content_encoding = getattr(response.headers, "get", lambda *_: "")(
+                "Content-Encoding", ""
+            ).strip().lower()
+            if content_encoding in {"gzip", "x-gzip"} or (
+                not content_encoding and body.startswith(b"\x1f\x8b")
+            ):
+                decoder = zlib.decompressobj(zlib.MAX_WBITS | 16)
+            elif content_encoding == "deflate":
+                decoder = zlib.decompressobj()
+            elif content_encoding in {"", "identity"}:
+                decoder = None
+            else:
+                return {
+                    "url": final_url,
+                    "site": site,
+                    "status": "unsupported_source",
+                    "limit": "unsupported content encoding",
+                }
+            if decoder is not None:
+                try:
+                    expanded = decoder.decompress(body, limit + 1)
+                except zlib.error:
+                    expanded = b""
+                if not decoder.eof or decoder.unconsumed_tail or len(expanded) > limit:
+                    return {
+                        "url": final_url,
+                        "site": site,
+                        "status": "unsupported_source",
+                        "limit": "compressed source is invalid or too large",
+                    }
+                body = expanded
             if pdf_hint and not body.startswith(b"%PDF-"):
                 return {
                     "url": final_url,
@@ -680,7 +716,15 @@ def read_original_page(
         anchored = True
     else:
         parser = _ReadableHtml()
-        parser.feed(body.decode(charset, errors="replace"))
+        decoded = body.decode(charset, errors="replace")
+        if decoded.count("\ufffd") > max(3, len(decoded) // 100):
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "unsupported_source",
+                "limit": "source text is not readable",
+            }
+        parser.feed(decoded)
         text = " ".join((parser.article_text or parser.text).split())
         title = parser.title[:300]
         anchored = (

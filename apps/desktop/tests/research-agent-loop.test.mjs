@@ -240,6 +240,48 @@ test('a fabricated final claim is dropped and no report is saved',async()=>{
  }finally{server.close();}
 });
 
+test('mock interview repairs a recorded next question that was never asked',async()=>{
+ let turn=0;const executions=[];
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('remember_interview',{asked:['第一题','第二题'],weaknesses:['异常记录验证未说明'],follow_up_reason:'核对细节',current_question:'你怎样确认异常记录没有被误删？'},turn):{role:'assistant',content:turn===2?'已记录，等你回答第二题。':'你说明了将异常记录单独输出，这一点具体。还缺少核对方法。你怎样确认异常记录没有被误删？'};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w1',requestId:'req_interview_repair',question:'我用 pandas 处理了缺失值，异常记录单独输出。',history:[],research:false},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(turn,3);assert.match(result.text,/异常记录没有被误删？/);assert(executions.at(-1).actions.some(item=>item.reason==='interview_question_missing'));
+ }finally{server.close();}
+});
+
+test('mock interview repairs a follow-up question without feedback on the candidate answer',async()=>{
+ let turn=0;const executions=[];
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('remember_interview',{asked:['第一题','第二题'],weaknesses:['退款规则未说明'],follow_up_reason:'异常金额核对',current_question:'你怎样区分正常退款与数据错误？'},turn):{role:'assistant',content:turn===2?'你怎样区分正常退款与数据错误？':'你说清了用脚本筛出负数金额，这一点有效；但没有说明如何避免把退款当成错误。你怎样区分正常退款与数据错误？'};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[],readPage:async()=>null,readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w1',requestId:'req_interview_feedback_repair',question:'我筛出了负数金额，发现其中一部分是退款。',history:[{role:'assistant',text:'请说说你如何核对异常金额？'}],research:false},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(turn,3);assert.match(result.text,/但没有说明如何避免把退款当成错误/);assert(executions.at(-1).actions.some(item=>item.reason==='interview_feedback_missing'));
+ }finally{server.close();}
+});
+
+test('deep research may read a bounded path on a discovered public origin',async()=>{
+ const home='https://www.python.org/';const about='https://www.python.org/about/';const quote='Python is powerful and fast.';
+ const original={...source,url:about,company:'',excerpt:quote,context:{source_type:'public_web',research_topic:'Python'},status:'read_original'};
+ original.evidence_id='ev_'+createHash('sha256').update(`${about}\0${quote}`).digest('hex').slice(0,24);
+ let turn=0;const reads=[],executions=[];
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('search_web',{site:'web',question:'Python official'},turn):turn===2?tool('read_page',{site:'web',url:about},turn):{role:'assistant',content:`官网原文描述 Python 为 powerful and fast [${original.evidence_id}]。`};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findEvidence:async()=>[],searchWeb:async()=>[{url:home,site:'web',title:'Python.org',status:'search_hint_only'}],readPage:async(_company,_site,url)=>{reads.push(url);return original;},readJob:async()=>null,readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w1',requestId:'req_same_host',question:'研究 Python 官方定位',history:[],research:true},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.deepEqual(reads,[about]);assert.match(result.text,/\[1\]/);assert(executions.at(-1).actions.some(item=>item.origin==='same_host'));
+ }finally{server.close();}
+});
+
 test('no-evidence answer states what was attempted and offers a next step',()=>{
  assert.match(explainResearchGap(0,[{tool:'find_evidence'}],[]),/没有发起网页检索/);
  assert.match(explainResearchGap(0,[{tool:'search_web'},{tool:'read_page',status:'read_failed'}],['read failed']),/原页读取失败/);
@@ -566,10 +608,21 @@ test('direct English official URL reads without subject or search and returns na
  try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w',requestId:'direct-web',question:`比较技术机制 ${url}`,history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{findEvidence:unexpected,searchWeb:unexpected,readPage:async(company,_site,target,_signal,_timeout,focus)=>{assert.equal(company,'');assert.equal(target,url);assert.equal(focus,'retrieval API');reads++;return doc;},readJob:unexpected,readBrowserPage:unexpected,saveExecution:async()=>{},saveReport:unexpected},()=>{},new AbortController().signal);assert.equal(calls,2);assert.equal(reads,1);assert.match(result.text,/\[1\]/);assert.equal(result.report,undefined);assert.equal(result.evidence.length,1);}finally{server.close();}
 });
 
+test('deep research cannot present an unsourced model answer as a finding',async()=>{
+ let turns=0,searches=0;const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turns++;sse(res,{role:'assistant',content:'未经核验的行业规模是 1000 亿元。'},'stop');});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w',requestId:'unsourced-research',question:'研究某行业规模',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{searchWeb:async()=>{searches++;return [];},saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(searches,1);assert.equal(turns,2);assert.doesNotMatch(result.text,/1000 亿元/);assert.match(result.text,/没有取得可引用的原文|没有找到可读取的相关原文/);}finally{server.close();}
+});
+
+test('deep research reads a supplied original when the model skips tools',async()=>{
+ const url='https://docs.example.org/guide',quote='The guide explains how to validate retrieval results.';const doc={...source,url,company:'',excerpt:quote,context:{source_type:'public_web',research_topic:'web'},status:'read_original'};doc.evidence_id='ev_'+createHash('sha256').update(`${url}\0${quote}`).digest('hex').slice(0,24);
+ let turns=0,reads=0;const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turns++;sse(res,{role:'assistant',content:turns===1?'The guide explains validation.':`这份原文说明了检索结果的验证方法 [${doc.evidence_id}]。`},'stop');});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const result=await runPiResearchAgent({skillId:'deep-research',workspaceId:'w',requestId:'auto-read',question:`研究检索验证 ${url}`,history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{readPage:async()=>{reads++;return doc;},saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(turns,2);assert.equal(reads,1);assert.match(result.text,/验证方法 \[1\]/);assert.equal(result.evidence.length,1);}finally{server.close();}
+});
+
 test('interview state survives stored conversation and is passed into the next turn',async()=>{
  const state={asked:['解释缓存失效'],weaknesses:['没有说明并发'],follow_up_reason:'检验并发条件',current_question:'如何避免同时重建？'};
  const finished=finishChat(beginChat(undefined,'interview-session','模拟面试','2026-09-29').chat,'下一题',undefined,'2026-09-29',{interviewState:state});assert.deepEqual(fromStoredResearchChat(toStoredResearchChat('w',finished)).turns.at(-1).interviewState,state);
- let turn=0;const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{const payload=JSON.parse(body);assert.match(JSON.stringify(payload.messages.find(m=>m.role==='user').content),/检验并发条件/);res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;sse(res,{role:'assistant',content:'你已提到缓存失效，接着说明并发控制。'},'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ let turn=0;const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{const payload=JSON.parse(body);assert.match(JSON.stringify(payload.messages.find(m=>m.role==='user').content),/检验并发条件/);res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;sse(res,{role:'assistant',content:'你已提到缓存失效，如何避免同时重建？'},'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{await runPiResearchAgent({skillId:'interview-prep',interviewState:state,workspaceId:'w',requestId:'interview-followup',question:'我会先加锁',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(turn,1);}finally{server.close();}
 });
 

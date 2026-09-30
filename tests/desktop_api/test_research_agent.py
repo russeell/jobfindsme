@@ -479,6 +479,59 @@ def test_original_read_only_counts_anchored_html(monkeypatch):
     assert result["published_at"] is None
 
 
+def test_original_read_decodes_bounded_gzip_and_rejects_binary_html(monkeypatch):
+    import gzip
+
+    monkeypatch.setattr(
+        agent_sources, "validate_public_http_url", lambda *_args, **_kwargs: None
+    )
+    html = (
+        b"<html><title>Python</title><article>Python is a programming language "
+        b"used for many kinds of applications and documented on this page."
+        b"</article></html>"
+    )
+
+    class Response:
+        def __init__(self, body, encoding=""):
+            self.body = body
+            self.headers = SimpleNamespace(
+                get_content_type=lambda: "text/html",
+                get_content_charset=lambda: "utf-8",
+                get=lambda key, default="": (
+                    encoding if key == "Content-Encoding" else default
+                ),
+            )
+
+        def geturl(self):
+            return "https://www.python.org/about/"
+
+        def read(self, amount):
+            return self.body[:amount]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+    def read(body, encoding=""):
+        return agent_sources.read_original_page(
+            "https://www.python.org/about/",
+            "",
+            "web",
+            opener=SimpleNamespace(
+                open=lambda *_args, **_kwargs: Response(body, encoding)
+            ),
+        )
+
+    assert "programming language" in read(gzip.compress(html), "gzip")["excerpt"]
+    assert (
+        read(gzip.compress(b"a" * 1_000_001), "gzip")["status"]
+        == "unsupported_source"
+    )
+    assert read(b"\x1f\x8b" + b"\xff" * 100)["status"] == "unsupported_source"
+
+
 def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch):
     import io
 
