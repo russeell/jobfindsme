@@ -2088,7 +2088,7 @@ def create_app(
             if (
                 not isinstance(timeout_ms, (int, float))
                 or isinstance(timeout_ms, bool)
-                or not 100 <= timeout_ms <= 4000
+                or not 100 <= timeout_ms <= 8000
             ):
                 raise ValueError("invalid research request timeout")
             started_read = time.monotonic()

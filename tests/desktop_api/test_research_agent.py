@@ -1746,3 +1746,33 @@ def test_explicit_topic_report_keeps_subject_separate_from_company(
     assert context["scope"] == "topic"
     assert context["subject_kind"] == "topic"
     assert context["subject_label"] == "检索与生成机制比较"
+
+
+def test_original_reader_uses_configured_proxy_with_tls_and_public_redirect_policy(
+    monkeypatch,
+):
+    from urllib.request import HTTPSHandler, ProxyHandler
+
+    from jobfindsme.connectors.http import SafeRedirectHandler
+
+    configured = {"https": "http://network-proxy.example:8080"}
+    monkeypatch.setattr(agent_sources.urllib.request, "getproxies", lambda: configured)
+    handlers = []
+    monkeypatch.setattr(
+        agent_sources.urllib.request,
+        "build_opener",
+        lambda *items: handlers.extend(items),
+    )
+    agent_sources._research_opener(search=False)
+    assert any(
+        isinstance(item, ProxyHandler) and item.proxies == configured
+        for item in handlers
+    )
+    assert any(
+        isinstance(item, HTTPSHandler) and item._context.verify_mode
+        for item in handlers
+    )
+    assert any(
+        isinstance(item, SafeRedirectHandler) and item.require_https
+        for item in handlers
+    )

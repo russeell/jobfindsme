@@ -574,7 +574,7 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  const server=http.createServer((request,response)=>{
   let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{
    payloads.push(JSON.parse(body));response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
-   const next=turn===1?tool('read_skill',{skill_id:skillId},turn):turn===2?tool('read_job',{},turn):turn===3?tool('read_confirmed_resume',{},turn):turn===4?tool('answer_in_chat',{},turn):{role:'assistant',content:'根据你的真实 Python 项目，可以准备 API 设计实例。以下是草稿。'};
+   const next=turn===1?tool('read_skill',{skill_id:skillId},turn):turn===2?tool('read_job',{},turn):turn===3?tool('read_confirmed_resume',{},turn):turn===4?tool('answer_in_chat',{},turn):{role:'assistant',content:skillId==='interview-prep'?'根据你提供的 Python 项目，我们练习一题：你怎样验证 API 返回值？':'根据你的真实 Python 项目，可以准备 API 设计实例。以下是草稿。'};
    sse(response,next,next.tool_calls?'tool_calls':'stop');
   });
  });await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -582,20 +582,20 @@ for(const skillId of ['resume-tailor','interview-prep'])test(`${skillId} loads i
  const tools={readResume:async()=>{actions.push('resume');return {source_version_id:'v1',text:'真实 Python 项目经历',limitations:'脱敏副本'};},readJob:async()=>{actions.push('job');return {title:'Python 工程师',description:'要求 API 开发'};},listSavedJobs:async()=>[],findEvidence:unexpected,searchWeb:unexpected,readPage:unexpected,readBrowserPage:unexpected,saveReport:unexpected,saveExecution:async state=>executions.push(state)};
  try{
   const result=await runPiResearchAgent({skillId,workspaceId:'w1',requestId:'req_skill_123',jobId:'job_123',question:'请结合目标岗位和我的简历',history:[],research:true},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
-  assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,/草稿/);
+  assert.deepEqual(actions,['job','resume']);assert.equal(result.researched,false);assert.match(result.text,skillId==='interview-prep'?/怎样验证 API/:/草稿/);
   const first=payloads[0];assert.match(first.messages.find(item=>item.role==='system').content,skillId==='resume-tailor'?/修改简历/:/模拟面试/);
   assert.ok(first.tools.some(item=>item.function.name==='read_skill'));
   assert.equal(first.tools.some(item=>item.function.name==='search_web'),skillId==='resume-tailor');
-  assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/修改草稿/:/每轮只问一道题/);
+  assert.match(JSON.stringify(payloads[1].messages),skillId==='resume-tailor'?/可复制草稿/:/一轮一道单一问题/);
   assert.equal(executions[0].context.skill_id,skillId);assert.equal(executions.at(-1).status,'complete');
  }finally{server.close();}
 });
 test('generic interview questions do not expose public page readers',async()=>{
- let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'先准备项目背景、个人贡献和技术取舍这三类问题。'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'我们先练项目背景：你负责的项目要解决什么问题？'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{const result=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'generic-interview',question:'有哪些问题',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.match(result.text,/项目背景/);for(const name of ['search_web','read_page','read_browser_page','find_evidence'])assert.equal(toolsSeen.includes(name),false);assert.equal(toolsSeen.includes('read_job'),true);}finally{server.close();}
 });
 test('interview questions with a supplied web link may read public originals',async()=>{
- let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'可以围绕链接中的岗位要求准备面试。'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ let toolsSeen=[];const server=http.createServer((request,response)=>{let body='';request.on('data',chunk=>body+=chunk);request.on('end',()=>{toolsSeen=JSON.parse(body).tools.map(item=>item.function.name);response.writeHead(200,{'Content-Type':'text/event-stream'});sse(response,{role:'assistant',content:'围绕提供的岗位要求练习：你会怎样验证实现符合要求？'},'stop');});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'linked-interview',question:'按这个网页准备面试 https://example.org/job',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(toolsSeen.includes('read_page'),true);}finally{server.close();}
 });
 test('explicit industry report preserves topic scope and original quotes',async()=>{
@@ -635,8 +635,8 @@ test('deep research reads a supplied original when the model skips tools',async(
 test('interview state survives stored conversation and is passed into the next turn',async()=>{
  const state={asked:['解释缓存失效'],weaknesses:['没有说明并发'],follow_up_reason:'检验并发条件',current_question:'如何避免同时重建？'};
  const finished=finishChat(beginChat(undefined,'interview-session','模拟面试','2026-09-29').chat,'下一题',undefined,'2026-09-29',{interviewState:state});assert.deepEqual(fromStoredResearchChat(toStoredResearchChat('w',finished)).turns.at(-1).interviewState,state);
- let turn=0;const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{const payload=JSON.parse(body);assert.match(JSON.stringify(payload.messages.find(m=>m.role==='user').content),/检验并发条件/);res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;sse(res,{role:'assistant',content:'你已提到缓存失效，如何避免同时重建？'},'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
- try{await runPiResearchAgent({skillId:'interview-prep',interviewState:state,workspaceId:'w',requestId:'interview-followup',question:'我会先加锁',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(turn,1);}finally{server.close();}
+ let turn=0;const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{const payload=JSON.parse(body);assert.match(JSON.stringify(payload.messages.find(m=>m.role==='user').content),/检验并发条件/);res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;sse(res,{role:'assistant',content:turn===1?'你已提到缓存失效，如何避免同时重建？':'你说清了用锁限制并发，但还缺少锁失效的处理。锁失效时你会怎样处理？'},'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{await runPiResearchAgent({skillId:'interview-prep',interviewState:state,workspaceId:'w',requestId:'interview-followup',question:'我会先加锁',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(turn,2);}finally{server.close();}
 });
 
 test('an explicitly requested technical report can save without inventing a company',async()=>{
@@ -656,4 +656,21 @@ test('resume skill hands off a reviewed proposal without applying or invoking a 
  let turn=0,proposals=0;const payloads=[];const patch={section:'projects',before:['实现本地工具'],after:['使用 Python 实现本地工具'],rationale:'突出真实技术',evidence_ids:['resume:projects:1','resume:skills:1'],needs_user_input:[]};
  const server=http.createServer((req,res)=>{let body='';req.on('data',v=>body+=v);req.on('end',()=>{payloads.push(JSON.parse(body));res.writeHead(200,{'Content-Type':'text/event-stream'});turn++;const next=turn===1?tool('read_confirmed_resume',{},turn):turn===2?tool('propose_resume_changes',{base_version_id:'confirmed-v1',patches:[patch]},turn):{role:'assistant',content:'已生成项目修改提案，请逐项审阅后再保存。'};sse(res,next,next.tool_calls?'tool_calls':'stop');});});await new Promise(r=>server.listen(0,'127.0.0.1',r));
  try{const result=await runPiResearchAgent({skillId:'resume-tailor',workspaceId:'w',requestId:'resume-proposal',question:'只修改项目经历',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{readResume:async()=>({source_version_id:'confirmed-v1',text:'实现本地工具，Python',evidence_ids:['resume:projects:1','resume:skills:1']}),proposeResume:async value=>{assert.equal(value.base_version_id,'confirmed-v1');assert.deepEqual(value.patches,[patch]);proposals++;return {session_id:'proposal-v1'};},saveExecution:async()=>{}},()=>{},new AbortController().signal);assert.equal(result.resumeProposalId,'proposal-v1');assert.equal(proposals,1);assert.equal(turn,3);assert(payloads.every(p=>p.messages.filter(m=>m.role==='system').length===1));}finally{server.close();}
+});
+
+test('simulation repairs multiple questions even when the model omitted interview memory',async()=>{
+ let turns=0;const executions=[];
+ const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turns++;sse(res,{role:'assistant',content:turns===1?'你如何处理缓存？如何验证结果？':'你如何验证缓存失效后的结果？'},'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{const answer=await runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'one-question',question:'开始模拟面试',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async row=>executions.push(row)},()=>{},new AbortController().signal);
+  assert.equal(turns,2);assert.equal((answer.text.match(/？/g)||[]).length,1);assert(executions.at(-1).actions.some(row=>row.reason==='interview_multiple_questions'));
+ }finally{server.close();}
+});
+
+
+test('invalid interview reply after bounded repair fails instead of being marked complete or streamed',async()=>{
+ let turns=0;const executions=[],deltas=[];
+ const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turns++;sse(res,{role:'assistant',content:'先看看准备清单'},'stop');});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ try{await assert.rejects(runPiResearchAgent({skillId:'interview-prep',workspaceId:'w',requestId:'invalid-interview',question:'开始模拟面试',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async row=>executions.push(row)},text=>deltas.push(text),new AbortController().signal),/assistant_failure:interview_output/);
+  assert.equal(turns,2);assert.equal(executions.at(-1).status,'failed');assert.deepEqual(deltas,[]);
+ }finally{server.close();}
 });

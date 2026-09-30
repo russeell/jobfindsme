@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,stopChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,stopChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
@@ -166,4 +166,17 @@ test('renamed chat title survives storage readback and later turns',()=>{
  const restored=fromStoredResearchChat(stored);
  assert.equal(restored.title,'面试准备');
  assert.equal(beginChat(restored,'renamed','继续追问','2026-09-30T01:00:00Z').chat.title,'面试准备');
+});
+
+
+test('failed attachment round restores retry materials after conversation reload, completed round does not',()=>{
+ const file={id:'attachment1',name:'example.txt',text:'generic sample',truncated:false};
+ const started=beginChat(undefined,'retry-files','改写附件','2026-01-01').chat;
+ started.turns[0].attachments=[file];
+ const failed=fromStoredResearchChat(toStoredResearchChat('w',failChat(started,'model unavailable','2026-01-02')));
+ assert.deepEqual(retryChatAttachments(failed),[file]);
+ assert.notEqual(retryChatAttachments(failed),failed.turns[0].attachments);
+ const done=finishChat(failed,'修改草稿',undefined,'2026-01-03');
+ assert.deepEqual(retryChatAttachments(done),[]);
+ assert.deepEqual(retryChatAttachments({...failed,draft:'另一条提问'}),[]);
 });

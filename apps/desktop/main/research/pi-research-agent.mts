@@ -9,6 +9,7 @@ import {createHash} from "node:crypto";
 import type {ModelConnection,ResearchEvidence,ResearchReport,ResearchChatProcessStep} from "../../shared/contracts.js";
 import {checkResearchClaim,researchClaimText,type SupportedResearchClaim} from "../../shared/research-claim-support.js";
 import {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
+import {interviewResponseIssue,researchDomainMatches} from "../../shared/assistant-quality.js";
 export {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
 
 export type AgentConversationTurn={attachments?:ChatAttachment[];role:"user"|"assistant";text:string};
@@ -202,7 +203,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
         const fresh:Discovery[]=[];
         for(const row of rows){
           const officialIndex=row.site==="web"&&row.source_type==="official_disclosure"&&row.provider==="official_index";
-          if((row.site!==p.site&&!officialIndex)||!publicKnownUrl(row.url))continue;
+          if((row.site!==p.site&&!officialIndex)||!publicKnownUrl(row.url)||!researchDomainMatches(row.url,domains))continue;
           const url=canonicalResearchUrl(row.url);if(discovered.has(url))continue;
           discovered.set(url,row.site);fresh.push({...row,url});progressCount++;
         }
@@ -231,7 +232,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
       if(reads>=budget.reads)throw Error("read budget exhausted");
       readUrls.add(url);reads++;perSiteReads.set(p.site,(perSiteReads.get(p.site)||0)+1);
       try{
-        const row=await tools.readPage(context.reportRequested?claimAnchor():"",p.site,url,runController.signal,remainingMs(),p.focus||context.question);guard();
+        const row=await tools.readPage(context.reportRequested?claimAnchor():"",p.site,url,runController.signal,remainingMs(8000),p.focus||context.question);guard();
         const bound=bindOriginalEvidence(row,url,context.reportRequested?claimAnchor():"");
         if(bound&&subject().kind==="topic"){bound.limitations="主题原文已读取；仅支持该来源与发布时间范围，不代表公司或团队事实。";bound.context={...bound.context,level:"topic"};}
         let selected=bound;let actionStatus=bound?"read_original":row.status;
@@ -289,14 +290,13 @@ finishTurn:async turn=>{
     // Repair once inside the existing Pi loop, sharing every original budget.
     const terminal=!turn.message.content.some(part=>part.type==="toolCall");
     const interviewAnswer=modelMessage(raw);
-    const missingInterviewQuestion=!/[?？]/u.test(interviewAnswer);
-    const answeredPreviousQuestion=context.history.some(item=>item.role==="assistant");
-    const missingInterviewFeedback=answeredPreviousQuestion&&!/(?:做得|说清|清楚|有效|准确|优点|亮点|不足|遗漏|改进|尚未|没说|还缺|需要补|建议)/u.test(interviewAnswer);
-    if(context.skillId==="interview-prep"&&terminal&&!interviewRepair&&interviewState?.current_question&&(missingInterviewQuestion||missingInterviewFeedback)&&!/结束|暂停|总结/u.test(context.question)&&!signal.aborted){
+    const answeredPreviousQuestion=!!context.interviewState?.current_question||context.history.some(turn=>turn.role==="assistant"&&/[?？]/u.test(turn.text));
+    const interviewIssue=interviewResponseIssue(interviewAnswer,context.question,answeredPreviousQuestion);
+    if(context.skillId==="interview-prep"&&terminal&&!interviewRepair&&interviewIssue&&!signal.aborted){
       interviewRepair=true;raw="";
-      actions.push({tool:"answer_check",status:"repair_required",reason:missingInterviewQuestion?"interview_question_missing":"interview_feedback_missing"});
+      actions.push({tool:"answer_check",status:"repair_required",reason:`interview_${interviewIssue}`});
       await persist();guard();
-      agent.steer({role:"user",timestamp:Date.now(),content:JSON.stringify({instruction:"刚才的回复缺少明确的面试问题或具体反馈，面试无法正常继续。先根据候选人刚才的回答指出一处说得有效的具体内容与一处仍需改进的具体内容，再把已记录的当前题目作为一个简短的问题问出来。不要只给追问，不要说‘等你回答下一题’，不要罗列多个子问题。",candidate_answer:context.question,current_question:interviewState.current_question})});
+      agent.steer({role:"user",timestamp:Date.now(),content:JSON.stringify({instruction:answeredPreviousQuestion?"修正本轮回复：针对候选人刚才回答先给一处具体有效点与一个关键改进，再只问一道简短追问。不列多个子问题，不重复上一题，问完等回答。":"修正本轮回复：根据现有岗位或项目材料，只问一道简短、单一的问题，不列子问题或参考答案，问完等回答。",candidate_answer:context.question,previous_question:context.interviewState?.current_question,current_question:interviewState?.current_question})});
       return {action:"continue"};
     }
     if(context.skillId==="deep-research"&&!context.reportRequested&&terminal&&!completionRepair&&!evidence.size&&!signal.aborted){
@@ -390,7 +390,7 @@ finishTurn:async turn=>{
     if(event.type==="tool_execution_end"&&["find_evidence","search_web","read_page","read_browser_page","read_job"].includes(event.toolName))onProgress?.({tool:event.toolName,status:event.isError?"failed":"completed"});
     if(event.type==="message_update"&&event.assistantMessageEvent.type==="text_delta"){
     const delta=event.assistantMessageEvent.delta;raw+=delta;
-    if(directChat&&!runController.signal.aborted){onDelta(delta,"direct");directStreamed=true;}
+    if(directChat&&!context.skillId&&!runController.signal.aborted){onDelta(delta,"direct");directStreamed=true;}
   }});
   const emitFinal=(value:string)=>{if(!directStreamed&&!finalEmitted){onDelta(value,"checked");finalEmitted=true;}};
   const prompt=JSON.stringify({interview_state:interviewState,research_subject:subject(),current_question:context.question,selected_skill:context.skillId,attached_materials:context.attachments?.map(({image,...item})=>item),company,title:context.title,job_id:context.jobId,research_requested:context.research});
@@ -398,6 +398,16 @@ finishTurn:async turn=>{
   let deadline:ReturnType<typeof setTimeout>|undefined;
   const timedOut=new Promise<never>((_,reject)=>{deadline=setTimeout(()=>{runController.abort();agent.abort();reject(Error("研究时间预算已用完"));},Math.max(1,deadlineAt-Date.now()));});
   try{await Promise.race([persist(),timedOut]);await Promise.race([agent.prompt(prompt,context.attachments?.filter(item=>item.image).map(item=>({type:"image" as const,data:item.image!.data,mimeType:item.image!.mimeType}))),timedOut]);collectUsage();if(signal.aborted)throw Error("cancelled");if(agent.state.errorMessage){if(context.attachments?.some(item=>item.image)&&/image|vision|multimodal|图片|视觉/i.test(agent.state.errorMessage))throw Error("当前模型未接受图片，请换用支持视觉的模型，或提供文本材料。");throw Error(`模型请求失败：${agent.state.errorMessage}`);}
+    if(context.skillId==="interview-prep"){
+      const text=modelMessage(raw),hasPrevious=!!context.interviewState?.current_question||context.history.some(turn=>turn.role==="assistant"&&/[?？]/u.test(turn.text));
+      if(interviewResponseIssue(text,context.question,hasPrevious))throw Error("assistant_failure:interview_output");
+      // Even if the model skipped the memory tool, preserve the actual question
+      // delivered to the user, rather than silently losing continuity on restart.
+      if(!actions.some(item=>item.tool==="remember_interview")){
+        const question=text.match(/[^。！？?\n]+[?？]/u)?.[0].trim();
+        if(question){interviewState={asked:[...(context.interviewState?.asked||[]),question].slice(-20),weaknesses:context.interviewState?.weaknesses||[],follow_up_reason:"",current_question:question};actions.push({tool:"remember_interview",status:"from_delivered_question"});}
+      }
+    }
     if(directChat&&!actions.some(item=>["search_web","read_page","read_browser_page"].includes(String(item.tool)))){const text=modelMessage(raw);if(!text)throw Error("模型没有返回可显示的内容。");status="complete";answer=text;await persist();emitFinal(text);return {text,resumeProposalId:proposalSessionId,interviewState,company:company||undefined,researched:false};}
     if(!actions.length&&!context.research){const text=modelMessage(raw);if(!text)throw Error("模型没有返回可显示的内容。");emitFinal(text);return {text,resumeProposalId:proposalSessionId,interviewState,company:company||undefined,researched:false};}
     if(!context.research&&!actions.some(item=>["find_evidence","search_web","read_page","read_browser_page"].includes(String(item.tool)))){

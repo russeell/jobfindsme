@@ -15,7 +15,7 @@ import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
-import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
+import {acceptsResearchDelta,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
 type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
@@ -62,7 +62,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   const [attachmentBusy,setAttachmentBusy]=useState(false);
   function chooseSkill(id:AssistantSkillId|undefined){setSkillId(id);setAddMenu(false);setQuestion(skillDraft(id,question,target&&job?.job_id===target.job_id?job:undefined));inputRef.current?.focus();}
   async function pickAttachments(kind:"files"|"folder"|"mixed"){
-    if(attachmentBusy||chatBusy)return;const selectionSequence=sequence.current;setAddMenu(false);setAttachmentBusy(true);
+    if(attachmentBusy||chatBusy)return;const selectionSequence=sequence.current;setAddMenu(false);setMessage("");setAttachmentBusy(true);
     try{const selected=await window.jobfindsme!.pickChatAttachments(kind);if(selectionSequence!==sequence.current)return;setAttachments(current=>{const combined=[...current];let total=combined.reduce((sum,item)=>sum+item.text.length,0),imageChars=combined.reduce((sum,item)=>sum+(item.image?.data.length||0),0);for(const item of selected.attachments){if(combined.length>=attachmentLimits.files||total+item.text.length>attachmentLimits.totalChars||imageChars+(item.image?.data.length||0)>8_000_000){setMessage("已达到附件数量或文本限制，部分新文件未添加。请移除一些附件后再添加。");break;}combined.push(item);total+=item.text.length;imageChars+=item.image?.data.length||0;}return combined;});if(selected.warnings.length)setMessage(selected.warnings.join("；"));}
     catch(error){setMessage(userError(error).message);}finally{setAttachmentBusy(false);}
   }
@@ -233,7 +233,7 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,data
   function updateShownReport(value:ResearchReport){setReport(current=>current?.report_id===value.report_id?value:current);keepReports(reports.map(item=>item.report_id===value.report_id?value:item));}
   function selectHistoryChat(item:SavedResearchChat){
     if(historyBusy){if(item.id===requestRef.current?.sessionId)onOpenChat();return;}
-    onOpenChat();setAttachments([]);setAddMenu(false);
+    onOpenChat();setAttachments(retryChatAttachments(item));setAddMenu(false);
     scrollRef.current?.scrollTo({top:0});setChatId(item.id);
     const lastUser=[...item.turns].reverse().find(turn=>turn.role==="user");setSkillId(isAssistantSkillId(lastUser?.skillId)?lastUser.skillId:undefined);
     const latest=[...item.reportIds].reverse().map(id=>reportsById.get(id)).find(Boolean);

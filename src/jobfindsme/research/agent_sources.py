@@ -257,7 +257,9 @@ def _research_opener(*, search: bool):
         )
     )
     return urllib.request.build_opener(
-        urllib.request.ProxyHandler({}),
+        # Discovery stays direct; original pages follow the user's existing
+        # network proxy. TLS and public-URL checks remain mandatory on both paths.
+        urllib.request.ProxyHandler({} if search else None),
         urllib.request.HTTPSHandler(
             context=ssl.create_default_context(cafile=certifi.where())
         ),
@@ -565,7 +567,7 @@ def read_original_page(
     )
     retrieved_at = datetime.now(UTC).isoformat()
     try:
-        with opener.open(request, timeout=max(0.1, min(timeout, 4))) as response:
+        with opener.open(request, timeout=max(0.1, min(timeout, 8))) as response:
             final_url = response.geturl()
             _source_url(final_url, site)
             content_type = response.headers.get_content_type()

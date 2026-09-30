@@ -1,5 +1,6 @@
 import type {ResearchChatDelta,ResearchChatTurn} from "./contracts";
 import type {PendingResearch} from "./research-dialogue";
+import type {ChatAttachment} from "./chat-attachments";
 
 export type SavedResearchChat={id:string;title:string;updatedAt:string;turns:ResearchChatTurn[];reportIds:string[];subjectCompany?:string;subjectTitle?:string;jobId?:string;researchMode?:boolean;draft?:string;failure?:string;pendingResearch?:PendingResearch};
 const key=(workspaceId:string)=>`jobfindsme:research-chat:${workspaceId}`;
@@ -11,6 +12,10 @@ export function beginChat(chat:SavedResearchChat|undefined,id:string,question:st
   const retry=chat?.draft===question&&turns.at(-1)?.role==="user"&&turns.at(-1)?.text===question;
   const history=retry?turns.slice(0,-1):turns;
   return {history,chat:{id,title:chat?.title||question.slice(0,40),updatedAt:at,turns:retry?turns:[...turns,{role:"user",text:question}],reportIds:chat?.reportIds||[],subjectCompany:chat?.subjectCompany,subjectTitle:chat?.subjectTitle,jobId:chat?.jobId,researchMode:chat?.researchMode,draft:question,pendingResearch:chat?.pendingResearch}};
+}
+export function retryChatAttachments(chat:SavedResearchChat):ChatAttachment[]{
+  const pending=chat.turns.at(-1);
+  return chat.draft&&pending?.role==="user"&&pending.text===chat.draft?[...(pending.attachments||[])]:[];
 }
 
 export function finishChat(chat:SavedResearchChat,text:string,reportId:string|undefined,at:string,details?:{resumeProposalId?:string;interviewState?:ResearchChatTurn["interviewState"];evidence?:ResearchChatTurn["evidence"];process?:ResearchChatTurn["process"]}):SavedResearchChat{

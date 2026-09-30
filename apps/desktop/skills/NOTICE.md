@@ -13,3 +13,7 @@
   许可证：licenses/deep-research-MIT.txt。
 
 不能将这些来源中的公开示例、数字或经历当作用户自身材料。
+
+本轮补充参考：MadsLorentzen/ai-job-search（MIT）的岗位材料范围与逐轮面试组织方式，未复制其个人档案或自动写入 Git 的流程。
+https://github.com/MadsLorentzen/ai-job-search/tree/d7287ec83493102f253282fab07bd88412e7dd50/.claude/skills/job-application-assistant
+许可证：licenses/ai-job-search-MIT.txt。
