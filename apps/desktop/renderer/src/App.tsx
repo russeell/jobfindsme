@@ -36,6 +36,20 @@ export function App() {
   const [page, setPage] = useState<Page>("discover");
   const [settingsTab,setSettingsTab]=useState<SettingsTab>("sources");
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
+  const [availableUpdate,setAvailableUpdate]=useState<{tag:string;message:string}>();
+  useEffect(()=>{
+    const key=`jfm.update.last-check:${buildInfo.label}`;
+    const last=Number(localStorage.getItem(key)||0);
+    if(Date.now()-last<24*60*60*1000)return;
+    let cancelled=false;
+    const timer=window.setTimeout(()=>{void window.jobfindsme?.checkForUpdates().then(result=>{
+      if(cancelled)return;
+      localStorage.setItem(key,String(Date.now()));
+      if(result.status==="available"&&result.tag&&localStorage.getItem("jfm.update.dismissed-tag")!==result.tag)setAvailableUpdate({tag:result.tag,message:result.message});
+    }).catch(()=>{localStorage.setItem(key,String(Date.now()));});},5000);
+    return()=>{cancelled=true;window.clearTimeout(timer);};
+  },[]);
+  function dismissUpdate(){if(availableUpdate)localStorage.setItem("jfm.update.dismissed-tag",availableUpdate.tag);setAvailableUpdate(undefined);}
   useEffect(()=>{const show=()=>openSettings("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[page]);
   const [data, setData] = useState<BootstrapData>();
   useEffect(()=>{if(!data)return;const allowed=new Set(data.sources.map(source=>source.source_id));setChosenSources(current=>current.filter(id=>allowed.has(id)));},[data]);
@@ -85,14 +99,15 @@ export function App() {
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}
     <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected} title={researchBusy?"返回当前对话":"求职助手"} aria-label={researchBusy?"求职助手：返回当前对话":"求职助手"} onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">进行中</span>}</button></nav></div>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
-    <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label="设置" aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span></button></div>
+    <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label={availableUpdate?"设置，有新版本":"设置"} aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(availableUpdate?"about":settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span>{availableUpdate&&<span className="update-indicator" aria-hidden="true"/>}</button></div>
   </>}>
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div id="research-topbar-actions" className="research-topbar-actions"/></header><div className={page==="research"?"content research-content":"content"}>
+      {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
       {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
-      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage/>}</div></section>}
+      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
   </Workbench>;
 }
@@ -236,9 +251,9 @@ function ModelsPage({ workspaceId, onError }: { workspaceId?:string; onError(mes
 
 function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : "本地服务不可用"; }
 
-function UpdatesPage(){
+function UpdatesPage({availableUpdate}:{availableUpdate?:{tag:string;message:string}}){
  const [busy,setBusy]=useState(false);
- const [result,setResult]=useState<{message:string;tag?:string}>();
+ const [result,setResult]=useState<{message:string;tag?:string}|undefined>(availableUpdate);
  async function check(){setBusy(true);setResult(undefined);try{setResult(await window.jobfindsme!.checkForUpdates());}catch(error){setResult({message:messageOf(error)});}finally{setBusy(false);}}
  return <section className="section updates-page"><h2>关于与更新</h2><p>当前版本：{buildInfo.label.split("+")[0]}</p><p>检查 GitHub 正式发布的桌面版本。下载安装不会在后台自动执行。</p><div className="button-row"><button className="primary-button" disabled={busy} onClick={()=>void check()}>{busy?"正在检查…":"检查更新"}</button><button onClick={()=>void window.jobfindsme!.openReleases().catch(error=>setResult({message:messageOf(error)}))}>查看发布与下载</button></div>{result&&<p role="status">{result.tag&&`发布版本：${result.tag} · `}{result.message}</p>}<details><summary>构建信息</summary><p>{buildInfo.label}</p></details></section>;
 }

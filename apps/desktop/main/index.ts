@@ -868,7 +868,7 @@ process.once("SIGTERM", () => app.quit());
 
 ipcMain.handle("desktop:check-updates",event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
- return checkForUpdates(String(packageInfo.releaseTag??""),process.platform);
+ return checkForUpdates(String(packageInfo.releaseTag??`v${packageInfo.version}`),process.platform);
 });
 ipcMain.handle("desktop:open-releases",async event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");

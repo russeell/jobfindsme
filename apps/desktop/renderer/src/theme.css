@@ -156,6 +156,16 @@ nav button .nav-label {font-size:13px;}
 .primary-button {background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important;font-size:12px!important;font-weight:600;}
 .primary-button:hover:not(:disabled) {background:var(--accent-hover)!important;border-color:var(--accent-hover)!important;}
 .discovery-resume-state {margin-top:3px!important;color:var(--text-muted);}
+.first-search-guide,.update-notice {display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface-soft);padding:10px 12px;font-size:12px;line-height:1.5;}
+.first-search-guide {margin-bottom:18px;}
+.first-search-guide>div:first-child {display:grid;gap:2px;min-width:0;}
+.first-search-guide span {color:var(--text-muted);}
+.first-search-guide .button-row {flex-shrink:0;flex-wrap:nowrap;gap:6px;}
+.first-search-guide button,.update-notice button {min-height:29px;padding:4px 9px;font-size:12px;white-space:nowrap;}
+.first-search-guide button:last-child,.update-notice button:last-child {border-color:transparent;background:transparent;color:var(--text-muted);}
+.update-notice {margin-bottom:14px;justify-content:flex-start;flex-wrap:wrap;}
+.update-notice span {margin-right:auto;}
+@container(max-width:650px){.first-search-guide {align-items:flex-start;flex-direction:column;}.first-search-guide .button-row {width:100%;}}
 .discovery-resume-state button,.discovery-next-step button {border:0;background:transparent;text-decoration:underline;padding:2px 4px;color:var(--text);min-height:0;}
 .discovery-next-step {font-size:12px;color:var(--text-muted);margin:6px 0;}
 .discovery-controls .searchbar {margin-top:12px;padding:5px;min-height:49px;}
@@ -472,6 +482,7 @@ nav button .nav-label {font-size:13px;}
 .sidebar-settings.active {background:var(--surface-selected);color:var(--text);box-shadow:inset 2px 0 var(--ink);}
 .sidebar-settings .nav-icon {width:17px;flex:0 0 17px;}
 .sidebar-settings .nav-label {font-size:13px;white-space:nowrap;}
+.update-indicator {width:7px;height:7px;margin-left:auto;border-radius:50%;background:var(--accent);}
 .sidebar-collapsed .sidebar-settings {padding:11px;}
 .sidebar-collapsed .sidebar-settings .nav-label {display:none;}
 .settings-page {min-height:0;padding:16px clamp(0px,3cqi,40px) 40px;}

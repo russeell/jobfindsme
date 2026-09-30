@@ -24,6 +24,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const attemptable = selectedAttemptableSources(sources,selectedSources);
   const unavailable=sources.filter(s=>selectedSources.includes(s.source_id)&&!s.live_search_enabled);
   const [intent, setIntent] = useState("");
+  const [showFirstRun,setShowFirstRun]=useState(()=>localStorage.getItem("jfm.first-search-guide.dismissed")!=="1"&&localStorage.getItem("jfm.sources.selected")===null);
+  function dismissFirstRun(){localStorage.setItem("jfm.first-search-guide.dismissed","1");setShowFirstRun(false);}
   const [roleSuggestions,setRoleSuggestions]=useState<string[]>([]);
   useEffect(()=>{if(suggestedIntent)setIntent(suggestedIntent.query);},[suggestedIntent?.nonce]);
   const [searching, setSearching] = useState(false);
@@ -187,6 +189,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     closeSearchMenus();
     if(!preserve){activeResultRun.current=undefined;displayedRun.current=undefined;filterBaseRun.current=undefined;setMobileView("list");}
     setShowingPrevious(!preserve&&!!page?.items.length);
+    if(showFirstRun)dismissFirstRun();
     setLatestAttempt(undefined);setSearching(true); setSearchError(undefined); setCollection(undefined);setProcessedSourceIds([]);setCurrentFound(0); setMatchingMessage(""); onError(undefined);
     try {
       const response = await window.jobfindsme!.runSourceSearch({ workspace_id: workspaceId,client_run_id:clientRunId,
@@ -245,7 +248,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?{...row,tracking}:row)}));
     }).catch(error=>onError(messageOf(error)));
   }
-  return <div ref={pageRef} className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div ref={controlsRef} className="discovery-controls"><div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
+  return <div ref={pageRef} className={`discovery-page${result||page||searching||searchError||collection?" has-results":""}`}><div ref={controlsRef} className="discovery-controls">{showFirstRun&&!result&&!searching&&<div className="first-search-guide" role="note"><div><strong>第一次使用？</strong><span>输入岗位方向，选好招聘平台，就能开始找工作。简历和模型可以稍后配置。</span></div><div className="button-row"><button type="button" onClick={()=>window.dispatchEvent(new Event("jfm:show-sources"))}>设置岗位来源</button><button type="button" onClick={dismissFirstRun}>知道了</button></div></div>}<div className="heading-row"><div><h1>{result||page||searching?"找工作":"想找什么样的工作？"}</h1><p className="discovery-resume-state">{!resumeState?"正在读取简历状态":resumeState.search_profile_state==="ready"?"已确认简历参与匹配":resumeState.search_profile_state==="pending_confirmation"?"简历待确认，当前检索不会使用它":showFirstRun?"选好城市和筛选条件后开始搜索。":"输入岗位方向即可开始；也可以先导入简历。"}</p></div><button ref={resumeTrigger} type="button" className="discovery-resume-button" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button></div>
     <form className="searchbar" onSubmit={(event) => void search(event)}><input aria-label="岗位关键词" placeholder="输入岗位方向，例如 AI 工程师" value={intent} onChange={(event) => setIntent(event.target.value)} />{(result||page||searching)&&<button type="button" className="discovery-resume-button compact" onClick={()=>setResumeOpen(true)}>{resumeState?.search_profile_state==="ready"?"查看简历":resumeState?.search_profile_state==="pending_confirmation"?"核对简历":"导入简历"}</button>}<button className="primary-button" disabled={searching || !workspaceId || attemptable.length === 0 || (!intent.trim() && resumeState?.search_profile_state!=="ready")}>{searching ? "检索中…" : "找岗位"}</button></form>
     {resumeState?.search_profile_state==="ready"&&<div className="resume-search-action"><button type="button" className="primary-button" disabled={searching||!workspaceId||attemptable.length===0} onClick={()=>void search(undefined,false,true)}>按我的简历找岗位</button><span>使用已确认岗位方向检索，简历只用于本地匹配。</span></div>}
     {!!roleSuggestions.length&&<div className="resume-search-action"><span>选择并记住目标岗位：</span>{roleSuggestions.map(role=><button type="button" key={role} onClick={()=>{setIntent(role);setRoleSuggestions([]);void window.jobfindsme!.getSearchPreferences(workspaceId!).then(p=>window.jobfindsme!.saveSearchPreferences({workspace_id:p.workspace_id,target_role:role,cities:p.cities,salary_min_k:p.salary_min_k,salary_max_k:p.salary_max_k})).catch(e=>onError(messageOf(e)));}}>{role}</button>)}</div>}
