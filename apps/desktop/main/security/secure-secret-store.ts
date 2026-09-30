@@ -10,14 +10,22 @@ type EncryptionProvider = {
 
 export class SecureSecretStore {
   private readonly filePath: string;
+  private availability: boolean | undefined;
   private readonly decrypted = new Map<string, { encrypted: string; secret: string }>();
 
   constructor(userDataPath: string, private readonly encryption: EncryptionProvider) {
     this.filePath = path.join(userDataPath, "secrets", "model-keys.json");
   }
 
-  isAvailable(): boolean {
-    return this.encryption.isEncryptionAvailable();
+  // Availability may initialize the OS keychain. Cache denial as well as success;
+  // only a deliberate user retry should invoke the provider again.
+  isAvailable(retry = false): boolean {
+    if (retry) this.availability = undefined;
+    if (this.availability === undefined) {
+      try { this.availability = this.encryption.isEncryptionAvailable(); }
+      catch { this.availability = false; }
+    }
+    return this.availability;
   }
 
   set(secretRef: string, secret: string): void {
@@ -25,7 +33,11 @@ export class SecureSecretStore {
       throw new Error("系统安全存储不可用，未保存 API Key。");
     }
     const values = this.read();
-    values[secretRef] = this.encryption.encryptString(secret).toString("base64");
+    try { values[secretRef] = this.encryption.encryptString(secret).toString("base64"); }
+    catch {
+      this.availability = false;
+      throw new Error("assistant_failure:model_key");
+    }
     this.writeAtomically(values);
     this.decrypted.set(secretRef, { encrypted: values[secretRef], secret });
   }
@@ -70,6 +82,7 @@ export class SecureSecretStore {
       this.decrypted.set(secretRef, { encrypted, secret });
       return secret;
     } catch {
+      this.availability = false;
       throw new Error("assistant_failure:model_key");
     }
   }

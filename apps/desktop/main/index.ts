@@ -676,7 +676,7 @@ ipcMain.handle("desktop:cancel-model-test", async () => {
   modelTestController?.abort();
   return cancelled;
 });
-ipcMain.handle("desktop:secure-storage-available", () => secretStore.isAvailable());
+ipcMain.handle("desktop:secure-storage-available", (_event, retry?: boolean) => secretStore.isAvailable(retry === true));
 ipcMain.handle("desktop:resolve-research-link", async (event, url: string) => {
   if (event.sender !== mainWindow?.webContents || typeof url !== "string" || url.length > 2000) throw new Error("invalid research link");
   const sourceId = Object.keys(sourceBrowserSpecs).find(id => isSourceBrowserId(id) && isAllowedSourceUrl(id, url));

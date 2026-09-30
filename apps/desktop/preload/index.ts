@@ -81,7 +81,7 @@ const bridge: DesktopBridge = Object.freeze({
   createScheduledTask: (input) => ipcRenderer.invoke("desktop:create-scheduled-task", input),
   setScheduledTaskPaused: (taskId, paused) => ipcRenderer.invoke("desktop:set-scheduled-task-paused", taskId, paused),
   legacyTaskStatus: (workspaceId) => ipcRenderer.invoke("desktop:legacy-task-status", workspaceId),
-  secureStorageAvailable: () => ipcRenderer.invoke("desktop:secure-storage-available"),
+  secureStorageAvailable: (retry = false) => ipcRenderer.invoke("desktop:secure-storage-available", retry),
   getServiceStatus: () => ipcRenderer.invoke("desktop:get-service-status"),
   onSourceBrowserStateChanged: listener => {
     const handler=(_event:Electron.IpcRendererEvent,state:import("../shared/contracts").SourceBrowserState)=>listener(state);

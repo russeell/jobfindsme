@@ -4,8 +4,7 @@ import type {ResearchReport} from "../../shared/contracts";
 import {userError} from "../../shared/user-errors";
 import {JobActions} from "./search/JobActions";
 import { Icon } from "./shared/Icon";
-import { modelPresets, protocolNames } from "./settings/model-presets";
-import {getCurrentModel,setCurrentModel} from "./settings/current-model";
+import { ModelsPage } from "./settings/ModelsPage";
 import { ResearchPage } from "./research/ResearchPage";
 import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
 import { Discovery } from "./search/Discovery";
@@ -16,8 +15,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
 import type {
-  BootstrapData, ModelConnection, ModelConnectionInput, SourceCheckResult,
-  ModelProtocol, ServiceStatus,
+  BootstrapData, SourceCheckResult,
+  ServiceStatus,
   SearchResultItem, TrackedJob,
 } from "../../shared/contracts";
 
@@ -203,51 +202,6 @@ function SourcesPage({ data, selected, onSelect, onRefresh, onError }: { selecte
   </>;
 }
 
-function ModelsPage({ workspaceId, onError }: { workspaceId?:string; onError(message?: string): void }) {
-  const emptyForm=():ModelConnectionInput=>({provider:"DeepSeek",protocol:"openai_compatible",endpoint:"https://api.deepseek.com",model_id:"",api_key:"",auth_mode:"api_key"});
-  const [connections,setConnections]=useState<ModelConnection[]>([]);
-  const [loading,setLoading]=useState(true);
-  const [editing,setEditing]=useState(false);
-  const [secure,setSecure]=useState(false);
-  const [testing,setTesting]=useState<string>();
-  const [notice,setNotice]=useState("");
-  const [selected,setSelected]=useState<string|null>(()=>getCurrentModel(workspaceId));
-  const [form,setForm]=useState<ModelConnectionInput>(emptyForm);
-  const preset=modelPresets.find(item=>item.name===form.provider);
-  useEffect(()=>{setSelected(getCurrentModel(workspaceId));},[workspaceId]);
-  useEffect(()=>{let cancelled=false;void Promise.all([window.jobfindsme!.listModelConnections(),window.jobfindsme!.secureStorageAvailable()]).then(([items,available])=>{if(cancelled)return;setConnections(items);setSecure(available);setEditing(items.length===0);setLoading(false);}).catch(error=>{if(!cancelled){setLoading(false);onError(messageOf(error));}});return()=>{cancelled=true;};},[onError]);
-  async function test(connectionId:string):Promise<ModelConnection|undefined>{
-    setTesting(connectionId);setNotice("正在测试模型连接…");onError(undefined);
-    try{const tested=await window.jobfindsme!.testModelConnection(connectionId);setConnections(items=>items.map(item=>item.connection_id===connectionId?{...tested,has_api_key:item.has_api_key}:item));setNotice(tested.status==="verified"?"连接测试通过，可以设为当前模型。":"连接测试未通过，请查看连接状态。");return tested;}
-    catch(error){try{setConnections(await window.jobfindsme!.listModelConnections());}catch{/* Keep the saved entry visible when refresh also fails. */}setNotice("连接测试失败，配置已保存。请检查密钥、地址与模型 ID。");onError(messageOf(error));return undefined;}
-    finally{setTesting(undefined);}
-  }
-  async function save(event:FormEvent){
-    event.preventDefault();onError(undefined);setNotice("正在保存配置…");
-    try{const saved=await window.jobfindsme!.saveModelConnection(form);setConnections(items=>[saved,...items.filter(item=>item.connection_id!==saved.connection_id)]);setForm(value=>({...value,connection_id:saved.connection_id,api_key:""}));const tested=await test(saved.connection_id);if(tested?.status==="verified")setEditing(false);}
-    catch(error){setNotice("保存失败，请检查填写内容。");onError(messageOf(error));}
-  }
-  function choose(connection:ModelConnection){if(connection.status!=="verified")return;setCurrentModel(workspaceId,connection.connection_id);setSelected(connection.connection_id);setNotice(`当前模型已设为 ${connection.provider} · ${connection.model_id}。`);}
-  function edit(connection:ModelConnection){setForm({connection_id:connection.connection_id,provider:connection.provider,protocol:connection.protocol,endpoint:connection.endpoint,model_id:connection.model_id,auth_mode:connection.auth_mode??"api_key",api_key:""});setEditing(true);setNotice("");}
-  return <div className="models-page">
-    {!secure&&!loading&&<p className="model-security-warning" role="status">系统安全存储不可用，暂不能保存新的 API Key。</p>}
-    {loading?<p className="muted">正在读取已保存连接…</p>:<>
-      {connections.length>0&&<section className="model-connections"><div className="model-section-heading"><div><h2>模型连接</h2><p className="note">选择用于求职助手的模型。</p></div><button type="button" onClick={()=>{setForm(emptyForm());setEditing(true);setNotice("");}}>添加连接</button></div>
-        <p className="note model-test-note">测试连接会向所选服务发送一次最小请求，服务商可能计费。</p><div className="model-connection-list">{connections.map(connection=><article className="model-connection" key={connection.connection_id}><div className="model-connection-top"><strong>{connection.provider} · {connection.model_id}</strong><span className="model-status-tags">{selected===connection.connection_id&&<span className="ready">当前模型</span>}<span className={connection.status==="verified"?"ready":"blocked"}>{({unverified:"待测试",testing:"测试中",verified:"可用",failed:"连接失败",cancelled:"已取消"})[connection.status]}</span></span></div><p>{protocolNames[connection.protocol]} · {connection.endpoint}<br/>认证：{connection.auth_mode==="none"?"本机免密":connection.has_api_key?"密钥已安全保存":"密钥未保存"}{connection.last_error?` · ${connection.last_error}`:""}</p>{connection.last_tested_at&&<small>最近测试 {new Date(connection.last_tested_at).toLocaleString()} · 用量 {connection.input_tokens??"?"}/{connection.output_tokens??"?"} tokens</small>}<div className="button-row"><button type="button" onClick={()=>edit(connection)}>编辑</button>{selected!==connection.connection_id&&<button type="button" disabled={connection.status!=="verified"} onClick={()=>choose(connection)}>设为当前模型</button>}<button type="button" disabled={(!connection.has_api_key&&connection.auth_mode!=="none")||!!testing} onClick={()=>void test(connection.connection_id)}>{testing===connection.connection_id?"测试中…":"测试连接"}</button>{testing===connection.connection_id&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest()}>取消测试</button>}</div></article>)}</div>
-      </section>}
-      {editing&&<form className="panel model-form" onSubmit={event=>void save(event)}><div className="model-section-heading"><h2>{form.connection_id?"编辑连接":"添加连接"}</h2>{connections.length>0&&<button type="button" onClick={()=>setEditing(false)}>收起</button>}</div>
-        <label>模型服务<select value={preset?form.provider:"自定义"} onChange={event=>{const next=modelPresets.find(item=>item.name===event.target.value)!;setForm({provider:next.name,protocol:next.protocol,endpoint:next.endpoint,model_id:"",api_key:"",auth_mode:next.local?"none":"api_key"});setNotice("");}}>{modelPresets.map(item=><option key={item.name}>{item.name}</option>)}</select></label>
-        {preset?.note&&<p className="note">{preset.note}</p>}
-        <label>模型 ID<input value={form.model_id} onChange={event=>setForm({...form,model_id:event.target.value})} placeholder="按服务商控制台或本地模型列表填写" required/></label>
-        {preset?.local?<label>本地服务地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label>:form.auth_mode!=="none"&&<label>API Key<input type="password" value={form.api_key} onChange={event=>setForm({...form,api_key:event.target.value})} placeholder={form.connection_id?"留空则保留已保存密钥":"仅保存到系统安全存储"}/></label>}
-        <details className="model-advanced"><summary>高级选项</summary><label>协议<select value={form.protocol} onChange={event=>setForm({...form,protocol:event.target.value as ModelProtocol})}><option value="openai_compatible">OpenAI 兼容</option><option value="anthropic">Anthropic 原生</option><option value="gemini">Gemini 原生</option></select></label><label>API 基础地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label><label>认证方式<select value={form.auth_mode??"api_key"} onChange={event=>setForm({...form,auth_mode:event.target.value as "api_key"|"none",api_key:""})}><option value="api_key">API Key</option><option value="none">本机免密</option></select></label></details>
-        <p className="note model-test-note">保存并测试会向所选服务发送一次最小请求，服务商可能计费。</p><button className="primary-button" disabled={!!testing||(!secure&&Boolean(form.api_key))}>{testing?"测试中…":"保存并测试"}</button>
-      </form>}
-      {!connections.length&&!editing&&<p className="muted">尚无配置。岗位检索不依赖模型。</p>}
-      {notice&&<p role="status" className="note model-notice">{notice}</p>}
-    </>}
-  </div>;
-}
 
 function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : "本地服务不可用"; }
 

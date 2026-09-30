@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-09-30",
+  "updated_at": "2026-10-01",
   "status_values": [
     "pending",
     "in_progress",
@@ -2251,6 +2251,27 @@
         "D127"
       ],
       "verification": "实现与本地回归完成；真实模型效果验收待完成，不记录私有验收材料。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "D129",
+      "title": "模型设置卡片与钥匙串访问收敛",
+      "depends_on": [
+        "D128"
+      ],
+      "status": "done",
+      "scope": [
+        "桌面模型设置",
+        "系统安全存储访问"
+      ],
+      "acceptance": [
+        "打开模型设置仅加载元数据，不自动触发钥匙串访问",
+        "授权失败不自动反复尝试，主动授权后可重试",
+        "连接卡片与编辑模态窗口在正常及小窗口可用"
+      ],
+      "verification": "Node 290 项、类型与构建、macOS 包审计通过；真实工作区核对反复进入模型设置、编辑/高级选项/Escape与约860×650布局。未执行付费模型请求，技能实际效果仍未验收；无稳定 Developer ID 签名，不能保证更新后不再出现系统授权。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]

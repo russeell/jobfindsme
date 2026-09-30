@@ -17,7 +17,7 @@ test('successful key access is cached only in memory and invalidated by cipherte
   store.delete('fixture');assert.equal(reopened.get('fixture'),undefined);
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
-test('keychain denial remains a key-access error and never caches an unsuccessful read',()=>{
+test('keychain denial suppresses repeated prompts until an explicit retry',()=>{
  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
  let calls=0;
  const encryption={isEncryptionAvailable:()=>true,encryptString:()=>Buffer.from('cipher'),decryptString:()=>{calls++;throw Error('private details');}};
@@ -25,6 +25,37 @@ test('keychain denial remains a key-access error and never caches an unsuccessfu
   new SecureSecretStore(directory,encryption).set('fixture','fixture');
   const reopened=new SecureSecretStore(directory,encryption);
   for(let i=0;i<2;i++)assert.throws(()=>reopened.get('fixture'),/^Error: assistant_failure:model_key$/);
+  assert.equal(calls,1);
+  assert.equal(reopened.isAvailable(true),true);
+  assert.throws(()=>reopened.get('fixture'),/^Error: assistant_failure:model_key$/);
   assert.equal(calls,2);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('unavailable keychain is probed once and missing-key metadata never requests access',()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ let probes=0;let available=false;
+ const encryption={isEncryptionAvailable:()=>{probes++;return available;},encryptString:value=>Buffer.from(value),decryptString:value=>value.toString()};
+ try{
+  const store=new SecureSecretStore(directory,encryption);
+  assert.equal(store.has('missing'),false);assert.equal(store.get('missing'),undefined);assert.equal(probes,0);
+  assert.equal(store.isAvailable(),false);assert.equal(store.isAvailable(),false);
+  assert.throws(()=>store.set('fixture','fixture'));assert.equal(probes,1);
+  available=true;assert.equal(store.isAvailable(),false);
+  assert.equal(store.isAvailable(true),true);store.set('fixture','fixture');assert.equal(probes,2);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('failed encryption pauses further attempts and preserves previously saved ciphertext',()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ let denied=false;let encryptions=0;
+ const encryption={isEncryptionAvailable:()=>true,encryptString:value=>{encryptions++;if(denied)throw Error('OS denial');return Buffer.from(`cipher:${value}`);},decryptString:value=>value.toString().slice(7)};
+ try{
+  const store=new SecureSecretStore(directory,encryption);store.set('fixture','first');denied=true;
+  assert.throws(()=>store.set('fixture','second'),/^Error: assistant_failure:model_key$/);
+  assert.throws(()=>store.set('fixture','third'));assert.equal(encryptions,2);
+  assert.equal(store.get('fixture'),'first');
+  assert.equal(new SecureSecretStore(directory,encryption).get('fixture'),'first');
+  store.isAvailable(true);denied=false;store.set('fixture','fourth');assert.equal(store.get('fixture'),'fourth');
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });

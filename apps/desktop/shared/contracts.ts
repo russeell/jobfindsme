@@ -120,7 +120,7 @@ export type DesktopBridge = {
   createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask>;
   setScheduledTaskPaused(taskId: string, paused: boolean): Promise<ScheduledTask>;
   legacyTaskStatus(workspaceId: string): Promise<LegacyTaskStatus>;
-  secureStorageAvailable(): Promise<boolean>;
+  secureStorageAvailable(retry?: boolean): Promise<boolean>;
   getServiceStatus(): Promise<ServiceStatus>;
   onSourceBrowserStateChanged(listener:(state:SourceBrowserState)=>void):()=>void;
   onSourceBrowserFocus(listener:()=>void):()=>void;
