@@ -2275,6 +2275,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D130",
+      "title": "移除归档页旧版研究记录区块",
+      "status": "done",
+      "verification": "类型与构建、macOS 包审计通过；真实 D130 核对归档页与列表末尾，旧版区块已移除，本地数据保留。未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

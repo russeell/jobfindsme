@@ -489,8 +489,6 @@ nav button .nav-label {font-size:13px;}
 .research-archive-actions .archive-delete svg {width:16px;height:16px;}
 .research-archive-actions .archive-delete:hover {background:#fff1f0;color:#b64135;}
 .research-archive-item .history-confirm {width:100%;}
-.research-legacy-reports {margin-top:28px;font-size:12px;color:var(--text-muted);}
-.research-legacy-reports button {display:block;max-width:100%;margin-top:7px;padding:5px 0;border:0;background:transparent;color:var(--text);text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sidebar-settings {display:flex;align-items:center;gap:10px;width:100%;min-height:38px;padding:9px 11px;border:0;background:transparent;text-align:left;font-size:13px;color:var(--text-muted);}
 .sidebar-settings.active {background:var(--surface-selected);color:var(--text);box-shadow:inset 2px 0 var(--ink);}
 .sidebar-settings .nav-icon {width:17px;flex:0 0 17px;}
