@@ -88,3 +88,12 @@ test("local no-auth configuration never stages a secret and retires the previous
   assert.equal(result.has_api_key, false);
   assert.deepEqual(deleted, ["old-secret"]);
 });
+
+test('delete retires the paired credential without decrypting or touching unrelated entries',async()=>{
+ const {deleteModelConnectionWithSecret}=await import('../dist-electron/main/backend/model-connection-service.js');
+ const calls=[];
+ const api={modelConnection:async()=>existing,deleteModelConnection:async id=>calls.push(['database',id])};
+ const secrets={withoutSecret:async(ref,commit)=>{calls.push(['secret',ref]);return commit();}};
+ await deleteModelConnectionWithSecret(api,secrets,'connection-1');
+ assert.deepEqual(calls,[['secret','old-secret'],['database','connection-1']]);
+});

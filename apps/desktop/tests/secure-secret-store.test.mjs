@@ -59,3 +59,31 @@ test('failed encryption pauses further attempts and preserves previously saved c
   store.isAvailable(true);denied=false;store.set('fixture','fourth');assert.equal(store.get('fixture'),'fourth');
  }finally{fs.rmSync(directory,{recursive:true,force:true});}
 });
+
+test('credential removal and database rollback require no keychain access',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ const file=path.join(directory,'secrets','model-keys.json');
+ const provider={isEncryptionAvailable:()=>true,encryptString:()=>Buffer.from('fixture-cipher'),decryptString:()=>{throw Error('must not decrypt');}};
+ try{
+  new SecureSecretStore(directory,provider).set('fixture','fixture');
+  const before=fs.readFileSync(file,'utf8');
+  const denied={isEncryptionAvailable:()=>{throw Error('must not probe');},encryptString:()=>{throw Error('must not encrypt');},decryptString:()=>{throw Error('must not decrypt');}};
+  const store=new SecureSecretStore(directory,denied);
+  await assert.rejects(store.withoutSecret('fixture',async()=>{assert.equal(store.has('fixture'),false);throw Error('database rejected deletion');}),/database rejected/);
+  assert.equal(fs.readFileSync(file,'utf8'),before);
+  await store.withoutSecret('fixture',async()=>{assert.equal(store.has('fixture'),false);});
+  assert.equal(store.has('fixture'),false);assert.equal(store.get('fixture'),undefined);
+ }finally{fs.rmSync(directory,{recursive:true,force:true});}
+});
+
+test('failed ciphertext deletion preserves the memory cache and never commits database changes',async()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'jfm-secrets-'));
+ const rename=fs.renameSync;let committed=false;
+ const provider={isEncryptionAvailable:()=>true,encryptString:value=>Buffer.from('fixture-cipher'),decryptString:()=>{throw Error('must keep cache');}};
+ try{
+  const store=new SecureSecretStore(directory,provider);store.set('fixture','fixture');
+  fs.renameSync=()=>{throw Error('disk unavailable');};
+  await assert.rejects(store.withoutSecret('fixture',async()=>{committed=true;}),/disk unavailable/);
+  assert.equal(committed,false);assert.equal(store.get('fixture'),'fixture');
+ }finally{fs.renameSync=rename;fs.rmSync(directory,{recursive:true,force:true});}
+});

@@ -672,3 +672,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .research-add-control .research-menu-dismiss,.research-add-control .research-menu-dismiss:hover,.research-add-control .research-menu-dismiss:focus-visible,.research-add-control .research-menu-dismiss:active {background:transparent!important;box-shadow:none;outline:none;border:0;border-radius:0;padding:0;cursor:default;}
 
 .resume-proposal{margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:12px}.proposal-diff{display:grid;grid-template-columns:1fr 1fr;gap:16px}.proposal-diff p{white-space:pre-wrap;line-height:1.8}.resume-proposal details{padding:12px 0}.resume-proposal button{margin:6px 8px 0 0}@media(max-width:720px){.proposal-diff{grid-template-columns:1fr}}
+
+.model-card-actions .model-delete-button {margin-right:auto;}
+.model-delete-button {display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--text-muted);font-size:12px;}
+.model-delete-button svg {width:14px;height:14px;}
+.model-delete-button:hover {color:#ad453c;background:#fff5f3;}
+.model-dialog-footer>div>.model-delete-button {margin-right:auto;}
+.model-delete-dialog {max-width:440px;}
+.model-delete-dialog h2 {margin:0;font-size:19px;overflow-wrap:anywhere;}
+.model-delete-description {margin:14px 0 24px;font-size:13px;line-height:1.8;color:var(--text-muted);}
+.model-delete-actions {display:flex;justify-content:flex-end;gap:8px;margin-top:22px;}
+.model-delete-actions button {min-height:36px;}
+.model-delete-confirm {background:#b5483f;color:white;border-color:#b5483f;}
+.model-delete-confirm:hover {background:#983c34;}

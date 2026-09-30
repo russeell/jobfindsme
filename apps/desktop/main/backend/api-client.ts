@@ -292,6 +292,10 @@ export class DesktopApiClient {
     });
   }
 
+  async deleteModelConnection(connectionId: string): Promise<void> {
+    await this.json(`/v1/model-connections/${encodeURIComponent(connectionId)}`, {method:"DELETE"});
+  }
+
   testModelConnection(
     connectionId: string,
     testId: string,

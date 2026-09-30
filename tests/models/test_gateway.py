@@ -299,3 +299,61 @@ def test_local_no_key_uses_real_loopback_http(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_switch_model_id_keeps_key_at_same_service(tmp_path):
+    repo = ModelConnectionRepository(Database(tmp_path / "model.db"))
+    original = repo.save(
+        provider="Example",
+        protocol=ModelProtocol.OPENAI_COMPATIBLE,
+        endpoint="https://model.example/v1",
+        model_id="first",
+        credential_ref="fixture",
+    )
+    changed = repo.save(
+        connection_id=original.connection_id,
+        provider=original.provider,
+        protocol=original.protocol,
+        endpoint=original.endpoint,
+        model_id="second",
+    )
+    assert changed.credential_ref == "fixture"
+    assert changed.status is ConnectionStatus.UNVERIFIED
+
+
+def test_deleted_configuration_preserves_history_and_cannot_be_used_or_revived(
+    tmp_path,
+):
+    database = Database(tmp_path / "models.db")
+    repo = ModelConnectionRepository(database)
+    connection = repo.save(
+        provider="Example",
+        protocol=ModelProtocol.OPENAI_COMPATIBLE,
+        endpoint="https://model.example/v1",
+        model_id="fixture",
+        credential_ref="fixture",
+    )
+    repo.begin_test(connection_id=connection.connection_id, test_id="history-fixture")
+    repo.cancel_test(connection_id=connection.connection_id, test_id="history-fixture")
+    repo.delete(connection.connection_id)
+    assert repo.list() == []
+    with pytest.raises(LookupError):
+        repo.get(connection.connection_id)
+    with pytest.raises(LookupError):
+        repo.begin_test(connection_id=connection.connection_id, test_id="new")
+    with pytest.raises(LookupError):
+        repo.save(
+            connection_id=connection.connection_id,
+            provider="Example",
+            protocol=connection.protocol,
+            endpoint=connection.endpoint,
+            model_id="changed",
+        )
+    with database.connect() as sql:
+        assert sql.execute("SELECT count(*) FROM model_test_runs").fetchone()[0] == 1
+        row = sql.execute(
+            "SELECT credential_ref, deleted_at FROM model_connections"
+        ).fetchone()
+        assert row["credential_ref"] is None
+        assert row["deleted_at"] is not None
+        assert sql.execute("PRAGMA foreign_key_check").fetchall() == []

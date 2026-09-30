@@ -60,3 +60,14 @@ export async function saveModelConnectionWithSecret(
     ),
   };
 }
+
+export async function deleteModelConnectionWithSecret(
+  api: Pick<ModelConfigurationApi, "modelConnection"> & {deleteModelConnection(connectionId:string):Promise<void>},
+  secrets: {withoutSecret<T>(secretRef:string, commit:()=>Promise<T>):Promise<T>},
+  connectionId:string,
+):Promise<void> {
+  const connection = await api.modelConnection(connectionId);
+  const commit = () => api.deleteModelConnection(connectionId);
+  if (connection.credential_ref) await secrets.withoutSecret(connection.credential_ref, commit);
+  else await commit();
+}

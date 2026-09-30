@@ -43,11 +43,29 @@ export class SecureSecretStore {
   }
 
   delete(secretRef: string): void {
-    this.decrypted.delete(secretRef);
     const values = this.read();
-    if (!(secretRef in values)) return;
+    if (!(secretRef in values)) { this.decrypted.delete(secretRef); return; }
     delete values[secretRef];
     this.writeAtomically(values);
+    this.decrypted.delete(secretRef);
+  }
+
+  async withoutSecret<T>(secretRef: string, commit: () => Promise<T>): Promise<T> {
+    // Remove ciphertext without decrypting or requesting keychain access.
+    // On database failure, restore the original pairing, never a plaintext key.
+    const encrypted = this.read()[secretRef];
+    const cached = this.decrypted.get(secretRef);
+    this.delete(secretRef);
+    try { return await commit(); }
+    catch (error) {
+      if (encrypted) {
+        const values = this.read();
+        values[secretRef] = encrypted;
+        this.writeAtomically(values);
+        if (cached?.encrypted === encrypted) this.decrypted.set(secretRef, cached);
+      }
+      throw error;
+    }
   }
 
   private writeAtomically(values: Record<string, string>): void {

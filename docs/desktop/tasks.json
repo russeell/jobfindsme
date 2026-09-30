@@ -2284,6 +2284,23 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D131",
+      "title": "模型连接删除与同服务密钥复用",
+      "status": "done",
+      "depends_on": [
+        "D129"
+      ],
+      "acceptance": [
+        "模型卡片和编辑窗口提供有确认的删除入口",
+        "移除配置及配对密钥时保留历史会话和草稿，失败恢复原配对",
+        "同服务切换模型ID保留已保存密钥，不增加临时模式"
+      ],
+      "verification": "Python465、Node293、相关Python38、类型/构建、Ruff和macOS包审计通过；真实D131核对删除入口、确认与取消、焦点恢复，未删除用户连接或使用付费模型。稳定签名与系统授权仍未完成。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

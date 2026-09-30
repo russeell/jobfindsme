@@ -3,7 +3,7 @@ import {createPortal} from "react-dom";
 import type {ModelConnection, ModelConnectionInput, ModelProtocol} from "../../../shared/contracts";
 import {userError} from "../../../shared/user-errors";
 import {Icon} from "../shared/Icon";
-import {getCurrentModel, setCurrentModel} from "./current-model";
+import {getCurrentModel, setCurrentModel, clearCurrentModel} from "./current-model";
 import {modelPresets, protocolNames} from "./model-presets";
 
 const emptyForm = (): ModelConnectionInput => ({provider:"DeepSeek", protocol:"openai_compatible", endpoint:"https://api.deepseek.com", model_id:"", api_key:"", auth_mode:"api_key"});
@@ -14,6 +14,8 @@ export function ModelsPage({workspaceId, onError}: {workspaceId?:string; onError
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [testing, setTesting] = useState<string>();
+  const [deleteTarget, setDeleteTarget] = useState<ModelConnection>();
+  const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
   const [keyBlocked, setKeyBlocked] = useState(false);
@@ -22,7 +24,8 @@ export function ModelsPage({workspaceId, onError}: {workspaceId?:string; onError
   const [selected, setSelected] = useState<string|null>(()=>getCurrentModel(workspaceId));
   const [form, setForm] = useState<ModelConnectionInput>(emptyForm);
   const dialog = useRef<HTMLDialogElement>(null);
-  const busy = saving || Boolean(testing) || authorizing;
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const busy = deleting || saving || Boolean(testing) || authorizing;
   const operation = useRef(false);
   const preset = modelPresets.find(item=>item.name===form.provider);
 
@@ -36,6 +39,22 @@ export function ModelsPage({workspaceId, onError}: {workspaceId?:string; onError
   },[]);
   useEffect(()=>{if(editing && !dialog.current?.open){dialog.current?.showModal();dialog.current?.querySelector("select")?.focus();}},[editing]);
   function closeEditor(){dialog.current?.close();setEditing(false);}
+
+  useEffect(()=>{if(deleteTarget && !deleteDialog.current?.open){deleteDialog.current?.showModal();deleteDialog.current?.querySelector("button")?.focus();}},[deleteTarget]);
+  function cancelDelete(){deleteDialog.current?.close();setDeleteTarget(undefined);}
+  function confirmDelete(connection:ModelConnection){clearFeedback();setDeleteTarget(connection);}
+  async function remove(){
+    if(!deleteTarget||operation.current)return;
+    operation.current=true;setDeleting(true);clearFeedback();
+    try {
+      await window.jobfindsme!.deleteModelConnection(deleteTarget.connection_id);
+      clearCurrentModel(deleteTarget.connection_id);
+      if(selected===deleteTarget.connection_id)setSelected(null);
+      setConnections(items=>items.filter(item=>item.connection_id!==deleteTarget.connection_id));
+      if(form.connection_id===deleteTarget.connection_id){closeEditor();setForm(emptyForm());}
+      cancelDelete();setNotice("模型连接及本机保存的密钥已删除。");
+    } catch(error){fail(error);} finally {setDeleting(false);operation.current=false;}
+  }
 
   function clearFeedback(){setNotice("");setProblem("");onError(undefined);}
   function fail(error:unknown){
@@ -101,9 +120,9 @@ export function ModelsPage({workspaceId, onError}: {workspaceId?:string; onError
       <div className="model-card-heading"><span className="model-provider-mark" aria-hidden="true"><Icon name="models"/></span><div className="model-card-title"><h2>{connection.model_id}</h2><span>{connection.provider}</span></div>{selected===connection.connection_id&&<span className="model-current">使用中</span>}</div>
       <p className="model-endpoint">{connection.endpoint}</p>
       <div className="model-card-meta"><span>{connection.auth_mode==="none"?"本机免密":connection.has_api_key?"密钥已加密保存":"尚未保存密钥"}</span><span className={connection.status==="failed"?"model-test-failed":""}>{statusLabels[connection.status]}{connection.last_tested_at&&` · ${new Date(connection.last_tested_at).toLocaleDateString()}`}</span></div>
-      <div className="model-card-actions"><button type="button" disabled={busy} onClick={()=>edit(connection)}>编辑</button>{selected!==connection.connection_id&&<button type="button" disabled={busy||connection.status!=="verified"} onClick={()=>choose(connection)}>使用此模型</button>}<button type="button" disabled={busy||(!connection.has_api_key&&connection.auth_mode!=="none")} onClick={()=>void test(connection.connection_id)}>{testing===connection.connection_id?"测试中…":"测试连接"}</button>{testing===connection.connection_id&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest()}>取消测试</button>}</div>
+      <div className="model-card-actions"><button className="model-delete-button" type="button" disabled={busy} onClick={()=>confirmDelete(connection)} aria-label={`删除模型：${connection.model_id}`}><Icon name="trash"/>删除</button><button type="button" disabled={busy} onClick={()=>edit(connection)}>编辑</button>{selected!==connection.connection_id&&<button type="button" disabled={busy||connection.status!=="verified"} onClick={()=>choose(connection)}>使用此模型</button>}<button type="button" disabled={busy||(!connection.has_api_key&&connection.auth_mode!=="none")} onClick={()=>void test(connection.connection_id)}>{testing===connection.connection_id?"测试中…":"测试连接"}</button>{testing===connection.connection_id&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest()}>取消测试</button>}</div>
     </article>)}</div>:<div className="model-empty"><Icon name="models"/><h2>连接你的第一个模型</h2><p>支持 DeepSeek、其他 API 服务和本地模型。</p><button type="button" className="primary-button" onClick={()=>edit()}>添加模型</button></div>}
-    {!editing&&feedback()}
+    {!editing&&!deleteTarget&&feedback()}
     <footer className="model-page-footer"><span>密钥加密保存在本机。连接测试可能产生少量费用。</span><button type="button" disabled={busy} onClick={()=>void retryAuthorization()}>{authorizing?"授权中…":"钥匙串授权"}</button></footer>
     {editing&&createPortal(<dialog ref={dialog} className="model-dialog" aria-labelledby="model-dialog-title" onCancel={event=>{event.preventDefault();if(!busy)closeEditor();}}>
       <form className="model-form" onSubmit={event=>void save(event)}>
@@ -115,9 +134,12 @@ export function ModelsPage({workspaceId, onError}: {workspaceId?:string; onError
           {preset?.local?<label>本地服务地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label>:form.auth_mode!=="none"&&<label>API Key<input type="password" autoComplete="off" value={form.api_key} onChange={event=>setForm({...form,api_key:event.target.value})} placeholder={form.connection_id?"留空保留原有密钥":"粘贴你的 API Key"}/></label>}
           <details className="model-advanced"><summary>高级选项</summary><label>协议<select value={form.protocol} onChange={event=>setForm({...form,protocol:event.target.value as ModelProtocol})}>{Object.entries(protocolNames).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label><label>API 基础地址<input type="url" value={form.endpoint} onChange={event=>setForm({...form,endpoint:event.target.value})} required/></label><label>认证方式<select value={form.auth_mode??"api_key"} onChange={event=>setForm({...form,auth_mode:event.target.value as "api_key"|"none",api_key:""})}><option value="api_key">API Key</option><option value="none">本机免密</option></select></label></details>
         </fieldset>
-        {feedback()}
-        <footer className="model-dialog-footer"><p>测试会发送一次最小请求，服务商可能计费。</p><div>{testing&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest().catch(fail)}>取消测试</button>}<button type="button" disabled={busy} onClick={closeEditor}>取消</button><button className="primary-button" disabled={busy}>{saving?"保存并测试中…":"保存并测试"}</button></div></footer>
+        {!deleteTarget&&feedback()}
+        <footer className="model-dialog-footer"><p>测试会发送一次最小请求，服务商可能计费。</p><div>{form.connection_id&&<button className="model-delete-button" type="button" disabled={busy} onClick={()=>{const current=connections.find(item=>item.connection_id===form.connection_id);if(current)confirmDelete(current);}}><Icon name="trash"/>删除连接</button>}{testing&&<button type="button" onClick={()=>void window.jobfindsme!.cancelModelTest().catch(fail)}>取消测试</button>}<button type="button" disabled={busy} onClick={closeEditor}>取消</button><button className="primary-button" disabled={busy}>{saving?"保存并测试中…":"保存并测试"}</button></div></footer>
       </form>
+    </dialog>,document.body)}
+    {deleteTarget&&createPortal(<dialog ref={deleteDialog} className="model-dialog model-delete-dialog" aria-labelledby="model-delete-title" onCancel={event=>{event.preventDefault();if(!deleting)cancelDelete();}}>
+      <div className="model-form"><h2 id="model-delete-title">删除 {deleteTarget.model_id}？</h2><p className="model-delete-description">移除此模型连接及本机保存的密钥。历史聊天和研究结果保留。</p>{feedback()}<div className="model-delete-actions"><button type="button" disabled={deleting} onClick={cancelDelete}>取消</button><button type="button" className="model-delete-confirm" disabled={deleting} onClick={()=>void remove()}>{deleting?"删除中…":"删除模型"}</button></div></div>
     </dialog>,document.body)}
   </div>;
 }

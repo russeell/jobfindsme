@@ -84,6 +84,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0036_research_agent",
         "0037_search_job_versions",
         "0038_research_execution_statuses",
+        "0039_deleted_model_connections",
     ]
     assert foreign_keys == 1
 

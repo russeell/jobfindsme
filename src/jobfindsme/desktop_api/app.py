@@ -1840,7 +1840,28 @@ def create_app(
             connection = model_connections.save(**request.model_dump())
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
+        except LookupError as error:
+            raise HTTPException(
+                status_code=404, detail="connection not found"
+            ) from error
         return _model_payload(connection)
+
+    @app.delete(
+        "/v1/model-connections/{connection_id}",
+        response_model=dict,
+        dependencies=[Depends(require_token)],
+    )
+    def delete_model_connection(connection_id: str) -> dict:
+        with active_model_tests_lock:
+            if any(item[0] == connection_id for item in active_model_tests.values()):
+                raise HTTPException(status_code=409, detail="model_configuration_busy")
+            try:
+                model_connections.delete(connection_id)
+            except LookupError as error:
+                raise HTTPException(
+                    status_code=404, detail="connection not found"
+                ) from error
+        return {"deleted": True}
 
     @app.post(
         "/v1/model-connections/{connection_id}/test",

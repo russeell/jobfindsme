@@ -651,6 +651,10 @@ def test_cancel_closes_active_model_transport_and_preserves_cancelled_state(
     thread = threading.Thread(target=run_test)
     thread.start()
     assert started.wait(timeout=2)
+    deletion = client.delete(
+        f"/v1/model-connections/{connection['connection_id']}", headers=headers
+    )
+    assert deletion.status_code == 409
     cancelled = client.post(
         f"/v1/model-connections/{connection['connection_id']}/tests/{test_id}/cancel",
         headers=headers,
@@ -749,3 +753,61 @@ def test_desktop_api_process_starts_and_stops_cleanly(tmp_path) -> None:
 
     # Windows TerminateProcess reports 1; POSIX reports SIGTERM or a clean exit.
     assert process.returncode in ({0, 1} if os.name == "nt" else {0, -15})
+
+
+def test_model_deletion_requires_auth_and_preserves_history(tmp_path):
+    database_path = tmp_path / "desktop.db"
+    client = TestClient(create_app(token="test-secret", database_path=database_path))
+    headers = {"Authorization": "Bearer test-secret"}
+    original = client.post(
+        "/v1/model-connections",
+        headers=headers,
+        json={
+            "provider": "Offline fixture",
+            "protocol": "openai_compatible",
+            "endpoint": "https://model.example/v1",
+            "model_id": "fixture",
+            "credential_ref": "fixture-reference",
+        },
+    ).json()
+    connection_id = original["connection_id"]
+    assert client.delete(f"/v1/model-connections/{connection_id}").status_code == 401
+    with Database(database_path).connect() as sql:
+        sql.execute(
+            "INSERT INTO model_test_runs(test_id, connection_id, status, started_at) "
+            "VALUES (?, ?, 'verified', ?)",
+            ("fixture-run", connection_id, "2026-01-01T00:00:00Z"),
+        )
+    deleted = client.delete(f"/v1/model-connections/{connection_id}", headers=headers)
+    assert deleted.status_code == 200
+    assert deleted.json() == {"deleted": True}
+    assert client.get("/v1/model-connections", headers=headers).json() == []
+    assert (
+        client.post(
+            f"/v1/model-connections/{connection_id}/test",
+            headers=headers,
+            json={
+                "test_id": "fixture-test-new",
+                "api_key": "fixture",
+                "timeout_seconds": 1,
+            },
+        ).status_code
+        == 404
+    )
+    assert (
+        client.post(
+            "/v1/model-connections",
+            headers=headers,
+            json={
+                "connection_id": connection_id,
+                "provider": "Offline fixture",
+                "protocol": "openai_compatible",
+                "endpoint": "https://model.example/v1",
+                "model_id": "new",
+            },
+        ).status_code
+        == 404
+    )
+    with Database(database_path).connect() as sql:
+        assert sql.execute("SELECT count(*) FROM model_test_runs").fetchone()[0] == 1
+        assert sql.execute("PRAGMA foreign_key_check").fetchall() == []

@@ -558,3 +558,41 @@ def test_agent_proposal_cannot_turn_jd_into_candidate_facts(tmp_path):
             decision="accepted",
         )
     assert not transport.prompts
+
+
+def test_removing_model_keeps_existing_resume_draft_and_research_report(tmp_path):
+    database, workspace, current, connection, _, prompts, _ = _context(tmp_path, [])
+    session = prompts.create_session(
+        workspace_id=workspace.workspace_id,
+        base_version_id=current.version_id,
+        connection=connection,
+    )
+    with database.connect() as sql:
+        sql.execute(
+            """INSERT INTO research_reports (
+            report_id, workspace_id, status, jd_facts_json, resume_observations_json,
+            project_rewrites_json, interview_topics_json, model_connection_id,
+            model_status, limitations_json, created_at
+        ) VALUES (?, ?, 'limited', '[]', '[]', '[]', '[]', ?,
+                  'not_requested', '[]', ?)""",
+            (
+                "fixture-report",
+                workspace.workspace_id,
+                connection.connection_id,
+                "2026-01-01T00:00:00Z",
+            ),
+        )
+    ModelConnectionRepository(database).delete(connection.connection_id)
+    assert prompts.get_session(session.session_id).session_id == session.session_id
+    assert (
+        prompts.list_sessions(workspace_id=workspace.workspace_id)[0].session_id
+        == session.session_id
+    )
+    with database.connect() as sql:
+        assert (
+            sql.execute(
+                "SELECT count(*) FROM research_reports WHERE report_id='fixture-report'"
+            ).fetchone()[0]
+            == 1
+        )
+        assert sql.execute("PRAGMA foreign_key_check").fetchall() == []

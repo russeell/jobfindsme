@@ -1,9 +1,10 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
  const text=error instanceof Error?error.message:String(error||'');
+ if(/model_configuration_busy/.test(text))return {kind:"service",message:"模型仍在使用或配置处理中，请结束当前任务后重试。",action:"retry"};
  if(/assistant_failure:interview_output/.test(text))return {kind:'service',message:'本轮面试回复未满足逐题练习要求，未将其作为完成的练习。提问已保留，可重试。',action:'retry'};
  const assistantPhase=text.match(/assistant_failure:(backend|input|model_config|model_key|runtime_load)/)?.[1];
- if(assistantPhase){const message={backend:'求职助手无法连接本地服务，请重启应用后重试。',input:'本轮材料超出可处理范围或会话格式无效。请减少附件或新建聊天重试。',model_config:'无法读取模型配置，请到“模型设置”检查连接。',model_key:'无法读取模型密钥。请完成系统钥匙串授权，或到“模型设置”重新保存密钥。',runtime_load:'求职助手组件未能加载，请重新安装完整的应用版本。'}[assistantPhase];return {kind:'service',message:message!,action:'retry'};}
+ if(assistantPhase){const message={backend:'求职助手无法连接本地服务，请重启应用后重试。',input:'本轮材料超出可处理范围或会话格式无效。请减少附件或新建聊天重试。',model_config:'无法读取模型配置，请到“模型设置”检查连接。',model_key:'无法读取模型密钥。请到“模型设置”完成钥匙串授权后重试。',runtime_load:'求职助手组件未能加载，请重新安装完整的应用版本。'}[assistantPhase];return {kind:'service',message:message!,action:'retry'};}
  if(/模型请求失败|model_request_failed/.test(text)){
   const detail=/401|403|unauthorized|invalid.api.key|authentication/i.test(text)?'模型拒绝了当前密钥，请到“模型设置”重新测试连接。':/429|rate.limit|quota|余额|额度/i.test(text)?'模型调用受限或额度不足，请检查模型账户后重试。':/timeout|timed.out|超时/i.test(text)?'模型回复超时，提问和材料已保留，可重试。':/fetch failed|ECONN|ENOTFOUND|network|connection/i.test(text)?'无法连接模型服务，请检查网络后重试。':'模型未能完成本轮回答，请重新测试模型连接后重试。';
   return {kind:'service',message:detail,action:'retry'};

@@ -284,20 +284,21 @@ class ModelConnectionRepository:
                     ),
                 )
             else:
-                routing_changed = any(
+                if existing["deleted_at"] is not None:
+                    raise LookupError(identifier)
+                credentials_changed = any(
                     (
                         existing["auth_mode"] != auth_mode,
                         existing["provider"] != provider.strip(),
                         existing["protocol"] != protocol.value,
                         existing["endpoint"] != normalized_endpoint,
-                        existing["model_id"] != model_id.strip(),
                     )
                 )
                 next_credential_ref = (
                     credential_ref
                     if credential_ref is not None
                     else None
-                    if routing_changed
+                    if credentials_changed
                     else existing["credential_ref"]
                 )
                 connection.execute(
@@ -328,7 +329,8 @@ class ModelConnectionRepository:
         with self.database.connect() as connection:
             if (
                 connection.execute(
-                    "SELECT 1 FROM model_connections WHERE connection_id = ?",
+                    "SELECT 1 FROM model_connections "
+                    "WHERE connection_id = ? AND deleted_at IS NULL",
                     (connection_id,),
                 ).fetchone()
                 is None
@@ -418,19 +420,44 @@ class ModelConnectionRepository:
         self.database.migrate()
         with self.database.connect() as connection:
             rows = connection.execute(
-                "SELECT * FROM model_connections ORDER BY updated_at DESC"
+                "SELECT * FROM model_connections WHERE deleted_at IS NULL "
+                "ORDER BY updated_at DESC"
             ).fetchall()
         return [_connection_from_row(row) for row in rows]
 
     def get(self, connection_id: str) -> ModelConnection:
         with self.database.connect() as connection:
             row = connection.execute(
-                "SELECT * FROM model_connections WHERE connection_id = ?",
+                "SELECT * FROM model_connections "
+                "WHERE connection_id = ? AND deleted_at IS NULL",
                 (connection_id,),
             ).fetchone()
         if row is None:
             raise LookupError(connection_id)
         return _connection_from_row(row)
+
+    def delete(self, connection_id: str) -> None:
+        # A tombstone prevents cascading deletion of resume drafts and reports.
+        now = datetime.now(UTC).isoformat()
+        with self.database.connect() as connection:
+            changed = connection.execute(
+                """
+                UPDATE model_connections
+                SET deleted_at = ?, updated_at = ?, credential_ref = NULL,
+                    status = 'unverified', last_error = NULL
+                WHERE connection_id = ? AND deleted_at IS NULL
+                """,
+                (now, now, connection_id),
+            ).rowcount
+            if not changed:
+                raise LookupError(connection_id)
+            connection.execute(
+                """
+                UPDATE model_test_runs SET status = 'cancelled', finished_at = ?
+                WHERE connection_id = ? AND status = 'testing'
+                """,
+                (now, connection_id),
+            )
 
 
 def _validate_auth(endpoint: str, auth_mode: str) -> None:

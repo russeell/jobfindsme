@@ -58,6 +58,7 @@ const bridge: DesktopBridge = Object.freeze({
   savePromptSession: (sessionId) => ipcRenderer.invoke("desktop:save-prompt-session", sessionId),
   listModelConnections: () => ipcRenderer.invoke("desktop:list-model-connections"),
   saveModelConnection: (input) => ipcRenderer.invoke("desktop:save-model-connection", input),
+  deleteModelConnection: connectionId => ipcRenderer.invoke("desktop:delete-model-connection", connectionId),
   testModelConnection: (connectionId) => ipcRenderer.invoke("desktop:test-model-connection", connectionId),
   cancelModelTest: () => ipcRenderer.invoke("desktop:cancel-model-test"),
   resolveResearchLink: (url) => ipcRenderer.invoke("desktop:resolve-research-link", url),

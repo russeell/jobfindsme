@@ -9,7 +9,7 @@ import path from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, safeStorage } from "electron";
 
 import type { DesktopApiClient } from "./backend/api-client";
-import { saveModelConnectionWithSecret } from "./backend/model-connection-service";
+import { saveModelConnectionWithSecret, deleteModelConnectionWithSecret } from "./backend/model-connection-service";
 import { PythonService, type ServiceStatus } from "./backend/python-service";
 import { SecureSecretStore } from "./security/secure-secret-store";
 import { SourceBrowserManager } from "./browser/source-browser";
@@ -62,6 +62,7 @@ const pythonService = new PythonService({
   },
 });
 const secretStore = new SecureSecretStore(app.getPath("userData"), safeStorage);
+let modelConfigurationBusy = false;
 let modelTestController: AbortController | undefined;
 let modelTestConnectionId: string | undefined;
 let modelTestRunId: string | undefined;
@@ -239,6 +240,7 @@ ipcMain.handle("desktop:rerank-matching",async(event,workspaceId:string,runId:st
   try {
     const {rule}=await client.matchingInput(workspaceId,runId);
     const snapshot=rule.model_snapshot;
+    if (snapshot && rule.connection_id) await client.modelConnection(rule.connection_id);
     const apiKey=snapshot?.auth_mode === "none" ? "" : snapshot?.credential_ref ? secretStore.get(snapshot.credential_ref) : "";
     if(request.cancelled)return {status:"cancelled",message:"已取消，保留本地结果。"};
     request.started=true;
@@ -621,19 +623,23 @@ ipcMain.handle("desktop:list-model-connections", async () => {
     ),
   }));
 });
-ipcMain.handle("desktop:save-model-connection", async (_event, input: ModelConnectionInput) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  if (input.api_key && !secretStore.isAvailable()) {
-    throw new Error("系统安全存储不可用，未保存 API Key。");
-  }
-  return saveModelConnectionWithSecret(
-    apiClient,
-    secretStore,
-    input,
-    () => `model-secret-${randomUUID()}`,
-  );
+ipcMain.handle("desktop:save-model-connection", async (event, input: ModelConnectionInput) => {
+  if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
+  if (modelConfigurationBusy) throw Error("model_configuration_busy");
+  modelConfigurationBusy = true;
+  try {
+    return await saveModelConnectionWithSecret(apiClient, secretStore, input, () => `model-secret-${randomUUID()}`);
+  } finally { modelConfigurationBusy = false; }
+});
+ipcMain.handle("desktop:delete-model-connection", async (event, connectionId:string) => {
+  if (event.sender !== mainWindow?.webContents || !apiClient || typeof connectionId !== "string" || !connectionId || connectionId.length > 200) throw Error("unauthorized caller");
+  if (modelConfigurationBusy || modelTestController || promptController || researchController || chatRuns.current || matchingRequest) throw Error("model_configuration_busy");
+  modelConfigurationBusy = true;
+  try { await deleteModelConnectionWithSecret(apiClient, secretStore, connectionId); }
+  finally { modelConfigurationBusy = false; }
 });
 ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: string) => {
+  if (modelConfigurationBusy) throw Error("model_configuration_busy");
   if (!apiClient) throw new Error("desktop API is not ready");
   const connection = await apiClient.modelConnection(connectionId);
   const apiKey = connection.credential_ref

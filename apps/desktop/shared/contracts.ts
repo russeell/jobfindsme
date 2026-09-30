@@ -97,6 +97,7 @@ export type DesktopBridge = {
   savePromptSession(sessionId: string): Promise<ResumeVersion>;
   listModelConnections(): Promise<ModelConnection[]>;
   saveModelConnection(input: ModelConnectionInput): Promise<ModelConnection>;
+  deleteModelConnection(connectionId: string): Promise<void>;
   testModelConnection(connectionId: string): Promise<ModelConnection>;
   cancelModelTest(): Promise<ModelConnection | undefined>;
   resolveResearchLink(url: string): Promise<{title:string;company:string;description: string;url:string; message: string}>;
