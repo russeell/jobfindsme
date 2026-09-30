@@ -266,6 +266,19 @@ test('mock interview repairs a follow-up question without feedback on the candid
  }finally{server.close();}
 });
 
+test('resume skill can read an unsaved local job named by the user',async()=>{
+ let turn=0;const executions=[];
+ const server=http.createServer((_request,response)=>{response.writeHead(200,{'Content-Type':'text/event-stream'});turn++;
+  const next=turn===1?tool('find_local_jobs',{title:'AI软件开发工程师'},turn):turn===2?tool('read_job',{job_id:'local-1'},turn):{role:'assistant',content:'本地找到目标岗位，但详情尚未读取；请提供简历和完整 JD，收到后我会先给可审阅草稿。'};
+  sse(response,next,next.tool_calls?'tool_calls':'stop');});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={findLocalJobs:async title=>{assert.equal(title,'AI软件开发工程师');return [{job_id:'local-1',title,company:'示例研究所',has_description:false}];},findEvidence:async()=>[],searchWeb:async()=>[],readPage:async()=>null,readJob:async id=>{assert.equal(id,'local-1');return {job_id:id,title:'AI软件开发工程师',company:'示例研究所',description:'岗位详情暂未读取'};},readBrowserPage:async()=>null,saveExecution:async state=>executions.push(state),saveReport:async()=>null};
+ try{const result=await runPiResearchAgent({skillId:'resume-tailor',workspaceId:'w1',requestId:'req_resume_local_job',question:'请结合示例研究所的「AI软件开发工程师」岗位修改简历。',history:[],research:false},
+  {protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(turn,3);assert.match(result.text,/详情尚未读取/);assert(executions.at(-1).actions.some(item=>item.tool==='find_local_jobs'&&item.count===1));assert(executions.at(-1).actions.some(item=>item.tool==='read_job'&&item.job_id==='local-1'));
+ }finally{server.close();}
+});
+
 test('deep research may read a bounded path on a discovered public origin',async()=>{
  const home='https://www.python.org/';const about='https://www.python.org/about/';const quote='Python is powerful and fast.';
  const original={...source,url:about,company:'',excerpt:quote,context:{source_type:'public_web',research_topic:'Python'},status:'read_original'};

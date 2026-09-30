@@ -11,7 +11,11 @@ import urllib.request
 
 from fastapi.testclient import TestClient
 
+from jobfindsme.connectors import RawJobRecord
+from jobfindsme.contracts import SourceKind
 from jobfindsme.desktop_api import create_app
+from jobfindsme.importing.normalizer import normalize_job
+from jobfindsme.importing.repository import JobRepository
 from jobfindsme.models import ModelGateway
 from jobfindsme.models.gateway import ModelGatewayError, TransportResponse
 from jobfindsme.resume_editor import ResumeEditorService
@@ -50,6 +54,49 @@ def test_bootstrap_reads_real_core_and_enforces_source_gates(tmp_path) -> None:
     for source_id in ("boss", "zhilian", "wuyou"):
         assert sources[source_id]["live_search_enabled"] is False
         assert sources[source_id]["login_required"] is True
+
+
+def test_agent_can_find_a_local_job_that_was_not_saved(tmp_path) -> None:
+    database_path = tmp_path / "desktop.db"
+    client = TestClient(create_app(token="test-secret", database_path=database_path))
+    headers = {"Authorization": "Bearer test-secret"}
+    workspace_id = client.get("/v1/bootstrap", headers=headers).json()["workspaces"][0][
+        "workspace_id"
+    ]
+    job = normalize_job(
+        RawJobRecord(
+            source_kind=SourceKind.CAREER_SITE,
+            source_name="猎聘",
+            source_url="https://www.liepin.com/job/fixture.html",
+            external_id="fixture",
+            payload={
+                "title": "AI软件开发工程师",
+                "company": "示例研究所",
+                "description": "岗位详情暂未读取",
+                "apply_url": "https://www.liepin.com/job/fixture.html",
+            },
+        )
+    )
+    JobRepository(Database(database_path)).upsert(workspace_id, job)
+    response = client.get(
+        "/v1/research-agent/local-jobs",
+        headers=headers,
+        params={"workspace_id": workspace_id, "title": "AI软件开发工程师"},
+    )
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "job_id": job.job_id,
+            "title": "AI软件开发工程师",
+            "company": "示例研究所",
+            "has_description": False,
+        }
+    ]
+    assert client.get(
+        "/v1/research-agent/local-jobs",
+        headers=headers,
+        params={"workspace_id": workspace_id, "title": "x"},
+    ).status_code == 400
 
 
 def test_resume_import_confirmation_version_and_analysis_preview(tmp_path) -> None:

@@ -2231,6 +2231,28 @@ def create_app(
                 status_code=404, detail="job not found in workspace"
             ) from error
 
+    @app.get("/v1/research-agent/local-jobs", dependencies=[Depends(require_token)])
+    def find_agent_local_jobs(workspace_id: str, title: str) -> list[dict]:
+        needle = " ".join(title.casefold().split())
+        if len(needle) < 2 or len(needle) > 120:
+            raise HTTPException(status_code=400, detail="invalid job title")
+        matches = [
+            job
+            for job in core.jobs.list(workspace_id)
+            if needle in " ".join(job.title.casefold().split())
+        ]
+        return [
+            {
+                "job_id": job.job_id,
+                "title": job.title,
+                "company": job.company,
+                "has_description": bool(
+                    job.description and len(job.description.strip()) > 30
+                ),
+            }
+            for job in matches[:10]
+        ]
+
     @app.post(
         "/v1/research-runs",
         response_model=dict,

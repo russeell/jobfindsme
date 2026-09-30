@@ -775,6 +775,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
       {
         readResume:()=>apiClient!.agentResume(input.workspace_id),
+        findLocalJobs:title=>apiClient!.findAgentLocalJobs(input.workspace_id,title),
         proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),
         findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
