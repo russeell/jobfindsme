@@ -18,9 +18,9 @@ import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,beginChat,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;onOpenArchive():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
+type Props={onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;onNewChat():void;onOpenArchive():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
-export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,onOpenArchive,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
+export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,onNewChat,onOpenArchive,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const [job,setJob]=useState<Job|undefined>(target);
   const [report,setReport]=useState<ResearchReport>();
@@ -28,13 +28,21 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,onOp
   const [mode,setMode]=useState<"start"|"report">("start");
   const [archivedChats,setArchivedChats]=useState<SavedResearchChat[]>([]);
   const [deleteId,setDeleteId]=useState("");
-  const [historyMenu,setHistoryMenu]=useState(false);
-  const [chatMenu,setChatMenu]=useState<string|null>(null);
+  const [historyMenu,setHistoryMenu]=useState<"sort"|"manage"|null>(null);
   const [historySort,setHistorySort]=useState<"recent"|"oldest"|"title">(()=>{const saved=localStorage.getItem("jobfindsme:chat-sort");return saved==="oldest"||saved==="title"?saved:"recent";});
   const [historySearchOpen,setHistorySearchOpen]=useState(false);
   const [historyQuery,setHistoryQuery]=useState("");
-  const [editingId,setEditingId]=useState<string|null>(null);
-  const [editingTitle,setEditingTitle]=useState("");
+  useEffect(()=>{
+    if(!historyMenu&&!historySearchOpen)return;
+    const dismiss=(event:PointerEvent)=>{
+      if(event.target instanceof Element&&event.target.closest(".research-history-menu, .research-history-toolbar, .research-history-search"))return;
+      setHistoryMenu(null);setHistorySearchOpen(false);
+    };
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"){setHistoryMenu(null);setHistorySearchOpen(false);}};
+    document.addEventListener("pointerdown",dismiss);
+    document.addEventListener("keydown",escape);
+    return()=>{document.removeEventListener("pointerdown",dismiss);document.removeEventListener("keydown",escape);};
+  },[historyMenu,historySearchOpen]);
   useEffect(()=>{localStorage.setItem("jobfindsme:chat-sort",historySort);},[historySort]);
   const [candidate,setCandidate]=useState<Awaited<ReturnType<NonNullable<typeof window.jobfindsme>["resolveResearchLink"]>>>();
   const [topbarTarget,setTopbarTarget]=useState<HTMLElement|null>(null);
@@ -197,12 +205,6 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,onOp
       setMessage(action==="archive"?"对话已归档。":action==="restore"?"对话已恢复。":"归档对话已删除。");
     }catch(error){if(workspaceRef.current===workspaceId)setMessage(userError(error).message);}finally{if(workspaceRef.current===workspaceId)setBusy(null);}
   }
-  function renameChat(item:SavedResearchChat){
-    const title=editingTitle.trim().replace(/\s+/g," ");
-    if(!title||title.length>80){setMessage("对话名称需为 1–80 个字符。");return;}
-    setChats(items=>items.map(chat=>chat.id===item.id?{...chat,title,updatedAt:new Date().toISOString()}:chat));
-    setEditingId(null);setChatMenu(null);setMessage("对话已重命名。");
-  }
   function openOriginal(value:string){const id=Object.keys(sourceBrowserSpecs).find(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,value));if(isPublicWebUrl(value))openBrowser({sourceId:id||"web",url:value,title:job?.title||"岗位原页"});else setMessage("该岗位原页链接不是可打开的公共网页。");}
   const history=reports;
   const historyBusy=chatBusy||!!busy||savePending;
@@ -266,11 +268,11 @@ export function ResearchPage({active,archiveVisible,newChatNonce,onOpenChat,onOp
       {!activeChat&&showingReport&&report&&<ReputationEvidence report={report} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})}/>}
     </div></div>
     {sidebarTarget&&createPortal(<aside id="research-history-panel" className="research-history-sidebar" aria-label="最近对话">
-      <div className="research-history-toolbar"><span>聊天</span><div><button type="button" aria-label="搜索聊天" title="搜索聊天" aria-expanded={historySearchOpen} onClick={()=>{setHistorySearchOpen(value=>!value);setHistoryQuery("");setHistoryMenu(false);}}><Icon name="discover"/></button><button type="button" aria-label="整理聊天" title="整理聊天" aria-expanded={historyMenu} onClick={()=>{setHistoryMenu(value=>!value);setChatMenu(null);}}>···</button></div></div>
+      <div className="research-history-toolbar"><button className="research-history-sort-trigger" type="button" aria-label="聊天排序方式" aria-expanded={historyMenu==="sort"} onClick={()=>{setHistoryMenu(value=>value==="sort"?null:"sort");setHistorySearchOpen(false);}}>{historySort==="recent"?"最近":historySort==="oldest"?"最早":"名称"}<span aria-hidden="true">⌄</span></button><div><button type="button" aria-label="搜索聊天" title="搜索聊天" aria-expanded={historySearchOpen} onClick={()=>{setHistorySearchOpen(value=>!value);setHistoryQuery("");setHistoryMenu(null);}}><Icon name="discover"/></button><button type="button" aria-label="整理聊天" title="整理聊天" aria-expanded={historyMenu==="manage"} onClick={()=>{setHistoryMenu(value=>value==="manage"?null:"manage");setHistorySearchOpen(false);}}>···</button><button type="button" aria-label="新建聊天" title="新建聊天" disabled={historyBusy} onClick={()=>{setHistoryMenu(null);setHistorySearchOpen(false);onNewChat();}}><Icon name="newChat"/></button></div></div>
       {historySearchOpen&&<input className="research-history-search" type="search" aria-label="搜索聊天名称" value={historyQuery} onChange={event=>setHistoryQuery(event.target.value)} placeholder="搜索聊天"/>}
-      {historyMenu&&<div className="research-history-menu" role="group" aria-label="聊天管理"><span>聊天排序方式</span>{([ ["recent","最近更新"],["oldest","最早更新"],["title","名称"] ] as const).map(([value,label])=><button key={value} type="button" aria-pressed={historySort===value} onClick={()=>{setHistorySort(value);setHistoryMenu(false);}}>{label}{historySort===value&&" ✓"}</button>)}<button type="button" onClick={()=>{setHistoryMenu(false);onOpenArchive();}}>查看归档对话</button></div>}
+      {historyMenu&&<div className={`research-history-menu research-history-menu-${historyMenu}`} role="group" aria-label={historyMenu==="sort"?"聊天排序方式":"聊天管理"}>{historyMenu==="sort"?([ ["recent","最近更新"],["oldest","最早更新"],["title","名称"] ] as const).map(([value,label])=><button key={value} type="button" aria-pressed={historySort===value} onClick={()=>{setHistorySort(value);setHistoryMenu(null);}}>{label}{historySort===value&&" ✓"}</button>):<button type="button" onClick={()=>{setHistoryMenu(null);onOpenArchive();}}>查看归档对话</button>}</div>}
       <div className="research-history-body">
-        {visibleChats.length?<div className="research-history-list">{visibleChats.map((item,index)=><div key={item.id}>{historySort!=="title"&&(index===0||historyGroup(visibleChats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row">{editingId===item.id?<input className="research-history-rename" aria-label={`重命名聊天：${item.title}`} autoFocus maxLength={80} value={editingTitle} onChange={event=>setEditingTitle(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")renameChat(item);if(event.key==="Escape")setEditingId(null);}} onBlur={()=>setEditingId(null)}/>:<button className="research-history-item" title={item.title} disabled={historyBusy&&item.id!==requestRef.current?.sessionId} aria-current={active&&chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.title}</button>}<button className="research-history-archive" type="button" title="聊天操作" disabled={historyBusy||editingId===item.id} aria-label={`聊天操作：${item.title}`} aria-expanded={chatMenu===item.id} onClick={()=>{setChatMenu(value=>value===item.id?null:item.id);setHistoryMenu(false);}}>···</button></div>{chatMenu===item.id&&<div className="research-chat-menu" role="group" aria-label={`管理聊天：${item.title}`}><button type="button" onClick={()=>{setEditingId(item.id);setEditingTitle(item.title);setChatMenu(null);}}>重命名</button><button type="button" onClick={()=>{setChatMenu(null);void changeChatHistory(item,"archive");}}>归档</button></div>}</div>)}</div>:<p className="research-empty-note">{historyQuery?"没有匹配的聊天。":"还没有对话。"}</p>}
+        {visibleChats.length?<div className="research-history-list">{visibleChats.map((item,index)=><div key={item.id}>{historySort!=="title"&&(index===0||historyGroup(visibleChats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button className="research-history-item" title={item.title} disabled={historyBusy&&item.id!==requestRef.current?.sessionId} aria-current={active&&chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.title}</button><button className="research-history-archive" type="button" title="归档聊天" disabled={historyBusy} aria-label={`归档聊天：${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}><Icon name="archive"/></button></div></div>)}</div>:<p className="research-empty-note">{historyQuery?"没有匹配的聊天。":"还没有对话。"}</p>}
       </div>
     </aside>,sidebarTarget)}
     {archiveVisible&&archiveTarget&&createPortal(<div className="research-archive-settings"><div className="heading-row settings-heading"><div><h1>对话归档</h1><p>在这里恢复或删除已归档的对话。</p></div><span className="settings-count">{archivedChats.length} 条对话</span></div>{archivedChats.length?<div className="research-archive-list">{archivedChats.map(item=><div className="research-archive-item" key={item.id}><div className="research-archive-info"><strong title={item.title}>{item.title}</strong><time dateTime={item.updatedAt}>{Number.isFinite(Date.parse(item.updatedAt))?new Date(item.updatedAt).toLocaleString("zh-CN",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"时间未知"}</time></div><div className="button-row research-archive-actions"><button disabled={chatBusy||!!busy} onClick={()=>void changeChatHistory(item,"restore")}>恢复对话</button><button className="archive-delete" title="删除归档对话" aria-label={`删除归档对话：${item.title}`} disabled={chatBusy||!!busy} onClick={()=>setDeleteId(item.id)}><Icon name="trash"/></button></div>{deleteId===item.id&&<div className="history-confirm" role="alert"><p>永久删除这条归档对话？</p><div className="button-row"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"delete")}>确认删除</button><button onClick={()=>setDeleteId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">还没有归档对话。</p>}{history.length>0&&<details className="research-legacy-reports"><summary>旧版研究记录（{history.length}）</summary><p className="note">旧版记录仍保留在本机，可在这里打开。</p>{history.map(item=><button key={item.report_id} type="button" onClick={()=>selectHistoryReport(item)}>{item.job_context?.company||"公司未知"} · {item.job_context?.title||"公司研究"}</button>)}</details>}</div>,archiveTarget)}
