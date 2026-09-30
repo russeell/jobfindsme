@@ -12,7 +12,8 @@ test('source presentation keeps search capability separate from session and chec
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'blocked',list_status:'blocked'}).title,'平台验证中');
  assert.equal(presentSourceStatus(source,{outcome:'failed',detail:'本次读取失败'}).title,'本次未确认');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}, {outcome:'failed',detail:'source_contract_error'}).title,'本次未确认');
- assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}).title,'登录状态待确认');
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false,list_status:'unverified'}).title,'登录状态待确认');
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false,list_status:'verified'}).title,'列表可读，登录未确认');
 });
 test('a list parse error is never presented as login or risk',()=>{
  assert.equal(sourceCheckFailureOutcome('source_contract_error:验证检索没有返回岗位'),'failed');

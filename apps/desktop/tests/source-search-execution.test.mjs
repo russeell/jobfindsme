@@ -23,9 +23,21 @@ test('selected unverified source uses the user search once and verifies only aft
  const calls=[];
  const client={searchPreflight:async request=>{calls.push(['preflight',request.attempt_unverified_login]);return {...preflight,allowed_source_ids:['zhilian']};},
   runSourceSearch:async request=>{calls.push(['save',request.attempt_unverified_login]);return {...response('zhilian','run-verify',1),jobs:[{...record('zhilian'),source_id:'zhilian'}]};},
-  recordSourceVerification:async(id,summary)=>{calls.push(['verify',id,summary.list_status]);}};
+  bootstrap:async()=>({sources:[{source_id:'zhilian',login_required:true,session_status:'unverified'}]}),
+  recordSourceVerification:async(id,summary)=>{calls.push(['verify',id,summary.list_status,summary.session_status,summary.enabled]);}};
  await executeBoundedSourceSearch({...input,source_ids:['zhilian']},{client,manager:{searchPage:async()=>{calls.push(['search']);return {records:[record('zhilian')],next_cursor:null};}},getCancellationEpoch:()=>0});
- assert.deepEqual(calls,[['preflight',true],['search'],['save',true],['verify','zhilian','verified']]);
+ assert.deepEqual(calls,[['preflight',true],['search'],['save',true],['verify','zhilian','verified','unverified',false]]);
+});
+
+test('readable anonymous 51job results never become a verified login',async()=>{
+ const statuses=[];
+ const client={searchPreflight:async()=>({...preflight,allowed_source_ids:['wuyou']}),
+  runSourceSearch:async()=>({...response('wuyou','run-public',1),jobs:[{...record('wuyou'),source_id:'wuyou'}]}),
+  bootstrap:async()=>({sources:[{source_id:'wuyou',login_required:true,session_status:'unverified'}]}),
+  recordSourceVerification:async(_id,summary)=>{statuses.push(summary);}};
+ const result=await executeBoundedSourceSearch({...input,source_ids:['wuyou']},{client,manager:{searchPage:async()=>({records:[{...record('wuyou'),payload:{title:'Python 工程师',company:'示例公司',url:'https://jobs.51job.com/example'}}],next_cursor:null})},getCancellationEpoch:()=>0});
+ assert.equal(result.result_page.total,1);assert.equal(statuses[0].list_status,'verified');
+ assert.equal(statuses[0].session_status,'unverified');assert.equal(statuses[0].enabled,false);
 });
 
 test('a failed batch save does not poison the next valid source',async()=>{

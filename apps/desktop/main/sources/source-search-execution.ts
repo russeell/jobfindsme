@@ -3,7 +3,7 @@ import type {DesktopApiClient} from "../backend/api-client";
 import type {SourceBrowserManager} from "../browser/source-browser";
 import type {BrowserSourcePage,SourceSearchInput,SourceSearchResponse,SourceSearchRun} from "../../shared/contracts";
 import {collectBrowserSourcePages} from "./source-search-coordinator";
-import {requiresElectronSourceSearch,summarizeSourceVerification} from "../../shared/source-browser-policy";
+import {requiresElectronSourceSearch,sourceSearchVerification} from "../../shared/source-browser-policy";
 
 export type SourceBatchFailure={source_id:string;stage:"save"|"source_status";message:string};
 const messageOf=(error:unknown)=>error instanceof Error?error.message:String(error);
@@ -47,8 +47,10 @@ export async function executeBoundedSourceSearch(
     if(failure)try{await client.recordSourceRuntimeFailure(sourceId,failure,error||`${failure}:有界检索被来源阻断`);}
       catch(statusError){failures.push({source_id:sourceId,stage:"source_status",message:messageOf(statusError).slice(0,300)});}
     if(!error&&requiresElectronSourceSearch(sourceId)&&response.jobs.some(job=>job.source_id===sourceId)&&!pages.some(page=>page.collection?.failure)&&response.source_runs.some(run=>run.source_id===sourceId&&run.status!=="failed")){
-      try{const summary=summarizeSourceVerification(pages);await client.recordSourceVerification(sourceId,{...summary,
-        detail_status:"unverified",pagination_status:"partial",notes:`本次用户检索读取 ${pages.flatMap(page=>page.records).length} 条；详情与网站续页仍单独待验。`});}
+      try{const source=(await client.bootstrap()).sources.find(item=>item.source_id===sourceId);
+        if(!source)throw Error("source_contract_error:来源状态不存在");
+        const summary=sourceSearchVerification(source,pages,sourceId==="boss");await client.recordSourceVerification(sourceId,{...summary,
+        detail_status:"unverified",pagination_status:"partial",notes:`本次用户检索读取 ${pages.flatMap(page=>page.records).length} 条；${summary.session_status==="verified"?"登录已另行确认":"登录身份未确认"}，详情与网站续页仍单独待验。`});}
       catch(statusError){failures.push({source_id:sourceId,stage:"source_status",message:messageOf(statusError).slice(0,300)});}
     }
   };

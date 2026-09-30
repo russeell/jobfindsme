@@ -17,8 +17,12 @@ export function presentSourceStatus(source:SourceCapability,check?:SourceCheckRe
   if(source.source_id==="zhilian"&&source.session_status==="verified"&&!source.live_search_enabled&&/后台有界检索未通过/.test(source.detail||""))return {title:"已登录，后台检索待修复",detail:"登录身份已确认，后台读取尚未成功；可重试或查看能力详情",action:"check",available:false};
   if(source.source_id==="zhilian"&&source.session_status==="verified"&&!source.live_search_enabled&&source.list_status==="partial")
     return {title:source.fields_status==="verified"?"已登录，列表可读":"已登录，检索待验",detail:source.detail||"输入关键词尝试搜索；检查会验证一次后台搜索",action:"use",available:false};
-  if(check?.outcome==="failed"||check?.outcome==="unverified")return {title:"本次未确认",detail:check.detail||"可稍后重试检查",action:"check",available:false};
+  if(check?.outcome==="failed")return {title:"本次未确认",detail:check.detail||"可稍后重试检查",action:"check",available:false};
   if(check?.outcome==="login_required")return {title:"本次需要登录",detail:"来源本次显示登录页，请在应用内核对",action:"login",available:false};
+  if(source.session_status==="expired")return {title:"会话待复查",detail:"请在应用内核对登录状态",action:"check",available:false};
+  if(source.login_required&&source.session_status!=="verified"&&source.list_status==="verified")
+    return {title:"列表可读，登录未确认",detail:"本次读到了岗位；账号身份尚未确认，详情和续页仍需分别检查",action:"check",available:false};
+  if(check?.outcome==="unverified")return {title:"本次未确认",detail:check.detail||"可稍后重试检查",action:"check",available:false};
   if(source.login_required&&source.session_status!=="verified")return {title:source.session_status==="expired"?"会话待复查":"登录状态待确认",detail:"可检查来源或在应用内打开官网",action:"check",available:false};
   if(source.live_search_enabled){
     if(stale)return {title:"之前可检索，待复查",detail:"可尝试搜索，结果以本次读取为准",action:"check",available:true};

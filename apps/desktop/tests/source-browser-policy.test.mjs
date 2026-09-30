@@ -12,6 +12,7 @@ import {
   sourceBrowserSpecs,
   sourceBrowserIdForSourceName,
   summarizeSourceVerification,
+  sourceSearchVerification,
 } from "../dist-electron/shared/source-browser-policy.js";
 
 test("each source has its own persistent partition", () => {
@@ -104,6 +105,16 @@ test("source verification enables only evidence-backed bounded results", () => {
   const clickOnly=summarizeSourceVerification([{records:[{payload:{title:'Agent工程师',company:'样例公司',url:'https://www.liepin.com/job/1.shtml'}}],next_cursor:'3',collection:{batches:2}}]);
   assert.match(clickOnly.notes,/2 页、1 条/);
   assert.throws(() => summarizeSourceVerification([{ records: [], next_cursor: null }]), /没有返回岗位/);
+});
+
+test("list evidence cannot manufacture a login session",()=>{
+  const pages=[{records:[{payload:{title:'Python',company:'示例公司',url:'https://www.zhaopin.com/jobdetail/1'}}],next_cursor:null}];
+  const unverified=sourceSearchVerification({login_required:true,session_status:'unverified'},pages);
+  assert.equal(unverified.list_status,'verified');assert.equal(unverified.session_status,'unverified');assert.equal(unverified.enabled,false);
+  const confirmed=sourceSearchVerification({login_required:true,session_status:'verified'},pages);
+  assert.equal(confirmed.session_status,'verified');assert.equal(confirmed.enabled,true);
+  const publicList=sourceSearchVerification({login_required:false,session_status:'unverified'},pages);
+  assert.equal(publicList.session_status,'anonymous');assert.equal(publicList.enabled,true);
 });
 
 test("browser bounds stay inside the desktop content area", () => {

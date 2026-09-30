@@ -81,6 +81,17 @@ export function summarizeSourceVerification(pages: Array<{ records: Array<{ payl
   };
 }
 
+// A readable result page proves list extraction, not the identity of the browser session.
+export function sourceSearchVerification(
+  source: {login_required:boolean;session_status:string},
+  pages: Parameters<typeof summarizeSourceVerification>[0],
+  authenticated=false,
+) {
+  const summary=summarizeSourceVerification(pages);
+  const session_status=authenticated||source.session_status==="verified"?"verified":source.login_required?"unverified":"anonymous";
+  return {...summary,session_status,enabled:!source.login_required||session_status==="verified"};
+}
+
 export function isSourceBrowserId(value: string): value is SourceBrowserId {
   return Object.hasOwn(sourceBrowserSpecs, value);
 }

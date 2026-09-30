@@ -23,11 +23,17 @@ test("all four platforms enter the queue; only eligible sources call the live ad
   assert.deepEqual(selected,["liepin"]);
 });
 
+test("a readable list without a confirmed session is not counted as a passed source",async()=>{
+ const result=await runSourceCheckQueue({sources:[source('wuyou')],signal:new AbortController().signal,probeUnverifiedLogin:true,
+  probe:async item=>({...item,list_status:'verified',live_search_enabled:false,detail:'本次读到岗位，但登录身份未确认'})});
+ assert.equal(result[0].outcome,'unverified');assert.equal(result[0].evidence,'live');
+});
+
 test("recent cache and risk control do not retry a source or claim a fresh pass",async()=>{
   const calls=[];
   const recent=source("liepin",{live_search_enabled:true,list_status:"verified",last_verified_at:new Date().toISOString()});
   const results=await runSourceCheckQueue({sources:[recent,source("sample_1"),source("sample_2")],signal:new AbortController().signal,
-    probe:async item=>{calls.push(item.source_id);if(item.source_id==="sample_1")throw Error("risk_control:验证码");return item;}});
+    probe:async item=>{calls.push(item.source_id);if(item.source_id==="sample_1")throw Error("risk_control:验证码");return {...item,live_search_enabled:true};}});
   assert.deepEqual(calls,["sample_1","sample_2"]);
   assert.deepEqual(results.map(item=>item.outcome),["cached_recent","risk_control","verified_now"]);
   assert.equal(results[0].evidence,"cache");
@@ -46,7 +52,7 @@ test("cancel stops the active check and marks every unvisited source",async()=>{
 test("source timeout is recorded and a later source uses the remaining total budget",async()=>{
   let calls=0;
   const results=await runSourceCheckQueue({sources:[source("liepin"),source("sample_1")],signal:new AbortController().signal,
-    perSourceMs:20,totalMs:1000,probe:async()=>{calls++;return calls===1?new Promise(()=>{}):source("sample_1");}});
+    perSourceMs:20,totalMs:1000,probe:async()=>{calls++;return calls===1?new Promise(()=>{}):source("sample_1",{live_search_enabled:true});}});
   assert.equal(calls,2);
   assert.deepEqual(results.map(item=>item.outcome),["failed","verified_now"]);
   assert.match(results[0].detail,/超时/);
@@ -55,7 +61,7 @@ test("source timeout is recorded and a later source uses the remaining total bud
 test("total budget marks unvisited sources without probing them",async()=>{
   let clock=0,calls=0;
   const results=await runSourceCheckQueue({sources:[source("liepin"),source("sample_1"),source("sample_2")],signal:new AbortController().signal,
-    now:()=>clock,totalMs:10,probe:async item=>{calls++;clock+=11;return item;}});
+    now:()=>clock,totalMs:10,probe:async item=>{calls++;clock+=11;return {...item,live_search_enabled:true};}});
   assert.equal(calls,1);
   assert.deepEqual(results.map(item=>item.outcome),["verified_now","not_checked_budget","not_checked_budget"]);
 });
@@ -63,7 +69,7 @@ test("total budget marks unvisited sources without probing them",async()=>{
 test("QA probe cap checks one eligible source while reporting the rest",async()=>{
   let calls=0;
   const results=await runSourceCheckQueue({sources:catalog,signal:new AbortController().signal,maxLiveProbes:1,
-    probe:async item=>{calls++;return item;}});
+    probe:async item=>{calls++;return {...item,live_search_enabled:true};}});
   assert.equal(calls,1);
   assert.equal(results.length,4);
   assert.equal(results[1].outcome,"verified_now");
