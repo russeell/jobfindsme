@@ -2224,6 +2224,15 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D126",
+      "title": "简化聊天侧栏浮层与归档入口",
+      "status": "done",
+      "verification": "桌面 Node 280 项、类型与构建通过；正常 D125 原生核对浮层不推动列表，D126 原生核对移除两个头部图标、历史聊天正常恢复；macOS 包审计通过。分享包已清理，不发布新版本。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

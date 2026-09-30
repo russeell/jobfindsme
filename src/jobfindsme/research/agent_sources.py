@@ -593,9 +593,11 @@ def read_original_page(
                     "status": "unsupported_source",
                     "limit": "source response too large",
                 }
-            content_encoding = getattr(response.headers, "get", lambda *_: "")(
-                "Content-Encoding", ""
-            ).strip().lower()
+            content_encoding = (
+                getattr(response.headers, "get", lambda *_: "")("Content-Encoding", "")
+                .strip()
+                .lower()
+            )
             if content_encoding in {"gzip", "x-gzip"} or (
                 not content_encoding and body.startswith(b"\x1f\x8b")
             ):

@@ -528,8 +528,7 @@ def test_original_read_decodes_bounded_gzip_and_rejects_binary_html(monkeypatch)
 
     assert "programming language" in read(gzip.compress(html), "gzip")["excerpt"]
     assert (
-        read(gzip.compress(b"a" * 1_000_001), "gzip")["status"]
-        == "unsupported_source"
+        read(gzip.compress(b"a" * 1_000_001), "gzip")["status"] == "unsupported_source"
     )
     assert read(b"\x1f\x8b" + b"\xff" * 100)["status"] == "unsupported_source"
 

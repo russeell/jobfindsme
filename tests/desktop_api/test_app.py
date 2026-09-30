@@ -92,11 +92,14 @@ def test_agent_can_find_a_local_job_that_was_not_saved(tmp_path) -> None:
             "has_description": False,
         }
     ]
-    assert client.get(
-        "/v1/research-agent/local-jobs",
-        headers=headers,
-        params={"workspace_id": workspace_id, "title": "x"},
-    ).status_code == 400
+    assert (
+        client.get(
+            "/v1/research-agent/local-jobs",
+            headers=headers,
+            params={"workspace_id": workspace_id, "title": "x"},
+        ).status_code
+        == 400
+    )
 
 
 def test_resume_import_confirmation_version_and_analysis_preview(tmp_path) -> None:
