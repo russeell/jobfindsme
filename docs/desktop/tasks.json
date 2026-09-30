@@ -2233,6 +2233,27 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ]
+    },
+    {
+      "id": "D127",
+      "title": "求职助手错误分层与进程内密钥复用",
+      "status": "done",
+      "verification": "代码回归通过；真实模型技能质量仍属 D103，未推送发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
+    },
+    {
+      "id": "D128",
+      "title": "三项技能交付质量与失败材料恢复",
+      "status": "in_progress",
+      "depends_on": [
+        "D127"
+      ],
+      "verification": "实现与本地回归完成；真实模型效果验收待完成，不记录私有验收材料。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ]
     }
   ]
 }

@@ -6,7 +6,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, safeStorage } from "electron";
 
 import type { DesktopApiClient } from "./backend/api-client";
 import { saveModelConnectionWithSecret } from "./backend/model-connection-service";
@@ -61,7 +61,7 @@ const pythonService = new PythonService({
     mainWindow?.webContents.send("desktop:service-status", status);
   },
 });
-const secretStore = new SecureSecretStore(app.getPath("userData"));
+const secretStore = new SecureSecretStore(app.getPath("userData"), safeStorage);
 let modelTestController: AbortController | undefined;
 let modelTestConnectionId: string | undefined;
 let modelTestRunId: string | undefined;
@@ -762,18 +762,23 @@ ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder"
  });
 });
 ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
-  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("research unavailable");
-  if(!validResearchChatInput(input))throw Error("invalid research chat input");
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("assistant_failure:backend");
+  if(!validResearchChatInput(input))throw Error("assistant_failure:input");
   const run=chatRuns.begin({runId:input.request_id,sessionId:input.session_id,workspaceId:input.workspace_id},90_000);
+  let phase="backend";
   try{
     const workspaces=(await apiClient.bootstrap()).workspaces;
     if(run.signal.aborted)throw Error("cancelled");
     if(!workspaces.some(item=>item.workspace_id===input.workspace_id))throw Error("workspace unavailable");
+    phase="model_config";
     const connection=await apiClient.modelConnection(input.connection_id);
     if(run.signal.aborted)throw Error("cancelled");
+    phase="model_key";
     const apiKey=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
+    phase="runtime_load";
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
     if(run.signal.aborted)throw Error("cancelled");
+    phase="agent";
     return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
       {
         readResume:()=>apiClient!.agentResume(input.workspace_id),
@@ -790,6 +795,12 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
       },
       (delta,content_status)=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta,content_status});},run.signal,
       progress=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,progress});});
+  }catch(error){
+    if(run.signal.aborted)throw Error("cancelled");
+    // Only expose a stage for setup failures; never send credentials, paths or
+    // backend response bodies to the renderer. Agent errors have their own UI mapping.
+    if(phase!=="agent")throw Error(`assistant_failure:${phase}`);
+    throw error;
   }finally{chatRuns.finish(run);}
 });
 ipcMain.handle("desktop:list-research-chats",async(event,workspaceId:string)=>{

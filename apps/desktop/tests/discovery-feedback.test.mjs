@@ -37,3 +37,14 @@ test('a source check that cannot see the account page does not claim the saved l
  assert.equal(result.kind,'source');assert.doesNotMatch(result.message,/重新登录|失效/);
  assert.match(result.message,/确认登录状态/);
 });
+
+test('assistant setup and model failures survive the IPC wrapper without exposing private details',()=>{
+ for(const phase of ['backend','input','model_config','model_key','runtime_load']){
+  const result=userError(`Error invoking remote method: assistant_failure:${phase}: private token`);
+  assert.doesNotMatch(result.message,/private|token|remote|assistant_failure/);
+  assert.doesNotMatch(result.message,/本地服务暂时异常/);
+ }
+ assert.match(userError('Error invoking remote method: 模型请求失败：401 private key').message,/密钥/);
+ assert.match(userError('Error invoking remote method: 模型请求失败：429 private endpoint').message,/额度/);
+ assert.match(userError('Error invoking remote method: 模型请求失败：fetch failed private path').message,/模型服务/);
+});

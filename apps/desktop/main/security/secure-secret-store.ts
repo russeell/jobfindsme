@@ -2,17 +2,22 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { safeStorage } from "electron";
+type EncryptionProvider = {
+  isEncryptionAvailable(): boolean;
+  encryptString(value: string): Buffer;
+  decryptString(value: Buffer): string;
+};
 
 export class SecureSecretStore {
   private readonly filePath: string;
+  private readonly decrypted = new Map<string, { encrypted: string; secret: string }>();
 
-  constructor(userDataPath: string) {
+  constructor(userDataPath: string, private readonly encryption: EncryptionProvider) {
     this.filePath = path.join(userDataPath, "secrets", "model-keys.json");
   }
 
   isAvailable(): boolean {
-    return safeStorage.isEncryptionAvailable();
+    return this.encryption.isEncryptionAvailable();
   }
 
   set(secretRef: string, secret: string): void {
@@ -20,11 +25,13 @@ export class SecureSecretStore {
       throw new Error("系统安全存储不可用，未保存 API Key。");
     }
     const values = this.read();
-    values[secretRef] = safeStorage.encryptString(secret).toString("base64");
+    values[secretRef] = this.encryption.encryptString(secret).toString("base64");
     this.writeAtomically(values);
+    this.decrypted.set(secretRef, { encrypted: values[secretRef], secret });
   }
 
   delete(secretRef: string): void {
+    this.decrypted.delete(secretRef);
     const values = this.read();
     if (!(secretRef in values)) return;
     delete values[secretRef];
@@ -53,8 +60,18 @@ export class SecureSecretStore {
 
   get(secretRef: string): string | undefined {
     const encrypted = this.read()[secretRef];
-    if (!encrypted || !this.isAvailable()) return undefined;
-    return safeStorage.decryptString(Buffer.from(encrypted, "base64"));
+    if (!encrypted) { this.decrypted.delete(secretRef); return undefined; }
+    const cached = this.decrypted.get(secretRef);
+    if (cached?.encrypted === encrypted) return cached.secret;
+    this.decrypted.delete(secretRef);
+    if (!this.isAvailable()) throw new Error("assistant_failure:model_key");
+    try {
+      const secret = this.encryption.decryptString(Buffer.from(encrypted, "base64"));
+      this.decrypted.set(secretRef, { encrypted, secret });
+      return secret;
+    } catch {
+      throw new Error("assistant_failure:model_key");
+    }
   }
 
   has(secretRef: string): boolean {
