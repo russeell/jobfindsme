@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D134",
+  "current_task": "D143",
   "tasks": [
     {
       "id": "D01",
@@ -2412,6 +2412,29 @@
         "准备与方向澄清不误当成已答题"
       ],
       "verification": "D142真实computer use：无JD的方向准备、同聊天单题模拟、虚构答案反馈与单一追问三次授权请求通过；325项Node回归、类型构建、diff检查及包审计通过。未测试所有岗位/模型，真实简历未参与。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D143",
+      "title": "v0.14.0发布及简洁图文README",
+      "depends_on": [
+        "D142"
+      ],
+      "status": "in_progress",
+      "scope": [
+        "核心特点与示例界面文档",
+        "版本元数据与macOS/Windows安装包",
+        "源代码同步、跨平台CI与GitHub发行"
+      ],
+      "acceptance": [
+        "README突出四平台检索、简历、面试与岗位公司研究",
+        "发布包不包含用户凭据、会话、数据库或简历",
+        "双平台下载、校验和及发行提交对应"
+      ],
+      "verification": "本地476项Python、325项Node、类型构建、Ruff及两套评估通过；打包和GitHub验证进行中。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],

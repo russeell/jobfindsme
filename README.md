@@ -2,10 +2,10 @@
   <img src="docs/images/logo.svg" width="72" height="72" alt="JobFindsMe 标志">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>找岗位，改简历，准备面试。</strong></p>
-<p align="center">一个桌面AI求职助手，欢迎Star和PR。</p>
+<p align="center"><strong>一次搜索四个平台，从找岗位到准备面试。</strong></p>
+<p align="center">开源 AI 求职桌面助手 · macOS / Windows</p>
 <p align="center">
-  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=2563eb" alt="最新发布版"></a>
+  <a href="https://github.com/russeell/jobfindsme/releases/latest"><img src="https://img.shields.io/github/v/release/russeell/jobfindsme?style=flat-square&color=2563eb" alt="最新版本"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/许可证-MIT-2563eb?style=flat-square" alt="MIT 许可证"></a>
 </p>
 <p align="center">
@@ -14,50 +14,49 @@
   <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a>
 </p>
 
-![岗位搜索与详情](docs/images/jobfindsme-search.png)
+## 四件事，一个工作台
 
-<sub>截图来自当前开发版，岗位与对话均为示例数据；下载版本以发布页为准。</sub>
+| 功能 | 能帮你做什么 |
+| --- | --- |
+| **一键检索四平台** | 同时搜索 **BOSS直聘、猎聘、智联招聘、前程无忧**，结果陆续展示；筛选、继续查找、阅读完整 JD。岗位搜索无需配置模型。 |
+| **修改简历** | 结合岗位要求和真实经历生成修改草稿，逐项审阅后保存，不编造经历。 |
+| **模拟面试** | 按岗位方向给准备重点，再逐题练习、点评与追问。**没有 JD 也能开始。** |
+| **深度研究** | 围绕目标岗位、公司与行业做背景调研，读取原文、追查缺口，并附来源供核对。 |
 
-## 能帮你做什么
+收藏岗位、记录投递进展，聊天支持搜索、归档和从某条回复创建分支。
 
-- **找岗位**：搜索 BOSS直聘、猎聘、智联招聘和前程无忧，按城市、薪资等条件筛选；导入并确认简历，辅助岗位匹配。
-- **聊求职**：选择简历定制、面试准备或深度研究；结合 JD 和真实经历生成修改草稿，了解公司时提供原文引用。
-- **记进展**：收藏岗位，记录已读与投递状态，保留对话，方便下次接着聊。
+![岗位检索、筛选与 JD 详情](docs/images/jobfindsme-search.png)
 
-![求职助手对话](docs/images/jobfindsme-research.png)
+![求职助手中的面试准备示例](docs/images/jobfindsme-research.png)
+
+<sub>界面示例使用虚构岗位与演示对话；平台覆盖受登录、验证码及网站变化影响，研究结论请结合原文核对。</sub>
 
 ## 下载
 
-| 系统 | 下载与打开 |
+| 系统 | 下载 |
 | --- | --- |
-| macOS · Apple Silicon（M 系列） | [下载 mac-arm64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip)，解压后打开 `JobFindsMe.app` |
-| Windows · x64 | [下载 windows-x64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip)，完整解压后运行 `JobFindsMe.exe` |
+| macOS · Apple Silicon（M 系列） | [mac-arm64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip) |
+| Windows · x64 | [windows-x64.zip](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip) |
 
-无需另装 Python 或 Node.js。安装包尚未签名，首次打开可能出现系统安全提示，说明与 SHA-256 校验信息见[发布页](https://github.com/russeell/jobfindsme/releases/latest)。其他系统暂未提供安装包。
+解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装 Python 或 Node.js。安装包尚未签名，首次打开提示与校验信息见[发布页](https://github.com/russeell/jobfindsme/releases/latest)。
 
 ## 开始使用
 
-1. 在「设置 → 岗位来源」选择平台，需要登录时使用内置浏览器。
-2. 在「找工作」输入岗位方向，例如 `Python 后端` 或 `Agent 开发`，查看详情和招聘原页。
-3. 在「设置 → 模型设置」配置模型，然后打开「求职助手」，点「＋」添加技能或资料，粘贴 JD 或直接提问。
+1. **选平台**：在「设置 → 岗位来源」选择平台，需要登录时使用内置浏览器。
+2. **找岗位**：输入岗位方向，选择一个城市或不限城市，点击「找岗位」。
+3. **用 AI 准备**：配置自己的模型，在「求职助手 → ＋」选择「修改简历」「模拟面试」或「深度研究」。
 
-> 这份 JD 最看重哪些能力？我应该怎样准备面试？
+> 帮我准备 Agent 开发面试。 / 结合这份 JD 修改简历。 / 研究这家公司和岗位，给出原文依据。
 
-没有 JD 时，也可以选择「模拟面试」，说“帮我准备 Agent 开发面试”获取准备重点，再说“开始模拟”逐题练习。JD 和简历用于之后定制，不是开始条件。
-
-部分平台的检索、详情和翻页会受登录、验证码及网站改版影响，不保证覆盖全部岗位。公司研究也可能缺少材料，请结合引用核对。
-
-岗位、简历和对话保存在本机。使用模型时，相关内容会发送给你配置的服务，并可能产生费用。联网检索会将公开查询词发送至检索服务，搜索摘要只用于发现网页，研究结论须核对原文。应用不会自动投递。
+岗位、简历和对话保存在本机；使用 AI 时，相关材料会发送给你配置的模型服务，可能产生费用。联网检索只应使用公开查询词。应用不会自动投递。
 
 <details>
 <summary>开发与贡献</summary>
 
-使用 Electron、React、Python、SQLite 和 Pi Agent。需要 Python 3.11+、Node.js/npm；运行方式见[开发说明](docs/desktop/README.md)。
+Electron · React · Python · SQLite · Pi Agent。开发需要 Python 3.11+、Node.js/npm，见[开发说明](docs/desktop/README.md)。
 
-欢迎提交 [Issue](https://github.com/russeell/jobfindsme/issues) 或 PR。反馈时请附操作步骤和错误提示，勿上传简历、密钥或 Cookie。
+欢迎 Star、[Issue](https://github.com/russeell/jobfindsme/issues) 和 PR；反馈时请勿上传简历、密钥或 Cookie。
 
-[贡献指南](CONTRIBUTING.md) · [项目结构](docs/desktop/STRUCTURE.md) · [安全说明](SECURITY.md)
+[贡献指南](CONTRIBUTING.md) · [项目结构](docs/desktop/STRUCTURE.md) · [安全说明](SECURITY.md) · [MIT 许可证](LICENSE)
 
 </details>
-
-[MIT 许可证](LICENSE)

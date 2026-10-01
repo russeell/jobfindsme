@@ -9,6 +9,7 @@ const projectRoot = path.resolve(desktopRoot, "../..");
 const electronApp = process.env.JFM_ELECTRON_APP || path.join(desktopRoot, "node_modules/electron/dist/Electron.app");
 const pythonRuntime = path.join(desktopRoot, "runtime/python/jobfindsme-api");
 const previewBuild=process.env.JFM_PACKAGE_PREVIEW === "1";
+const packageVersion=JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version;
 const buildInfo=JSON.parse(readFileSync(path.join(desktopRoot,"build-info.json"),"utf8"));
 const buildLabel=process.env.JFM_PACKAGE_BUILD_LABEL || buildInfo.label;
 if(process.env.JFM_PACKAGE_BUILD_LABEL&&!/^v\d+\.\d+\.\d+\+local\.D\d+$/.test(buildLabel))throw Error("invalid local build label");
@@ -73,6 +74,8 @@ for (const [key, value] of [
   ["CFBundleName", displayName],
   ["CFBundleExecutable", "JobFindsMe"],
   ["CFBundleIdentifier", bundleId],
+  ["CFBundleShortVersionString", packageVersion],
+  ["CFBundleVersion", packageVersion],
 ]) {
   execFileSync("/usr/bin/plutil", ["-replace", key, "-string", value, plist]);
 }
