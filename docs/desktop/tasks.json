@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D143",
+  "current_task": "D134",
   "tasks": [
     {
       "id": "D01",
@@ -2423,7 +2423,7 @@
       "depends_on": [
         "D142"
       ],
-      "status": "in_progress",
+      "status": "done",
       "scope": [
         "核心特点与示例界面文档",
         "版本元数据与macOS/Windows安装包",
@@ -2434,9 +2434,13 @@
         "发布包不包含用户凭据、会话、数据库或简历",
         "双平台下载、校验和及发行提交对应"
       ],
-      "verification": "本地476项Python、325项Node、类型构建、Ruff及两套评估通过；打包和GitHub验证进行中。",
+      "verification": "v0.14.0已发布：main和tag对应发行代码；476项Python、325项Node、本地检查及跨平台CI通过。macOS正式包computer use通过，Windows构建/审计/两次启动通过，runner直接附加校验通过；双平台资产及SHA256摘要匹配，无用户数据打包。",
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.14.0",
+        "https://github.com/russeell/jobfindsme/actions/runs/36856104080",
+        "https://github.com/russeell/jobfindsme/actions/runs/36856103523",
+        "https://github.com/russeell/jobfindsme/actions/runs/36859035456"
       ],
       "blocker": null
     }
