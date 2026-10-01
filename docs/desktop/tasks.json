@@ -2479,6 +2479,26 @@
         "docs/desktop/STRUCTURE.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D146",
+      "title": "四平台与内嵌浏览器图文产品介绍",
+      "status": "done",
+      "depends_on": [
+        "D145"
+      ],
+      "scope": [
+        "真实公开岗位截图",
+        "核心收益、内嵌浏览器与三技能介绍",
+        "中英文README同步"
+      ],
+      "verification": "参考Browser Use、Cline及此前FuckJob的产品定位与视觉展示，以原创文案突出四平台一键搜索、原页分栏和三项AI技能。正式v0.14.0 computer use完成公开岗位关键词检索、四平台勾选、选中岗位JD补充及浏览器原页截图；隐藏个人侧栏，没有使用简历/模型或发送消息。两张原生截图目视检查和元数据检查，中英文46行、链接及GitHub Markdown渲染、浏览器窄窗口排版与diff检查通过；旧图移除。不以截图证明所有来源本轮成功或稳定覆盖，不发布新版本。",
+      "evidence": [
+        "README.md",
+        "README.en.md",
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

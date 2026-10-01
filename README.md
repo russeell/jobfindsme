@@ -2,38 +2,45 @@
   <img src="docs/images/logo.svg" width="56" height="56" alt="JobFindsMe 标志">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>一键搜岗位，改简历，练面试，研究公司。</strong><br>开源 AI 求职桌面助手 · macOS / Windows</p>
+<p align="center"><strong>四个平台，一次搜索。岗位与原页，一起看。</strong><br>开源 AI 求职桌面助手 · macOS / Windows</p>
 <p align="center">
   <a href="https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip">下载 macOS（M 系列）</a> ·
   <a href="https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip">下载 Windows（x64）</a> ·
-  <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a>
+  <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a> · <a href="README.en.md">English</a>
 </p>
 
-## 能做什么
+## 四个平台，一键检索
 
-| 功能 | 能帮你做什么 |
+同时查找 **BOSS直聘、猎聘、智联招聘、前程无忧**，结果陆续出现。筛选、继续查找、选中后补全 JD；**找岗位无需配置模型。**
+
+![一次选择四个平台，在同一工作台查看岗位结果和 JD](docs/images/jobfindsme-four-platforms.jpg)
+
+## 内嵌浏览器，原页就在旁边
+
+在应用内完成登录、验证和原文核对。支持 **多标签、网页搜索、书签与分栏浏览**，少在窗口之间来回切换。
+
+![左侧岗位详情，右侧内嵌浏览器打开对应招聘原页](docs/images/jobfindsme-browser.jpg)
+
+<sub>v0.14.0 实际界面，展示公开岗位。结果数量仅代表本次检索；平台可用性受登录、验证与网站变化影响。</sub>
+
+## 找到岗位，继续准备
+
+| 技能 | 能帮你做什么 |
 | --- | --- |
-| **一键检索四平台** | BOSS直聘、猎聘、智联招聘、前程无忧；结果陆续出现，可筛选、续查、补全 JD。**找岗位无需模型。** |
-| **修改简历** | 根据岗位要求和真实经历生成修改稿，审阅后保存。 |
-| **模拟面试** | 准备重点、逐题练习、点评追问。**没有 JD 也能开始。** |
-| **深度研究** | 对岗位、公司和行业做背景调研，附原文来源，说明证据缺口。 |
+| **修改简历** | 对照 JD 和真实经历生成修改稿，审阅后保存。 |
+| **模拟面试** | 准备重点、逐题练习、点评追问；没有 JD 也能开始。 |
+| **深度研究** | 岗位、公司与行业背调，追查原文，附来源和证据缺口。 |
 
-岗位可收藏、记录投递进展；聊天可搜索、归档、创建分支。
+收藏岗位、记录投递进展；聊天支持搜索、归档和分支。
 
-![岗位检索、筛选与 JD 详情](docs/images/jobfindsme-search.png)
+## 三步开始
 
-![求职助手中的面试准备示例](docs/images/jobfindsme-research.png)
-
-<sub>虚构岗位与对话示例。平台覆盖受登录、验证码及网站变化影响；研究结论请结合原文核对。</sub>
-
-## 开始使用
-
-1. **下载并解压**，打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装运行环境。
-2. **选平台，找岗位**：在「设置 → 岗位来源」选择平台，按需登录；输入关键词，选择一个城市或不限城市后搜索。
-3. **用 AI 准备**：在「设置 → 模型设置」配置模型，再到「求职助手 → ＋」选择三项技能。
+1. **下载安装**：解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装运行环境。
+2. **搜索岗位**：「设置 → 岗位来源」选择平台，按需登录；输入关键词，选择一个城市或不限城市后搜索。
+3. **用 AI 准备**：「设置 → 模型设置」配置自己的模型，再到「求职助手 → ＋」选择技能。
 
 安装包尚未签名，首次打开说明与校验信息见[发布页](https://github.com/russeell/jobfindsme/releases/latest)。
 
-岗位、简历和对话保存在本机；使用 AI 时，相关材料会发送给所选模型服务，可能产生费用。应用不会自动投递。反馈时请勿上传简历、密钥或 Cookie。
+数据保存在本机；使用 AI 时，相关材料会发送给所选模型服务，可能产生费用。研究结论请核对原文。应用不会自动投递。
 
-[开发说明](docs/desktop/README.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [MIT 许可证](LICENSE)
+[开发说明](docs/desktop/README.md) · [贡献与反馈](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [MIT 许可证](LICENSE)
