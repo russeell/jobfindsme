@@ -25,11 +25,23 @@ Sign in, handle verification and check original sources inside the app. **Tabs, 
 
 ## Find a role. Get ready for it.
 
-| Skill | What you get |
-| --- | --- |
-| **Tailor your resume** | Draft changes based on the job description and your real experience, then review and save. |
-| **Practice interviews** | Preparation, one question at a time, feedback and follow-ups. A job description is optional. |
-| **Deep research** | Investigate roles, companies and industries with original sources and explicit evidence gaps. |
+<table>
+  <tr>
+    <th width="33%">Tailor your resume</th><th width="33%">Practice interviews</th><th width="33%">Deep research</th>
+  </tr>
+  <tr>
+    <td><a href="docs/images/jobfindsme-resume.png"><img src="docs/images/jobfindsme-resume.png" alt="Review resume changes side by side, then accept or reject each item"></a></td>
+    <td><a href="docs/images/jobfindsme-interview.png"><img src="docs/images/jobfindsme-interview.png" alt="Interview practice without a JD: questions, feedback and follow-ups"></a></td>
+    <td><a href="docs/images/jobfindsme-deep-research.png"><img src="docs/images/jobfindsme-deep-research.png" alt="Research with original sources, citations and explicit evidence gaps"></a></td>
+  </tr>
+  <tr>
+    <td>Draft changes from the JD and your real experience. Review before saving.</td>
+    <td>One question at a time, with feedback and follow-ups. No JD required.</td>
+    <td>Investigate roles, companies and industries, with sources and evidence gaps.</td>
+  </tr>
+</table>
+
+<sub>Click screenshots to enlarge. Resume and interview examples use fictional materials; research reads public official documentation. All show the actual app.</sub>
 
 Save jobs and track applications; search, archive and branch conversations.
 

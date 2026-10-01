@@ -25,11 +25,23 @@
 
 ## 找到岗位，继续准备
 
-| 技能 | 能帮你做什么 |
-| --- | --- |
-| **修改简历** | 对照 JD 和真实经历生成修改稿，审阅后保存。 |
-| **模拟面试** | 准备重点、逐题练习、点评追问；没有 JD 也能开始。 |
-| **深度研究** | 岗位、公司与行业背调，追查原文，附来源和证据缺口。 |
+<table>
+  <tr>
+    <th width="33%">修改简历</th><th width="33%">模拟面试</th><th width="33%">深度研究</th>
+  </tr>
+  <tr>
+    <td><a href="docs/images/jobfindsme-resume.png"><img src="docs/images/jobfindsme-resume.png" alt="简历修改前后对照，可逐项接受或拒绝"></a></td>
+    <td><a href="docs/images/jobfindsme-interview.png"><img src="docs/images/jobfindsme-interview.png" alt="无 JD 的模拟面试：逐题提问、点评和追问"></a></td>
+    <td><a href="docs/images/jobfindsme-deep-research.png"><img src="docs/images/jobfindsme-deep-research.png" alt="深度研究：核实原文、引用来源并说明证据缺口"></a></td>
+  </tr>
+  <tr>
+    <td>对照 JD 和真实经历生成修改稿，审阅后保存。</td>
+    <td>逐题练习、点评追问；没有 JD 也能开始。</td>
+    <td>岗位、公司与行业背调，附来源和证据缺口。</td>
+  </tr>
+</table>
+
+<sub>点击截图查看大图。简历与面试使用虚构演示资料，研究读取公开官方文档；均为实际应用界面。</sub>
 
 收藏岗位、记录投递进展；聊天支持搜索、归档和分支。
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-01",
+  "updated_at": "2026-10-02",
   "status_values": [
     "pending",
     "in_progress",
@@ -2497,6 +2497,25 @@
         "README.md",
         "README.en.md",
         "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D147",
+      "title": "三项求职技能真实界面截图画廊",
+      "status": "done",
+      "depends_on": [
+        "D146"
+      ],
+      "scope": [
+        "虚构简历提案与无JD逐题面试截图",
+        "公开官方原文研究截图",
+        "中英文README三列画廊"
+      ],
+      "verification": "正式v0.14.0代码在临时演示资料目录运行，原生computer use执行：虚构已确认简历生成两项提案但不接受或保存；无JD完成第一题及回答后点评、单题追问；读取两份Playwright官方原文生成引用与缺口。截图来自原生内容捕获，不改造回答，940×728 PNG仅标准色彩配置、无个人元数据；仅截图和文档入库。README本地链接、GitHub渲染与隐私核对，临时资料与密钥清理；不扩大D134功能验收范围、不发布版本。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md",
+        "README.md"
       ],
       "blocker": null
     }
