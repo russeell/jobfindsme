@@ -1,0 +1,62 @@
+name: Attach verified Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful Windows desktop package run ID
+        required: true
+      tag:
+        description: Existing draft release tag
+        required: true
+permissions:
+  actions: read
+  contents: write
+jobs:
+  attach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PACKAGE_RUN: ${{ inputs.run_id }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Validate, download and attach the tested package
+        shell: python
+        run: |
+          import hashlib, json, os, pathlib, re, subprocess, zipfile
+          def gh(*args):
+              return subprocess.check_output(['gh', *args], text=True)
+          tag, run = os.environ['RELEASE_TAG'], os.environ['PACKAGE_RUN']
+          assert re.fullmatch(r'v\d+\.\d+\.\d+', tag)
+          assert re.fullmatch(r'\d+', run)
+          repo = os.environ['GH_REPO']
+          build = json.loads(gh('api', f'repos/{repo}/actions/runs/{run}'))
+          release = json.loads(gh('release', 'view', tag, '--json', 'isDraft,targetCommitish,assets'))
+          assert release['isDraft'], 'Only an unpublished draft may be changed'
+          assert build['conclusion'] == 'success' and build['name'] == 'Windows desktop package'
+          assert build['head_sha'] == release['targetCommitish'], 'Package and release commits differ'
+          folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'verified-release'
+          gh('run', 'download', run, '--name', 'JobFindsMe-windows-x64', '--dir', str(folder))
+          package = folder / 'JobFindsMe-windows-x64.zip'
+          with zipfile.ZipFile(package) as archive:
+              assert archive.testzip() is None
+              names = archive.namelist()
+              for name in names:
+                  assert name.startswith('JobFindsMe/') and '..' not in pathlib.PurePosixPath(name).parts
+                  assert not re.search(r'(^|/)(Cookies|Local Storage|Session Storage|\.env)(/|$)|\.(db|sqlite|sqlite3)(-wal|-shm|-journal)?$', name, re.I), name
+                  if re.search(r'\.(pdf|docx)$', name, re.I):
+                      assert name == 'JobFindsMe/resources/python/jobfindsme-api/_internal/docx/templates/default.docx', name
+              info = json.loads(archive.read('JobFindsMe/resources/app/package.json'))
+              assert info['version'] == tag[1:] and info['build'] == tag and info['releaseTag'] == tag
+              assert not info.get('qa') and not info.get('jobfindsmePreview')
+          digest = hashlib.file_digest(package.open('rb'), 'sha256').hexdigest()
+          existing = next((item for item in release['assets'] if item['name'] == 'windows-x64.zip'), None)
+          if existing:
+              assert existing['state'] == 'uploaded' and existing['digest'] == 'sha256:' + digest
+          else:
+              target = folder / 'windows-x64.zip'
+              package.rename(target)
+              gh('release', 'upload', tag, str(target))
+          print('windows-x64.zip SHA256=' + digest)
+          pathlib.Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('Verified package from ' + build['head_sha'] + '\n\nwindows-x64.zip SHA256=' + digest + '\n')
