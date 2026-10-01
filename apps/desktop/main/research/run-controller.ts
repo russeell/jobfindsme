@@ -9,12 +9,12 @@ export class ResearchRunController{
     if(this.active.has(input.runId)||this.forSession(input.workspaceId,input.sessionId))throw Error("该对话正在生成，请先停止或使用另一条聊天。");
     if(this.active.size>=4)throw Error("chat_concurrency_limit");
     const controller=new AbortController();
-    const run={...input,controller,signal:controller.signal,timer:setTimeout(()=>this.cancel(input.runId),timeoutMs)};
+    const run={...input,controller,signal:controller.signal,timer:setTimeout(()=>this.cancel(input.runId,"timeout"),timeoutMs)};
     this.active.set(input.runId,run);return run;
   }
-  cancel(runId:string):boolean{
+  cancel(runId:string,reason:"cancelled"|"timeout"="cancelled"):boolean{
     const run=this.active.get(runId);if(!run)return false;
-    this.active.delete(runId);clearTimeout(run.timer);run.controller.abort();return true;
+    this.active.delete(runId);clearTimeout(run.timer);run.controller.abort(reason);return true;
   }
   cancelCurrent():boolean{
     const runs=[...this.active.keys()];for(const id of runs)this.cancel(id);return runs.length>0;

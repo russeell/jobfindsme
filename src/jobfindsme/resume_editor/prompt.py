@@ -65,6 +65,7 @@ class PromptSession:
     target_url: str = ""
     target_jd: str = ""
     saved_version_id: str | None = None
+    target_job_id: str | None = None
 
 
 class PromptResumeEditor:
@@ -87,6 +88,7 @@ class PromptResumeEditor:
         target_title: str = "",
         target_url: str = "",
         target_jd: str = "",
+        target_job_id: str | None = None,
     ) -> PromptSession:
         base = self.resume_editor.get_version(
             workspace_id=workspace_id, version_id=base_version_id
@@ -95,6 +97,17 @@ class PromptResumeEditor:
             raise PromptResumeError("base resume version is no longer current")
         if connection.status is not ConnectionStatus.VERIFIED:
             raise PromptResumeError("model connection must be verified before use")
+        if target_job_id:
+            from jobfindsme.importing.repository import JobRepository
+
+            job = JobRepository(self.database).get(
+                workspace_id=workspace_id, job_id=target_job_id
+            )
+            target_title, target_url, target_jd = (
+                job.title,
+                job.apply_url,
+                job.description,
+            )
         identifier = f"resume_edit_{uuid4().hex}"
         now = datetime.now(UTC).isoformat()
         with self.database.connect() as database:
@@ -114,8 +127,14 @@ class PromptResumeEditor:
             )
             database.execute(
                 "UPDATE resume_edit_sessions SET target_title=?, target_url=?, "
-                "target_jd=? WHERE session_id=?",
-                (target_title[:300], target_url[:2000], target_jd[:30000], identifier),
+                "target_jd=?, target_job_id=? WHERE session_id=?",
+                (
+                    target_title[:300],
+                    target_url[:2000],
+                    target_jd[:30000],
+                    target_job_id,
+                    identifier,
+                ),
             )
         return self.get_session(identifier)
 
@@ -293,7 +312,14 @@ class PromptResumeEditor:
         return self.get_session(session_id)
 
     def propose_from_agent(
-        self, *, workspace_id, connection, base_version_id, structured, user_prompt
+        self,
+        *,
+        workspace_id,
+        connection,
+        base_version_id,
+        structured,
+        user_prompt,
+        target_job_id=None,
     ):
         """Accept a Pi proposal, never apply it. Reuse editor evidence/version gates."""
         base = self.resume_editor.get_version(
@@ -316,6 +342,7 @@ class PromptResumeEditor:
             workspace_id=workspace_id,
             base_version_id=base_version_id,
             connection=connection,
+            target_job_id=target_job_id,
         )
         now = datetime.now(UTC).isoformat()
         with self.database.connect() as db:
@@ -439,9 +466,29 @@ class PromptResumeEditor:
                     workspace_id=session.workspace_id,
                     base_version_id=session.base_version_id,
                     content=content,
+                    make_current=not bool(session.target_job_id),
                 )
             except ValueError as error:
                 raise PromptResumeError(str(error)) from error
+            if session.target_job_id:
+                database.execute(
+                    "INSERT INTO "
+                    "job_preparations(workspace_id,job_id,stage,"
+                    "resume_version_id,updated_at) "
+                    "VALUES(?,?,CASE WHEN EXISTS(SELECT 1 FROM job_tracking_flags "
+                    "WHERE workspace_id=? AND job_id=? AND applied=1) THEN 'applied' "
+                    "ELSE 'considering' END,?,?) ON CONFLICT(workspace_id,job_id) DO "
+                    "UPDATE SET "
+                    "resume_version_id=excluded.resume_version_id,updated_at=excluded.updated_at",
+                    (
+                        session.workspace_id,
+                        session.target_job_id,
+                        session.workspace_id,
+                        session.target_job_id,
+                        version.version_id,
+                        datetime.now(UTC).isoformat(),
+                    ),
+                )
             database.execute(
                 """UPDATE resume_edit_sessions
                 SET status = 'saved', updated_at = ?, saved_version_id=?
@@ -498,6 +545,7 @@ class PromptResumeEditor:
             target_url=row["target_url"],
             target_jd=row["target_jd"],
             saved_version_id=row["saved_version_id"],
+            target_job_id=row["target_job_id"],
         )
 
     def _next_turn(self, session_id: str) -> int:

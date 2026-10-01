@@ -1,6 +1,7 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
  const text=error instanceof Error?error.message:String(error||'');
+ if(/assistant_failure:timeout|研究时间预算已用完/.test(text))return {kind:"service",message:"本轮等待已超时，提问和材料已保留。可重试，或到模型设置测试连接。",action:"retry"};
  if(/model_configuration_busy/.test(text))return {kind:"service",message:"模型仍在使用或配置处理中，请结束当前任务后重试。",action:"retry"};
  if(/assistant_failure:interview_output/.test(text))return {kind:'service',message:'本轮面试回复未满足逐题练习要求，未将其作为完成的练习。提问已保留，可重试。',action:'retry'};
  const assistantPhase=text.match(/assistant_failure:(backend|input|model_config|model_key|runtime_load)/)?.[1];

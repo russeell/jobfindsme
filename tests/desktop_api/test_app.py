@@ -811,3 +811,59 @@ def test_model_deletion_requires_auth_and_preserves_history(tmp_path):
     with Database(database_path).connect() as sql:
         assert sql.execute("SELECT count(*) FROM model_test_runs").fetchone()[0] == 1
         assert sql.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_preparation_api_auth_validation_and_job_scope(tmp_path):
+    from datetime import UTC, datetime
+    from jobfindsme.workspaces import WorkspaceService
+
+    db_path = tmp_path / "preparation.db"
+    db = Database(db_path)
+    db.migrate()
+    workspace = WorkspaceService(db).create()
+    job = normalize_job(
+        RawJobRecord(
+            source_kind=SourceKind.CAREER_SITE,
+            source_name="猎聘",
+            source_url="https://www.liepin.com/job/901.html",
+            external_id="901",
+            payload={
+                "title": "Python 工程师",
+                "company": "虚构公司",
+                "description": "Python 开发",
+                "apply_url": "https://www.liepin.com/job/901.html",
+            },
+        ),
+        fetched_at=datetime.now(UTC),
+    )
+    JobRepository(db).upsert(workspace.workspace_id, job)
+    client = TestClient(create_app(token="test-secret", database_path=db_path))
+    path = f"/v1/jobs/{job.job_id}/preparation"
+    headers = {"Authorization": "Bearer test-secret"}
+    assert (
+        client.get(path, params={"workspace_id": workspace.workspace_id}).status_code
+        == 401
+    )
+    assert (
+        client.get(path, params={"workspace_id": "wrong"}, headers=headers).status_code
+        == 404
+    )
+    body = {
+        "workspace_id": workspace.workspace_id,
+        "stage": "interview",
+        "next_action": "练习项目问答",
+    }
+    response = client.put(path, json=body, headers=headers)
+    assert response.status_code == 200
+    assert response.json()["job"]["job_id"] == job.job_id
+    assert response.json()["preparation"]["stage"] == "interview"
+    assert (
+        client.put(
+            path, json={**body, "stage": "invented"}, headers=headers
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put(path, json={**body, "due_date": "bad"}, headers=headers).status_code
+        == 400
+    )

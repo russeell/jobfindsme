@@ -438,3 +438,79 @@ def test_tracking_migration_preserves_state_but_not_old_impressions(tmp_path) ->
         ).fetchone()[0]
     assert tuple(migrated) == (1, 0)
     assert read_count == 0
+
+
+def test_preparation_persists_next_action_without_implicit_application(tmp_path):
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(987)
+    jobs.upsert(workspace.workspace_id, job)
+    preparations = JobPreparationService(database)
+    original = preparations.get(workspace.workspace_id, job.job_id)
+    assert original["preparation"]["stage"] == "considering"
+    assert tracking.list_tracking(workspace_id=workspace.workspace_id) == []
+    saved = preparations.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage="considering",
+        next_action=" 准备项目介绍 ",
+        due_date="2026-10-03",
+        note="练习资料",
+    )
+    assert saved["preparation"]["next_action"] == "准备项目介绍"
+    assert not tracking.tracking_states(workspace.workspace_id, [job.job_id])[
+        job.job_id
+    ].applied
+    rows = tracking.list_tracking(workspace_id=workspace.workspace_id)
+    assert rows[0]["preparation"]["due_date"] == "2026-10-03"
+    restored = JobPreparationService(Database(tmp_path / "desktop-jobs.db"))
+    assert restored.get(workspace.workspace_id, job.job_id) == saved
+
+
+def test_preparation_and_explicit_tracking_stay_consistent(tmp_path):
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(988)
+    jobs.upsert(workspace.workspace_id, job)
+    preparations = JobPreparationService(database)
+    tracking.set_tracking(
+        workspace_id=workspace.workspace_id, job_id=job.job_id, event_type="saved"
+    )
+    preparations.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage="interview",
+        next_action="练习技术问答",
+    )
+    flags = tracking.tracking_states(workspace.workspace_id, [job.job_id])[job.job_id]
+    assert flags.saved and flags.applied
+    tracking.set_tracking(
+        workspace_id=workspace.workspace_id, job_id=job.job_id, event_type="applied"
+    )
+    assert (
+        preparations.get(workspace.workspace_id, job.job_id)["preparation"]["stage"]
+        == "interview"
+    )
+    preparations.save(workspace.workspace_id, job.job_id, stage="closed")
+    assert tracking.tracking_states(workspace.workspace_id, [job.job_id])[
+        job.job_id
+    ].applied
+    tracking.set_tracking(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        event_type="applied",
+        enabled=False,
+    )
+    assert (
+        preparations.get(workspace.workspace_id, job.job_id)["preparation"]["stage"]
+        == "considering"
+    )
+    other = WorkspaceService(database).create()
+    with pytest.raises(LookupError):
+        preparations.save(other.workspace_id, job.job_id, stage="offer")
+    with pytest.raises(ValueError):
+        preparations.save(
+            workspace.workspace_id, job.job_id, stage="interview", due_date="tomorrow"
+        )

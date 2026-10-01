@@ -596,3 +596,89 @@ def test_removing_model_keeps_existing_resume_draft_and_research_report(tmp_path
             == 1
         )
         assert sql.execute("PRAGMA foreign_key_check").fetchall() == []
+
+
+def test_job_resume_is_independent_preserves_base_and_progress(tmp_path):
+    from datetime import UTC, datetime
+    from jobfindsme.connectors import RawJobRecord
+    from jobfindsme.contracts import SourceKind
+    from jobfindsme.importing.normalizer import normalize_job
+    from jobfindsme.importing.repository import JobRepository
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, current, connection, editor, service, _ = _context(
+        tmp_path, []
+    )
+    job = normalize_job(
+        RawJobRecord(
+            source_kind=SourceKind.CAREER_SITE,
+            source_name="猎聘",
+            source_url="https://www.liepin.com/job/999.html",
+            external_id="999",
+            payload={
+                "title": "Python 工程师",
+                "company": "虚构公司",
+                "description": "Python 应用开发",
+                "apply_url": "https://www.liepin.com/job/999.html",
+            },
+        ),
+        fetched_at=datetime.now(UTC),
+    )
+    JobRepository(database).upsert(workspace.workspace_id, job)
+    preparations = JobPreparationService(database)
+    preparations.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage="interview",
+        next_action="准备项目介绍",
+    )
+    session = service.propose_from_agent(
+        workspace_id=workspace.workspace_id,
+        connection=connection,
+        base_version_id=current.version_id,
+        user_prompt="改写已有项目",
+        target_job_id=job.job_id,
+        structured={
+            "patches": [
+                {
+                    "section": "projects",
+                    "after": ["使用 Python 实现本地求职工具"],
+                    "before": list(current.content["projects"]),
+                    "rationale": "重排已有事实",
+                    "evidence_ids": ["resume:projects:1", "resume:skills:1"],
+                    "needs_user_input": [],
+                }
+            ]
+        },
+    )
+    assert session.target_job_id == job.job_id
+    assert session.target_jd == job.description
+    service.decide_patch(
+        session_id=session.session_id,
+        patch_id=session.patches[0].patch_id,
+        decision="accepted",
+    )
+    saved = service.save_as_version(session_id=session.session_id)
+    assert not saved.is_current
+    assert editor.get_version(
+        workspace_id=workspace.workspace_id, version_id=current.version_id
+    ).is_current
+    assert (
+        editor.get_version(
+            workspace_id=workspace.workspace_id, version_id=current.version_id
+        ).content
+        == current.content
+    )
+    result = preparations.get(workspace.workspace_id, job.job_id)["preparation"]
+    assert result["resume_version_id"] == saved.version_id
+    assert result["stage"] == "interview" and result["next_action"] == "准备项目介绍"
+    other = WorkspaceService(database).create()
+    other_job = job.model_copy(update={"job_id": "job_other_workspace"})
+    JobRepository(database).upsert(other.workspace_id, other_job)
+    with pytest.raises(LookupError):
+        service.create_session(
+            workspace_id=workspace.workspace_id,
+            base_version_id=current.version_id,
+            connection=connection,
+            target_job_id=other_job.job_id,
+        )

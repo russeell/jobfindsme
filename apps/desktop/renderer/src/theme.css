@@ -690,3 +690,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .model-delete-actions button {min-height:36px;}
 .model-delete-confirm {background:#b5483f;color:white;border-color:#b5483f;}
 .model-delete-confirm:hover {background:#983c34;}
+
+/* Original-page access stays secondary to preparation in the tracking list. */
+.records-job-list .job-action-buttons>.primary-button{background:var(--surface)!important;color:#707a88!important;border-color:#e2e5e9!important;font-weight:400}
+.records-job-list .job-action-buttons>.primary-button:hover:not(:disabled){background:#f6f7f9!important;border-color:#d9dfe6!important}
+.records-job-list .job-actions .research-job-action{background:#f4f6f9;border-color:#e8ecf1;color:#425772}
+.records-job-list .job-actions .research-job-action:hover{background:#eaf0f7}

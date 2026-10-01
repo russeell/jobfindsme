@@ -1,4 +1,4 @@
-import type {MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
+import type {JobPreparationData,JobPreparationInput,MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
 import type {
   AnalysisPreview,
   AnalysisPreviewInput,
@@ -128,6 +128,9 @@ export class DesktopApiClient {
       body: JSON.stringify({ workspace_id: input.workspace_id, event_type: input.event_type, enabled: input.enabled ?? true }),
     });
   }
+
+  getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>{return this.json(`/v1/jobs/${encodeURIComponent(jobId)}/preparation?${new URLSearchParams({workspace_id:workspaceId})}`);}
+  saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>{const {job_id,workspace_id,stage,next_action,due_date,note}=input;return this.json(`/v1/jobs/${encodeURIComponent(job_id)}/preparation`,{method:"PUT",body:JSON.stringify({workspace_id,stage,next_action,due_date,note})});}
 
   listJobTracking(workspaceId: string): Promise<TrackedJob[]> {
     const query = new URLSearchParams({ workspace_id: workspaceId });

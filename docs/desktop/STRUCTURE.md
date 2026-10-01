@@ -60,3 +60,5 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 `skills/web-retrieval` 是内部联网能力，自动用于检索/深度研究或由 Agent 按需读取，不增加第四个聊天模式。`main/research/public-retrieval.ts` 通过固定只读 HTTPS 适配器调用 Exa 官方远程 MCP 搜索接口，不依赖本机 Agent Reach/mcporter、不读取用户模型 Key、不启动本地 MCP 服务器；失败按同一截止时间调用既有 Python 发现服务，限流进入三分钟进程冷却。GitHub/论文为独立站点路由，原文仍由 Python 严格 HTTPS/公网/域名/跳转校验后读取；返回候选不携带证据ID或正文。邮箱、手机号、密钥和私人路径不得进入外部搜索词。
 
 聊天任务由 `main/research/run-controller.ts` 按请求管理，renderer只显示当前会话的流与进度。`shared/research-chat-history.ts` 负责复制前缀的新分支及关系序列化，关系存入现有 conversation context；复制通过受限 preload clipboard IPC，不使用页面读写权限。
+
+`renderer/src/preparation/JobPreparation.tsx` 是岗位准备卡；`shared/job-preparation.ts` 管阶段、目标匹配与显式入口草稿。`search/preparation.py` 与0040迁移保存工作区内阶段/下一步/日期/备注及岗位简历关联，复用既有job tracking和resume版本。`resume_editor/prompt.py` 的目标岗位提案保存为独立副本；通用编辑仍沿用原有基础版本规则。没有新增Agent或调度器。

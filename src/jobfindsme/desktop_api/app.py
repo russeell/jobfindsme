@@ -57,6 +57,7 @@ from jobfindsme.search.desktop import (
 )
 from jobfindsme.search.jobs import DesktopJobFilters, DesktopJobService
 from jobfindsme.search.matching_prompts import MatchingPromptService
+from jobfindsme.search.preparation import JobPreparationService
 from jobfindsme.sources.desktop import DesktopSourceService
 
 
@@ -269,6 +270,14 @@ class JobTrackingRequest(StrictResponse):
     enabled: bool = True
 
 
+class JobPreparationRequest(StrictResponse):
+    workspace_id: str
+    stage: Literal["considering", "applied", "interview", "offer", "closed"]
+    next_action: str = Field(default="", max_length=200)
+    due_date: str | None = None
+    note: str = Field(default="", max_length=2000)
+
+
 class JobTrackingResponse(StrictResponse):
     read: bool
     saved: bool
@@ -373,6 +382,7 @@ class ResumeExportResponse(StrictResponse):
 
 
 class PromptSessionRequest(StrictResponse):
+    target_job_id: str | None = None
     target_title: str = Field(default="", max_length=300)
     target_url: str = Field(default="", max_length=2000)
     target_jd: str = Field(default="", max_length=30000)
@@ -412,6 +422,7 @@ class PromptSessionResponse(StrictResponse):
     target_url: str = ""
     target_jd: str = ""
     saved_version_id: str | None = None
+    target_job_id: str | None = None
     session_id: str
     workspace_id: str
     base_version_id: str
@@ -1293,6 +1304,25 @@ def create_app(
     def list_job_tracking(workspace_id: str) -> list[dict]:
         return desktop_jobs.list_tracking(workspace_id)
 
+    @app.get("/v1/jobs/{job_id}/preparation", dependencies=[Depends(require_token)])
+    def get_job_preparation(job_id: str, workspace_id: str) -> dict:
+        try:
+            return JobPreparationService(core.database).get(workspace_id, job_id)
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="job not found") from error
+
+    @app.put("/v1/jobs/{job_id}/preparation", dependencies=[Depends(require_token)])
+    def save_job_preparation(job_id: str, request: JobPreparationRequest) -> dict:
+        try:
+            return JobPreparationService(core.database).save(
+                job_id=job_id,
+                **request.model_dump(),
+            )
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="job not found") from error
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
     def resolve_workspace(workspace_id: str | None, *, create: bool = False):
         if workspace_id:
             return core.context.resolve_workspace(workspace_id)
@@ -1683,6 +1713,7 @@ def create_app(
                 target_title=request.target_title,
                 target_url=request.target_url,
                 target_jd=request.target_jd,
+                target_job_id=request.target_job_id,
             )
         except LookupError as error:
             raise HTTPException(
@@ -2031,6 +2062,7 @@ def create_app(
                 base_version_id=str(request["base_version_id"]),
                 structured={"patches": request["patches"]},
                 user_prompt=str(request["question"]),
+                target_job_id=request.get("job_id") or None,
             )
             return _prompt_session_payload(session).model_dump()
         except (KeyError, LookupError, ValueError, PromptResumeError) as error:
@@ -2577,6 +2609,7 @@ def _prompt_session_payload(session) -> PromptSessionResponse:
         target_url=session.target_url,
         target_jd=session.target_jd,
         saved_version_id=session.saved_version_id,
+        target_job_id=session.target_job_id,
         patches=[
             PromptPatchResponse(
                 patch_id=patch.patch_id,

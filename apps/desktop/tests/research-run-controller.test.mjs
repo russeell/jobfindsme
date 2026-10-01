@@ -18,5 +18,5 @@ test('finite concurrency and shutdown abort every independent run',()=>{
 });
 test('one timeout never aborts a different session',async()=>{
  const runs=new ResearchRunController();const a=runs.begin(input('short'),5),b=runs.begin(input('long'),90000);
- try{await new Promise(resolve=>setTimeout(resolve,20));assert.equal(a.signal.aborted,true);assert.equal(b.signal.aborted,false);assert.equal(runs.has(b),true);}finally{runs.cancelCurrent();}
+ try{await new Promise(resolve=>setTimeout(resolve,20));assert.equal(a.signal.aborted,true);assert.equal(a.signal.reason,"timeout");assert.equal(b.signal.aborted,false);assert.equal(runs.has(b),true);}finally{runs.cancelCurrent();}
 });

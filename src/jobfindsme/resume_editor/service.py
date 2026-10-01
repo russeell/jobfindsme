@@ -152,6 +152,7 @@ class ResumeEditorService:
         workspace_id: str,
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
+        make_current: bool = True,
     ) -> ResumeVersion:
         """Create a version on a caller-owned transaction.
 
@@ -172,7 +173,9 @@ class ResumeEditorService:
             WHERE workspace_id = ? AND is_current = 1""",
             (workspace_id,),
         ).fetchone()
-        if current is None or current["version_id"] != base_version_id:
+        if make_current and (
+            current is None or current["version_id"] != base_version_id
+        ):
             raise ResumeEditorError(
                 "resume version conflict: reload the current version before saving"
             )
@@ -181,16 +184,17 @@ class ResumeEditorService:
             FROM resume_versions WHERE workspace_id = ?""",
             (workspace_id,),
         ).fetchone()[0]
-        connection.execute(
-            "UPDATE resume_versions SET is_current = 0 WHERE workspace_id = ?",
-            (workspace_id,),
-        )
+        if make_current:
+            connection.execute(
+                "UPDATE resume_versions SET is_current = 0 WHERE workspace_id = ?",
+                (workspace_id,),
+            )
         connection.execute(
             """INSERT INTO resume_versions (
                 version_id, workspace_id, profile_id, source_document_id,
                 parent_version_id, version_number, content_json,
                 is_current, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)""",
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 version_id,
                 workspace_id,
@@ -199,6 +203,7 @@ class ResumeEditorService:
                 base_version_id,
                 next_number,
                 json.dumps(content, ensure_ascii=False),
+                int(make_current),
                 now.isoformat(),
             ),
         )

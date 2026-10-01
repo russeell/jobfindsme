@@ -426,6 +426,15 @@ class DesktopJobService:
                             event_type,
                         ),
                     )
+            if event_type == "applied":
+                connection.execute(
+                    "UPDATE job_preparations SET stage=CASE WHEN ?=0 THEN "
+                    "'considering' "
+                    "WHEN stage='considering' THEN 'applied' ELSE stage "
+                    "END,updated_at=? "
+                    "WHERE workspace_id=? AND job_id=?",
+                    (int(enabled), now, workspace_id, job_id),
+                )
         return self.tracking_states(workspace_id, [job_id])[job_id]
 
     def tracking_states(
@@ -473,13 +482,22 @@ class DesktopJobService:
     def list_tracking(self, workspace_id: str) -> list[dict]:
         jobs = self.jobs.list(workspace_id)
         states = self.tracking_states(workspace_id, [job.job_id for job in jobs])
+        with self.database.connect() as db:
+            preparations = {
+                row["job_id"]: dict(row)
+                for row in db.execute(
+                    "SELECT * FROM job_preparations WHERE workspace_id=?",
+                    (workspace_id,),
+                ).fetchall()
+            }
         return [
             {
                 "job": job.model_dump(mode="json"),
                 "tracking": asdict(states[job.job_id]),
+                "preparation": preparations.get(job.job_id),
             }
             for job in jobs
-            if any(asdict(states[job.job_id]).values())
+            if any(asdict(states[job.job_id]).values()) or job.job_id in preparations
         ]
 
     def _read_job_ids(self, workspace_id: str) -> set[str]:

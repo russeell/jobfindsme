@@ -1,3 +1,4 @@
+import {preparationDraft} from "../../../shared/job-preparation";
 import {ResumeProposal} from "./ResumeProposal";
 import {attachmentLimits,type ChatAttachment} from "../../../shared/chat-attachments";
 import {assistantSkills,assistantSkill,skillDraft,isAssistantSkillId,type AssistantSkillId} from "../../../shared/assistant-skills";
@@ -18,9 +19,9 @@ import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
+type Props={preparationRequest?:{job:Job;skill:AssistantSkillId;nonce:number;chatId?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
-export function ResearchPage({selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
+export function ResearchPage({preparationRequest,selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const [job,setJob]=useState<Job|undefined>(target);
   const [report,setReport]=useState<ResearchReport>();
@@ -139,10 +140,19 @@ export function ResearchPage({selectedSources,active,archiveVisible,newChatNonce
     refreshRequests(value=>value+1);
   }),[]);
   useEffect(()=>{if(!target)return;rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
+  const openedPreparation=useRef<number|undefined>(undefined);
+  useEffect(()=>{
+    if(busy||!preparationRequest||loadedWorkspace!==workspaceId||openedPreparation.current===preparationRequest.nonce)return;
+    openedPreparation.current=preparationRequest.nonce;
+    const previous=preparationRequest.chatId?chats.find(item=>item.id===preparationRequest.chatId&&item.jobId===preparationRequest.job.job_id):undefined;
+    if(previous){selectHistoryChat(previous);setJob(preparationRequest.job);return;}
+    rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(preparationRequest.skill);setAttachments([]);setAddMenu(false);setJob(preparationRequest.job);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion(preparationDraft(preparationRequest.skill,preparationRequest.job));setMessage("");setBusy(null);
+    requestAnimationFrame(()=>inputRef.current?.focus());
+  },[preparationRequest,loadedWorkspace,workspaceId,chats,busy]);
   const lastNewChatNonce=useRef(newChatNonce);
   useEffect(()=>{if(lastNewChatNonce.current===newChatNonce)return;lastNewChatNonce.current=newChatNonce;rememberDraft();scrollRef.current?.scrollTo({top:0});sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(undefined);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);requestAnimationFrame(()=>inputRef.current?.focus());},[newChatNonce]);
   useEffect(()=>{const input=inputRef.current;if(!input)return;input.style.height="auto";input.style.height=`${Math.min(input.scrollHeight,window.innerHeight<650?74:112)}px`;},[question,active]);
-  useEffect(()=>{if(!workspaceId||(!active&&!archiveVisible))return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspaceId).then(values=>{if(cancelled)return;keepReports(values);if(!active||chatIdRef.current)return;if(lastOpened.current){const previous=values.find(item=>item.report_id===lastOpened.current);if(previous)return;}if(target){const latest=values.filter(item=>reportMatchesJob(item,target)&&item.outcome!=="failed").sort((a,b)=>(b.version_number??1)-(a.version_number??1)||b.created_at.localeCompare(a.created_at))[0];if(latest)openSaved(latest);}}).catch(error=>onError(userError(error).message));return()=>{cancelled=true;};},[workspaceId,active,archiveVisible,target]);
+  useEffect(()=>{if(!workspaceId||(!active&&!archiveVisible))return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspaceId).then(values=>{if(cancelled)return;keepReports(values);if(!active||chatIdRef.current)return;if(lastOpened.current){const previous=values.find(item=>item.report_id===lastOpened.current);if(previous)return;}if(target&&!preparationRequest){const latest=values.filter(item=>reportMatchesJob(item,target)&&item.outcome!=="failed").sort((a,b)=>(b.version_number??1)-(a.version_number??1)||b.created_at.localeCompare(a.created_at))[0];if(latest)openSaved(latest);}}).catch(error=>onError(userError(error).message));return()=>{cancelled=true;};},[workspaceId,active,archiveVisible,target]);
   async function readLink(value:string){
     if(!value)return;
     if(!Object.keys(sourceBrowserSpecs).some(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,value))){setCandidate(undefined);setMessage("仅支持已接入招聘来源的 HTTPS 岗位链接，请检查网址后重试。");return;}

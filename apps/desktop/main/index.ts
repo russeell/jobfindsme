@@ -300,6 +300,14 @@ ipcMain.handle("desktop:set-job-tracking", (event, input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.setJobTracking(input);
 });
+ipcMain.handle("desktop:get-job-preparation", (event, workspaceId:string, jobId:string) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.getJobPreparation(workspaceId,jobId);
+});
+ipcMain.handle("desktop:save-job-preparation", (event,input) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.saveJobPreparation(input);
+});
 ipcMain.handle("desktop:list-job-tracking", (event, workspaceId: string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.listJobTracking(workspaceId);
@@ -809,7 +817,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
         browser:(operation,value,signal,ms)=>{if(!sourceBrowserManager)throw Error("browser unavailable");return sourceBrowserManager.taskBrowser(input.workspace_id+"/"+input.request_id,operation,value,signal,ms);},
         readResume:()=>apiClient!.agentResume(input.workspace_id),
         findLocalJobs:title=>apiClient!.findAgentLocalJobs(input.workspace_id,title),
-        proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question}),
+        proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question,job_id:input.job_id}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),
         findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
         retrievalStatus:()=>publicRetrieval.status(),
@@ -831,7 +839,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
       (delta,content_status)=>{if(!run.signal.aborted&&chatRuns.has(run))event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta,content_status});},run.signal,
       progress=>{if(!run.signal.aborted&&chatRuns.has(run))event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,progress});});
   }catch(error){
-    if(run.signal.aborted)throw Error("cancelled");
+    if(run.signal.aborted)throw Error(run.signal.reason==="timeout"?"assistant_failure:timeout":"cancelled");
     // Only expose a stage for setup failures; never send credentials, paths or
     // backend response bodies to the renderer. Agent errors have their own UI mapping.
     if(phase!=="agent")throw Error(`assistant_failure:${phase}`);

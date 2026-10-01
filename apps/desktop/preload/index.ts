@@ -19,6 +19,8 @@ const bridge: DesktopBridge = Object.freeze({
   refilterSearch:(workspaceId,runId,filters,pageSize)=>ipcRenderer.invoke("desktop:refilter-search",workspaceId,runId,filters,pageSize),
   getSearchPage: (workspaceId, runId, page, pageSize) => ipcRenderer.invoke("desktop:get-search-page", workspaceId, runId, page, pageSize),
   setJobTracking: (input) => ipcRenderer.invoke("desktop:set-job-tracking", input),
+  getJobPreparation:(workspaceId,jobId)=>ipcRenderer.invoke("desktop:get-job-preparation",workspaceId,jobId),
+  saveJobPreparation:input=>ipcRenderer.invoke("desktop:save-job-preparation",input),
   listJobTracking: (workspaceId) => ipcRenderer.invoke("desktop:list-job-tracking", workspaceId),
   openSourceBrowser: (sourceId, bounds) => ipcRenderer.invoke("desktop:open-source-browser", sourceId, bounds),
   onSourceStatusChanged: listener => {const handler=()=>listener();ipcRenderer.on("desktop:source-status-changed",handler);return ()=>ipcRenderer.removeListener("desktop:source-status-changed",handler);},

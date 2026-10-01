@@ -1,3 +1,6 @@
+import {preparationStages} from "../../shared/job-preparation";
+import {JobPreparation} from "./preparation/JobPreparation";
+import type {AssistantSkillId} from "../../shared/assistant-skills";
 import {readSelectedSources} from "../../shared/discovery-filters";
 import {reportMatchesJob} from "../../shared/research-reports";
 import type {ResearchReport} from "../../shared/contracts";
@@ -58,6 +61,9 @@ export function App() {
   },[data]);
   const [error, setError] = useState<string>();
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
+  const [preparationJob,setPreparationJob]=useState<SearchResultItem["job"]>();
+  const [preparationRequest,setPreparationRequest]=useState<{job:SearchResultItem["job"];skill:AssistantSkillId;nonce:number;chatId?:string}>();
+  function startPreparation(job:SearchResultItem["job"],skill:AssistantSkillId,chatId?:string){setPreparationJob(undefined);setResearchTarget(undefined);setPreparationRequest({job,skill,nonce:Date.now(),chatId});setPage("research");}
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
   const [researchBusy,setResearchBusy]=useState(false);
   const [newChatNonce,setNewChatNonce]=useState(0);
@@ -103,19 +109,21 @@ export function App() {
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div id="research-topbar-actions" className="research-topbar-actions"/></header><div className={page==="research"?"content research-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
       {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
-      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
-      <div className="research-mount" hidden={page!=="research"}><ResearchPage selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
-      {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
+      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={setPreparationJob} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
+      <div className="research-mount" hidden={page!=="research"}><ResearchPage preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
+      {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={setPreparationJob} onError={setError}/>}
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
+    {preparationJob&&data?.workspaces[0]&&<JobPreparation key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
   </Workbench>;
 }
 
 function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchReport[]; onResearch(job:SearchResultItem["job"]):void; data?: BootstrapData; onError(message?: string): void }) {
   const [items, setItems] = useState<TrackedJob[]>([]);
   const openBrowser = useOriginalBrowser();
-  const [filter, setFilter] = useState("read");
-  const visibleItems = items.filter(item => filter === "read" ? item.tracking.read : filter === "saved" ? item.tracking.saved : item.tracking.applied);
+  const [filter, setFilter] = useState("all");
+  const visibleItems = items.filter(item => filter === "all" ? true : filter === "read" ? item.tracking.read : filter === "saved" ? item.tracking.saved : filter === "applied" ? item.tracking.applied : item.preparation?.stage===filter);
+  const upcoming=items.filter(item=>item.preparation?.next_action&&item.preparation.stage!=="closed").sort((a,b)=>(a.preparation?.due_date||"9999").localeCompare(b.preparation?.due_date||"9999"));
   const workspaceId = data?.workspaces[0]?.workspace_id;
   async function update(item: TrackedJob, event_type: "read" | "saved" | "applied" | "apply_opened", enabled = true) {
     if (!workspaceId) return;
@@ -123,16 +131,18 @@ function RecordsPage({ data, onError, onResearch,reports }: {reports:ResearchRep
     onError(undefined);
     try {
       const tracking = await window.jobfindsme!.setJobTracking({workspace_id:workspaceId,job_id:item.job.job_id,event_type,enabled});
-      setItems(current => current.map(row => row.job.job_id === item.job.job_id ? {...row,tracking} : row));
+      setItems(await window.jobfindsme!.listJobTracking(workspaceId));
       if (event_type === "apply_opened" && sourceId) openBrowser({sourceId,url:item.job.apply_url,title:item.job.title});
     } catch (error) { onError(messageOf(error)); }
   }
-  useEffect(() => { if (workspaceId) void window.jobfindsme!.listJobTracking(workspaceId).then(setItems).catch((error) => onError(messageOf(error))); }, [workspaceId, onError]);
-  return <><div className="heading-row"><div><h1>我的岗位</h1><p>回到你认真看过的机会。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div>
-    <div className="source-tabs">{[["read","已看过"],["saved","收藏"],["applied","已投递"]].map(([key,label])=><button key={key} className={filter===key?"active":""} onClick={()=>setFilter(key)}>{label}</button>)}</div>
-    <div className="job-list section">{visibleItems.length?visibleItems.map(item=><article key={item.job.job_id}>
-      <div><strong>{item.job.title}</strong><span>{item.job.source.source_name}</span></div>
+  useEffect(() => {if(!workspaceId)return;let cancelled=false;const load=()=>void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(!cancelled)setItems(rows);}).catch(error=>{if(!cancelled)onError(messageOf(error));});load();window.addEventListener("jfm:job-updated",load);return()=>{cancelled=true;window.removeEventListener("jfm:job-updated",load);};}, [workspaceId, onError]);
+  return <><div className="heading-row"><div><h1>我的岗位</h1><p>把值得继续的机会和下一步留在一起。</p></div><span className="pill">{visibleItems.length} 条岗位</span></div>
+    {upcoming.length>0&&<section className="records-next"><div><span className="preparation-eyebrow">接下来</span><strong>{upcoming[0].preparation!.next_action}</strong><p>{upcoming[0].job.company} · {upcoming[0].job.title}{upcoming[0].preparation!.due_date&&` · ${upcoming[0].preparation!.due_date}`}</p></div><button type="button" onClick={()=>onResearch(upcoming[0].job)}>继续准备 →</button></section>}
+    <div className="source-tabs records-tabs">{[["all","全部"],["saved","收藏"],["applied","已投递"],["interview","面试中"],["offer","Offer"],["read","已看过"],["closed","已结束"]].map(([key,label])=><button key={key} className={filter===key?"active":""} onClick={()=>setFilter(key)}>{label}</button>)}</div>
+    <div className="job-list section records-job-list">{visibleItems.length?visibleItems.map(item=><article key={item.job.job_id}>
+      <div><strong>{item.job.title}</strong><span>{item.preparation?preparationStages[item.preparation.stage]:item.tracking.applied?"已投递":item.job.source.source_name}</span></div>
       <p>{item.job.company} · {item.job.locations.join("/")||"地点未知"} · {formatSalary(item.job)}</p>
+      {item.preparation?.next_action&&<p className="records-action"><span>下一步</span>{item.preparation.next_action}{item.preparation.due_date&&<time>{item.preparation.due_date}</time>}</p>}
       <JobActions hasReport={reports.some(report=>reportMatchesJob(report,item.job))} tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,"apply_opened")} onResearch={()=>onResearch(item.job)} onError={onError}/>
     </article>):<div className="empty"><strong>暂无记录</strong><p>阅读过的岗位会留在这里；收藏和投递状态分别保存。</p></div>}</div></>;
 }

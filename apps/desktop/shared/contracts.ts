@@ -59,6 +59,8 @@ export type DesktopBridge = {
   getSearchPage(workspaceId: string, runId: string, page: number, pageSize: number): Promise<SearchResultPage>;
   setJobTracking(input: JobTrackingInput): Promise<JobTrackingState>;
   listJobTracking(workspaceId: string): Promise<TrackedJob[]>;
+  getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>;
+  saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>;
   openSourceBrowser(sourceId: string, bounds: SourceBrowserBounds): Promise<void>;
   onSourceStatusChanged(listener: () => void): () => void;
   onSourceCollectionProgress(listener: (progress:SourceCollectionProgress) => void): () => void;
@@ -206,7 +208,11 @@ export type JobTrackingInput = {
   event_type: "read" | "saved" | "applied" | "apply_opened";
   enabled?: boolean;
 };
-export type TrackedJob = { job: SearchResultItem["job"]; tracking: JobTrackingState };
+export type PreparationStage="considering"|"applied"|"interview"|"offer"|"closed";
+export type JobPreparationInput={workspace_id:string;job_id:string;stage:PreparationStage;next_action:string;due_date:string|null;note:string};
+export type JobPreparation=JobPreparationInput&{resume_version_id:string|null;updated_at:string|null};
+export type JobPreparationData={job:SearchResultItem["job"];preparation:JobPreparation};
+export type TrackedJob = { job: SearchResultItem["job"]; tracking: JobTrackingState;preparation?:JobPreparation|null };
 
 export type SearchResultItem = {
   job: {
@@ -365,6 +371,7 @@ export type ResumeExportInput = {
 export type ResumeExport = ResumeExportInput & { path: string };
 
 export type PromptSessionInput = {
+  target_job_id?:string|null;
   target_title?:string;
   target_url?:string;
   target_jd?:string;

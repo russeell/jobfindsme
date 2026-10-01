@@ -48,3 +48,5 @@ test('assistant setup and model failures survive the IPC wrapper without exposin
  assert.match(userError('Error invoking remote method: 模型请求失败：429 private endpoint').message,/额度/);
  assert.match(userError('Error invoking remote method: 模型请求失败：fetch failed private path').message,/模型服务/);
 });
+
+test('bounded model waits distinguish timeout from local-service failure',()=>{for(const error of ['Error invoking remote method: assistant_failure:timeout','Error invoking remote method: 研究时间预算已用完']){const result=userError(error);assert.match(result.message,/超时/);assert.match(result.message,/保留/);assert.doesNotMatch(result.message,/本地服务.*异常/);}});
