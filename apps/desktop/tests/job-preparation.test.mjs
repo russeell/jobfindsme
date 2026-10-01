@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {proposalMatchesJob,preparationDraft} from '../dist-electron/shared/job-preparation.js';
+import {proposalMatchesJob,preparationDraft,preparationHasChanges} from '../dist-electron/shared/job-preparation.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 
 test('preparation proposals use job identity and legacy exact URL only',()=>{
@@ -13,4 +13,18 @@ test('preparation proposals use job identity and legacy exact URL only',()=>{
    const draft=preparationDraft(skill,job);
    assert.equal(resolveResearchSession(draft,undefined,job,{}).activeJobId,'selected');
  }
+});
+
+
+test('unsaved preparation protection covers editable fields but ignores background document updates',()=>{
+ const saved={workspace_id:'test',job_id:'test-job',stage:'considering',next_action:'',due_date:null,note:'',resume_version_id:null,updated_at:null};
+ assert.equal(preparationHasChanges(undefined,saved),false);
+ assert.equal(preparationHasChanges(saved,undefined),false);
+ assert.equal(preparationHasChanges({...saved,resume_version_id:'new-document',updated_at:'2026-10-02'},saved),false);
+ for(const [key,value] of [['stage','interview'],['next_action','练习项目介绍'],['due_date','2026-10-03'],['note','待核对']]){
+  const edited={...saved,[key]:value};
+  assert.equal(preparationHasChanges(edited,saved),true);
+  assert.equal(preparationHasChanges(edited,{...edited}),false);
+ }
+ assert.equal(saved.stage,'considering');
 });

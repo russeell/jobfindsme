@@ -53,8 +53,8 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
     {loadError&&<p className="records-load-error" role="alert">{loadError} <button type="button" onClick={()=>setReloadNonce(value=>value+1)}>重新读取</button></p>}
     {!loaded?<p className="records-loading" role="status">{loadError?'已有记录保留在本机，可重试读取。':'正在读取本地岗位…'}</p>:selected.length?<>
       <div className="records-job-list">{selected.slice(0,limit).map(item=>{const status=recordStage(item);return <article className="record-card" key={item.job.job_id}>
-        <div className="record-card-heading"><button type="button" className="record-title" onClick={()=>onPrepare(item.job)}>{item.job.title}</button><span className={`record-stage ${status||'browsed'}`}>{status?preparationStages[status]:item.tracking.saved?'已收藏':'已看过'}</span></div>
-        <div className="record-meta"><span>{item.job.company}</span><span>{item.job.locations.join(' / ')||'地点未知'}</span><span className="record-source">{item.job.source.source_name}</span></div>
+        <div className="record-card-heading"><button type="button" className="record-title" onClick={()=>onPrepare(item.job)}>{item.job.title}</button>{(status||item.tracking.saved)&&<span className={`record-stage ${status||'saved'}`}>{status?preparationStages[status]:'已收藏'}</span>}</div>
+        <div className="record-meta"><span>{item.job.company}</span><span>{item.job.locations.join(' / ')||'地点未知'}</span>{item.job.source.source_name!==item.job.company&&<span className="record-source">{item.job.source.source_name}</span>}</div>
         <p className="record-salary">{formatSalary(item.job)}</p>
         {item.preparation?.next_action&&<p className="records-action"><span>下一步</span>{item.preparation.next_action}{item.preparation.due_date&&<time>{item.preparation.due_date}</time>}</p>}
         <JobActions compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>

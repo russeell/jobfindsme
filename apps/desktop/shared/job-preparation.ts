@@ -1,8 +1,11 @@
 import type {AssistantSkillId} from './assistant-skills';
-import type {PreparationStage,PromptSession,SearchResultItem} from './contracts';
+import type {JobPreparationInput,PreparationStage,PromptSession,SearchResultItem} from './contracts';
 import {canonicalJobUrl} from './research-reports';
 
 export const preparationStages:Record<PreparationStage,string>={considering:'考虑中',applied:'已投递',interview:'面试中',offer:'Offer',closed:'已结束'};
+export function preparationHasChanges(current:JobPreparationInput|undefined,saved:JobPreparationInput|undefined):boolean {
+  return !!current&&!!saved&&(['stage','next_action','due_date','note'] as const).some(key=>current[key]!==saved[key]);
+}
 export function proposalMatchesJob(session:PromptSession,job:SearchResultItem['job']):boolean {
   return session.target_job_id?session.target_job_id===job.job_id:!!session.target_url&&!!job.apply_url&&canonicalJobUrl(session.target_url)===canonicalJobUrl(job.apply_url);
 }

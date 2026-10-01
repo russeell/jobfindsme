@@ -704,3 +704,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .records-load-error{font-size:12px;line-height:1.7;color:#9b7373;padding:12px 15px;background:#fcf8f7;border:1px solid #f0e6e3;border-radius:8px}.records-load-error button{font-size:11px;margin-left:8px;padding:4px 9px;background:white}
 .record-card>.record-meta{justify-content:flex-start}
 .records-job-list>.record-card{border-bottom:1px solid #e8ecf0}
+
+/* Compact opportunity rows and optional preparation details. */
+.records-job-list>.record-card{padding:14px 18px}
+.record-card .record-salary{margin:5px 0 8px}
+.record-card .job-actions.compact{padding-top:8px;margin-top:8px}
+.preparation-progress{margin-top:18px;border:1px solid #e8ecf0;border-radius:10px;padding:0 16px}
+.preparation-progress>summary{cursor:pointer;padding:14px 0;font-size:12px;color:#66758a;line-height:1.6}
+.preparation-progress>summary strong{font-size:12px;color:var(--text);font-weight:500;margin-right:14px}
+.preparation-progress>summary span{font-size:11px;overflow-wrap:anywhere}
+.preparation-progress[open]>summary{border-bottom:1px solid #edf0f3;margin-bottom:16px}
+.preparation-progress .preparation-form{padding-bottom:14px}
+.preparation-leave{position:sticky;bottom:-26px;margin:18px -30px -26px;padding:16px 30px;border-top:1px solid #e8ecf0;background:var(--surface);box-shadow:0 -8px 18px #18233306;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.preparation-leave strong{font-size:12px;font-weight:500}
+.preparation-leave p{font-size:11px;color:#858b94;margin:5px 0 0}
+.preparation-leave>div:last-child{display:flex;gap:8px;flex-shrink:0}
+.preparation-leave button{font-size:11px;padding:7px 10px}
+@media(max-width:750px){.preparation-leave{bottom:-22px;margin:18px -20px -22px;padding:14px 20px;flex-wrap:wrap}.preparation-leave>div:last-child{margin-left:auto}.preparation-progress>summary span{display:block;margin:4px 0 0 13px}.records-job-list>.record-card{padding:12px 14px}}
