@@ -76,6 +76,16 @@ export function ResearchPage({selectedSources,active,archiveVisible,newChatNonce
   const runningCount=requestsRef.current.size;
   const [focusedCitation,setFocusedCitation]=useState<{turn:number;number:number}|null>(null);
   const [copiedMessage,setCopiedMessage]=useState<string|null>(null);
+  const [branchSelection,setBranchSelection]=useState<{chatId:string;turnIndex:number}|null>(null);
+  const branchDialog=useRef<HTMLDialogElement>(null);
+  const branchTrigger=useRef<HTMLElement|null>(null);
+  useEffect(()=>{
+    if(!branchSelection)return;
+    const dialog=branchDialog.current;if(!dialog)return;
+    dialog.showModal();dialog.querySelector<HTMLButtonElement>(".research-branch-option")?.focus();
+    return()=>{dialog.close();if(branchTrigger.current?.isConnected)branchTrigger.current.focus();};
+  },[branchSelection]);
+  useEffect(()=>setBranchSelection(null),[workspaceId,chatId,active]);
   const draftsRef=useRef(new Map<string,{text:string;attachments:ChatAttachment[];skillId?:AssistantSkillId}>());
   function rememberDraft(){if(chatIdRef.current&&!requestsRef.current.has(chatIdRef.current))draftsRef.current.set(chatIdRef.current,{text:question,attachments,skillId});}
   const workspaceRef=useRef(workspaceId);
@@ -261,9 +271,15 @@ export function ResearchPage({selectedSources,active,archiveVisible,newChatNonce
   function forkMessage(chat:SavedResearchChat,index:number){
     if(busy)return;
     const fork=branchChat(chat,index,crypto.randomUUID(),new Date().toISOString(),reports);
-    setChats(items=>[fork,...items]);selectHistoryChat(fork);setMessage("");
+    setBranchSelection(null);setChats(items=>[fork,...items]);selectHistoryChat(fork);setMessage("");
+    requestAnimationFrame(()=>inputRef.current?.focus());
   }
   return <div className="research-page research-workbench">
+    {branchSelection&&createPortal(<dialog ref={branchDialog} className="research-branch-dialog" aria-labelledby="research-branch-title" aria-describedby="research-branch-description" onCancel={event=>{event.preventDefault();setBranchSelection(null);}} onClick={event=>{if(event.target!==event.currentTarget)return;const bounds=event.currentTarget.getBoundingClientRect();if(event.clientX<bounds.left||event.clientX>bounds.right||event.clientY<bounds.top||event.clientY>bounds.bottom)setBranchSelection(null);}}>
+      <header><h2 id="research-branch-title">从这里创建聊天分支</h2><button type="button" aria-label="关闭分支选择" onClick={()=>setBranchSelection(null)}>×</button></header>
+      <p id="research-branch-description">保留截至这条回复的消息，原聊天不变。</p>
+      <button type="button" className="research-branch-option" onClick={()=>{const parent=chats.find(chat=>chat.id===branchSelection.chatId);if(parent)forkMessage(parent,branchSelection.turnIndex);else setBranchSelection(null);}}><Icon name="chatBranch"/><span><strong>在此工作区中创建分支</strong><small>从这条消息继续，在新聊天中探索</small></span></button>
+    </dialog>,document.body)}
     {active&&topbarTarget&&job&&createPortal(<div className="button-row" aria-label="岗位操作"><button onClick={()=>openOriginal(job.apply_url)}>岗位原页 ↗</button></div>,topbarTarget)}
     <div ref={scrollRef} className={`research-scroll-region${centeredEmpty?" research-empty-state":""}${activeChat&&!showingReport?" research-conversation":""}`} role="region" aria-label="求职助手对话" tabIndex={0}><div className="research-reading-column">
       {(!activeChat||showingReport)&&<header className={job&&!showingReport?"research-header research-header-job":"research-header"}><div>{job&&!showingReport?<><strong>{job.title}</strong><p>{job.company} · 围绕这个岗位继续聊</p></>:<><h1>{showingReport?(job?.title||report?.job_context?.company||"公司研究"):"有什么求职问题？"}</h1><p>{showingReport?`${job?job.company+" · ":"公司研究 · "}${report&&new Date(report.created_at).toLocaleString()} · ${report&&reportStatus(report)}`:"可以聊岗位、简历、面试，也可以了解公司。"}</p></>}</div></header>}
@@ -282,7 +298,7 @@ export function ResearchPage({selectedSources,active,archiveVisible,newChatNonce
             {item.interrupted&&<small className="note" role="status">已停止 · 内容未完成</small>}
             {attachedReport?<details id={`research-sources-${index}`}><summary>来源与核验详情（{attachedReport.evidence.length}）</summary><ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})} focusedEvidenceId={focusedCitation?.turn===index?attachedReport.evidence[focusedCitation.number-1]?.evidence_id:undefined}/></details>:item.evidence?.length?<details id={`research-sources-${index}`}><summary>来源片段（{item.evidence.length}）</summary>{item.evidence.map((source,sourceIndex)=><article id={`research-source-${index}-${sourceIndex+1}`} tabIndex={-1} className={`evidence-card${focusedCitation?.turn===index&&focusedCitation.number===sourceIndex+1?" research-source-focused":""}`} key={source.evidence_id}><strong>原文片段 [{sourceIndex+1}] · {source.platform}</strong><small>{source.context?.page?`第 ${source.context.page} 页 · `:""}{source.published_at||"发布时间未知"}</small><blockquote>{source.excerpt}</blockquote><p className="note">{source.limitations} · 读取于 {source.retrieved_at}</p>{source.url&&<button type="button" onClick={()=>openBrowser({sourceId:"web",url:source.url!,title:"研究来源"})}>查看原页 ↗</button>}</article>)}</details>:null}
             {!!item.process?.length&&<details className="research-diagnostics"><summary>检索与阅读过程（{item.process.length}）</summary><ol>{item.process.map((step,stepIndex)=><li key={stepIndex}>{({find_evidence:"核对已存材料",search_web:"发现网页",read_page:"读取原页",read_browser_page:"浏览器读取原页",answer_check:"核对陈述",completion_check:"补查缺口"} as Record<string,string>)[step.tool]||step.tool}{step.site?` · ${step.site}`:""} · {step.status}{typeof step.count==="number"?` · ${step.count} 条`:""}</li>)}</ol></details>}
-            <div className="research-message-actions" aria-label="消息操作"><button type="button" aria-label={copiedMessage===`${activeChat.id}-${index}`?"已复制消息":"复制消息"} title="复制消息" onClick={()=>void copyMessage(activeChat,index)}><Icon name="copy"/>{copiedMessage===`${activeChat.id}-${index}`&&<span>已复制</span>}</button>{item.role==="assistant"&&<button type="button" title="从此处新建分支" aria-label="从此处新建分支" onClick={()=>forkMessage(activeChat,index)}><Icon name="branch"/></button>}</div>
+            <div className="research-message-actions" aria-label="消息操作"><button type="button" aria-label={copiedMessage===`${activeChat.id}-${index}`?"已复制消息":"复制消息"} data-tooltip={copiedMessage===`${activeChat.id}-${index}`?"已复制":"复制"} onClick={()=>void copyMessage(activeChat,index)}><Icon name={copiedMessage===`${activeChat.id}-${index}`?"check":"copy"}/></button>{item.role==="assistant"&&<button type="button" data-tooltip="分支到新聊天" aria-label="分支到新聊天" aria-haspopup="dialog" onClick={event=>{branchTrigger.current=event.currentTarget;setBranchSelection({chatId:activeChat.id,turnIndex:index});}}><Icon name="chatBranch"/></button>}</div>
             {item.searchQuery&&<button type="button" className="research-search-action" onClick={()=>onSearchJobs(item.searchQuery!)}>去找工作 · {item.searchQuery}</button>}
           </article>;
         })}

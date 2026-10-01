@@ -2371,6 +2371,28 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D141",
+      "title": "消息操作栏与分支选择设计",
+      "depends_on": [
+        "D139"
+      ],
+      "status": "done",
+      "scope": [
+        "消息复制反馈、分流图标与提示",
+        "先选择再创建的分支弹窗"
+      ],
+      "acceptance": [
+        "弹窗不移动对话，取消不创建分支",
+        "聚焦与关闭恢复正确",
+        "显式选择才创建前缀分支，复制仍可粘贴"
+      ],
+      "verification": "D141真实computer use及截图核对：Esc/关闭恢复焦点，显式创建两条消息的前缀分支，复制后系统粘贴一致；类型构建、diff检查和包审计通过，无模型调用。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

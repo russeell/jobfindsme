@@ -528,11 +528,28 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 
 .agent-job-results{display:grid;gap:10px;margin-top:14px}.agent-job-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:white}.agent-job-card p{font-size:12px;color:var(--muted);margin:5px 0 10px}.agent-job-card button{font-size:12px;padding:6px 10px}
 
-.research-message-actions{display:flex;justify-content:flex-start;gap:4px;margin-top:8px;color:#7b818b}
-.research-message-actions button{display:inline-flex;align-items:center;gap:6px;padding:5px;border:0;border-radius:6px;background:transparent;color:inherit;min-height:28px;font-size:12px}
-.research-message-actions button:hover,.research-message-actions button:focus-visible{background:#f1f3f6;color:#202630}
-.research-message-actions svg{width:15px;height:15px}
-.research-chat-turn.user .research-message-actions{justify-content:flex-end}
+.research-message-actions{display:flex;align-items:center;justify-content:flex-start;gap:3px;margin-top:10px;color:#8a8a8a}
+.research-message-actions button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:6px;border:0;border-radius:50%;background:transparent;color:inherit;transition:background .12s,color .12s}
+.research-message-actions button:hover,.research-message-actions button:focus-visible{background:#ededed;color:#636363}
+.research-message-actions button:focus-visible{outline:2px solid #9ba6b6;outline-offset:2px}
+.research-message-actions svg{width:19px;height:19px;stroke-width:1.65}
+.research-message-actions button::after{content:attr(data-tooltip);position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(3px);padding:7px 11px;border-radius:10px;background:#191919;color:white;font-size:12px;font-weight:500;line-height:1.4;white-space:nowrap;box-shadow:0 3px 12px #0002;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .1s,transform .1s;z-index:20}
+.research-message-actions button:hover::after,.research-message-actions button:focus-visible::after{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.research-chat-turn.user .research-message-actions{justify-content:flex-end;margin-top:6px}
+.research-branch-dialog{width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;padding:24px;border:1px solid #dedede;border-radius:20px;background:var(--surface);color:var(--text);box-shadow:0 18px 70px #0002}
+.research-branch-dialog::backdrop{background:#0002}
+.research-branch-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.research-branch-dialog h2{margin:0;font-size:20px;font-weight:600;letter-spacing:-.03em}
+.research-branch-dialog>header>button{display:grid;place-items:center;flex-shrink:0;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:transparent;font-size:23px;color:#8a8a8a}
+.research-branch-dialog>header>button:hover{background:#f0f0f0;color:#333}
+.research-branch-dialog>p{margin:8px 0 20px;font-size:12px;line-height:1.6;color:var(--text-muted)}
+.research-branch-dialog>.research-branch-option{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:0;border-radius:12px;text-align:left;background:#f4f4f4;color:var(--text)}
+.research-branch-dialog>.research-branch-option:hover{background:#ededed}
+.research-branch-option>svg{width:21px;height:21px;flex-shrink:0;color:#6c6c6c}
+.research-branch-option>span{display:grid;gap:4px}
+.research-branch-option strong{font-size:14px;font-weight:500}
+.research-branch-option small{font-size:12px;line-height:1.5;color:var(--text-muted)}
+@media(prefers-reduced-motion:reduce){.research-message-actions button,.research-message-actions button::after{transition:none}}
 .research-branch-origin{display:flex;align-items:center;gap:8px;color:#7b818b;font-size:12px;margin-bottom:20px}
 .research-branch-origin button{border:0;background:transparent;color:inherit;padding:4px;text-decoration:underline}
 .research-history-running{color:#64758c;float:right}
