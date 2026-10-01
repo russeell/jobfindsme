@@ -11,7 +11,7 @@ import {useOriginalBrowser} from "../shared/Workbench";
 import {SearchFilters as FilterControls} from "./SearchFilters";
 import {sourceBrowserIdForSourceName} from "../../../shared/source-browser-policy";
 import {formatSalary} from "./salary";
-import {ResumePage} from "../resume/ResumePage";
+import {ResumeDialog} from "../resume/ResumeDialog";
 import {selectedSourceContinuation,remoteSearchScopeChanged,searchPageForCurrentFilters,mergeSearchCoverage,unstartedSourceIds,keepVisibleSearchPage,keepSelectedSearchJob,sourceRunNeedsAttention,progressBelongsToRun} from "../../../shared/search-scope";
 
 const messageOf = (e:unknown) => e instanceof Error ? e.message : String(e);
@@ -45,19 +45,8 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [resumeState,setResumeState]=useState<ResumeState>();
   const [resumeOpen,setResumeOpen]=useState(false);
   const resumeTrigger=useRef<HTMLButtonElement>(null);
-  const resumeClose=useRef<HTMLButtonElement>(null);
-  const resumeDialog=useRef<HTMLDivElement>(null);
   function closeResume(){setResumeOpen(false);resumeTrigger.current?.focus();}
   useEffect(()=>{if(!active)setResumeOpen(false);},[active]);
-  useEffect(()=>{if(!resumeOpen||!active)return;resumeClose.current?.focus();const onKey=(event:KeyboardEvent)=>{
-    if(event.key==="Escape"){event.preventDefault();closeResume();return;}
-    if(event.key!=="Tab"||!resumeDialog.current)return;
-    const focusable=Array.from(resumeDialog.current.querySelectorAll<HTMLElement>("button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href],summary")).filter(element=>element.getClientRects().length>0);
-    if(!focusable.length)return;
-    const first=focusable[0],last=focusable[focusable.length-1];
-    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
-    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
-  };window.addEventListener("keydown",onKey);return()=>window.removeEventListener("keydown",onKey);},[resumeOpen,active]);
   useEffect(()=>{if(!workspaceId)return;let cancelled=false;const refresh=()=>{void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(cancelled)return;const states=new Map(rows.map(row=>[row.job.job_id,row]));setSelected(current=>{const value=current&&states.get(current.job.job_id);return current&&value?{...current,job:value.job,tracking:value.tracking,score_basis_outdated:current.job.description!==value.job.description||current.score_basis_outdated}:current;});setPage(current=>current&&({...current,items:current.items.map(item=>{const value=states.get(item.job.job_id);return value?{...item,tracking:value.tracking}:item;})}));}).catch(error=>onError(messageOf(error)));};window.addEventListener("jfm:job-updated",refresh);return()=>{cancelled=true;window.removeEventListener("jfm:job-updated",refresh);};},[workspaceId,onError]);
   const detailPending=useRef(new Set<string>());
   const [detailTimes,setDetailTimes]=useState<Record<string,{fetched_at:string;elapsed_ms?:number}>>({});
@@ -291,6 +280,6 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
         {selected.model_match&&<details className="model-evidence"><summary>历史模型分析记录</summary>{selected.model_match.evidence.map((entry,index)=><p className="note" key={index}>简历：{entry.resume_quote}<br/>JD：{entry.jd_quote}</p>)}<p className="note">未知：{selected.model_match.unknowns.join("；")||"未列出"}</p></details>}
       </div>:<div className="empty"><strong>选择一个岗位</strong><p>从左侧列表查看岗位职责与原页。</p></div>}
       {result && <details className="source-coverage"><summary>来源覆盖与实际检索词</summary><p>计划：{(result.planned_queries||[]).map(query=>`${sources.find(s=>s.source_id===query.source_id)?.name||query.source_id} / ${query.keyword} / ${query.city||"城市不限"}`).join("；")||result.keywords.join(" · ")}</p><p>已检索：{(result.executed_queries||[]).map(query=>`${sources.find(s=>s.source_id===query.source_id)?.name||query.source_id} / ${query.keyword} / ${query.city||"城市不限"}`).join("；")||"无"}。薪资与其他条件在本地筛选。</p>{result.source_diagnostics&&<p>首批可用岗位：{result.source_diagnostics.first_usable_ms==null?"尚无":`${(result.source_diagnostics.first_usable_ms/1000).toFixed(1)} 秒`} · 本次开始于 {new Date(result.source_diagnostics.started_at).toLocaleString()}</p>}{sources.map((source) => { const run = result.source_runs.find((item) => item.source_id === source.source_id); return <p key={source.source_id}>{source.name}：{run ? `${run.status==="success"?"已完成":run.status==="partial"?"部分结果":"未完成"} · ${result.source_diagnostics?.sources[source.source_id]?`${(result.source_diagnostics.sources[source.source_id].elapsed_ms/1000).toFixed(1)} 秒 · ${result.source_diagnostics.sources[source.source_id].records} 条候选 · `:""}${run.pages_fetched} ${source.source_id==="boss"?"采集批次":"页"} · ${run.coverage_status==="complete"?"本次范围已读完":"未覆盖全部岗位"} · ${runReason(run.stop_reason)}` : result.blocked_sources[source.source_id] ?? "未执行"}</p>; })}</details>}</aside></div>
-    {active&&resumeOpen&&<div className="resume-modal-backdrop" data-browser-overlay="modal" onMouseDown={event=>{if(event.target===event.currentTarget)closeResume();}}><div ref={resumeDialog} className="resume-modal" role="dialog" aria-modal="true" aria-label="简历维护"><header className="resume-modal-header"><strong>简历维护</strong><button ref={resumeClose} type="button" onClick={closeResume} aria-label="关闭简历维护">关闭 ×</button></header><ResumePage onChanged={setResumeState}/></div></div>}
+    {active&&resumeOpen&&<ResumeDialog onClose={closeResume} onChanged={setResumeState}/>}
     </div>;
 }
