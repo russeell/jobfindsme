@@ -63,8 +63,8 @@ export type DesktopBridge = {
   onSourceStatusChanged(listener: () => void): () => void;
   onSourceCollectionProgress(listener: (progress:SourceCollectionProgress) => void): () => void;
   cancelSourceSearch():Promise<void>;
-  readBossDetail(url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;job?:SearchResultItem["job"]}>;
-  readSourceDetail(sourceId:string,url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;job?:SearchResultItem["job"]}>;
+  readBossDetail(url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;elapsed_ms?:number;job?:SearchResultItem["job"]}>;
+  readSourceDetail(sourceId:string,url:string,workspaceId?:string,jobId?:string):Promise<{title:string;company:string;location?:string;salary?:string;description:string;url:string;fetched_at:string;elapsed_ms?:number;job?:SearchResultItem["job"]}>;
   verifySource(sourceId: string): Promise<SourceCapability>;
   checkAllSources(runId:string):Promise<SourceCheckResult[]>;
   cancelAllSourceChecks():Promise<void>;
@@ -116,6 +116,7 @@ export type DesktopBridge = {
   pickChatAttachments(kind:"files"|"folder"|"mixed"):Promise<ChatAttachmentSelection>;
   runResearchChat(input:ResearchChatInput):Promise<ResearchChatResult>;
   cancelResearchChat(requestId:string):Promise<void>;
+  copyChatText(text:string):Promise<void>;
   onResearchChatDelta(listener:(event:ResearchChatDelta)=>void):()=>void;
   listScheduledTasks(workspaceId: string): Promise<ScheduledTask[]>;
   createScheduledTask(input: ScheduledTaskInput): Promise<ScheduledTask>;
@@ -124,6 +125,7 @@ export type DesktopBridge = {
   secureStorageAvailable(retry?: boolean): Promise<boolean>;
   getServiceStatus(): Promise<ServiceStatus>;
   onSourceBrowserStateChanged(listener:(state:SourceBrowserState)=>void):()=>void;
+  onBrowserRecovery(listener:()=>void):()=>void;
   onSourceBrowserFocus(listener:()=>void):()=>void;
   onServiceStatus(listener: (status: ServiceStatus) => void): () => void;
 };
@@ -405,10 +407,10 @@ export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatProcessStep = {tool:string;status:string;site?:string;count?:number};
 export type InterviewState={asked:string[];weaknesses:string[];follow_up_reason:string;current_question:string};
-export type ResearchChatTurn = {resumeProposalId?:string;interviewState?:InterviewState;attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
-export type ResearchChatInput = {interview_state?:InterviewState;attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
+export type ResearchChatTurn = {jobs?:SearchResultItem["job"][];resumeProposalId?:string;interviewState?:InterviewState;attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatInput = {source_ids?:string[];interview_state?:InterviewState;attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};
-export type ResearchChatResult = {resumeProposalId?:string;interviewState?:InterviewState;text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
+export type ResearchChatResult = {jobs?:SearchResultItem["job"][];resumeProposalId?:string;interviewState?:InterviewState;text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 
 export type SecretStorageMode = "system" | "local_file";
 
@@ -443,7 +445,7 @@ export type ServiceStatus = {
 export type ResearchDirection = "role" | "workload" | "salary" | "leave" | "care";
 export type ResearchCorrectionInput = {workspace_id:string;evidence_id:string;kind:"wrong_entity"|"broken_link"|"wrong_team"|"other";note:string};
 export type ResearchEvidence = {
-  context?: {link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|"question"|null;source_type?:"official_disclosure"|"personal_account"|"public_web";content_type?:string;page?:number|null;start_char?:number;end_char?:number;passage_id?:string;source_id?:string};
+  context?: {requested_url?:string;redirect_chain?:string[];reader?:string;tab_id?:string;content_hash?:string;cache_status?:string;cached_at?:string;link_status?:"reachable"|"broken"|"unavailable"|"unknown";role?:string|null;level?:string|null;region?:string|null;company_match?:string;research_topic?:"company"|"job"|null;search_angle?:"business"|"listing"|"positive"|"negative"|"workload"|"benefits"|"role"|"development"|"question"|null;source_type?:"official_disclosure"|"personal_account"|"public_web";content_type?:string;page?:number|null;start_char?:number;end_char?:number;passage_id?:string;source_id?:string};
   evidence_id: string;
   url: string | null;
   platform: string;

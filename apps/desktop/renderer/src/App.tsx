@@ -61,7 +61,7 @@ export function App() {
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
   const [researchBusy,setResearchBusy]=useState(false);
   const [newChatNonce,setNewChatNonce]=useState(0);
-  function openNewChat(){if(researchBusy){setPage("research");return;}setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
+  function openNewChat(){setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
   const [suggestedSearch,setSuggestedSearch]=useState<{query:string;nonce:number}>();
   useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }); }, [page]);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({ connected: false, message: "本地服务正在启动" });
@@ -104,7 +104,7 @@ export function App() {
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
       {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={job=>{setResearchTarget(job);setPage("research");}} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
-      <div className="research-mount" hidden={page!=="research"}><ResearchPage onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
+      <div className="research-mount" hidden={page!=="research"}><ResearchPage selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       {page==="records"&&<RecordsPage reports={reports} data={data} onResearch={job=>{setResearchTarget(job);setPage("research");}} onError={setError}/>}
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>

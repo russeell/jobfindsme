@@ -3,7 +3,7 @@ import type {Discovery} from "./pi-research-agent.mjs" with {"resolution-mode":"
 
 const ENDPOINT="https://mcp.exa.ai/mcp";
 export const retrievalSites:Record<string,string>={web:"",github:"github.com",papers:"arxiv.org OR site:doi.org OR site:aclanthology.org",cninfo:"cninfo.com.cn",sse:"sse.com.cn",szse:"szse.cn",hkex:"hkexnews.hk",maimai:"maimai.cn",kanzhun:"kanzhun.com",zhihu:"zhihu.com",offershow:"offershow.cn"};
-type Input={company:string;query:string;site:string;originalQuestion:string};
+type Input={workspace?:string;company:string;query:string;site:string;originalQuestion:string};
 type Fallback=(input:Input,signal:AbortSignal,timeoutMs:number)=>Promise<Discovery[]>;
 
 export function parseExaDiscovery(body:string,site:string):Discovery[]{
@@ -46,11 +46,15 @@ async function boundedBody(response:Response):Promise<string>{
 // Read-only, fixed official endpoint. No local MCP server, command execution,
 // global Agent Reach configuration, OAuth token or user model key is involved.
 export function createPublicRetrieval(fetcher:typeof fetch=fetch,clock=Date.now){
+  const cache=new Map<string,{at:number;rows:Discovery[]}>();
+  const remember=(key:string,rows:Discovery[])=>{if(rows.length){cache.set(key,{at:clock(),rows:structuredClone(rows)});if(cache.size>100)cache.delete(cache.keys().next().value!);}return rows;};
   let cooldownUntil=0;let lastStatus="not_probed";let fallbackStatus="not_probed";
   const status=()=>({skill:"web-retrieval",providers:[{id:"exa_public",configured:true,status:clock()<cooldownUntil?"cooldown":lastStatus},{id:"public_search",configured:true,status:fallbackStatus}],privacy:"仅发送公开查询词；摘要不能作为原文证据"});
   async function search(input:Input,fallback:Fallback,signal:AbortSignal,timeoutMs:number):Promise<Discovery[]>{
     if(!Object.hasOwn(retrievalSites,input.site)||!input.query.trim()||input.query.length>700||input.company.length>100)throw Error("invalid retrieval request");
     if(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|\b(?:sk-|AIza)[A-Za-z0-9_-]{12,}|\b1[3-9]\d{9}\b|\/Users\/[^\s]+|[A-Z]:\\Users\\/i.test(input.company+" "+input.query))throw Error("公开检索词不能包含邮箱、手机号、密钥或私人文件路径。");
+    if(signal.aborted)throw Error("cancelled");
+    const key=JSON.stringify([input.workspace||"app",input.company,input.query,input.site]),cached=cache.get(key);if(cached&&clock()-cached.at<60000)return structuredClone(cached.rows);
     const deadline=clock()+Math.min(10000,Math.max(100,timeoutMs));
     const remaining=()=>Math.max(0,deadline-clock());
     let primaryFailure="";
@@ -66,7 +70,7 @@ export function createPublicRetrieval(fetcher:typeof fetch=fetch,clock=Date.now)
         }
         const rows=parseExaDiscovery(await boundedBody(response),input.site);
         lastStatus=rows.length?"candidates":"no_results";
-        if(rows.length)return rows;
+        if(rows.length)return remember(key,rows);
       }catch(error){
         if(signal.aborted)throw Error("cancelled");
         primaryFailure=error instanceof Error?error.message:"retrieval:unavailable";
@@ -82,7 +86,7 @@ export function createPublicRetrieval(fetcher:typeof fetch=fetch,clock=Date.now)
       fallbackStatus="running";const rows=await fallback(input,signal,remaining());
       fallbackStatus=rows.length?"candidates":"no_results";
       if(!rows.length&&primaryFailure)throw Error("主检索不可用，备用检索没有取得候选");
-      return rows;
+      return remember(key,rows);
     }
     catch(error){if(signal.aborted)throw Error("cancelled");if(fallbackStatus!=="no_results")fallbackStatus="unavailable";if(primaryFailure)throw Error(`公开检索服务未能完成（${primaryFailure.startsWith("retrieval:HTTP")?primaryFailure:"主检索不可用"}；备用检索不可用）`);throw error;}
   }

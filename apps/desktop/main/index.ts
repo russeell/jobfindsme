@@ -7,7 +7,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, shell, safeStorage } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell, safeStorage } from "electron";
 
 import type { DesktopApiClient } from "./backend/api-client";
 import { saveModelConnectionWithSecret, deleteModelConnectionWithSecret } from "./backend/model-connection-service";
@@ -16,7 +16,11 @@ import { SecureSecretStore } from "./security/secure-secret-store";
 import { SourceBrowserManager } from "./browser/source-browser";
 import {classifyBackgroundLoginPrompt,runSourceCheckQueue,shouldAutoCheckSource} from "./sources/source-check-queue";
 import {executeBoundedSourceSearch} from "./sources/source-search-execution";
-import {readIsolatedResearchPage} from "./research/browser-page";
+import {createOriginalReader} from "./research/original-reader";
+import {snapshotEvidence} from "./research/browser-snapshot";
+import {hasFullDescription} from "../shared/research-reports";
+import {sourceBrowserIdForSourceName,sourceBrowserIdForUrl} from "../shared/source-browser-policy";
+const readOriginal=createOriginalReader();
 import {ResearchRunController} from "./research/run-controller";
 import {explicitReportRequest,validResearchChatInput} from "../shared/research-chat-ipc";
 import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, sourceSearchVerification, type SourceBrowserBounds } from "../shared/source-browser-policy";
@@ -154,7 +158,7 @@ async function createWindow(): Promise<void> {
     if(state===lastBossState&&!explicit&&!revisit)return;
     if(state==="ready"||state==="logged_in") {
       if(current?.session_status==="blocked" || sourceBrowserManager?.boss.paused==="risk_control")return;
-      sourceBrowserManager?.boss.resume();
+      sourceBrowserManager?.resumeBossSearch();
       if(current?.session_status!=="blocked"&&(current?.session_status!=="verified"||current.list_status!=="verified"))await apiClient.recordSourceVerification("boss",{session_status:"verified",list_status:"partial",detail_status:current?.detail_status||"unverified",fields_status:current?.fields_status||"unverified",pagination_status:current?.pagination_status||"unverified",enabled:false,notes:"当前平台页显示已登录；岗位列表和自动检索仍待单独检查。"});
       const last=sourceAutoCheckAt.get("boss")||0;
       if(!probeOnly&&!recent&&!sourceAutoCheckPending.has("boss")&&Date.now()-last>600000){
@@ -263,23 +267,26 @@ ipcMain.handle("desktop:get-bootstrap", async () => {
   return apiClient.bootstrap();
 });
 let sourceSearchActive=0;
-ipcMain.handle("desktop:run-source-search", async (event, input: SourceSearchInput) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) {
-    throw new Error("desktop API is not ready");
-  }
+let sourceSearchController:AbortController|undefined;
+async function runDesktopSearch(input:SourceSearchInput,signal?:AbortSignal){
+  if(!apiClient)throw Error("desktop API is not ready");
   if(!Array.isArray(input.source_ids)||!input.source_ids.length)throw new Error("请先选择岗位来源。");
   if(sourceCheckController)throw Error("全部来源检查进行中，请先结束检查");
   if(sourceVerifyActive.size)throw Error("单个平台检查进行中，请结束后再检索岗位");
   if(sourceSearchActive)throw Error("岗位检索进行中，请先停止当前检索。");
   sourceSearchActive++;
+  const controller=new AbortController();sourceSearchController=controller;
+  const abort=()=>{controller.abort();sourceBrowserManager?.cancelBossSearch();sourceBrowserManager?.cancelCareerSearch();};
+  if(signal?.aborted)abort();signal?.addEventListener("abort",abort,{once:true});
   try{
   input={...input,filters:normalizeDiscoveryFilters(input.filters)};
   return await executeBoundedSourceSearch(input,{client:apiClient,manager:sourceBrowserManager,
-    getCancellationEpoch:()=>sourceSearchEpoch,
+    signal:controller.signal,getCancellationEpoch:()=>sourceSearchEpoch,
     onProgress:value=>mainWindow?.webContents.send("desktop:source-collection-progress",value),
     onSourceStatusChanged:()=>mainWindow?.webContents.send("desktop:source-status-changed")});
-  }finally{sourceSearchActive--;}
-});
+  }finally{signal?.removeEventListener("abort",abort);sourceSearchActive--;if(sourceSearchController===controller)sourceSearchController=undefined;}
+}
+ipcMain.handle("desktop:run-source-search",(event,input:SourceSearchInput)=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");return runDesktopSearch(input);});
 
 let sourceSearchEpoch=0;
 ipcMain.handle("desktop:search-preflight",(event,input)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.searchPreflight(input);});
@@ -450,15 +457,17 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   finally{clearTimeout(timer);mainWindow?.webContents.send("desktop:source-status-changed");}
   }finally{sourceVerifyActive.delete(sourceId);}
 });
-ipcMain.handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceBrowserManager?.boss.cancel();sourceBrowserManager?.cancelCareerSearch();});
+ipcMain.handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceSearchController?.abort();sourceBrowserManager?.cancelBossSearch();sourceBrowserManager?.cancelCareerSearch();});
 ipcMain.handle("desktop:read-source-detail",async(event,sourceId:string,url:string,workspaceId?:string,jobId?:string)=>{
   if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||!isSourceBrowserId(sourceId)||typeof url!=="string")throw Error("unauthorized caller");
-  const detail={...await sourceBrowserManager.readResearchJob(sourceId,url),fetched_at:new Date().toISOString()};
-  return {...detail,job:workspaceId&&jobId?await apiClient.enrichSourceJob(workspaceId,jobId,detail):undefined};
+  const started=Date.now();
+  const detail={...await sourceBrowserManager.readResearchJob(sourceId,url,undefined,21000,workspaceId),fetched_at:new Date().toISOString()};
+  const job=workspaceId&&jobId?await apiClient.enrichSourceJob(workspaceId,jobId,detail):undefined;
+  return {...detail,job,elapsed_ms:Date.now()-started};
 });
 ipcMain.handle("desktop:read-boss-detail",async(event,url:string,workspaceId?:string,jobId?:string)=>{
   if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||typeof url!=="string")throw Error("unauthorized caller");
-  try{const detail=await sourceBrowserManager.boss.readDetail(url);return {...detail,job:workspaceId&&jobId?await apiClient.enrichBossJob(workspaceId,jobId,detail):undefined};}catch(error){const failure=sourceBrowserManager.boss.paused;if(failure){await apiClient.recordSourceRuntimeFailure("boss",failure,"BOSS 已暂停，请在平台原页处理");mainWindow?.webContents.send("desktop:source-status-changed");}throw error;}
+  try{const started=Date.now();const detail={...await sourceBrowserManager.readResearchJob("boss",url,undefined,21000,workspaceId),fetched_at:new Date().toISOString()};const job=workspaceId&&jobId?await apiClient.enrichBossJob(workspaceId,jobId,detail):undefined;return {...detail,job,elapsed_ms:Date.now()-started};}catch(error){const failure=sourceBrowserManager.boss.paused;if(failure){await apiClient.recordSourceRuntimeFailure("boss",failure,"BOSS 已暂停，请在平台原页处理");mainWindow?.webContents.send("desktop:source-status-changed");}throw error;}
 });
 ipcMain.handle("desktop:layout-source-browser", (event, bounds: SourceBrowserBounds | null) => {
   if (event.sender !== mainWindow?.webContents) throw new Error("unauthorized caller");
@@ -788,30 +797,46 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     const {runPiResearchAgent}=await import("./research/pi-research-agent.mjs");
     if(run.signal.aborted)throw Error("cancelled");
     phase="agent";
-    return await runPiResearchAgent({skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
+    const previousState=await apiClient.agentContinuation(input.workspace_id,input.session_id);
+    return await runPiResearchAgent({previousState,skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
       {
+        searchJobs:(query,cities,previous,signal,ms)=>{
+          const cursors=Object.fromEntries((previous?.source_runs||[]).filter(source=>source.can_continue&&source.next_cursor).map(source=>[source.source_id,source.next_cursor!]));
+          const sourceIds=previous?previous.allowed_source_ids.filter(id=>Object.hasOwn(cursors,id)):input.source_ids||[];
+          if(previous&&!sourceIds.length)return Promise.resolve(previous);
+          return runDesktopSearch({workspace_id:input.workspace_id,intent:query,filters:normalizeDiscoveryFilters({cities}),source_ids:sourceIds,source_cursors:cursors,existing_run_id:previous?.result_page.run_id,max_pages:1,time_budget_seconds:Math.min(15,ms/1000),page_size:10},signal);
+        },
+        browser:(operation,value,signal,ms)=>{if(!sourceBrowserManager)throw Error("browser unavailable");return sourceBrowserManager.taskBrowser(input.workspace_id+"/"+input.request_id,operation,value,signal,ms);},
         readResume:()=>apiClient!.agentResume(input.workspace_id),
         findLocalJobs:title=>apiClient!.findAgentLocalJobs(input.workspace_id,title),
         proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),
         findEvidence:(company,signal,timeoutMs)=>apiClient!.findAgentEvidence(input.workspace_id,company,signal,timeoutMs),
         retrievalStatus:()=>publicRetrieval.status(),
-        searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>publicRetrieval.search({company,query:searchQuery,site,originalQuestion},(query,signal,remaining)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company:query.company,original_question:query.originalQuestion,search_query:query.query,site:query.site,timeout_ms:remaining},signal,remaining),signal,timeoutMs),
-        readPage:(company,site,url,signal,timeoutMs,question)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url,question,timeout_ms:timeoutMs},signal,timeoutMs),
-        readJob:(jobId,signal,timeoutMs)=>apiClient!.readAgentJob(input.workspace_id,jobId,signal,timeoutMs),
-        readBrowserPage:(company,site,url,signal,timeoutMs)=>readIsolatedResearchPage(company,site,url,signal,timeoutMs),
+        searchWeb:(company,searchQuery,site,originalQuestion,signal,timeoutMs)=>publicRetrieval.search({workspace:input.workspace_id,company,query:searchQuery,site,originalQuestion},(query,signal,remaining)=>apiClient!.searchAgentSources({workspace_id:input.workspace_id,company:query.company,original_question:query.originalQuestion,search_query:query.query,site:query.site,timeout_ms:remaining},signal,remaining),signal,timeoutMs),
+        readPage:(company,site,url,signal,timeoutMs,question)=>readOriginal({workspace:input.workspace_id,session:sourceBrowserIdForUrl(url)||"web",site,url,company,focus:question||""},
+          (signal,ms)=>apiClient!.readAgentPage({workspace_id:input.workspace_id,company,site,url,question,timeout_ms:ms},signal,ms),
+          async(signal,ms)=>{if(!sourceBrowserManager)return {status:"read_failed",url} as import("../shared/contracts").ResearchEvidence&{status:string};try{const page=await sourceBrowserManager.taskBrowser(input.workspace_id+"/"+input.request_id,"open",{url},signal,ms);const row=snapshotEvidence(page,company,site,question);return {...row,context:{...row.context,requested_url:url,redirect_chain:[page.url]}};}catch(error){if(signal.aborted)throw error;return {status:"read_failed",url} as import("../shared/contracts").ResearchEvidence&{status:string};}},signal,timeoutMs),
+        readJob:async(jobId,signal,timeoutMs)=>{
+          const job=await apiClient!.readAgentJob(input.workspace_id,jobId,signal,timeoutMs);
+          if(hasFullDescription(job)||!sourceBrowserManager)return job;
+          const source=sourceBrowserIdForSourceName(job.source.source_name);if(!source)return job;
+          try{const detail=await sourceBrowserManager.readResearchJob(source,job.apply_url,signal,timeoutMs,input.workspace_id);if(signal.aborted)throw Error("cancelled");return await apiClient!.enrichSourceJob(input.workspace_id,jobId,{...detail,fetched_at:new Date().toISOString()});}
+          catch(error){if(signal.aborted)throw error;return {...job,detail_status:"read_failed",detail_message:"完整JD未读到，保留列表原文。"};}
+        },
+        readBrowserPage:async(company,site,url,signal,timeoutMs)=>{if(!sourceBrowserManager)throw Error("browser unavailable");return snapshotEvidence(await sourceBrowserManager.taskBrowser(input.workspace_id+"/"+input.request_id,"open",{url},signal,timeoutMs),company,site);},
         saveExecution:state=>apiClient!.saveAgentExecution(state),
         saveReport:state=>apiClient!.saveAgentReport(state),
       },
-      (delta,content_status)=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta,content_status});},run.signal,
-      progress=>{if(!run.signal.aborted&&chatRuns.current===run)event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,progress});});
+      (delta,content_status)=>{if(!run.signal.aborted&&chatRuns.has(run))event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,delta,content_status});},run.signal,
+      progress=>{if(!run.signal.aborted&&chatRuns.has(run))event.sender.send("desktop:research-chat-delta",{request_id:input.request_id,session_id:input.session_id,workspace_id:input.workspace_id,progress});});
   }catch(error){
     if(run.signal.aborted)throw Error("cancelled");
     // Only expose a stage for setup failures; never send credentials, paths or
     // backend response bodies to the renderer. Agent errors have their own UI mapping.
     if(phase!=="agent")throw Error(`assistant_failure:${phase}`);
     throw error;
-  }finally{chatRuns.finish(run);}
+  }finally{sourceBrowserManager?.releaseTaskBrowser(input.workspace_id+"/"+input.request_id);chatRuns.finish(run);}
 });
 ipcMain.handle("desktop:list-research-chats",async(event,workspaceId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
@@ -828,10 +853,14 @@ ipcMain.handle("desktop:save-research-chat",async(event,input:Record<string,unkn
 for(const [channel,action] of [["archive",(workspaceId:string,id:string)=>apiClient!.archiveAgentConversation(workspaceId,id)],["restore",(workspaceId:string,id:string)=>apiClient!.restoreAgentConversation(workspaceId,id)],["delete-archived",(workspaceId:string,id:string)=>apiClient!.deleteArchivedAgentConversation(workspaceId,id)]] as const){
   ipcMain.handle(`desktop:${channel}-research-chat`,async(event,workspaceId:string,id:string)=>{
     if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string"||typeof id!=="string")throw Error("research unavailable");
-    if(chatRuns.current?.sessionId===id&&chatRuns.current.workspaceId===workspaceId)throw Error("当前对话运行中，请先停止再整理历史");
+    if(chatRuns.forSession(workspaceId,id))throw Error("当前对话运行中，请先停止再整理历史");
     await action(workspaceId,id);
   });
 }
+ipcMain.handle("desktop:copy-chat-text",(event,text:string)=>{
+  if(event.sender!==mainWindow?.webContents||typeof text!=="string"||text.length>100000)throw Error("invalid clipboard request");
+  clipboard.writeText(text);
+});
 ipcMain.handle("desktop:cancel-research-chat",async(event,requestId:string)=>{
   if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
   if(requestId)chatRuns.cancel(requestId);

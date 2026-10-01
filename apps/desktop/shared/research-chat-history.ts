@@ -2,7 +2,7 @@ import type {ResearchChatDelta,ResearchChatTurn} from "./contracts";
 import type {PendingResearch} from "./research-dialogue";
 import type {ChatAttachment} from "./chat-attachments";
 
-export type SavedResearchChat={id:string;title:string;updatedAt:string;turns:ResearchChatTurn[];reportIds:string[];subjectCompany?:string;subjectTitle?:string;jobId?:string;researchMode?:boolean;draft?:string;failure?:string;pendingResearch?:PendingResearch};
+export type SavedResearchChat={id:string;title:string;updatedAt:string;turns:ResearchChatTurn[];reportIds:string[];subjectCompany?:string;subjectTitle?:string;jobId?:string;researchMode?:boolean;draft?:string;failure?:string;pendingResearch?:PendingResearch;branchOf?:{chatId:string;turnIndex:number}};
 const key=(workspaceId:string)=>`jobfindsme:research-chat:${workspaceId}`;
 export type ActiveResearchRequest={id:string;workspaceId:string;sessionId:string;kind:"model"|"report"};
 export const acceptsResearchDelta=(active:ActiveResearchRequest|null,event:ResearchChatDelta,workspaceId?:string)=>!!active&&active.kind==="model"&&active.id===event.request_id&&active.workspaceId===event.workspace_id&&active.sessionId===event.session_id&&workspaceId===event.workspace_id;
@@ -11,15 +11,15 @@ export function beginChat(chat:SavedResearchChat|undefined,id:string,question:st
   const turns=chat?.turns||[];
   const retry=chat?.draft===question&&turns.at(-1)?.role==="user"&&turns.at(-1)?.text===question;
   const history=retry?turns.slice(0,-1):turns;
-  return {history,chat:{id,title:chat?.title||question.slice(0,40),updatedAt:at,turns:retry?turns:[...turns,{role:"user",text:question}],reportIds:chat?.reportIds||[],subjectCompany:chat?.subjectCompany,subjectTitle:chat?.subjectTitle,jobId:chat?.jobId,researchMode:chat?.researchMode,draft:question,pendingResearch:chat?.pendingResearch}};
+  return {history,chat:{id,title:chat?.title||question.slice(0,40),updatedAt:at,turns:retry?turns:[...turns,{role:"user",text:question}],reportIds:chat?.reportIds||[],subjectCompany:chat?.subjectCompany,subjectTitle:chat?.subjectTitle,jobId:chat?.jobId,researchMode:chat?.researchMode,draft:question,branchOf:chat?.branchOf,pendingResearch:chat?.pendingResearch}};
 }
 export function retryChatAttachments(chat:SavedResearchChat):ChatAttachment[]{
   const pending=chat.turns.at(-1);
   return chat.draft&&pending?.role==="user"&&pending.text===chat.draft?[...(pending.attachments||[])]:[];
 }
 
-export function finishChat(chat:SavedResearchChat,text:string,reportId:string|undefined,at:string,details?:{resumeProposalId?:string;interviewState?:ResearchChatTurn["interviewState"];evidence?:ResearchChatTurn["evidence"];process?:ResearchChatTurn["process"]}):SavedResearchChat{
-  return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text,...(reportId?{reportId}:{}),...(details?.resumeProposalId?{resumeProposalId:details.resumeProposalId}:{}),...(details?.interviewState?{interviewState:details.interviewState}:{}),...(details?.evidence?.length?{evidence:details.evidence}:{}),...(details?.process?.length?{process:details.process}:{})}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
+export function finishChat(chat:SavedResearchChat,text:string,reportId:string|undefined,at:string,details?:{jobs?:ResearchChatTurn["jobs"];resumeProposalId?:string;interviewState?:ResearchChatTurn["interviewState"];evidence?:ResearchChatTurn["evidence"];process?:ResearchChatTurn["process"]}):SavedResearchChat{
+  return {...chat,updatedAt:at,turns:[...chat.turns,{role:"assistant",text,...(reportId?{reportId}:{}),...(details?.jobs?.length?{jobs:details.jobs}:{}),...(details?.resumeProposalId?{resumeProposalId:details.resumeProposalId}:{}),...(details?.interviewState?{interviewState:details.interviewState}:{}),...(details?.evidence?.length?{evidence:details.evidence}:{}),...(details?.process?.length?{process:details.process}:{})}],reportIds:reportId?[...chat.reportIds,reportId]:chat.reportIds,draft:undefined,failure:undefined,pendingResearch:undefined};
 }
 
 export function stopChat(chat:SavedResearchChat,text:string,status:ResearchChatDelta["content_status"],at:string):SavedResearchChat{
@@ -55,6 +55,20 @@ export function reportIdsByTurn(chat:SavedResearchChat,reports:Array<{report_id:
   return assigned;
 }
 
+function validBranch(value:unknown):SavedResearchChat["branchOf"]{
+  if(!value||typeof value!=="object")return;
+  const branch=value as Record<string,unknown>;
+  if(typeof branch.chatId==="string"&&branch.chatId.length<=100&&Number.isInteger(branch.turnIndex)&&Number(branch.turnIndex)>=0)return {chatId:branch.chatId,turnIndex:Number(branch.turnIndex)};
+}
+export function branchChat(chat:SavedResearchChat,turnIndex:number,id:string,at:string,reports:Parameters<typeof reportIdsByTurn>[1]=[]):SavedResearchChat{
+  if(!id||id===chat.id||!Number.isInteger(turnIndex)||chat.turns[turnIndex]?.role!=="assistant")throw Error("请选择已完成的回复创建分支。");
+  const linked=reportIdsByTurn(chat,reports);
+  const turns=structuredClone(chat.turns.slice(0,turnIndex+1));
+  for(const [index,turn] of turns.entries())if(linked.has(index))turn.reportId=linked.get(index);
+  const latest=turnIndex===chat.turns.length-1;
+  return {id,title:`${chat.title} · 分支`.slice(0,80),updatedAt:at,turns,reportIds:[...new Set(turns.flatMap(turn=>turn.reportId?[turn.reportId]:[]))],branchOf:{chatId:chat.id,turnIndex},researchMode:chat.researchMode,...(latest?{jobId:chat.jobId,subjectCompany:chat.subjectCompany,subjectTitle:chat.subjectTitle}:{})};
+}
+
 export function failChat(chat:SavedResearchChat,reason:string,at:string):SavedResearchChat{
   return {...chat,updatedAt:at,failure:reason,draft:chat.draft||chat.turns.at(-1)?.text};
 }
@@ -77,7 +91,7 @@ export function saveResearchChats(workspaceId:string,chats:SavedResearchChat[]):
 }
 
 export function toStoredResearchChat(workspaceId:string,chat:SavedResearchChat):Record<string,unknown>{
-  return {workspace_id:workspaceId,id:chat.id,chat_title:chat.title,updated_at:chat.updatedAt,subject_key:(chat.subjectCompany||"").toLocaleLowerCase().replace(/\s+/g,""),subject_company:chat.subjectCompany,subject_title:chat.subjectTitle,job_id:chat.jobId,research_mode:chat.researchMode,turns:chat.turns,report_ids:chat.reportIds.slice(-30),draft:chat.draft,pending:chat.pendingResearch,failure:chat.failure};
+  return {workspace_id:workspaceId,id:chat.id,chat_title:chat.title,updated_at:chat.updatedAt,subject_key:(chat.subjectCompany||"").toLocaleLowerCase().replace(/\s+/g,""),subject_company:chat.subjectCompany,subject_title:chat.subjectTitle,job_id:chat.jobId,research_mode:chat.researchMode,turns:chat.turns,report_ids:chat.reportIds.slice(-30),draft:chat.draft,pending:chat.pendingResearch,failure:chat.failure,branch_of:chat.branchOf};
 }
 export async function saveResearchChatWithRetry(item:Record<string,unknown>,save:(item:Record<string,unknown>)=>Promise<unknown>):Promise<void>{
   try{await save(item);}catch(error){
@@ -89,7 +103,7 @@ export async function saveResearchChatWithRetry(item:Record<string,unknown>,save
 export function fromStoredResearchChat(item:Record<string,unknown>):SavedResearchChat{
   const turns=Array.isArray(item.turns)?item.turns.filter(value=>value&&typeof value==="object"&&["user","assistant"].includes(value.role)&&typeof value.text==="string") as ResearchChatTurn[]:[];
   const first=turns.find(value=>value.role==="user");
-  return {id:String(item.id),title:typeof item.chat_title==="string"&&item.chat_title.trim()?item.chat_title.trim():first?.text.slice(0,40)||"研究对话",updatedAt:String(item.updated_at||new Date().toISOString()),turns,reportIds:Array.isArray(item.report_ids)?item.report_ids.filter((value):value is string=>typeof value==="string"):[],subjectCompany:typeof item.subject_company==="string"?item.subject_company:undefined,subjectTitle:typeof item.subject_title==="string"?item.subject_title:undefined,jobId:typeof item.job_id==="string"?item.job_id:undefined,researchMode:typeof item.research_mode==="boolean"?item.research_mode:undefined,draft:typeof item.draft==="string"?item.draft:undefined,pendingResearch:item.pending&&typeof item.pending==="object"?item.pending as PendingResearch:undefined,failure:typeof item.failure==="string"?item.failure:undefined};
+  return {id:String(item.id),title:typeof item.chat_title==="string"&&item.chat_title.trim()?item.chat_title.trim():first?.text.slice(0,40)||"研究对话",updatedAt:String(item.updated_at||new Date().toISOString()),turns,reportIds:Array.isArray(item.report_ids)?item.report_ids.filter((value):value is string=>typeof value==="string"):[],subjectCompany:typeof item.subject_company==="string"?item.subject_company:undefined,subjectTitle:typeof item.subject_title==="string"?item.subject_title:undefined,jobId:typeof item.job_id==="string"?item.job_id:undefined,researchMode:typeof item.research_mode==="boolean"?item.research_mode:undefined,draft:typeof item.draft==="string"?item.draft:undefined,pendingResearch:item.pending&&typeof item.pending==="object"?item.pending as PendingResearch:undefined,branchOf:validBranch(item.branch_of),failure:typeof item.failure==="string"?item.failure:undefined};
 }
 export function mergeResearchChats(local:SavedResearchChat[],remote:SavedResearchChat[]):SavedResearchChat[]{
   const byId=new Map(remote.map(chat=>[chat.id,chat]));

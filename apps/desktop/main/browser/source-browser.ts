@@ -1,3 +1,6 @@
+import {randomUUID} from "node:crypto";
+import {createPublicNetworkGuard} from "./public-network";
+import {retrievalSnapshotScript,type RetrievalSnapshot} from "../research/browser-snapshot";
 import {ZhilianSearchEvidence,type ZhilianInitialSearch} from '../sources/zhilian-search-evidence';
 import {zhilianSubmitSearchScript} from '../sources/zhilian-page';
 import {validateZhilianSearchScope} from "../sources/source-actions";
@@ -25,7 +28,7 @@ import {
   passiveSourceObservationScript, type PassiveSourceObservation,
 } from "../sources/source-actions";
 
-type BrowserTab = { stoppedNavigation?:number; navigation?:number; id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
+type BrowserTab = { owner?:string;gate?:boolean; snapshot?:RetrievalSnapshot; stoppedNavigation?:number; navigation?:number; id:string; sourceId:ForegroundBrowserId; view:WebContentsView; initialUrl:string; zoom:number; fitting?:boolean; error?:string; notice?:string };
 export const MAX_BROWSER_TABS = 12;
 
 export class SourceBrowserManager {
@@ -48,6 +51,9 @@ export class SourceBrowserManager {
     read: detail => this.bossView(detail).webContents.executeJavaScript(bossPageScript()),
     scroll: async () => { await this.bossView(false).webContents.executeJavaScript(bossScrollScript()); },
   });
+  bossForSearch(_city:string):BossCollector{return this.boss;}
+  resumeBossSearch(){this.boss.resume();}
+  cancelBossSearch(){this.boss.cancel();}
   private bossDetailView?:WebContentsView;
   private bossObservation?:ReturnType<typeof setInterval>;
   private platformObservation?:ReturnType<typeof setInterval>;
@@ -100,12 +106,12 @@ export class SourceBrowserManager {
     if(!this.window.isDestroyed()&&!this.window.webContents?.isDestroyed?.())this.window.webContents?.send("desktop:source-browser-state",this.state());
   }
 
-  private createForegroundTab(sourceId:ForegroundBrowserId,target:string,popupOptions?:Electron.BrowserWindowConstructorOptions):BrowserTab {
+  private createForegroundTab(sourceId:ForegroundBrowserId,target:string,popupOptions?:Electron.BrowserWindowConstructorOptions,activate=true):BrowserTab {
     const id=`tab-${this.nextId++}`;
     const view=this.createView(sourceId,true,popupOptions);
     const tab:BrowserTab={id,sourceId,view,initialUrl:target,zoom:1};
     this.tabs.push(tab);
-    view.webContents.on("did-start-navigation",(_event,_url,_inPlace,isMain)=>{if(isMain){tab.error=undefined;this.publishState();}});
+    view.webContents.on("did-start-navigation",(_event,_url,_inPlace,isMain)=>{if(isMain){tab.error=undefined;tab.snapshot=undefined;this.publishState();}});
     view.webContents.on("did-fail-load",(_event,code,description,_url,isMain)=>{if(isMain && code!==-3){tab.error=`页面加载失败：${description}`;this.publishState();}});
     view.webContents.on("render-process-gone",()=>{tab.error="页面进程已退出，请刷新或关闭标签。";this.publishState();});
     if(sourceId==="zhilian"||sourceId==="wuyou") {
@@ -118,7 +124,7 @@ export class SourceBrowserManager {
     view.webContents.on("did-navigate",()=>this.publishState());
     view.webContents.on("did-navigate-in-page",()=>this.publishState());
     view.webContents.on("page-title-updated",()=>this.publishState());
-    this.selectTab(id);
+    if(activate)this.selectTab(id);
     return tab;
   }
 
@@ -342,17 +348,86 @@ export class SourceBrowserManager {
     return (await this.readResearchJob(sourceId,url)).description;
   }
 
-  async readResearchJob(sourceId: SourceBrowserId, url: string): Promise<{title:string;company:string;description:string;url:string}> {
+  private publicRequest=createPublicNetworkGuard();
+  private ownedTab(owner:string):BrowserTab|undefined{return this.tabs.find(tab=>tab.owner===owner);}
+  async taskBrowser(owner:string,operation:"open"|"snapshot"|"search"|"click"|"next",input:{url?:string;ref?:string;query?:string},signal:AbortSignal,ms:number):Promise<RetrievalSnapshot>{
+    const deadline=Date.now()+Math.min(ms,10000);let tab=this.ownedTab(owner);
+    const remaining=()=>Math.max(1,deadline-Date.now());
+    if(signal.aborted||ms<=0)throw Error("cancelled or expired browser budget");
+    const bounded=async<T>(work:Promise<T>):Promise<T>=>{
+      if(signal.aborted)throw Error("cancelled");let timer:ReturnType<typeof setTimeout>|undefined;let abort:()=>void=()=>{};
+      try{return await Promise.race([work,new Promise<never>((_,reject)=>{abort=()=>{tab?.view.webContents.stop();reject(Error("cancelled"));};signal.addEventListener("abort",abort,{once:true});timer=setTimeout(()=>{tab?.view.webContents.stop();reject(Error("browser read timeout"));},remaining());})]);}
+      finally{if(timer)clearTimeout(timer);signal.removeEventListener("abort",abort);}
+    };
+    let target=input.url;
+    if(operation!=="open"&&!tab)throw Error("browser tab not opened for this task");
+    if(operation==="click"||operation==="next"||operation==="search"){
+      if(!tab?.snapshot||tab.snapshot.url!==tab.view.webContents.getURL())throw Error("snapshot expired:请重新读取页面结构");
+      const element=tab.snapshot.elements.find(element=>element.ref===input.ref);
+      if(!element||operation==="search"&&element.role!=="searchbox"||operation!=="search"&&element.role!=="link"||operation==="next"&&!element.next)throw Error("invalid element reference");
+      if(operation==="search"){
+        if(!input.query||input.query.length>120||/https?:|@|\b1[3-9]\d{9}\b|\/Users\//.test(input.query))throw Error("invalid public search query");
+        const form=await bounded(tab.view.webContents.executeJavaScriptInIsolatedWorld(1001,[{code:`(()=>{const node=Array.from(document.querySelectorAll('input[type="search"],input[name="q"],input[name="query"],input[name="keyword"],[role="searchbox"]')).find(n=>n.name===${JSON.stringify(element.query_name)});return node?.form?{method:node.form.method,action:node.form.action}:null;})()`}])) as {method:string;action:string}|null;
+        if(!form||form.method.toLowerCase()!=="get")throw Error("此搜索表单尚未核对为只读 GET，请用户在浏览器搜索");
+        const url=new URL(form.action);if(url.origin!==new URL(tab.snapshot.url).origin)throw Error("search action leaves source");url.searchParams.set(element.query_name||"q",input.query);target=url.href;
+      }else target=element.url;
+    }
+    if(target){
+      if(!isPublicWebUrl(target)||new URL(target).protocol!=="https:"||!/^(|443)$/.test(new URL(target).port)||!await this.publicRequest(target))throw Error("unsafe public URL");
+      if(operation!=="open"&&/\b(apply|logout|signout|delete|remove|send|submit|purchase|checkout)\b|投递|申请|发送/.test(new URL(target).pathname+new URL(target).search))throw Error("external write action is not allowed");
+      const partition=sourceBrowserIdForUrl(target)||"web";
+      // Each managed platform has its own existing login session. Never carry
+      // another platform's partition across a task navigation or reuse a user tab.
+      if(tab&&tab.sourceId!==partition){this.closeTab(tab.id);tab=undefined;}
+      if(!tab){if(this.tabs.length>=MAX_BROWSER_TABS)throw Error("浏览器标签数量已达上限，请关闭不需要的页面");tab=this.createForegroundTab(partition,target,undefined,false);tab.owner=owner;}
+      tab.snapshot=undefined;tab.gate=false;
+      const load=tab.view.webContents.loadURL(target).catch(error=>{if(signal.aborted||!(error instanceof Error)||!(error as Error&{code?:string}).code?.includes("ERR_ABORTED"))throw error;});
+      // Rendering often becomes usable before slow analytics finish loading.
+      await bounded(Promise.race([load,new Promise(resolve=>setTimeout(resolve,Math.min(1500,remaining())))]));
+    }
+    if(!tab)throw Error("browser unavailable");
+    let previous="",snapshot:RetrievalSnapshot|undefined;
+    do{
+      const current=tab.view.webContents.getURL();
+      if(current==="about:blank"||target&&current!==target&&tab.view.webContents.isLoadingMainFrame()){await bounded(new Promise(resolve=>setTimeout(resolve,200)));continue;}
+      const page=await bounded(tab.view.webContents.executeJavaScriptInIsolatedWorld(1001,[{code:retrievalSnapshotScript(randomUUID())}])) as Omit<RetrievalSnapshot,"tab_id">;
+      if(!await this.publicRequest(page.url))throw Error("unsafe redirect");
+      snapshot={...page,tab_id:tab.id};tab.snapshot=snapshot;
+      if(["login_required","verification_required"].includes(page.status)){
+        tab.gate=true;this.selectTab(tab.id);this.window.webContents.send("desktop:browser-recovery");break;
+      }
+      if(page.status==="readable"&&page.text===previous)break;
+      previous=page.text;
+      if(remaining()<250)break;
+      await bounded(new Promise(resolve=>setTimeout(resolve,200)));
+    }while(Date.now()<deadline);
+    if(!snapshot)throw Error("browser read timeout:未取得当前页面正文");return snapshot;
+  }
+  releaseTaskBrowser(owner:string){const tab=this.ownedTab(owner);if(!tab)return;if(tab.gate){tab.owner=undefined;return;}this.closeTab(tab.id);}
+  private detailCache=new Map<string,{time:number;value:{title:string;company:string;description:string;url:string}}>();
+  private pendingDetails=new Map<string,Promise<{title:string;company:string;description:string;url:string}>>();
+  readResearchJob(sourceId:SourceBrowserId,url:string,signal?:AbortSignal,ms=21000,workspace="app"):Promise<{title:string;company:string;description:string;url:string}>{
+    if(!isAllowedSourceUrl(sourceId,url))return Promise.reject(Error("不安全或未支持的岗位链接"));
+    if(signal?.aborted)return Promise.reject(Error("cancelled"));
+    const key=JSON.stringify([workspace,sourceId,url]),cached=this.detailCache.get(key);
+    if(cached&&Date.now()-cached.time<1800000)return Promise.resolve(structuredClone(cached.value));
+    const pending=this.pendingDetails.get(key);if(pending&&!signal)return pending;
+    const work=this.readResearchJobUncached(sourceId,url,signal,ms).then(value=>{
+      this.detailCache.set(key,{time:Date.now(),value});if(this.detailCache.size>100)this.detailCache.delete(this.detailCache.keys().next().value!);return value;
+    }).finally(()=>this.pendingDetails.delete(key));this.pendingDetails.set(key,work);return work;
+  }
+  private async readResearchJobUncached(sourceId: SourceBrowserId, url: string, signal?:AbortSignal,ms=21000): Promise<{title:string;company:string;description:string;url:string}> {
     if (!isAllowedSourceUrl(sourceId,url)) throw new Error("不安全或未支持的岗位链接");
-    if(sourceId==="boss"){const detail=await this.boss.readDetail(url);return {...detail,company:detail.company||"公司未知"};}
+    if(sourceId==="boss"){const detail=await this.boss.readDetail(url,signal,ms);return detail;}
     const view=this.createView(sourceId);
-    const detailDeadline=Date.now()+21000;
+    const detailDeadline=Date.now()+Math.min(21000,ms);
+    const abort=()=>{if(!view.webContents.isDestroyed())view.webContents.close();};signal?.addEventListener("abort",abort,{once:true});
     let timeout:ReturnType<typeof setTimeout> | undefined;
     try {
       const load=view.webContents.loadURL(url).catch(async error=>{
         if(!await confirmAllowedNavigationAfterAbort(sourceId,url,error,()=>({url:view.webContents.getURL(),loading:view.webContents.isLoadingMainFrame()})))throw error;
       });
-      await Promise.race([load,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("页面读取超时")),15000);})]);
+      await Promise.race([load,new Promise((_,reject)=>{timeout=setTimeout(()=>reject(new Error("页面读取超时")),Math.max(1,Math.min(15000,ms)));})]);
       if (!isAllowedSourceUrl(sourceId,view.webContents.getURL())) throw new Error("页面跳转受限");
       for(let attempt=0;attempt<100&&Date.now()<detailDeadline;attempt++) {
         let evalTimer:ReturnType<typeof setTimeout>|undefined;
@@ -363,7 +438,7 @@ export class SourceBrowserManager {
         await new Promise(resolve=>setTimeout(resolve,150));
       }
       throw new Error("source_detail_unreadable:没有读取到完整岗位信息，请打开原页确认。");
-    } finally {if(timeout)clearTimeout(timeout);if(!view.webContents.isDestroyed())view.webContents.close();}
+    } finally {signal?.removeEventListener("abort",abort);if(timeout)clearTimeout(timeout);if(!view.webContents.isDestroyed())view.webContents.close();}
   }
 
   private careerIdle=new Map<SourceBrowserId,ReturnType<typeof setTimeout>>();
@@ -514,7 +589,7 @@ export class SourceBrowserManager {
   }
 
   destroy(): void {
-    this.boss.cancel();for(const timer of this.careerIdle.values())clearTimeout(timer);this.careerIdle.clear();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
+    this.cancelBossSearch();for(const timer of this.careerIdle.values())clearTimeout(timer);this.careerIdle.clear();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
     for(const timer of this.observationTimers.values())clearTimeout(timer);this.observationTimers.clear();
     if(this.bossDetailView&&!this.bossDetailView.webContents.isDestroyed())this.bossDetailView.webContents.close();
     // The BrowserWindow closed event may run after its native contentView died.
@@ -555,6 +630,7 @@ export class SourceBrowserManager {
       if(ascii!==current)view.webContents.setUserAgent(ascii);
     }
     if(sourceId==="boss"&&foreground){const navigated=()=>{this.bossDocumentTime=Date.now();};view.webContents.on("did-navigate",navigated);view.webContents.on("did-navigate-in-page",navigated);}
+    view.webContents.on("did-start-navigation",(_event,_url,_inPlace,isMain)=>{if(isMain){const tab=this.tabs.find(t=>t.view===view);if(tab)tab.snapshot=undefined;}});
     if(!foreground)view.setBounds({x:0,y:0,width:1240,height:900});
     if(foreground)view.webContents.on("focus",()=>{if(!this.window.isDestroyed())this.window.webContents.send("desktop:source-browser-focused");});
     const session=view.webContents.session;
@@ -564,19 +640,19 @@ export class SourceBrowserManager {
       session.setPermissionRequestHandler((contents,permission,callback,details)=>{
         const tab=this.tabs.find(t=>t.view.webContents===contents);
         const url=details.requestingUrl || contents.getURL();
-        if(!tab || !isPublicWebUrl(url) || this.window.isDestroyed() || !["media","geolocation","notifications","fullscreen"].includes(permission)){callback(false);return;}
+        if(!tab || tab.owner || !isPublicWebUrl(url) || this.window.isDestroyed() || !["media","geolocation","notifications","fullscreen"].includes(permission)){callback(false);return;}
         void dialog.showMessageBox(this.window,{type:"question",buttons:["不允许","允许此次"],defaultId:0,cancelId:0,message:`${new URL(url).origin} 请求 ${permission}`,detail:"仅在你同意后授予此次网页请求。"}).then(result=>callback(result.response===1),()=>callback(false));
       });
-      session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*"]},(details,callback)=>callback({cancel:!isPublicWebUrl(details.url)}));
+      session.webRequest.onBeforeRequest({urls:["http://*/*","https://*/*"]},(details,callback)=>void this.publicRequest(details.url).then(allowed=>callback({cancel:!allowed}),()=>callback({cancel:true})));
       const downloadHandler=(event:Electron.Event,item:Electron.DownloadItem,contents:Electron.WebContents)=>{
-        if(!this.tabs.some(t=>t.view.webContents===contents)){event.preventDefault();return;}
+        if(!this.tabs.some(t=>t.view.webContents===contents&&!t.owner)){event.preventDefault();return;}
         item.setSaveDialogOptions({title:"保存网页下载文件",buttonLabel:"保存"});
       };
       this.downloadHandlers.set(session,downloadHandler);
       session.on("will-download",downloadHandler);
     }
     view.webContents.setWindowOpenHandler(({url}) => {
-      if(foreground){
+      if(foreground&&!this.tabs.find(t=>t.view===view)?.owner){
         // Keep the real WindowProxy: some sites open a blank window and assign
         // its location afterward. Denying and opening a replacement loses that URL.
         if((isPublicWebUrl(url)||url==='about:blank') && this.requestedBounds && this.tabs.length<MAX_BROWSER_TABS){
@@ -590,7 +666,7 @@ export class SourceBrowserManager {
     });
     const guard = (event: {preventDefault():void}, url:string, kind:string, isMain=true) => {
       const destination=sourceId==="web"&&isMain?sourceBrowserIdForUrl(url):undefined;
-      if(foreground&&destination&&this.requestedBounds){
+      if(foreground&&destination&&this.requestedBounds&&!this.tabs.find(t=>t.view===view)?.owner){
         event.preventDefault();
         void this.show(destination,this.requestedBounds,url).then(()=>{this.notice="招聘站点已在专用会话标签中打开。";}).catch(error=>{this.notice=`来源标签未打开：${String(error).slice(0,150)}`;});
         return;

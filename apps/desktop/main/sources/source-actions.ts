@@ -81,7 +81,7 @@ export function buildSourceSearchUrl(
     target.searchParams.set("p", String(page));
   } else {
     target.searchParams.set("keyword", keyword.trim());
-    if (/^\d+$/.test(city.trim())) target.searchParams.set("jobArea", city.trim());
+    target.searchParams.set("jobArea",wuyouCityCode(city));
     target.searchParams.set("pageNum", String(page));
   }
   return target.toString();
@@ -277,4 +277,11 @@ export function normalizeZhilianJobUrl(value:string):string|null {
     if(url.protocol==="http:"&&["www.zhaopin.com","jobs.zhaopin.com"].includes(url.hostname)&&!url.port&&!url.username&&!url.password)url.protocol="https:";
     return isZhilianJobUrl(url.toString())?url.toString():null;
   }catch{return null;}
+}
+
+export function wuyouCityCode(city:string):string{
+  const codes:Record<string,string>={"":"000000","全国":"000000","北京":"010000","上海":"020000","广州":"030000","深圳":"040000","杭州":"080200","南京":"070200","苏州":"070300","成都":"090200","武汉":"180200","西安":"110200","重庆":"130200"};
+  if(/^\d{6}$/.test(city.trim()))return city.trim();
+  if(Object.hasOwn(codes,city.trim()))return codes[city.trim()];
+  throw Error("unsupported_city:前程无忧尚未核验该城市编码");
 }

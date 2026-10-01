@@ -76,6 +76,7 @@ const bridge: DesktopBridge = Object.freeze({
   cancelResearch: () => ipcRenderer.invoke("desktop:cancel-research"),
   pickChatAttachments: kind => ipcRenderer.invoke("desktop:pick-chat-attachments",kind),
   runResearchChat: input => ipcRenderer.invoke("desktop:run-research-chat",input),
+  copyChatText: text => ipcRenderer.invoke("desktop:copy-chat-text",text),
   cancelResearchChat: requestId => ipcRenderer.invoke("desktop:cancel-research-chat",requestId),
   onResearchChatDelta: listener => {const handler=(_event:Electron.IpcRendererEvent,payload:import("../shared/contracts").ResearchChatDelta)=>listener(payload);ipcRenderer.on("desktop:research-chat-delta",handler);return ()=>ipcRenderer.removeListener("desktop:research-chat-delta",handler);},
   listScheduledTasks: (workspaceId) => ipcRenderer.invoke("desktop:list-scheduled-tasks", workspaceId),
@@ -89,6 +90,7 @@ const bridge: DesktopBridge = Object.freeze({
     ipcRenderer.on("desktop:source-browser-state",handler);
     return ()=>ipcRenderer.removeListener("desktop:source-browser-state",handler);
   },
+  onBrowserRecovery: listener => {const handler=()=>listener();ipcRenderer.on("desktop:browser-recovery",handler);return ()=>ipcRenderer.removeListener("desktop:browser-recovery",handler);},
   onSourceBrowserFocus: listener => {
     const handler=()=>listener();
     ipcRenderer.on("desktop:source-browser-focused",handler);

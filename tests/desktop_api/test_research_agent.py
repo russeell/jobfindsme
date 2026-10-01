@@ -533,7 +533,10 @@ def test_original_read_decodes_bounded_gzip_and_rejects_binary_html(monkeypatch)
     assert read(b"\x1f\x8b" + b"\xff" * 100)["status"] == "unsupported_source"
 
 
-def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch):
+@pytest.mark.parametrize(
+    "mime", ["application/pdf", "application/octet-stream", "text/html"]
+)
+def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch, mime):
     import io
 
     from reportlab.pdfgen import canvas
@@ -560,11 +563,11 @@ def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch):
 
     class Response:
         headers = SimpleNamespace(
-            get_content_type=lambda: "application/pdf", get_content_charset=lambda: None
+            get_content_type=lambda: mime, get_content_charset=lambda: None
         )
 
         def geturl(self):
-            return "https://www.cninfo.com.cn/report.pdf"
+            return "https://www.cninfo.com.cn/document?id=123"
 
         def read(self, amount):
             return body[:amount]
@@ -577,14 +580,20 @@ def test_pdf_reader_keeps_page_citation_and_rejects_missing_entity(monkeypatch):
 
     opener = SimpleNamespace(open=lambda *_args, **_kwargs: Response())
     found = agent_sources.read_original_page(
-        "https://www.cninfo.com.cn/report.pdf", "ExampleCorp", "cninfo", opener=opener
+        "https://www.cninfo.com.cn/document?id=123",
+        "ExampleCorp",
+        "cninfo",
+        opener=opener,
     )
     assert found["status"] == "read_original"
     assert found["context"]["page"] == 2
     assert found["context"]["content_type"] == "application/pdf"
     assert "ExampleCorp" in found["excerpt"]
     missing = agent_sources.read_original_page(
-        "https://www.cninfo.com.cn/report.pdf", "UnrelatedCo", "cninfo", opener=opener
+        "https://www.cninfo.com.cn/document?id=123",
+        "UnrelatedCo",
+        "cninfo",
+        opener=opener,
     )
     assert missing["status"] == "entity_mismatch"
 
@@ -655,7 +664,7 @@ def test_html_research_uses_later_relevant_passage(monkeypatch):
     body = (
         "<html><head><title>ExampleCorp report</title></head><body><article>"
         "ExampleCorp business introduction. "
-        + "Other general information. " * 90
+        + "Other general information. " * 190
         + "The research team announced a new language model. " * 4
         + "</article></body></html>"
     ).encode()
@@ -1776,3 +1785,154 @@ def test_original_reader_uses_configured_proxy_with_tls_and_public_redirect_poli
         isinstance(item, SafeRedirectHandler) and item.require_https
         for item in handlers
     )
+
+
+def test_semantic_reader_ignores_github_navigation_and_chooses_readme():
+    from jobfindsme.research.service import _ReadableHtml
+
+    parser = _ReadableHtml()
+    parser.feed(
+        "<html><title>Repo</title><nav>sign in</nav><main><div>files</div>"
+        '<article class="markdown-body"><h1>README</h1>'
+        "<div>Actual implementation</div></article>"
+        "<aside>related</aside></main>"
+    )
+    assert parser.title == "Repo"
+    assert parser.article_text == "README Actual implementation"
+    assert "sign in" not in parser.text
+    assert "related" not in parser.text
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        (
+            "<html><title>Login</title><form><input type='password'></form></html>",
+            "login_required",
+        ),
+        (
+            "<html><title>Checking your browser</title>"
+            "<p>Please verify you are a human</p></html>",
+            "verification_required",
+        ),
+        (
+            "<html><body>"
+            + "<a href='/section'>Navigation section only</a> " * 20
+            + "</body></html>",
+            "navigation_only",
+        ),
+        (
+            "<html><article>" + "text\x00unparsed" * 30 + "</article></html>",
+            "unsupported_source",
+        ),
+    ],
+)
+def test_original_quality_gates_are_not_evidence(monkeypatch, body, expected):
+    monkeypatch.setattr(
+        agent_sources, "validate_public_http_url", lambda *_a, **_k: None
+    )
+
+    class Response:
+        headers = SimpleNamespace(
+            get_content_type=lambda: "text/html",
+            get_content_charset=lambda: "utf-8",
+            get=lambda *_a: "",
+        )
+
+        def geturl(self):
+            return "https://example.org/article"
+
+        def read(self, amount):
+            return body.encode()[:amount]
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_a):
+            pass
+
+    found = agent_sources.read_original_page(
+        "https://example.org/article",
+        "",
+        "web",
+        opener=SimpleNamespace(open=lambda *_a, **_k: Response()),
+    )
+    assert found["status"] == expected
+    assert not found.get("evidence_id")
+
+
+def test_research_continuation_is_scoped_to_workspace_and_conversation(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    other = WorkspaceService(store.database).create().workspace_id
+    journal = {
+        "questions": ["What is known?"],
+        "findings": [],
+        "gaps": ["Missing original"],
+    }
+    store.save_execution(
+        workspace,
+        {
+            "id": "execution-journal",
+            "conversation_id": "chat-journal",
+            "status": "complete",
+            "context": {
+                "research_state": journal,
+                "queries": ["public query"],
+                "company": "Example",
+                "job_id": None,
+            },
+            "evidence": [evidence()],
+        },
+    )
+    found = store.continuation(workspace, "chat-journal")
+    assert found["research_state"] == journal
+    assert len(found["evidence"]) == 1
+    assert found["company"] == "Example"
+    assert store.continuation(other, "chat-journal") == {}
+    assert store.continuation(workspace, "unrelated-chat") == {}
+
+
+def test_chat_branch_roundtrip_and_workspace_boundary(tmp_path):
+    store, workspace = setup_store(tmp_path)
+    parent = {
+        "id": "parent",
+        "turns": [
+            {"role": "user", "text": "fictional question"},
+            {"role": "assistant", "text": "fictional answer"},
+            {"role": "user", "text": "later question"},
+        ],
+    }
+    store.save_conversation(workspace, parent)
+    branch = {
+        "id": "child",
+        "turns": parent["turns"][:2],
+        "branch_of": {"chatId": "parent", "turnIndex": 1},
+    }
+    store.save_conversation(workspace, branch)
+    fresh = ResearchAgentStore(store.database)
+    chats = {chat["id"]: chat for chat in fresh.list_conversations(workspace)}
+    assert chats["child"]["branch_of"] == branch["branch_of"]
+    assert chats["child"]["turns"] == parent["turns"][:2]
+    assert chats["parent"]["turns"] == parent["turns"]
+    other = WorkspaceService(store.database).create().workspace_id
+    with pytest.raises(ValueError, match="parent not found"):
+        store.save_conversation(other, {**branch, "id": "foreign"})
+    with pytest.raises(ValueError, match="turn not found"):
+        store.save_conversation(
+            workspace,
+            {
+                **branch,
+                "id": "invalid",
+                "branch_of": {"chatId": "parent", "turnIndex": 99},
+            },
+        )
+    store.archive_conversation(workspace, "parent")
+    store.delete_archived_conversation(workspace, "parent")
+    store.save_conversation(
+        workspace,
+        {
+            **branch,
+            "turns": [*branch["turns"], {"role": "user", "text": "child followup"}],
+        },
+    )
+    assert len(store.list_conversations(workspace)[0]["turns"]) == 3

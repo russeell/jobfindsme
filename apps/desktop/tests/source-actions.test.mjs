@@ -53,7 +53,7 @@ test("browser source results reject cross-origin URLs and bound fields", () => {
 test('named cities are never sent as opaque platform city codes',()=>{
  for(const id of ['zhilian','wuyou']){
  const url=new URL(buildSourceSearchUrl(id,'工程师','上海',1));
- assert.equal(url.searchParams.get(id==='zhilian'?'jl':'jobArea'),id==='zhilian'?'538':null);
+ assert.equal(url.searchParams.get(id==='zhilian'?'jl':'jobArea'),id==='zhilian'?'538':'020000');
  }
 });
 

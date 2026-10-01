@@ -63,3 +63,28 @@ test('same platform pages stay sequential while four sources start independently
  await collectBrowserSourcePages({workspace_id:'w',intent:'Agent',source_ids:['boss','liepin','zhilian','wuyou']},{allowed_source_ids:['boss','liepin','zhilian','wuyou'],keywords:['Agent'],max_pages:2,time_budget_seconds:5},{client:{publicSourcePages:async()=>[]},manager:{boss:{collect:async()=>({records:[],next_cursor:null})},searchPage:page},isCancelled:()=>false});
  assert.equal(overlap,false);assert.deepEqual(starts.filter(([id])=>id==='zhilian').map(([,p])=>p),[1,2]);assert.deepEqual(starts.filter(([id])=>id==='wuyou').map(([,p])=>p),[1,2]);
 });
+
+test('pages stream immediately, and scoped source cursors reject changed cities',async()=>{
+ const input={workspace_id:'w',intent:'Python',source_ids:['wuyou'],filters:{cities:['上海']}};
+ const preflight={allowed_source_ids:['wuyou'],keywords:['Python'],max_pages:2,time_budget_seconds:5};
+ const calls=[],events=[];
+ const manager={searchPage:async(_id,q)=>{calls.push([q.city,q.page]);return {records:[{external_id:String(q.page),payload:{title:'Python'}}],next_cursor:String(q.page+1)};}};
+ const deps={client:{},manager,isCancelled:()=>false,onPage:async(_id,p)=>events.push([p.records[0].external_id,calls.length])};
+ const first=await collectBrowserSourcePages(input,preflight,deps);
+ assert.deepEqual(events,[['1',1],['2',2]]);
+ await collectBrowserSourcePages({...input,source_cursors:{wuyou:first.continuations.wuyou}},preflight,deps);
+ assert.deepEqual(calls,[['上海',1],['上海',2],['上海',3],['上海',4]]);
+ const mismatched=await collectBrowserSourcePages({...input,filters:{cities:['深圳']},source_cursors:{wuyou:first.continuations.wuyou}},preflight,deps);
+ assert.match(mismatched.errors.wuyou,/unsupported_cursor/);assert.equal(calls.length,4);
+});
+
+test('cancellation keeps a saved page and resumes at its next page',async()=>{
+ let cancelled=false;const calls=[];
+ const input={workspace_id:'w',intent:'Python',source_ids:['wuyou'],filters:{cities:['上海']}};
+ const preflight={allowed_source_ids:['wuyou'],keywords:['Python'],max_pages:2,time_budget_seconds:5};
+ const manager={searchPage:async(_id,q)=>{calls.push(q.page);return {records:[{external_id:String(q.page),payload:{title:'Python'}}],next_cursor:String(q.page+1)};}};
+ const first=await collectBrowserSourcePages(input,preflight,{client:{},manager,isCancelled:()=>cancelled,onPage:async()=>{cancelled=true;}});
+ assert.equal(first.pages.wuyou.length,1);cancelled=false;
+ await collectBrowserSourcePages({...input,source_cursors:{wuyou:first.continuations.wuyou}},{...preflight,max_pages:1},{client:{},manager,isCancelled:()=>false});
+ assert.deepEqual(calls,[1,2]);
+});

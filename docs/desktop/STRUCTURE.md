@@ -46,3 +46,5 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 求职助手发送错误按准备阶段和模型原因分别呈现；系统密钥只缓存成功解密的当前密文，进程退出即释放。原文 HTTP 阅读跟随已有网络代理并保留 TLS、公网地址与同站重定向校验；Python备用发现沿用原有直连服务，默认入口现由下述主进程检索路由负责。面试输出有一次有界格式修正，失败附件随未完成会话恢复。
 
 `skills/web-retrieval` 是内部联网能力，自动用于检索/深度研究或由 Agent 按需读取，不增加第四个聊天模式。`main/research/public-retrieval.ts` 通过固定只读 HTTPS 适配器调用 Exa 官方远程 MCP 搜索接口，不依赖本机 Agent Reach/mcporter、不读取用户模型 Key、不启动本地 MCP 服务器；失败按同一截止时间调用既有 Python 发现服务，限流进入三分钟进程冷却。GitHub/论文为独立站点路由，原文仍由 Python 严格 HTTPS/公网/域名/跳转校验后读取；返回候选不携带证据ID或正文。邮箱、手机号、密钥和私人路径不得进入外部搜索词。
+
+聊天任务由 `main/research/run-controller.ts` 按请求管理，renderer只显示当前会话的流与进度。`shared/research-chat-history.ts` 负责复制前缀的新分支及关系序列化，关系存入现有 conversation context；复制通过受限 preload clipboard IPC，不使用页面读写权限。

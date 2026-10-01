@@ -8,11 +8,11 @@ export const SOURCE_SEARCH_CONCURRENCY = 4;
 export async function collectBrowserSourcePages(
   input: SourceSearchInput,
   preflight: SourceSearchPreflight,
-  deps: {concurrency?:number;client:DesktopApiClient;manager?:SourceBrowserManager;isCancelled:()=>boolean;onProgress?:(value:unknown)=>void;onSourceCompleted?:(sourceId:string,pages:BrowserSourcePage[],error?:string)=>Promise<void>},
+  deps: {concurrency?:number;client:DesktopApiClient;manager?:SourceBrowserManager;isCancelled:()=>boolean;onProgress?:(value:unknown)=>void;signal?:AbortSignal;onPage?:(sourceId:string,page:BrowserSourcePage)=>Promise<void>;onSourceCompleted?:(sourceId:string,pages:BrowserSourcePage[],error?:string)=>Promise<void>},
 ): Promise<{
   pages: Record<string, BrowserSourcePage[]>;
   errors: Record<string, string>;
-  diagnostics: {started_at:string;first_source_ms:number|null;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>};
+  continuations:Record<string,string|null>;planned_queries:Array<{source_id:string;keyword:string;city:string}>;executed_queries:Array<{source_id:string;keyword:string;city:string}>;diagnostics: {started_at:string;first_source_ms:number|null;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>};
 }> {
   const {client,manager,isCancelled,onProgress,onSourceCompleted}=deps;
   const started=Date.now();
@@ -21,58 +21,51 @@ export async function collectBrowserSourcePages(
   const diagnostics:{started_at:string;first_source_ms:number|null;sources:Record<string,{elapsed_ms:number;records:number;site_pages:number;read_at:string;status:string}>}={started_at:new Date(started).toISOString(),first_source_ms:null,sources:{}};
   const browserPages: Record<string, BrowserSourcePage[]> = {};
   const browserErrors: Record<string, string> = {};
-  const collectOne=async (sourceId:string):Promise<void> => {
-    const cursor=input.source_cursors?.[sourceId]??(sourceId==="boss"?input.boss_cursor:input.source_cursor);
-    if(isCancelled()){browserErrors[sourceId]="cancelled:已停止后续来源，保留已读取结果";return;}
-    if(remaining()<0.1){browserErrors[sourceId]="time_budget:本次总时间预算已用完";return;}
-    onProgress?.({stage:"loading",count:0,message:`正在读取 ${isSourceBrowserId(sourceId)?browserSiteNames[sourceId]:"岗位来源"}`});
-    if (!requiresElectronSourceSearch(sourceId)) {
-      if(!isSourceBrowserId(sourceId))return;
-      try { browserPages[sourceId]=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||'',max_pages:Math.min(3,preflight.max_pages),seconds:Math.max(1,Math.min(60,remaining())),cursor}); }
-      catch(primaryError){
-        browserErrors[sourceId]=String(primaryError).slice(0,1000);
-      }
-      return;
+  const cities=[...new Set(input.city?[input.city]:input.filters?.cities?.length?input.filters.cities:[""])];
+  if(cities.length>1)throw Error("每次只能选择一个城市；也可以选择城市不限");
+  const city=cities[0],scope=JSON.stringify([input.workspace_id,preflight.keywords[0],city]);
+  const continuations:Record<string,string|null>={},planned_queries=preflight.allowed_source_ids.flatMap(source_id=>cities.map(city=>({source_id,keyword:preflight.keywords[0],city}))),executed_queries:typeof planned_queries=[];
+  const collectOne=async(sourceId:string):Promise<void>=>{
+    const supplied=input.source_cursors?.[sourceId]??(sourceId==="boss"?input.boss_cursor:input.source_cursor);
+    let cursor:string|null|undefined=supplied;
+    if(supplied?.startsWith("source-v1:")){
+      try{const decoded=JSON.parse(Buffer.from(supplied.slice(10),"base64url").toString());
+        if(decoded.scope!==scope||decoded.source!==sourceId||decoded.cursor!==null&&decoded.cursor!==undefined&&typeof decoded.cursor!=="string")throw Error();
+        cursor=decoded.cursor;
+      }catch{browserErrors[sourceId]="unsupported_cursor:检索条件与续页不一致，请开始新搜索";return;}
+    }else if(supplied?.startsWith("cities-v1:")){browserErrors[sourceId]="unsupported_cursor:旧版多城市检索请开始新搜索";return;}
+    const pages:BrowserSourcePage[]=[];browserPages[sourceId]=pages;
+    collect: for(let round=0;round<preflight.max_pages;round++){
+      if(cursor===null)break;
+      if(isCancelled()){browserErrors[sourceId]="cancelled:已停止后续来源，保留已读取结果";break collect;}
+      if(remaining()<0.1){browserErrors[sourceId]="time_budget:本次总时间预算已用完";break collect;}
+      onProgress?.({stage:"loading",count:pages.reduce((n,p)=>n+p.records.length,0),message:`正在读取 ${isSourceBrowserId(sourceId)?browserSiteNames[sourceId]:sourceId}${city?" · "+city:""}`});
+      if(!isSourceBrowserId(sourceId))continue;
+      try{
+        const nativeCursor=cursor??undefined;let batch:BrowserSourcePage[];
+        executed_queries.push({source_id:sourceId,keyword:preflight.keywords[0],city});
+        if(!requiresElectronSourceSearch(sourceId))batch=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city,max_pages:1,seconds:Math.max(1,Math.min(60,remaining())),cursor:nativeCursor},deps.signal);
+        else if(!manager)throw Error("browser_session_error:来源后台会话不可用");
+        else if(sourceId==="boss")batch=[await (manager.bossForSearch?.(city)||manager.boss).collect({keyword:preflight.keywords[0],city,maxBatches:1,seconds:remaining(),cursor:nativeCursor},onProgress)];
+        else{
+          const page=nativeCursor?Number(nativeCursor):1;
+          if(!Number.isInteger(page)||page<1)throw Error("unsupported_cursor:来源未提供可用页码");
+          batch=[await manager.searchPage(sourceId,{keyword:preflight.keywords[0],city,page,deadline})];
+        }
+        for(const page of batch){
+          pages.push(page);const nextCursor=sourceId==="boss"?page.collection?.cursor??page.next_cursor:page.next_cursor;
+          if(page.collection?.failure){browserErrors[sourceId]=`${page.collection.failure}:请在平台原页处理后重试`;}
+          if(diagnostics.first_source_ms===null&&page.records.length)diagnostics.first_source_ms=Date.now()-started;
+          await deps.onPage?.(sourceId,page);cursor=nextCursor;
+        }
+        if(!batch.length)cursor=null;
+        if(browserErrors[sourceId])break collect;
+      }catch(error){browserErrors[sourceId]=String(error instanceof Error?error.message:error).slice(0,1000);break collect;}
     }
-    if (!manager) {
-      browserErrors[sourceId] = "browser_session_error:来源后台会话不可用";
-      return;
-    }
-    if(sourceId==="boss"){
-      try {browserPages.boss=[await manager.boss.collect({keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||"",maxBatches:preflight.max_pages,seconds:remaining(),cursor},progress=>{onProgress?.(progress);})];}
-      catch(error){const message=error instanceof Error?error.message:String(error),failure=message.startsWith("risk_control:")?"risk_control":message.startsWith("login_required:")?"login_required":null;
-        browserPages.boss=[{records:[],next_cursor:null,collection:{batches:0,elapsed_seconds:0,stop_reason:failure||(message.startsWith("unsupported_city:")?"unsupported_city":"source_contract_error"),cursor:null,complete:false,failure}}];
-      }
-      const collection=browserPages.boss[0]?.collection;
-      if((input.filters?.cities?.length||0)>1 && collection?.complete){collection.complete=false;collection.stop_reason="city_scope";}
-      return;
-    }
-    const pages: BrowserSourcePage[] = [];
-    let page = cursor ? Number(cursor) : 1;
-    if(!Number.isInteger(page)||page<1){browserErrors[sourceId]="unsupported_cursor:来源未提供可用页码";return;}
-    try {
-      let fetched=0;
-      while (fetched < preflight.max_pages && remaining()>=0.1) {
-        if(isCancelled())throw Error('cancelled:已停止后续翻页，保留已读取结果');
-        const result = await manager.searchPage(
-          sourceId,
-          { keyword: preflight.keywords[0], city: input.city || input.filters?.cities?.[0] || "", page, deadline },
-        );
-        pages.push(result);
-        fetched++;
-        if (!result.next_cursor) break;
-        const nextPage = Number(result.next_cursor);
-        if (!Number.isInteger(nextPage) || nextPage <= page) break;
-        page = nextPage;
-      }
-      browserPages[sourceId] = pages;
-    } catch (error) {
-      if (pages.length) browserPages[sourceId] = pages;
-      const message = error instanceof Error ? error.message : String(error);
-      browserErrors[sourceId] = message.slice(0, 1000);
-      // Persist the validated batch before a source gate changes. The caller
-      // records runtime failure only after onSourceCompleted has returned.
-    }
+    if(!pages.length)delete browserPages[sourceId];
+    // A source cursor binds the original query and workspace. Undefined means
+    // an unstarted first page; only a saved page advances the native cursor.
+    continuations[sourceId]=cursor===null?null:"source-v1:"+Buffer.from(JSON.stringify({scope,source:sourceId,cursor})).toString("base64url");
   };
   // Different sources have independent views; a small worker pool limits load.
   const sourceIds=[...preflight.allowed_source_ids];let nextSource=0;
@@ -88,5 +81,5 @@ export async function collectBrowserSourcePages(
       if(records)onProgress?.({stage:"listing",count:records,message:`${browserSiteNames[sourceId as keyof typeof browserSiteNames]||sourceId} 已读取 ${records} 条；其他来源继续检索`,titles:pages.flatMap(page=>page.records).slice(0,3).map(record=>String(record.payload.title||""))});
     }
   }));
-  return { pages: browserPages, errors: browserErrors, diagnostics };
+  return { pages: browserPages, errors: browserErrors, diagnostics,continuations,planned_queries,executed_queries };
 }

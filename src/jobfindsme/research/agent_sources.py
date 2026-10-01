@@ -69,7 +69,7 @@ def _question_terms(question: str, company: str) -> tuple[str, ...]:
 
 
 def _relevant_passage(
-    text: str, question: str, company: str, limit: int = 1200
+    text: str, question: str, company: str, limit: int = 4000
 ) -> tuple[str, int]:
     terms = _question_terms(question, company)
     if not terms:
@@ -250,13 +250,26 @@ class BingRedirectHandler(SafeRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
-def _research_opener(*, search: bool):
+class OriginalRedirectHandler(SafeRedirectHandler):
+    def __init__(self, site: str):
+        super().__init__(max_redirects=3, require_https=True, same_host_only=False)
+        self.site = site
+        self.chain: list[str] = []
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Normal public redirects are read-only. Every hop still requires DNS,
+        # HTTPS, port and the declared fixed-site checks; DOI resolves publishers.
+        _source_url(newurl, "web" if self.site == "papers" else self.site)
+        self.chain.append(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _research_opener(*, search: bool, site: str = "web"):
+
     redirect = (
         BingRedirectHandler(max_redirects=2, require_https=True)
         if search
-        else SafeRedirectHandler(
-            max_redirects=2, require_https=True, same_host_only=True
-        )
+        else OriginalRedirectHandler(site)
     )
     return urllib.request.build_opener(
         # Discovery stays direct; original pages follow the user's existing
@@ -568,7 +581,7 @@ def read_original_page(
     domain, label, source_type = SITES[site]
     if site == "web" and is_tencent_disclosure_url(url, company):
         label, source_type = "腾讯投资者关系", "official_disclosure"
-    opener = opener or _research_opener(search=False)
+    opener = opener or _research_opener(search=False, site=site)
     request = urllib.request.Request(
         url,
         headers={
@@ -580,14 +593,20 @@ def read_original_page(
     try:
         with opener.open(request, timeout=max(0.1, min(timeout, 8))) as response:
             final_url = response.geturl()
-            _source_url(final_url, site)
+            _source_url(final_url, "web" if site == "papers" else site)
             content_type = response.headers.get_content_type()
             pdf_hint = content_type in {"application/pdf", "application/x-pdf"} or (
                 content_type == "application/octet-stream"
                 and urllib.parse.urlsplit(final_url).path.lower().endswith(".pdf")
             )
             if (
-                content_type not in {"text/html", "application/xhtml+xml"}
+                content_type
+                not in {
+                    "text/html",
+                    "application/xhtml+xml",
+                    "text/plain",
+                    "application/octet-stream",
+                }
                 and not pdf_hint
             ):
                 return {
@@ -639,6 +658,14 @@ def read_original_page(
                         "limit": "compressed source is invalid or too large",
                     }
                 body = expanded
+            pdf_hint = pdf_hint or body.startswith(b"%PDF-")
+            if content_type == "application/octet-stream" and not pdf_hint:
+                return {
+                    "url": final_url,
+                    "site": site,
+                    "status": "unsupported_source",
+                    "limit": "unparsed binary content",
+                }
             if pdf_hint and not body.startswith(b"%PDF-"):
                 return {
                     "url": final_url,
@@ -739,9 +766,72 @@ def read_original_page(
                 "status": "unsupported_source",
                 "limit": "source text is not readable",
             }
+        if (
+            "\x00" in decoded
+            or sum(
+                decoded.count(marker)
+                for marker in ("endobj", "endstream", "/FlateDecode")
+            )
+            >= 2
+        ):
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "unsupported_source",
+                "limit": "unparsed binary content",
+            }
         parser.feed(decoded)
         text = " ".join((parser.article_text or parser.text).split())
         title = parser.title[:300]
+        prefix = (title + " " + text[:1200]).casefold()
+        if (
+            any(
+                marker in prefix
+                for marker in (
+                    "please verify you are a human",
+                    "checking your browser before accessing",
+                    "enable javascript and cookies to continue",
+                    "attention required! | cloudflare",
+                    "人机验证",
+                    "安全验证",
+                    "访问过于频繁",
+                )
+            )
+            and len(text) < 5000
+        ):
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "verification_required",
+                "limit": "website verification required",
+            }
+        if (
+            parser.has_password
+            and not parser.article_text
+            or re.search(
+                r"/login(?:/|$)|/signin(?:/|$)", urllib.parse.urlsplit(final_url).path
+            )
+        ):
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "login_required",
+                "limit": "login page is not evidence",
+            }
+        if len(text) < 50:
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "empty_body",
+                "limit": "rendered body required",
+            }
+        if not parser.article_text and parser.link_chars > len(text) * 0.85:
+            return {
+                "url": final_url,
+                "site": site,
+                "status": "navigation_only",
+                "limit": "no article body found",
+            }
         anchored = (
             not company
             or bool(parser.article_text)
@@ -779,6 +869,11 @@ def read_original_page(
         + (" 页面未提供可核验发布日期。" if not published_at else ""),
         "context": {
             "source_type": source_type,
+            "requested_url": url,
+            "redirect_chain": [final_url] if final_url != url else [],
+            "content_hash": hashlib.sha256(
+                re.sub(r"\s+", "", text).casefold().encode()
+            ).hexdigest(),
             "content_type": "application/pdf" if pdf_hint else content_type,
             "page": page_number,
             "start_char": passage_start,

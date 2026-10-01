@@ -2219,6 +2219,15 @@ def create_app(
         except (KeyError, ValueError, LookupError, PermissionError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
+    @app.get("/v1/research-agent/continuation", dependencies=[Depends(require_token)])
+    def agent_continuation(workspace_id: str, conversation_id: str) -> dict:
+        try:
+            return research_agent_store.continuation(workspace_id, conversation_id)
+        except LookupError as error:
+            raise HTTPException(
+                status_code=404, detail="workspace not found"
+            ) from error
+
     @app.put("/v1/research-agent/executions", dependencies=[Depends(require_token)])
     def save_agent_execution(request: dict) -> dict:
         try:

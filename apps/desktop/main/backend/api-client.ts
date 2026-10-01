@@ -362,6 +362,7 @@ export class DesktopApiClient {
   readAgentJob(workspaceId:string,jobId:string,signal?:AbortSignal,timeoutMs=8000):Promise<import("../../shared/contracts").SearchResultItem["job"]> {
     return this.json(`/v1/research-agent/jobs/${encodeURIComponent(jobId)}?${new URLSearchParams({workspace_id:workspaceId})}`,{signal},timeoutMs);
   }
+  agentContinuation(workspaceId:string,conversationId:string):Promise<Record<string,unknown>>{return this.json(`/v1/research-agent/continuation?${new URLSearchParams({workspace_id:workspaceId,conversation_id:conversationId})}`);}
   saveAgentExecution(input:Record<string,unknown>):Promise<unknown> {
     return this.json("/v1/research-agent/executions",{method:"PUT",body:JSON.stringify(input)});
   }

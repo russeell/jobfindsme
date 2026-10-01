@@ -7,7 +7,7 @@ export function resolveResearchSession(value:string,prior:SavedResearchChat|unde
   const currentCompany=prior?.subjectCompany||jobCompany||context.company;
   const decision=decideResearchRequest(value,{company:currentCompany,title:prior?.subjectTitle||job?.title||context.title,hasJob:!!(prior?.jobId||job),pending:prior?.pendingResearch});
   const newSubject=decision.kind==="research"&&!!currentCompany&&decision.company.toLocaleLowerCase()!==currentCompany.toLocaleLowerCase();
-  const current=newSubject?undefined:prior;
+  const current=prior;
   const activeJobId=newSubject?undefined:(job?.job_id||current?.jobId);
   const sameJob=decision.kind==="research"&&!!activeJobId&&(!job||unknownCompanies.has(job.company)||decision.company.toLocaleLowerCase()===job.company.toLocaleLowerCase());
   return {decision,newSubject,current,currentCompany,activeJobId,sameJob};

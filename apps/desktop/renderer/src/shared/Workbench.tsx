@@ -168,6 +168,7 @@ export function Workbench({ sidebar, children, onError }: { sidebar: ReactNode; 
     void window.jobfindsme?.sourceBrowserCommand("state").then(state=>{if(!disposed&&!changed)setBrowserState(state);}).catch(error=>{if(!disposed)setTabError(String(error));});
     return()=>{disposed=true;unsubscribe?.();};
   }, []);
+  useEffect(()=>window.jobfindsme?.onBrowserRecovery(()=>{setPanelOpen(true);setNewTab(false);setMode("browser");}),[]);
   useEffect(() => () => { void window.jobfindsme?.closeSourceBrowser(); }, []);
   function openDestination(destination:Extract<BrowserDestination,{url:string}>) {
     setTarget({sourceId:destination.sourceId,url:destination.url,title:"浏览网页"});setNewTab(false);setTabError("");

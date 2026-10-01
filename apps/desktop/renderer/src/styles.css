@@ -525,3 +525,16 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 .browser-page-failure h3 { font-size:16px; margin:0 0 8px; }
 .browser-page-failure p { color:var(--text-muted); overflow-wrap:anywhere; }
 .browser-page-failure button { margin:4px; }
+
+.agent-job-results{display:grid;gap:10px;margin-top:14px}.agent-job-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:white}.agent-job-card p{font-size:12px;color:var(--muted);margin:5px 0 10px}.agent-job-card button{font-size:12px;padding:6px 10px}
+
+.research-message-actions{display:flex;justify-content:flex-start;gap:4px;margin-top:8px;color:#7b818b}
+.research-message-actions button{display:inline-flex;align-items:center;gap:6px;padding:5px;border:0;border-radius:6px;background:transparent;color:inherit;min-height:28px;font-size:12px}
+.research-message-actions button:hover,.research-message-actions button:focus-visible{background:#f1f3f6;color:#202630}
+.research-message-actions svg{width:15px;height:15px}
+.research-chat-turn.user .research-message-actions{justify-content:flex-end}
+.research-branch-origin{display:flex;align-items:center;gap:8px;color:#7b818b;font-size:12px;margin-bottom:20px}
+.research-branch-origin button{border:0;background:transparent;color:inherit;padding:4px;text-decoration:underline}
+.research-history-running{color:#64758c;float:right}
+
+.research-history-branch-icon svg{width:13px;height:13px;vertical-align:-2px;margin-right:5px;color:#7b818b}

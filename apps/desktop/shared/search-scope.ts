@@ -30,8 +30,8 @@ export function mergeSearchCoverage(previous:SourceSearchResponse|undefined,next
   for(const id of next.allowed_source_ids||[])delete blocked[id];
   return {...next,
     source_runs:unique([...previous.source_runs,...next.source_runs]),
-    planned_queries:unique([...(previous.planned_queries||[]),...(next.planned_queries||[])]),
-    executed_queries:unique([...(previous.executed_queries||[]),...(next.executed_queries||[])]),
+    planned_queries:[...new Map([...(previous.planned_queries||[]),...(next.planned_queries||[])].map(query=>[JSON.stringify(query),query])).values()],
+    executed_queries:[...new Map([...(previous.executed_queries||[]),...(next.executed_queries||[])].map(query=>[JSON.stringify(query),query])).values()],
     blocked_sources:{...blocked,...next.blocked_sources},
     source_diagnostics:next.source_diagnostics?{...next.source_diagnostics,sources:{...previous.source_diagnostics?.sources,...next.source_diagnostics.sources}}:previous.source_diagnostics,
   };

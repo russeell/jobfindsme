@@ -1007,15 +1007,18 @@ def _evidence_id(report_id: str, url: str, excerpt: str) -> str:
 
 
 class _ReadableHtml(HTMLParser):
+    """Bounded semantic extraction; navigation and hidden forms are not prose."""
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.article_parts: list[str] = []
-        self._article_depth = 0
+        self.content_parts: list[str] = []
+        self._stack: list[tuple[str, bool, bool, bool]] = []
         self.meta: dict[str, str] = {}
         self.title = ""
-        self._in_title = False
-        self._ignored_depth = 0
+        self.has_password = False
+        self.link_chars = 0
 
     @property
     def text(self) -> str:
@@ -1023,40 +1026,71 @@ class _ReadableHtml(HTMLParser):
 
     @property
     def article_text(self) -> str:
-        return " ".join(self.article_parts)
+        return " ".join(self.content_parts or self.article_parts)
 
     def handle_starttag(self, tag: str, attrs) -> None:
-        if tag in {"article", "main"}:
-            self._article_depth += 1
         values = {str(key).casefold(): str(value) for key, value in attrs if value}
-        if tag in {"script", "style", "noscript", "svg"}:
-            self._ignored_depth += 1
-        elif tag == "title":
-            self._in_title = True
-        elif tag == "meta":
+        if tag == "meta":
             key = (values.get("property") or values.get("name") or "").casefold()
-            content = values.get("content")
-            if key and content:
-                self.meta[key] = content
+            if key and values.get("content"):
+                self.meta[key] = values["content"]
+        if tag == "input" and values.get("type") == "password":
+            self.has_password = True
+        if tag in {
+            "meta",
+            "link",
+            "br",
+            "hr",
+            "img",
+            "input",
+            "source",
+            "wbr",
+            "area",
+            "base",
+            "embed",
+            "param",
+            "track",
+            "col",
+        }:
+            return
+        parent = self._stack[-1] if self._stack else ("", False, False, False)
+        ignored = (
+            parent[1]
+            or tag
+            in {"script", "style", "noscript", "svg", "nav", "footer", "aside", "form"}
+            or values.get("role") in {"navigation", "banner"}
+            or "hidden" in dict(attrs)
+            or values.get("aria-hidden") == "true"
+        )
+        article = parent[2] or tag in {"article", "main"}
+        content = (
+            parent[3]
+            or tag == "article"
+            or "markdown-body" in values.get("class", "").split()
+            or values.get("id") in {"readme", "readme-content", "article-body"}
+        )
+        self._stack.append((tag, ignored, article, content))
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in {"article", "main"} and self._article_depth:
-            self._article_depth -= 1
-        if tag in {"script", "style", "noscript", "svg"} and self._ignored_depth:
-            self._ignored_depth -= 1
-        elif tag == "title":
-            self._in_title = False
+        for index in range(len(self._stack) - 1, -1, -1):
+            if self._stack[index][0] == tag:
+                del self._stack[index:]
+                break
 
     def handle_data(self, data: str) -> None:
-        if self._ignored_depth:
-            return
         value = data.strip()
-        if value:
-            self.parts.append(value)
-            if self._article_depth:
-                self.article_parts.append(value)
-            if self._in_title:
-                self.title = f"{self.title} {value}".strip()[:300]
+        if not value or self._stack and self._stack[-1][1]:
+            return
+        if any(item[0] == "title" for item in self._stack):
+            self.title = f"{self.title} {value}".strip()[:300]
+            return
+        self.parts.append(value)
+        if self._stack and self._stack[-1][2]:
+            self.article_parts.append(value)
+        if self._stack and self._stack[-1][3]:
+            self.content_parts.append(value)
+        if any(item[0] == "a" for item in self._stack):
+            self.link_chars += len(value)
 
 
 def _host_matches(hostname: str | None, expected_domain: str) -> bool:

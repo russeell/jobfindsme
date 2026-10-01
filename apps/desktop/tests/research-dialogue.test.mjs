@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {decideResearchRequest} from '../dist-electron/shared/research-dialogue.js';
-import {acceptsResearchDelta,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,stopChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
+import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,stopChat,fromStoredResearchChat,loadResearchChats,mergeResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,toStoredResearchChat} from '../dist-electron/shared/research-chat-history.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 import {modelHistoryWithinBudget} from '../dist-electron/shared/research-chat-ipc.js';
 
@@ -140,7 +140,7 @@ test('A and B history selection binds the next turn to the selected session',()=
  const chosen=resolveResearchSession('这个岗位职责如何？',b,undefined,{company:'A公司',title:'A岗位'});
  assert.equal(chosen.decision.kind,'research');assert.equal(chosen.decision.company,'B公司');assert.equal(chosen.activeJobId,'job-b');assert.equal(chosen.current?.id,'b');
  const switched=resolveResearchSession('A公司的经营如何？',b,undefined,{});
- assert.equal(switched.newSubject,true);assert.equal(switched.current,undefined);assert.equal(switched.activeJobId,undefined);
+ assert.equal(switched.newSubject,true);assert.equal(switched.current?.id,'b');assert.equal(switched.activeJobId,undefined);
 });
 
 test('toStored fixture preserves a long answer and migration verifies the backend readback',async()=>{
@@ -179,4 +179,24 @@ test('failed attachment round restores retry materials after conversation reload
  const done=finishChat(failed,'修改草稿',undefined,'2026-01-03');
  assert.deepEqual(retryChatAttachments(done),[]);
  assert.deepEqual(retryChatAttachments({...failed,draft:'另一条提问'}),[]);
+});
+
+
+test('employee followups retain their conversation and company',()=>{
+ const chat={id:'employee-chat',title:'公司研究',updatedAt:'2026-01-01',turns:[],reportIds:[],subjectCompany:'星宇股份',jobId:'job-one'};
+ for(const question of ['对打工人来讲怎么样','福利怎么样','工作强度怎么样','对员工来说如何']){
+   const result=resolveResearchSession(question,chat,undefined,{});
+   assert.equal(result.current.id,chat.id);assert.equal(result.newSubject,false,question);assert.equal(result.currentCompany,chat.subjectCompany,question);assert.equal(result.activeJobId,chat.jobId);
+ }
+});
+test('branch contains only the chosen prefix, retains lineage and never aliases original turns',()=>{
+ const parent={id:'parent',title:'讨论',updatedAt:'2026-01-01',turns:[{role:'user',text:'第一问'},{role:'assistant',text:'第一答',reportId:'r1',jobs:[{title:'fictional'}]},{role:'user',text:'第二问'},{role:'assistant',text:'第二答',reportId:'r2'}],reportIds:['r1','r2'],subjectCompany:'后来的公司',jobId:'later-job',draft:'未发送',failure:'failure'};
+ const fork=branchChat(parent,1,'child','2026-01-02');
+ assert.equal(fork.turns.length,2);assert.deepEqual(fork.reportIds,['r1']);assert.equal(fork.jobId,undefined);assert.equal(fork.subjectCompany,undefined);assert.equal(fork.draft,undefined);assert.equal(fork.failure,undefined);
+ fork.turns[1].jobs[0].title='changed';assert.equal(parent.turns[1].jobs[0].title,'fictional');
+ assert.deepEqual(fromStoredResearchChat(toStoredResearchChat('w',fork)).branchOf,{chatId:'parent',turnIndex:1});
+ assert.deepEqual(beginChat(fork,'child','追问','2026-01-03').chat.branchOf,fork.branchOf);
+ assert.equal(branchChat(parent,3,'latest','2026-01-02').jobId,'later-job');
+ assert.throws(()=>branchChat(parent,0,'bad','2026-01-02'));
+ assert.throws(()=>branchChat(parent,1,'parent','2026-01-02'));
 });

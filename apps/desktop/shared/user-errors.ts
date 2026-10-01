@@ -17,7 +17,7 @@ export function userError(error:unknown):UserError {
  if(/source_detail_unreadable:|没有读取到完整岗位信息/.test(text))return {kind:'source',message:'未能读取完整岗位详情。列表和登录状态保留，可打开原页查看或重试。',action:'retry'};
  if(/source_visible_page_required:/.test(text))return {kind:'source',message:'请在内置浏览器打开智联账号页面，确认登录状态后重试检查。',action:'source'};
  if(/login_required\b|\bverified login\b|登录.*(失效|过期)/.test(text))return {kind:'login',message:'该来源显示登录页，请在内置浏览器核对账号状态。已读取的岗位会保留。',action:'source'};
- if(/risk_control|验证码|安全验证|限流|过于频繁/.test(text))return {kind:'risk',message:'该来源要求验证或暂时限制访问，采集已暂停。',action:'source'};
+ if(/verification_required|risk_control|验证码|安全验证|限流|过于频繁/.test(text))return {kind:'risk',message:'该来源要求验证或暂时限制访问，采集已暂停。',action:'source'};
  if(/source_backoff:/.test(text))return {kind:'source',message:'该来源正在检查或刚完成检查，本次没有重复访问。',action:'retry'};
  if(/source_check_timeout|source_timeout:/.test(text))return {kind:'source',message:'本次来源读取超时，登录和检索能力尚未确认。',action:'retry'};
  if(/no_matching:/.test(text))return {kind:'source',message:'本次未读到匹配岗位，检索能力仍待验证。',action:'retry'};
@@ -27,6 +27,7 @@ export function userError(error:unknown):UserError {
  if(/source_contract_error:/.test(text))return {kind:'source',message:'本次未读到可验证的岗位列表，可能是页面结构变化；登录状态仍待确认。',action:'source'};
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};
  if(/source_contract|来源|continuation_expired/.test(text))return {kind:'source',message:'来源暂时无法读取，请打开对应网站确认状态。',action:'source'};
+ if(/chat_concurrency_limit/.test(text))return {kind:'service',message:'同时最多运行四条聊天，请等待其中一条完成或停止后再发送。',action:'retry'};
  if(/500|502|503|fetch failed|API.*(ready|failed)|ECONN|IPC|invoking remote/.test(text))return {kind:'service',message:'本次操作未完成，本地服务暂时异常，请稍后重试。',action:'retry'};
  if(/[\u4e00-\u9fff]/.test(text)&&text.length<=160&&!/Error|Exception|\n\s+at |https?:|Bearer|token|api.key/i.test(text))return {kind:'unknown',message:text,action:'retry'};
  return {kind:'unknown',message:'操作未完成，请稍后重试。',action:'retry'};

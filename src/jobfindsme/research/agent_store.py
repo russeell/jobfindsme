@@ -181,6 +181,18 @@ class ResearchAgentStore:
             "research_mode": bool(item.get("research_mode")),
             "failure": str(item.get("failure") or "")[:500],
         }
+        branch = item.get("branch_of")
+        if branch is not None:
+            if (
+                not isinstance(branch, dict)
+                or not isinstance(branch.get("chatId"), str)
+                or not 0 < len(branch["chatId"]) <= 100
+                or branch["chatId"] == conversation_id
+                or type(branch.get("turnIndex")) is not int
+                or not 0 <= branch["turnIndex"] < 1000
+            ):
+                raise ValueError("invalid conversation branch")
+            context["branch_of"] = branch
         reports = [str(value) for value in (item.get("report_ids") or [])[:30]]
         now = _now()
         supplied = item.get("updated_at")
@@ -206,6 +218,16 @@ class ResearchAgentStore:
             ).fetchone()
             if existing and existing["workspace_id"] != workspace_id:
                 raise PermissionError("conversation belongs to another workspace")
+            if branch and not existing:
+                parent = connection.execute(
+                    "SELECT workspace_id,turns_json FROM research_conversations "
+                    "WHERE conversation_id=?",
+                    (branch["chatId"],),
+                ).fetchone()
+                if not parent or parent["workspace_id"] != workspace_id:
+                    raise ValueError("branch parent not found in workspace")
+                if branch["turnIndex"] >= len(json.loads(parent["turns_json"])):
+                    raise ValueError("branch turn not found")
             connection.execute(
                 """INSERT INTO research_conversations
                    (conversation_id,workspace_id,subject_key,context_json,turns_json,
@@ -255,6 +277,7 @@ class ResearchAgentStore:
                 "job_id": json.loads(row["context_json"]).get("job_id"),
                 "research_mode": json.loads(row["context_json"]).get("research_mode"),
                 "failure": json.loads(row["context_json"]).get("failure"),
+                "branch_of": json.loads(row["context_json"]).get("branch_of"),
                 "turns": json.loads(row["turns_json"]),
                 "report_ids": json.loads(row["report_ids_json"]),
                 "draft": row["draft"],
@@ -306,6 +329,28 @@ class ResearchAgentStore:
             )
             if not result.rowcount:
                 raise LookupError("archived conversation not found")
+
+    def continuation(self, workspace_id: str, conversation_id: str) -> dict:
+        with self.database.connect() as connection:
+            self._workspace(connection, workspace_id)
+            row = connection.execute(
+                "SELECT context_json,evidence_json FROM research_executions "
+                "WHERE workspace_id=? AND conversation_id=? "
+                "ORDER BY updated_at DESC LIMIT 1",
+                (workspace_id, conversation_id),
+            ).fetchone()
+        if not row:
+            return {}
+        context = json.loads(row["context_json"])
+        return {
+            "research_state": context.get("research_state"),
+            "queries": context.get("queries", []),
+            "evidence": json.loads(row["evidence_json"]),
+            "company": context.get("company"),
+            "job_id": context.get("job_id"),
+            "subject_anchor": context.get("subject_anchor"),
+            "job_searches": context.get("job_searches", []),
+        }
 
     def save_execution(self, workspace_id: str, item: dict) -> dict:
         execution_id = str(item["id"])

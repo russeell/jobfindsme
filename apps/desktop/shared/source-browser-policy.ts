@@ -175,10 +175,10 @@ export function isPublicWebUrl(value:string):boolean {
   try {
     const url=new URL(value),host=url.hostname.toLowerCase().replace(/\.$/,"");
     if(!["http:","https:"].includes(url.protocol)||url.username||url.password)return false;
-    if(host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host==="[::1]"||host==="[::]"||host.startsWith("[::ffff:")||/^\[(?:fc|fd|fe[89ab])/i.test(host))return false;
+    if(host==="localhost"||host.endsWith(".localhost")||host.endsWith(".local")||host==="[::1]"||host==="[::]"||host.startsWith("[::ffff:")||host.startsWith("[ff")||/^\[(?:fc|fd|fe[89ab])/i.test(host))return false;
     const ip=host.split(".").map(Number);
     if(ip.length===4&&ip.every(n=>Number.isInteger(n)&&n>=0&&n<=255)) {
-      if(ip[0]===0||ip[0]===10||ip[0]===127||ip[0]>=224||ip[0]===169&&ip[1]===254||ip[0]===172&&ip[1]>=16&&ip[1]<=31||ip[0]===192&&ip[1]===168)return false;
+      if(ip[0]===0||ip[0]===10||ip[0]===127||ip[0]>=224||ip[0]===169&&ip[1]===254||ip[0]===172&&ip[1]>=16&&ip[1]<=31||ip[0]===192&&ip[1]===168||ip[0]===100&&ip[1]>=64&&ip[1]<=127||ip[0]===198&&[18,19].includes(ip[1])||ip[0]===192&&ip[1]===0||ip[0]===198&&ip[1]===51&&ip[2]===100||ip[0]===203&&ip[1]===0&&ip[2]===113)return false;
     }
     return !!host;
   } catch{return false;}

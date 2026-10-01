@@ -11,11 +11,11 @@ const messageOf=(error:unknown)=>error instanceof Error?error.message:String(err
 /** Keep source collection concurrent while committing each validated batch in order. */
 export async function executeBoundedSourceSearch(
   input:SourceSearchInput,
-  deps:{client:DesktopApiClient;manager?:SourceBrowserManager;getCancellationEpoch:()=>number;onProgress?:(value:unknown)=>void;onSourceStatusChanged?:()=>void},
+  deps:{signal?:AbortSignal;client:DesktopApiClient;manager?:SourceBrowserManager;getCancellationEpoch:()=>number;onProgress?:(value:unknown)=>void;onSourceStatusChanged?:()=>void},
 ):Promise<SourceSearchResponse>{
   const {client,manager,getCancellationEpoch,onProgress,onSourceStatusChanged}=deps;
   const epoch=getCancellationEpoch();
-  const isCancelled=()=>epoch!==getCancellationEpoch();
+  const isCancelled=()=>epoch!==getCancellationEpoch()||!!deps.signal?.aborted;
   if(isCancelled())throw Error("cancelled:检索已停止");
   const runStarted=Date.now();
   const preflight=await client.searchPreflight({...input,attempt_unverified_login:true});
@@ -25,6 +25,7 @@ export async function executeBoundedSourceSearch(
   let runId=input.existing_run_id;
   const responses:SourceSearchResponse[]=[];
   const failures:SourceBatchFailure[]=[];
+  const committedSources=new Set<string>();
   let firstUsableMs:number|null=null;
   let saveQueue=Promise.resolve();
   const saveOne=async(sourceId:string,pages:BrowserSourcePage[],error?:string)=>{
@@ -34,9 +35,9 @@ export async function executeBoundedSourceSearch(
     try{
       response=await client.runSourceSearch({...executionInput,attempt_unverified_login:true,allow_cache_fallback:false,source_ids:[sourceId],existing_run_id:runId,
         resume_version_id:preflight.resume_version_id||undefined,
-        browser_pages:pages.length?{[sourceId]:pages}:{},browser_errors:error?{[sourceId]:error}:{}});
-    }catch(saveError){failures.push({source_id:sourceId,stage:"save",message:messageOf(saveError).slice(0,300)});return;}
-    runId=response.result_page.run_id;
+        max_pages:Math.max(1,pages.length),browser_pages:pages.length?{[sourceId]:pages}:{},browser_errors:error?{[sourceId]:error}:{}});
+    }catch(saveError){failures.push({source_id:sourceId,stage:"save",message:messageOf(saveError).slice(0,300)});throw Error("save_failed:岗位批次未保存，续查从本批重试");}
+    runId=response.result_page.run_id;committedSources.add(sourceId);
     responses.push(response);
     if(firstUsableMs===null&&response.result_page.total>0)firstUsableMs=Date.now()-runStarted;
     try{onProgress?.({stage:"listing",count:response.result_page.total,
@@ -56,15 +57,19 @@ export async function executeBoundedSourceSearch(
   };
   const browser=await collectBrowserSourcePages(input,preflight,{client,manager,isCancelled,
     onProgress:value=>onProgress?.({...(value as object),workspace_id:input.workspace_id,client_run_id:clientRunId}),
-    onSourceCompleted:(sourceId,pages,error)=>{
-      saveQueue=saveQueue.then(()=>saveOne(sourceId,pages,error)).catch(saveError=>{
-        failures.push({source_id:sourceId,stage:"save",message:messageOf(saveError).slice(0,300)});
-      });
-      return saveQueue;
+    signal:deps.signal,
+    onPage:(sourceId,page)=>{saveQueue=saveQueue.catch(()=>{}).then(()=>saveOne(sourceId,[page]));return saveQueue;},
+    onSourceCompleted:async(sourceId,pages,error)=>{
+      if(!pages.length){saveQueue=saveQueue.catch(()=>{}).then(()=>saveOne(sourceId,[],error));await saveQueue;}
+      else if(error){
+        const failure=/^login_required:/.test(error)?"login_required":/^risk_control:/.test(error)?"risk_control":null;
+        if(failure)try{await client.recordSourceRuntimeFailure(sourceId,failure,error);}
+        catch(statusError){failures.push({source_id:sourceId,stage:"source_status",message:messageOf(statusError).slice(0,300)});}
+      }
     }});
-  await saveQueue;
+  await saveQueue.catch(()=>{});
   if(isCancelled()&&!responses.length)throw Error("cancelled:检索已停止");
-  let response=responses.at(-1);
+  let response=responses.reduce<SourceSearchResponse|undefined>((best,next)=>!best||next.result_page.total>=best.result_page.total?next:best,undefined);
   if(!response){
     if(failures.length)throw Error(`本次岗位保存失败：${failures.map(item=>item.source_id).join("、")}`);
     const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,existing_run_id:_existing,...executionInput}=input;
@@ -78,20 +83,23 @@ export async function executeBoundedSourceSearch(
   }
   if(runId&&client.finalizeSearch){await client.finalizeSearch(input.workspace_id,runId);response={...response,result_page:await client.getSearchPage(input.workspace_id,runId,1,input.page_size||20)};}
   onSourceStatusChanged?.();
-  const query={keyword:preflight.keywords[0],city:input.city||input.filters?.cities?.[0]||""};
   const failedRuns:SourceSearchRun[]=failures.filter(item=>item.stage==="save").map(item=>({source_id:item.source_id,
     status:"failed",pages_fetched:browser.pages[item.source_id]?.length||0,elapsed_seconds:0,coverage_status:"failed",
     can_continue:false,next_cursor:null,stop_reason:"save_failed",error:item.message}));
   for(const item of failures){const diagnostic=browser.diagnostics.sources[item.source_id];if(diagnostic)diagnostic.status=item.stage==="save"?"save_failed":"source_status_failed";}
   const runOrder=new Map(preflight.allowed_source_ids.map((sourceId,index)=>[sourceId,index]));
-  const sourceRuns=[...responses.flatMap(batch=>batch.source_runs),...failedRuns]
-    .sort((a,b)=>(runOrder.get(a.source_id)??Infinity)-(runOrder.get(b.source_id)??Infinity));
+  const sourceRuns=[...new Map(responses.flatMap(batch=>batch.source_runs).map(run=>[run.source_id,run])).values(),...failedRuns]
+    .map(run=>{
+      const cursor=browser.continuations[run.source_id];const error=browser.errors[run.source_id];
+      const blocked=!!error&&/login_required|risk_control|unsupported_cursor/.test(error);
+      return {...run,pages_fetched:browser.pages[run.source_id]?.length||run.pages_fetched,
+        next_cursor:blocked?null:cursor??null,can_continue:!blocked&&!!cursor,
+        ...(!error&&cursor?{status:"partial" as const,stop_reason:run.stop_reason==="complete"?"page_budget":run.stop_reason,coverage_status:"partial"}:{}),
+        ...(error?{status:(committedSources.has(run.source_id)&&browser.pages[run.source_id]?.some(p=>p.records.length)?"partial":"failed") as SourceSearchRun["status"],stop_reason:error.split(":")[0],error}:{}),
+      };
+    }).sort((a,b)=>(runOrder.get(a.source_id)??Infinity)-(runOrder.get(b.source_id)??Infinity));
   return {...response,allowed_source_ids:preflight.allowed_source_ids,blocked_sources:preflight.blocked_sources,
     source_runs:sourceRuns,batch_failures:failures,
     source_diagnostics:{...browser.diagnostics,first_usable_ms:firstUsableMs,total_elapsed_ms:Date.now()-runStarted,concurrency:Math.min(4,preflight.allowed_source_ids.length)},
-    planned_queries:preflight.allowed_source_ids.map(source_id=>({source_id,...query})),
-    executed_queries:preflight.allowed_source_ids.filter(source_id=>{
-      const source=browser.diagnostics.sources[source_id];return !!source&&
-        (source.site_pages>0||!/(cancelled|time_budget|browser_session_error|unsupported_cursor)/.test(browser.errors[source_id]||""));
-    }).map(source_id=>({source_id,...query})),local_filters:input.filters};
+    planned_queries:browser.planned_queries,executed_queries:browser.executed_queries,local_filters:input.filters};
 }
