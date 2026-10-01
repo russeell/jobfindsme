@@ -2393,6 +2393,29 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D142",
+      "title": "无JD面试准备与逐题练习连续状态",
+      "depends_on": [
+        "D141"
+      ],
+      "status": "done",
+      "scope": [
+        "准备、练习、答案与复盘意图区分",
+        "JD可选，实际交付问题与点评状态",
+        "开源实现核对及真实本机验收"
+      ],
+      "acceptance": [
+        "仅岗位方向即可获得准备重点，不把建议丢弃",
+        "无JD可进入单题练习并根据回答反馈追问",
+        "准备与方向澄清不误当成已答题"
+      ],
+      "verification": "D142真实computer use：无JD的方向准备、同聊天单题模拟、虚构答案反馈与单一追问三次授权请求通过；325项Node回归、类型构建、diff检查及包审计通过。未测试所有岗位/模型，真实简历未参与。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

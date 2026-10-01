@@ -8,14 +8,14 @@ import type {Model} from "@earendil-works/pi-ai";
 import type {AgentTool,AgentMessage} from "@earendil-works/pi-agent-core";
 import {Type} from "typebox";
 import {createHash} from "node:crypto";
-import type {ModelConnection,ResearchEvidence,ResearchReport,ResearchChatProcessStep,SearchResultItem,SourceSearchResponse} from "../../shared/contracts.js";
+import type {InterviewState,ModelConnection,ResearchEvidence,ResearchReport,ResearchChatProcessStep,SearchResultItem,SourceSearchResponse} from "../../shared/contracts.js";
 import {checkResearchClaim,researchClaimText,type SupportedResearchClaim} from "../../shared/research-claim-support.js";
 import {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
-import {interviewResponseIssue,researchDomainMatches} from "../../shared/assistant-quality.js";
+import {deliveredInterviewQuestion,interviewModeFor,interviewSetupQuestion,interviewResponseIssue,researchDomainMatches} from "../../shared/assistant-quality.js";
 export {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
 
 export type AgentConversationTurn={attachments?:ChatAttachment[];role:"user"|"assistant";text:string};
-export type InterviewState={asked:string[];weaknesses:string[];follow_up_reason:string;current_question:string};
+export type {InterviewState} from "../../shared/contracts.js";
 export type AgentResearchContext={previousState?:Record<string,unknown>;interviewState?:InterviewState;attachments?:ChatAttachment[];skillId?:AssistantSkillId;workspaceId:string;sessionId?:string;requestId:string;question:string;jobId?:string;company?:string;title?:string;history:AgentConversationTurn[];research:boolean;reportRequested?:boolean};
 export type AgentResearchResult={jobs?:SearchResultItem["job"][];resumeProposalId?:string;interviewState?:InterviewState;text:string;report?:ResearchReport;company?:string;researched?:boolean;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 export type Discovery={url:string;site:string;title:string;status:string;source_type?:string;provider?:string};
@@ -141,6 +141,12 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
   const subject=()=>({...researchSubject(company),...(subjectKind?{kind:subjectKind}:{})});const anchor=()=>subject().anchor;
   const claimAnchor=()=>subject().kind==="company"?anchor():"";
   let proposalSessionId:string|undefined;let interviewState=context.interviewState;
+  const interviewMode=interviewModeFor(context.question,context.interviewState?.mode);
+  const previousAssistant=[...context.history].reverse().find(turn=>turn.role==="assistant");
+  // Legacy chats have no mode. Only the most recent delivered practice question
+  // can require feedback; a setup clarification or an older question cannot.
+  const previousQuestion=interviewMode==="practice"?(context.interviewState?.current_question||(!context.interviewState&&previousAssistant&&!interviewSetupQuestion(previousAssistant.text)?deliveredInterviewQuestion(previousAssistant.text):undefined)):undefined;
+  const answeredPreviousQuestion=interviewMode==="practice"&&!/(?:开始|直接|进入|切换到|换成).{0,12}(?:模拟|练习|面试|问我)|考我/u.test(context.question)&&!!previousQuestion;
   const evidence=new Map<string,ResearchEvidence>();const discovered=new Map<string,string>();const knownUrls=new Set<string>();const officialKnownUrls=new Set<string>();const failedReads=new Set<string>();const haltedHosts=new Set<string>();const failedSearchSites=new Set<string>();
   for(const turn of [{role:"user",text:context.question},...context.history.filter(turn=>turn.role==="user")])for(const match of turn.text.matchAll(/https:\/\/[^\s<>"）)]+/gu)){const value=match[0].replace(/[。,;；.!]+$/u,"");if(publicKnownUrl(value)){const url=canonicalResearchUrl(value);knownUrls.add(url);discovered.set(url,"web");}}
   const pageCache=new Map<string,unknown>();
@@ -368,13 +374,12 @@ finishTurn:async turn=>{
     // A terminal model response is not proof that evidence acquisition is complete.
     // Repair once inside the existing Pi loop, sharing every original budget.
     const interviewAnswer=modelMessage(raw);
-    const answeredPreviousQuestion=!!context.interviewState?.current_question||context.history.some(turn=>turn.role==="assistant"&&/[?？]/u.test(turn.text));
-    const interviewIssue=interviewResponseIssue(interviewAnswer,context.question,answeredPreviousQuestion);
+    const interviewIssue=interviewResponseIssue(interviewAnswer,context.question,answeredPreviousQuestion,interviewMode);
     if(context.skillId==="interview-prep"&&terminal&&!interviewRepair&&interviewIssue&&!signal.aborted){
       interviewRepair=true;raw="";
       actions.push({tool:"answer_check",status:"repair_required",reason:`interview_${interviewIssue}`});
       await persist();guard();
-      agent.steer({role:"user",timestamp:Date.now(),content:JSON.stringify({instruction:answeredPreviousQuestion?"修正本轮回复：针对候选人刚才回答先给一处具体有效点与一个关键改进，再只问一道简短追问。不列多个子问题，不重复上一题，问完等回答。":"修正本轮回复：根据现有岗位或项目材料，只问一道简短、单一的问题，不列子问题或参考答案，问完等回答。",candidate_answer:context.question,previous_question:context.interviewState?.current_question,current_question:interviewState?.current_question})});
+      agent.steer({role:"user",timestamp:Date.now(),content:JSON.stringify({instruction:interviewMode==="prepare"?"修正本轮回复：JD不是前提。按用户已有岗位方向给出简短、可执行的准备重点与练习顺序；不要要求先交JD或简历，不把准备建议当成候选人答案点评。":interviewIssue==="jd_required"?"JD不是开始条件。已有方向按该方向的通用能力问一道题，缺方向只问想练哪个方向。没有真实项目材料时明确使用假设场景，不虚构候选人经历。":answeredPreviousQuestion?"修正本轮回复：针对候选人刚才回答先给一处具体有效点与一个关键改进，再只问一道简短追问。不列多个子问题，不重复上一题，问完等回答。":"修正本轮回复：根据现有岗位或项目材料，只问一道简短、单一的问题，不列子问题或参考答案，问完等回答。",candidate_answer:context.question,previous_question:context.interviewState?.current_question,current_question:interviewState?.current_question})});
       return {action:"continue"};
     }
     if(context.skillId==="deep-research"&&!context.reportRequested&&terminal&&!completionRepair&&!evidence.size&&!signal.aborted){
@@ -471,20 +476,23 @@ finishTurn:async turn=>{
     if(directChat&&!context.skillId&&!runController.signal.aborted){onDelta(delta,"direct");directStreamed=true;}
   }});
   const emitFinal=(value:string)=>{if(!directStreamed&&!finalEmitted){onDelta(value,"checked");finalEmitted=true;}};
-  const prompt=JSON.stringify({research_journal:researchState,already_queried:[...searchedQueries],previous_originals:[...evidence.values()],interview_state:interviewState,research_subject:subject(),current_question:context.question,selected_skill:context.skillId,attached_materials:context.attachments?.map(({image,...item})=>item),company,title:context.title,job_id:context.jobId,research_requested:context.research});
+  const prompt=JSON.stringify({research_journal:researchState,already_queried:[...searchedQueries],previous_originals:[...evidence.values()],interview_state:interviewState,research_subject:subject(),current_question:context.question,selected_skill:context.skillId,...(context.skillId==="interview-prep"?{interview_delivery:{mode:interviewMode,feedback_required:answeredPreviousQuestion,jd_optional:true,previous_question:previousQuestion||null}}:{}),attached_materials:context.attachments?.map(({image,...item})=>item),company,title:context.title,job_id:context.jobId,research_requested:context.research});
   const abort=()=>{runController.abort();agent.abort();};signal.addEventListener("abort",abort,{once:true});
   let deadline:ReturnType<typeof setTimeout>|undefined;
   const timedOut=new Promise<never>((_,reject)=>{deadline=setTimeout(()=>{runController.abort();agent.abort();reject(Error("研究时间预算已用完"));},Math.max(1,deadlineAt-Date.now()));});
   try{await Promise.race([persist(),timedOut]);await Promise.race([agent.prompt(prompt,context.attachments?.filter(item=>item.image).map(item=>({type:"image" as const,data:item.image!.data,mimeType:item.image!.mimeType}))),timedOut]);collectUsage();if(signal.aborted)throw Error("cancelled");if(agent.state.errorMessage){if(context.attachments?.some(item=>item.image)&&/image|vision|multimodal|图片|视觉/i.test(agent.state.errorMessage))throw Error("当前模型未接受图片，请换用支持视觉的模型，或提供文本材料。");throw Error(`模型请求失败：${agent.state.errorMessage}`);}
     if(context.skillId==="interview-prep"){
-      const text=modelMessage(raw),hasPrevious=!!context.interviewState?.current_question||context.history.some(turn=>turn.role==="assistant"&&/[?？]/u.test(turn.text));
-      if(interviewResponseIssue(text,context.question,hasPrevious))throw Error("assistant_failure:interview_output");
-      // Even if the model skipped the memory tool, preserve the actual question
-      // delivered to the user, rather than silently losing continuity on restart.
-      if(!actions.some(item=>item.tool==="remember_interview")){
-        const question=text.match(/[^。！？?\n]+[?？]/u)?.[0].trim();
-        if(question){interviewState={asked:[...(context.interviewState?.asked||[]),question].slice(-20),weaknesses:context.interviewState?.weaknesses||[],follow_up_reason:"",current_question:question};actions.push({tool:"remember_interview",status:"from_delivered_question"});}
-      }
+      const text=modelMessage(raw);
+      if(interviewResponseIssue(text,context.question,answeredPreviousQuestion,interviewMode))throw Error("assistant_failure:interview_output");
+      const question=interviewMode==="practice"&&!interviewSetupQuestion(text)?deliveredInterviewQuestion(text):undefined;
+      const recorded=interviewState?.current_question;
+      const prior=context.interviewState;
+      const asked=[...(prior?.asked||[])];
+      if(question&&!asked.includes(question.slice(0,300)))asked.push(question.slice(0,300));
+      // The delivered question is authoritative. A plan, clarification, reference
+      // answer or pause must not turn into a phantom question on the next turn.
+      interviewState={asked:asked.slice(-20),weaknesses:interviewState?.weaknesses||prior?.weaknesses||[],follow_up_reason:question&&recorded===question?interviewState?.follow_up_reason||"":"",current_question:question?.slice(0,500)||"",mode:interviewMode};
+      actions.push({tool:"remember_interview",status:"from_delivered_response",mode:interviewMode});
     }
     if(directChat&&!actions.some(item=>["search_web","read_page","read_browser_page"].includes(String(item.tool)))){const text=modelMessage(raw);if(!text)throw Error("模型没有返回可显示的内容。");status="complete";answer=text;await persist();emitFinal(text);return {jobs:[...liveJobs.values()],text,resumeProposalId:proposalSessionId,interviewState,company:company||undefined,researched:false};}
     if(!actions.length&&!context.research){const text=modelMessage(raw);if(!text)throw Error("模型没有返回可显示的内容。");emitFinal(text);return {jobs:[...liveJobs.values()],text,resumeProposalId:proposalSessionId,interviewState,company:company||undefined,researched:false};}

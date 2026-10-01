@@ -13,7 +13,7 @@ const forbidden = [
   /(^|\/)\.env(?:\.|$)/i,
   /(^|\/)(?:credentials?|secrets?|api[-_]?keys?)(?:\.[^/]*)?$/i,
 ];
-const skillFiles=new Set(["NOTICE.md","licenses/resume-tailoring-MIT.txt","licenses/tech-interview-handbook-MIT.txt","licenses/deep-research-MIT.txt","licenses/ai-job-search-MIT.txt","licenses/agent-reach-MIT.txt",... ["resume-tailor","interview-prep","deep-research","web-retrieval"].map(id=>`${id}/SKILL.md`)].map(file=>`Contents/Resources/app/skills/${file}`));
+const skillFiles=new Set(["NOTICE.md","licenses/resume-tailoring-MIT.txt","licenses/tech-interview-handbook-MIT.txt","licenses/deep-research-MIT.txt","licenses/ai-job-search-MIT.txt","licenses/agent-reach-MIT.txt","licenses/interview-mentor-MIT.txt","licenses/open-interviewer-MIT.txt",... ["resume-tailor","interview-prep","deep-research","web-retrieval"].map(id=>`${id}/SKILL.md`)].map(file=>`Contents/Resources/app/skills/${file}`));
 const violations = [];
 const visit = (directory) => {
   for (const entry of readdirSync(directory)) {

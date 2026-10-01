@@ -406,7 +406,7 @@ export type PromptTurnInput = {
 export type ModelProtocol = "openai_compatible" | "anthropic" | "gemini";
 
 export type ResearchChatProcessStep = {tool:string;status:string;site?:string;count?:number};
-export type InterviewState={asked:string[];weaknesses:string[];follow_up_reason:string;current_question:string};
+export type InterviewState={asked:string[];weaknesses:string[];follow_up_reason:string;current_question:string;mode?:import("./assistant-quality.js").InterviewMode};
 export type ResearchChatTurn = {jobs?:SearchResultItem["job"][];resumeProposalId?:string;interviewState?:InterviewState;attachments?:ChatAttachment[];skillId?:AssistantSkillId;role:"user"|"assistant";text:string;interrupted?:boolean;reportId?:string;searchQuery?:string;evidence?:ResearchEvidence[];process?:ResearchChatProcessStep[]};
 export type ResearchChatInput = {source_ids?:string[];interview_state?:InterviewState;attachments?:ChatAttachment[];skill_id?:AssistantSkillId;request_id:string;session_id:string;workspace_id:string;connection_id:string;question:string;research:boolean;job_id?:string;company?:string;title?:string;history:ResearchChatTurn[]};
 export type ResearchChatDelta = {request_id:string;session_id:string;workspace_id:string;delta?:string;content_status?:"direct"|"checked";progress?:{tool:string;status:"started"|"completed"|"failed"}};

@@ -25,3 +25,14 @@ https://github.com/Panniantong/Agent-Reach/tree/a19a171fa980a0785849596492e0af4d
 Exa 官方托管搜索接口的格式与工具协议参考官方 exa-labs/exa-mcp-server，未复制服务器源码、Agent 或客户端框架。仅通过固定 HTTPS 远程接口调用 web_search_exa；不恢复 JobFindsMe 旧 MCP 服务器。
 https://github.com/exa-labs/exa-mcp-server/blob/f3d71fb6b0ff4b4683f108f05bc2bae61a9f7e97/src/tools/webSearch.ts
 服务配额及可用性受提供方限制；搜索内容只用于发现，不能成为已核验原文。
+
+面试准备补充（D142）：自行实现准备/练习意图区分与实际交付问题的连续状态；仅参考以下 MIT 源码的岗位方向可选、能力维度、场景练习与回答后追问组织，不复制题库、提示词、评分算法或引入其运行时。
+- saber0830/open-interviewer，角色与简历的可选上下文及逐轮反馈：
+  https://github.com/saber0830/open-interviewer/blob/24cf43e3c71ea5568a94826078ce1210f8901743/src/app.js
+  许可证：licenses/open-interviewer-MIT.txt。
+- PrepLabsAI/InterviewMentor，技术机制、评测、失败处理及成本的能力维度：
+  https://github.com/PrepLabsAI/InterviewMentor/blob/ba37b1c49aace2c59cd312ff978dd9f56ef8ef64/agents/ai-pm/prompt-engineering-interviewer/SKILL.md
+  许可证：licenses/interview-mentor-MIT.txt。
+- yangshun/tech-interview-handbook，先准备再练习、基于练习反馈复盘：
+  https://github.com/yangshun/tech-interview-handbook/blob/e1d28e8886c0b6ff3e50da991ce0e895134ddc59/apps/website/contents/mock-interviews.md
+  沿用 licenses/tech-interview-handbook-MIT.txt。

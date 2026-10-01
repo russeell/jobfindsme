@@ -52,3 +52,11 @@ test('archived and deleted chats never migrate back from device cache after SQLi
  assert.deepEqual(legacyChatsForMigration(cached,new Set(['archived']),false).map(item=>item.id),['deleted','legacy']);
  assert.deepEqual(legacyChatsForMigration(cached,new Set(),true),[]);
 });
+
+test('interview mode is optional for older chats and constrained for new requests',()=>{
+ const base={request_id:'request-1234',session_id:'session-1234',workspace_id:'workspace-1',connection_id:'model-1',question:'继续',research:false,history:[]};
+ const state={asked:[],weaknesses:[],follow_up_reason:'',current_question:''};
+ assert(validResearchChatInput({...base,interview_state:state}));
+ for(const mode of ['prepare','practice','reference','summary'])assert(validResearchChatInput({...base,interview_state:{...state,mode}}));
+ assert(!validResearchChatInput({...base,interview_state:{...state,mode:'unknown'}}));
+});
