@@ -2443,6 +2443,23 @@
         "https://github.com/russeell/jobfindsme/actions/runs/36859035456"
       ],
       "blocker": null
+    },
+    {
+      "id": "D144",
+      "title": "参考开源项目精简产品README",
+      "status": "done",
+      "depends_on": [
+        "D143"
+      ],
+      "scope": [
+        "四项特点、两张示例图、下载与三步上手"
+      ],
+      "verification": "核对FuckJob当前README的定位/截图写法，使用本项目原创文案和既有虚构示例图；README从62行精简至39行，保留四平台、三技能、登录限制与模型数据说明。相对链接和图片存在、GitHub Markdown表格/步骤/图片渲染及diff检查通过；仅文档改动，不运行模型、不改安装包、不发布。",
+      "evidence": [
+        "README.md",
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
