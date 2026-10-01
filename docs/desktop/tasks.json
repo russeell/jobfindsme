@@ -2460,6 +2460,25 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D145",
+      "title": "本地生成物清理与公开仓库目录整理",
+      "status": "done",
+      "depends_on": [
+        "D144"
+      ],
+      "scope": [
+        "旧开发App、归档和可再生成缓存",
+        "移除个人开发Skill及未引用图片",
+        "同步英文README和目录说明"
+      ],
+      "verification": "清理405项生成物，按文件分配块统计约3.14GiB；保留v0.14.0 App、发行ZIP、开发依赖和用户数据，最新App包审计通过。README/英文README/目录说明链接存在，英文GitHub Markdown渲染及diff检查通过。个人开发Skill退出跟踪并添加忽略，应用Skill、许可证、迁移与测试保留；不发布新版本。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md",
+        "docs/desktop/STRUCTURE.md"
+      ],
+      "blocker": null
     }
   ]
 }

@@ -1,4 +1,6 @@
 .DS_Store
+# Personal development skills stay local; application skills are tracked.
+.agents/
 .development-archive/
 apps/desktop/release/
 apps/desktop/runtime/python/

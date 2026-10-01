@@ -22,5 +22,5 @@ without separate authorization.
 
 Keep the current tree focused on working code, tests, packaging and concise
 current docs. For history, link to a fixed Git commit instead of restoring old
-plans or per-task evidence files. The tracked development skill is
-`.agents/skills/jobfindsme-dev/SKILL.md`.
+plans or per-task evidence files. Personal development skills stay local;
+application skills and their license notices remain in `apps/desktop/skills/`.

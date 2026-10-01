@@ -1,14 +1,26 @@
 # 项目结构
 
 ```text
-apps/desktop/       Electron 桌面端：窗口、持久浏览器会话、界面与 IPC 契约
-src/jobfindsme/      Python 本地服务：检索、来源、研究、简历与 SQLite 迁移
-tests/              Python 功能与桌面 API 测试
-evaluation/         当前 CI 使用的检索质量评测与样例
-scripts/            构建与验证脚本
-docs/desktop/       当前开发状态、模块边界与任务清单
-docs/images/        README 使用的界面截图
+jobfindsme/
+├── apps/desktop/       桌面应用
+│   ├── main/           浏览器、来源采集、Agent 与本地服务连接
+│   ├── renderer/       React 界面
+│   ├── preload/        受限 IPC 桥接
+│   ├── shared/         类型契约与共用逻辑
+│   ├── skills/         应用技能及来源许可证
+│   ├── tests/          桌面回归
+│   └── scripts/        打包、审计与启动验证
+├── src/jobfindsme/     Python 检索、研究、简历与 SQLite 服务
+├── tests/              Python 回归
+├── evaluation/         检索质量评测与合成样例
+├── scripts/            Python 构建与数据验证
+├── docs/
+│   ├── desktop/        开发入口、模块说明与当前任务
+│   └── images/         README 演示图
+└── .github/workflows/  CI 与发行工作流
 ```
+
+安装包只放 GitHub Releases，不进入源码树；本机缓存、用户数据、临时验收材料与个人开发 Skill 不提交。数据库迁移、应用技能和第三方许可证必须保留。
 
 桌面端 `main/browser` 管浏览器会话，`main/sources` 管页面提取，`main/backend` 管 Python 进程与通信，`main/security` 管系统密钥；`renderer/src` 管找工作、研究、简历和设置。`main/index.ts` 与 `renderer/src/App.tsx` 负责组装。
 
