@@ -600,6 +600,7 @@ def test_removing_model_keeps_existing_resume_draft_and_research_report(tmp_path
 
 def test_job_resume_is_independent_preserves_base_and_progress(tmp_path):
     from datetime import UTC, datetime
+
     from jobfindsme.connectors import RawJobRecord
     from jobfindsme.contracts import SourceKind
     from jobfindsme.importing.normalizer import normalize_job

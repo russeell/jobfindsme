@@ -815,6 +815,7 @@ def test_model_deletion_requires_auth_and_preserves_history(tmp_path):
 
 def test_preparation_api_auth_validation_and_job_scope(tmp_path):
     from datetime import UTC, datetime
+
     from jobfindsme.workspaces import WorkspaceService
 
     db_path = tmp_path / "preparation.db"
