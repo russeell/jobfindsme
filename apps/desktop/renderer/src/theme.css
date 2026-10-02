@@ -172,9 +172,6 @@ nav button .nav-label {font-size:13px;}
 .discovery-controls .searchbar input {font-size:14px;min-width:0;}
 .discovery-controls .searchbar button {min-width:94px;}
 .discovery-controls .popover-trigger {font-size:12px;min-height:34px;}
-.filter-extra {display:grid;gap:10px;min-width:210px;}
-.filter-extra label {display:grid;gap:5px;font-size:12px;}
-.filter-extra select {width:100%;}
 .source-picker-footer {display:flex;gap:8px;position:sticky;bottom:0;background:var(--surface);padding-top:8px;border-top:1px solid var(--line);}
 .source-picker-footer button {flex:1;white-space:normal;}
 .source-audit {padding:16px;}
@@ -721,3 +718,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .preparation-leave>div:last-child{display:flex;gap:8px;flex-shrink:0}
 .preparation-leave button{font-size:11px;padding:7px 10px}
 @media(max-width:750px){.preparation-leave{bottom:-22px;margin:18px -20px -22px;padding:14px 20px;flex-wrap:wrap}.preparation-leave>div:last-child{margin-left:auto}.preparation-progress>summary span{display:block;margin:4px 0 0 13px}.records-job-list>.record-card{padding:12px 14px}}
+
+.filter-row .filter-unread{display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;background:transparent;color:#858d98;font-size:12px;padding:7px 9px;border-radius:7px}
+.filter-row .filter-unread:hover{background:#f3f5f8;color:#546479}
+.filter-row .filter-unread[aria-pressed="true"]{background:#edf3fc;border-color:#dbe7f9;color:#3169b5}
+.filter-unread>span{width:11px;font-size:11px}

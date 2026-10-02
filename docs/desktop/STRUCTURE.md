@@ -63,4 +63,6 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 
 `renderer/src/preparation/JobPreparation.tsx` 是岗位准备卡；`shared/job-preparation.ts` 管阶段、目标匹配与显式入口草稿。`search/preparation.py` 与0040迁移保存工作区内阶段/下一步/日期/备注及岗位简历关联，复用既有job tracking和resume版本。`resume_editor/prompt.py` 的目标岗位提案保存为独立副本；通用编辑仍沿用原有基础版本规则。没有新增Agent或调度器。
 
-`renderer/src/preparation/RecordsPage.tsx` 保留本地记录筛选状态，`shared/records-view.ts` 负责实际跟进/阶段、全部记录搜索与排序，先筛选再每批展示20条；不增加后端查询或模型调用。`resume/ResumeDialog.tsx` 使用原生dialog管理焦点与关闭，`ResumePage.tsx` 复用原有导入/核对/版本接口；待核对稿与当前版本分开显示，没有新增迁移。
+`renderer/src/preparation/RecordsPage.tsx` 仅保留在跟进/全部两项导航及本地记录筛选状态，`shared/records-view.ts` 负责实际跟进/阶段、全部记录搜索与排序，先筛选再每批展示20条；不增加后端查询或模型调用。`resume/ResumeDialog.tsx` 使用原生dialog管理焦点与关闭，`ResumePage.tsx` 复用原有导入/核对/版本接口；待核对稿与当前版本分开显示，没有新增迁移。
+
+`shared/discovery-filters.ts` 的 `simpleDiscoveryFilters` 仅用于精简搜索界面的条件、预检返回与续查，移除已退休的类型条件；历史快照与其他调用方沿用原契约。搜索界面保留城市、薪资、经验、平台和直接未读开关。

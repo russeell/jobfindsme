@@ -449,7 +449,6 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 .filter-option:hover,.status-option:hover,.filter-option.selected{background:var(--surface-hover)}
 .filter-option.selected{font-weight:600;color:var(--text)}
 .filter-range{display:flex;align-items:center;gap:6px;margin:10px 0}.filter-range label{flex:1;min-width:0}
-.filter-extra{display:grid;gap:12px}.filter-extra label{display:grid;gap:5px}
 .clear-filters{margin-left:auto;border:0;background:transparent;color:var(--text-muted);padding:5px;font-size:11px}
 .job-detail-top{position:sticky;top:-1px;z-index:2;background:#fff;padding:0 0 14px;border-bottom:1px solid var(--line);margin-bottom:14px}
 .job-actions{display:flex!important;flex-wrap:wrap;align-items:center;justify-content:flex-start!important;gap:8px;margin-top:12px}

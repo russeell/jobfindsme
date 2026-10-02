@@ -2,7 +2,7 @@ import {alternativeSearchKeywords} from "../../../shared/search-keywords";
 import {jobDescriptionParagraphs} from "../../../shared/job-description";
 import {reportMatchesJob,hasFullDescription} from "../../../shared/research-reports";
 import type {ResearchReport} from "../../../shared/contracts";
-import {defaultDiscoveryFilters,normalizeDiscoveryFilters,selectedSearchSources,selectedAttemptableSources} from "../../../shared/discovery-filters";
+import {defaultDiscoveryFilters,simpleDiscoveryFilters,selectedSearchSources,selectedAttemptableSources} from "../../../shared/discovery-filters";
 import {userError} from "../../../shared/user-errors";
 import {JobActions} from "./JobActions";
 import {useEffect, useMemo,useState,useRef,type FormEvent} from "react";
@@ -131,7 +131,7 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     setSelected(previous=>keepSelectedSearchJob(previous,shownRunId,next));
   }
   async function updateFilters(next:SearchFilters) {
-    next=normalizeDiscoveryFilters(next);filtersRef.current=next;setFilters(next);const epoch=++filterEpoch.current;
+    next=simpleDiscoveryFilters(next);filtersRef.current=next;setFilters(next);const epoch=++filterEpoch.current;
     if(!result||!workspaceId)return;
     try {const nextPage=await window.jobfindsme!.refilterSearch(workspaceId,filterBaseRun.current||result.result_page.run_id,next,pageSize);
       if(epoch!==filterEpoch.current)return;setPage(nextPage);setSelected(nextPage.items[0]);setMatchingMessage(resultRequest&&remoteSearchScopeChanged(intent,next,resultRequest.intent,resultRequest.filters)?"已筛选本地候选；关键词或城市已改变，请点击找岗位开始新搜索。":"已按当前筛选更新本地候选；未重新请求招聘网站。");
@@ -160,14 +160,14 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       setIntent(preferences.target_role);
     }
     let requestIntent=preserve?resultRequest?.intent??intent.trim():useResume?"":alternative||intent.trim();
-    let requestFilters=preserve?resultRequest?.filters??normalizeDiscoveryFilters(filters):normalizeDiscoveryFilters(filters);
+    let requestFilters=simpleDiscoveryFilters(preserve&&resultRequest?resultRequest.filters:filters);
     if (!preserve&&!requestIntent && resumeState?.search_profile_state!=="ready") {onError("请输入岗位关键词，或先确认一份简历。");return;}
     if (!preserve&&!attemptable.length) {onError("请先选择至少一个可检索或可尝试验证的来源。");return;}
     if (requestFilters.salary_min_k != null && requestFilters.salary_max_k != null && requestFilters.salary_min_k > requestFilters.salary_max_k) { onError("最低薪资不能高于最高薪资。"); return; }
     const sourceIds=preserve?continuationPlan?.sourceIds||[]:selectedSources;
     if(!sourceIds.length){onError("已选平台没有可继续读取的结果；请查看来源详情或开始新搜索。");return;}
     if(!preserve){try{const resolved=await window.jobfindsme!.searchPreflight({workspace_id:workspaceId,intent:requestIntent,source_ids:sourceIds,filters:requestFilters,max_pages:1,time_budget_seconds:15});
-      if(resolved.search_intent){requestIntent=resolved.search_intent.query;requestFilters=resolved.search_intent.filters;setIntent(requestIntent);filtersRef.current=requestFilters;setFilters(requestFilters);}
+      if(resolved.search_intent){requestIntent=resolved.search_intent.query;requestFilters=simpleDiscoveryFilters(resolved.search_intent.filters);setIntent(requestIntent);filtersRef.current=requestFilters;setFilters(requestFilters);}
     }catch(error){onError(messageOf(error));return;}}
     if(!preserve&&confirmTargetRole.current){
       const p=await window.jobfindsme!.getSearchPreferences(workspaceId);

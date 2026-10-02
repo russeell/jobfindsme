@@ -9,7 +9,7 @@ import {formatSalary} from '../search/salary';
 import {Icon} from '../shared/Icon';
 import {useOriginalBrowser} from '../shared/Workbench';
 
-const tabs:Array<[RecordsFilter,string]>=[['following','在跟进'],['saved','收藏'],['applied','已投递'],['read','已看过'],['all','全部']];
+const tabs:Array<[RecordsFilter,string]>=[['following','在跟进'],['all','全部']];
 type Props={active:boolean;data?:BootstrapData;onError(message?:string):void;onPrepare(job:SearchResultItem['job']):void;onDiscover():void};
 export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   const [items,setItems]=useState<TrackedJob[]>([]);
@@ -60,6 +60,6 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
         <JobActions compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>
       </article>;})}</div>
       <div className="records-pagination"><span>显示 {Math.min(limit,selected.length)} / {selected.length} 条岗位</span>{limit<selected.length&&<button type="button" onClick={()=>setLimit(value=>value+recordsPageSize)}>再显示 {Math.min(recordsPageSize,selected.length-limit)} 条</button>}</div>
-    </>:<div className="records-empty"><Icon name="records"/><h2>{query||stage?'没有匹配的岗位':filter==='following'?'还没有正在跟进的机会':'这里还没有岗位'}</h2><p>{query||stage?'试试其他关键词，或清空筛选。':filter==='following'?'收藏感兴趣的岗位，或在岗位准备中记录进度。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query||stage?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter==='following'&&items.length>0&&<button type="button" onClick={()=>setFilter('read')}>查看已看过的岗位</button>}</>}</div></div>}
+    </>:<div className="records-empty"><Icon name="records"/><h2>{query||stage?'没有匹配的岗位':filter==='following'?'还没有正在跟进的机会':'这里还没有岗位'}</h2><p>{query||stage?'试试其他关键词，或清空筛选。':filter==='following'?'收藏感兴趣的岗位，或在岗位准备中记录进度。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query||stage?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter==='following'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}
   </section>;
 }

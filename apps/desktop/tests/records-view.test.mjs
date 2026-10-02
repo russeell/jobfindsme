@@ -9,7 +9,7 @@ test('following excludes casual browsing and closed opportunities without losing
  const items=[browsed,saved,applied,prepared,closed];
  assert.deepEqual(selectRecords(items,'following','','','recent').map(item=>item.job.job_id),['saved','applied','prepared']);
  assert.equal(selectRecords(items,'all','','','recent').length,5);
- assert.equal(matchesRecordFilter(closed,'applied'),true);
+ assert.equal(matchesRecordFilter(closed,'all'),true);
  assert.equal(followsRecord(closed),false);
  assert.deepEqual(selectRecords(items,'all','','applied','recent').map(item=>item.job.job_id),['applied']);
 });

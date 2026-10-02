@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import http from 'node:http';
-import {userError} from '../dist-electron/shared/user-errors.js';import {defaultDiscoveryFilters,hasDiscoveryFilters,normalizeDiscoveryFilters,readSelectedSources,selectedSearchSources,selectedAttemptableSources} from '../dist-electron/shared/discovery-filters.js';import {DesktopApiClient} from '../dist-electron/main/backend/api-client.js';
+import {userError} from '../dist-electron/shared/user-errors.js';import {defaultDiscoveryFilters,hasDiscoveryFilters,normalizeDiscoveryFilters,simpleDiscoveryFilters,readSelectedSources,selectedSearchSources,selectedAttemptableSources} from '../dist-electron/shared/discovery-filters.js';import {DesktopApiClient} from '../dist-electron/main/backend/api-client.js';
 test('all hidden and visible filters reset to defaults; keyword is outside reset state',()=>{assert(!hasDiscoveryFilters(defaultDiscoveryFilters(),''));for(const field of [{cities:['上海']},{read:'read'},{experience_min_years:0},{employment_type:'contract'},{source_names:['BOSS直聘']}])assert(hasDiscoveryFilters({...defaultDiscoveryFilters(),...field},''));assert(hasDiscoveryFilters(defaultDiscoveryFilters(),'boss'));assert.notEqual(defaultDiscoveryFilters(),defaultDiscoveryFilters());});
 test('IPC exceptions and private-looking details never become user-visible raw errors',()=>{for(const raw of ["Error invoking remote method 'desktop:run-source-search': Error: desktop API request failed (500)",'Error stack\n at f (private-file:23) token=private']){const result=userError(raw);assert(!/Error|remote|stack|private|500/.test(result.message));}assert.equal(userError('risk_control:captcha').kind,'risk');assert.equal(userError('login_required').kind,'login');assert.equal(userError('partial').kind,'partial');});
 test('source check errors retain a safe concrete reason',()=>{
@@ -50,3 +50,20 @@ test('assistant setup and model failures survive the IPC wrapper without exposin
 });
 
 test('bounded model waits distinguish timeout from local-service failure',()=>{for(const error of ['Error invoking remote method: assistant_failure:timeout','Error invoking remote method: 研究时间预算已用完']){const result=userError(error);assert.match(result.message,/超时/);assert.match(result.message,/保留/);assert.doesNotMatch(result.message,/本地服务.*异常/);}});
+
+
+test('simplified interactive search removes retired constraints without changing stored snapshots',()=>{
+ const stored={cities:['上海'],salary_min_k:20,experience_min_years:1,recruitment_track:'campus',employment_type:'contract',read:'read',unknown_policy:'exclude'};
+ const before=structuredClone(stored);
+ const interactive=simpleDiscoveryFilters(stored);
+ assert.equal(interactive.recruitment_track,undefined);
+ assert.equal(interactive.employment_type,undefined);
+ assert.equal(interactive.read,'any');
+ assert.deepEqual(interactive.cities,['上海']);
+ assert.equal(interactive.salary_min_k,20);
+ assert.equal(interactive.experience_min_years,1);
+ assert.equal(interactive.unknown_policy,'exclude');
+ assert.equal(simpleDiscoveryFilters({...stored,read:'unread'}).read,'unread');
+ assert.deepEqual(stored,before);
+ assert.equal(normalizeDiscoveryFilters(stored).employment_type,'contract');
+});

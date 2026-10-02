@@ -2,6 +2,14 @@ import type {SearchFilters,SourceCapability} from './contracts';
 export function defaultDiscoveryFilters():SearchFilters{return {unknown_policy:'include',read:'any',salary_mode:'overlap'};}
 // Interactive searches use fixed defaults; frozen scheduled snapshots are separate.
 export function normalizeDiscoveryFilters(filters:SearchFilters={}):SearchFilters{return {...filters,unknown_policy:filters.unknown_policy??'include',salary_mode:filters.salary_mode??'overlap'};}
+// Only the simplified interactive UI drops retired controls; stored snapshots
+// and other API callers retain their original filter contracts.
+export function simpleDiscoveryFilters(filters:SearchFilters={}):SearchFilters {
+ const next=normalizeDiscoveryFilters(filters);
+ delete next.recruitment_track;delete next.employment_type;
+ next.read=filters.read==='unread'?'unread':'any';
+ return next;
+}
 export function selectedSearchSources(sources:SourceCapability[],selected:string[]):SourceCapability[]{return sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled);}
 export function selectedAttemptableSources(sources:SourceCapability[],selected:string[]):SourceCapability[]{return sources.filter(s=>selected.includes(s.source_id)&&(
   s.live_search_enabled||(["boss","zhilian","wuyou"].includes(s.source_id)&&s.session_status!=="blocked"&&s.list_status!=="blocked")
