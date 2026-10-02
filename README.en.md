@@ -55,4 +55,6 @@ Packages are unsigned. First-launch instructions and checksums are on the [relea
 
 Data is stored locally. AI features send relevant materials to your chosen model service, which may charge for requests. Check research conclusions against the original sources. The app does not apply automatically.
 
+**Disclaimer: This project is intended for learning and personal use only. Follow each platform's usage rules and independently verify job information and AI-generated output.**
+
 [Development](docs/desktop/README.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [MIT license](LICENSE)
