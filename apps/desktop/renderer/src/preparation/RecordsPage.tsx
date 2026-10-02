@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import type {BootstrapData,PreparationStage,SearchResultItem,TrackedJob} from '../../../shared/contracts';
+import type {BootstrapData,SearchResultItem,TrackedJob} from '../../../shared/contracts';
 import {preparationStages} from '../../../shared/job-preparation';
 import {matchesRecordFilter,recordStage,recordsPageSize,selectRecords,type RecordsFilter,type RecordsSort} from '../../../shared/records-view';
 import {isAllowedSourceUrl,sourceBrowserSpecs,type SourceBrowserId} from '../../../shared/source-browser-policy';
@@ -9,24 +9,23 @@ import {formatSalary} from '../search/salary';
 import {Icon} from '../shared/Icon';
 import {useOriginalBrowser} from '../shared/Workbench';
 
-const tabs:Array<[RecordsFilter,string]>=[['following','在跟进'],['all','全部']];
+const tabs:Array<[RecordsFilter,string]>=[['saved','收藏'],['applied','已投递'],['all','全部']];
 type Props={active:boolean;data?:BootstrapData;onError(message?:string):void;onPrepare(job:SearchResultItem['job']):void;onDiscover():void};
 export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   const [items,setItems]=useState<TrackedJob[]>([]);
   const [loaded,setLoaded]=useState(false);
   const [loadError,setLoadError]=useState('');
   const [reloadNonce,setReloadNonce]=useState(0);
-  const [filter,setFilter]=useState<RecordsFilter>('following');
+  const [filter,setFilter]=useState<RecordsFilter>('saved');
   const [query,setQuery]=useState('');
-  const [stage,setStage]=useState<PreparationStage|''>('');
   const [sort,setSort]=useState<RecordsSort>('recent');
   const [limit,setLimit]=useState(recordsPageSize);
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const openBrowser=useOriginalBrowser();
-  const selected=selectRecords(items,filter,query,stage,sort);
+  const selected=selectRecords(items,filter,query,'',sort);
   const upcoming=selectRecords(items,'following','','','next').find(item=>item.preparation?.next_action);
-  useEffect(()=>setLimit(recordsPageSize),[filter,query,stage,sort]);
-  useEffect(()=>{setItems([]);setLoaded(false);setQuery('');setStage('');setFilter('following');},[workspaceId]);
+  useEffect(()=>setLimit(recordsPageSize),[filter,query,sort]);
+  useEffect(()=>{setItems([]);setLoaded(false);setQuery('');setFilter('saved');},[workspaceId]);
   useEffect(()=>{
     if(!workspaceId||!active)return;let cancelled=false;
     const load=()=>{setLoadError('');void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(!cancelled){setItems(rows);setLoaded(true);}}).catch(error=>{if(!cancelled)setLoadError(userError(error).message);});};
@@ -42,13 +41,13 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
       openBrowser({sourceId,url:item.job.apply_url,title:item.job.title});
     }
   }
-  function clearFilters(){setQuery('');setStage('');}
+  function clearFilters(){setQuery('');}
   return <section className="records-page">
     <div className="records-heading"><div><span className="preparation-eyebrow">机会与进度</span><h1>我的岗位</h1><p>收藏值得继续的机会，把下一步留在这里。</p></div><button type="button" className="records-find" onClick={onDiscover}>找更多岗位 <span aria-hidden="true">↗</span></button></div>
     {upcoming&&<section className="records-next"><div><span className="preparation-eyebrow">接下来{upcoming.preparation?.due_date&&` · ${upcoming.preparation.due_date}`}</span><strong>{upcoming.preparation!.next_action}</strong><p>{upcoming.job.company} · {upcoming.job.title}</p></div><button type="button" onClick={()=>onPrepare(upcoming.job)}>继续准备 →</button></section>}
     <div className="records-controls">
-      <nav className="records-tabs" aria-label="岗位记录分类">{tabs.map(([key,label])=><button type="button" key={key} aria-current={filter===key?'page':undefined} className={filter===key?'active':''} onClick={()=>{setFilter(key);setStage('');}}>{label}<small>{items.filter(item=>matchesRecordFilter(item,key)).length}</small></button>)}</nav>
-      <div className="records-tools"><label className="records-search"><Icon name="discover"/><input aria-label="搜索我的岗位" placeholder="搜索岗位、公司或城市" value={query} onChange={event=>setQuery(event.target.value)}/>{query&&<button type="button" aria-label="清空岗位搜索" onClick={()=>setQuery('')}>×</button>}</label><select aria-label="筛选岗位进度" value={stage} onChange={event=>{const next=event.target.value as typeof stage;setStage(next);if(next==='closed'&&filter==='following')setFilter('all');}}><option value="">所有进度</option>{Object.entries(preparationStages).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select><select aria-label="岗位排列方式" value={sort} onChange={event=>setSort(event.target.value as RecordsSort)}><option value="recent">最近记录</option><option value="next">下一步日期</option></select></div>
+      <nav className="records-tabs" aria-label="岗位记录分类">{tabs.map(([key,label])=><button type="button" key={key} aria-current={filter===key?'page':undefined} className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<small>{items.filter(item=>matchesRecordFilter(item,key)).length}</small></button>)}</nav>
+      <div className="records-tools"><label className="records-search"><Icon name="discover"/><input aria-label="搜索我的岗位" placeholder="搜索岗位、公司或城市" value={query} onChange={event=>setQuery(event.target.value)}/>{query&&<button type="button" aria-label="清空岗位搜索" onClick={()=>setQuery('')}>×</button>}</label><select aria-label="岗位排列方式" value={sort} onChange={event=>setSort(event.target.value as RecordsSort)}><option value="recent">最近记录</option><option value="next">下一步日期</option></select></div>
     </div>
     {loadError&&<p className="records-load-error" role="alert">{loadError} <button type="button" onClick={()=>setReloadNonce(value=>value+1)}>重新读取</button></p>}
     {!loaded?<p className="records-loading" role="status">{loadError?'已有记录保留在本机，可重试读取。':'正在读取本地岗位…'}</p>:selected.length?<>
@@ -60,6 +59,6 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
         <JobActions compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>
       </article>;})}</div>
       <div className="records-pagination"><span>显示 {Math.min(limit,selected.length)} / {selected.length} 条岗位</span>{limit<selected.length&&<button type="button" onClick={()=>setLimit(value=>value+recordsPageSize)}>再显示 {Math.min(recordsPageSize,selected.length-limit)} 条</button>}</div>
-    </>:<div className="records-empty"><Icon name="records"/><h2>{query||stage?'没有匹配的岗位':filter==='following'?'还没有正在跟进的机会':'这里还没有岗位'}</h2><p>{query||stage?'试试其他关键词，或清空筛选。':filter==='following'?'收藏感兴趣的岗位，或在岗位准备中记录进度。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query||stage?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter==='following'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}
+    </>:<div className="records-empty"><Icon name="records"/><h2>{query?'没有匹配的岗位':filter==='saved'?'还没有收藏岗位':filter==='applied'?'还没有已投递岗位':'这里还没有岗位'}</h2><p>{query?'试试其他关键词，或清空筛选。':filter==='saved'?'点击岗位上的星标，喜欢的机会就会留在这里。':filter==='applied'?'投递后在岗位上标记，不会把打开原页当作已投递。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter!=='all'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}
   </section>;
 }

@@ -194,6 +194,8 @@ export type SearchFilters = {
   salary_mode?: "overlap" | "contained";
   recruitment_track?: "campus" | "social";
   employment_type?: "full_time" | "internship" | "part_time" | "contract";
+  require_known_employment?: boolean;
+  experience_profile?: "student" | "graduate";
   experience_min_years?: number;
   experience_max_years?: number;
   source_names?: string[];

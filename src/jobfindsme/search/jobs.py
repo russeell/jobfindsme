@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Literal
@@ -41,6 +42,8 @@ class DesktopJobFilters:
     salary_mode: SalaryMode = "overlap"
     recruitment_track: str | None = None
     employment_type: str | None = None
+    require_known_employment: bool = False
+    experience_profile: Literal["student", "graduate"] | None = None
     experience_min_years: int | None = None
     experience_max_years: int | None = None
     source_names: tuple[str, ...] = ()
@@ -48,6 +51,8 @@ class DesktopJobFilters:
     unknown_policy: UnknownPolicy = "include"
 
     def validate(self) -> None:
+        if self.experience_profile not in {None, "student", "graduate"}:
+            raise ValueError("experience_profile must be student or graduate")
         if self.salary_mode not in {"overlap", "contained"}:
             raise ValueError("salary_mode must be overlap or contained")
         if self.unknown_policy not in {"include", "exclude", "only"}:
@@ -545,7 +550,34 @@ class DesktopJobService:
         if filters.employment_type:
             known = job.employment_type is not EmploymentType.UNKNOWN
             matched = job.employment_type.value == filters.employment_type
+            # Interactive type selection requires a source marker; legacy callers
+            # and snapshots keep their existing unknown-policy semantics.
+            if filters.require_known_employment and not known:
+                return False
             if not cls._known_match(known, matched, filters.unknown_policy):
+                return False
+        if filters.experience_profile:
+            # A years range is not proof of student/graduate eligibility. Only
+            # original text or the source's explicit recruitment/type marker counts.
+            text = f"{job.title} {job.description}".casefold()
+            terms = (
+                r"在校生?|在读|实习生|\bstudent\b"
+                if filters.experience_profile == "student"
+                else r"应届(?:生|毕业生)?|\b(?:fresh|new) graduates?\b"
+            )
+            declined = re.search(
+                r"(?:不招(?:收)?|不接受|不考虑|无需|不要|非|no|not accepting)"
+                rf"\s*(?:{terms})",
+                text,
+            )
+            explicit = re.search(terms, text) is not None
+            marked = (
+                job.employment_type is EmploymentType.INTERNSHIP
+                if filters.experience_profile == "student"
+                else job.recruitment_track is RecruitmentTrack.CAMPUS
+                and job.employment_type is not EmploymentType.INTERNSHIP
+            )
+            if declined or not (explicit or marked):
                 return False
         if filters.salary_min_k is not None or filters.salary_max_k is not None:
             comparable = job.salary is None or (

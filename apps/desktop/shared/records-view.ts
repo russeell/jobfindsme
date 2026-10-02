@@ -1,6 +1,6 @@
 import type {PreparationStage,TrackedJob} from './contracts';
 
-export type RecordsFilter='following'|'all';
+export type RecordsFilter='following'|'saved'|'applied'|'all';
 export type RecordsSort='recent'|'next';
 export const recordsPageSize=20;
 
@@ -11,6 +11,8 @@ export function followsRecord(item:TrackedJob):boolean {
   return recordStage(item)!=='closed' && (item.tracking.saved||item.tracking.applied||!!item.preparation);
 }
 export function matchesRecordFilter(item:TrackedJob,filter:RecordsFilter):boolean {
+  if(filter==='saved')return item.tracking.saved;
+  if(filter==='applied')return item.tracking.applied||['applied','interview','offer'].includes(recordStage(item)||'');
   return filter==='all'||followsRecord(item);
 }
 function recordedAt(item:TrackedJob):number {

@@ -514,3 +514,139 @@ def test_preparation_and_explicit_tracking_stay_consistent(tmp_path):
         preparations.save(
             workspace.workspace_id, job.job_id, stage="interview", due_date="tomorrow"
         )
+
+
+@pytest.mark.parametrize(
+    ("profile", "description", "updates", "matches"),
+    [
+        ("student", "接受在校生，每周到岗三天", {}, True),
+        ("student", "不接受在校生", {}, False),
+        ("student", "Python开发", {"employment_type": "internship"}, True),
+        ("graduate", "接受应届毕业生", {}, True),
+        ("graduate", "不招应届生", {"recruitment_track": "campus"}, False),
+        ("graduate", "Python开发", {"recruitment_track": "campus"}, True),
+        (
+            "graduate",
+            "Python开发",
+            {"recruitment_track": "campus", "employment_type": "internship"},
+            False,
+        ),
+        ("graduate", "本科毕业生，五年经验", {}, False),
+        (
+            "graduate",
+            "Python开发",
+            {"experience_min_years": 0, "experience_max_years": 0},
+            False,
+        ),
+        (
+            "student",
+            "Python开发",
+            {"experience_min_years": None, "experience_max_years": None},
+            False,
+        ),
+    ],
+)
+def test_student_and_graduate_filters_need_positive_source_evidence(
+    profile, description, updates, matches
+):
+    from jobfindsme.contracts import EmploymentType, RecruitmentTrack
+
+    values = dict(updates)
+    if "employment_type" in values:
+        values["employment_type"] = EmploymentType(values["employment_type"])
+    if "recruitment_track" in values:
+        values["recruitment_track"] = RecruitmentTrack(values["recruitment_track"])
+    job = _job(701, description=description).model_copy(update=values)
+    assert (
+        DesktopJobService._matches(
+            job, filters=DesktopJobFilters(experience_profile=profile), read_ids=set()
+        )
+        is matches
+    )
+
+
+def test_experience_profile_survives_preflight_snapshot_and_refilter(tmp_path):
+    from jobfindsme.desktop_api.app import DesktopSearchFilters
+    from jobfindsme.search.intent import parse_intent
+
+    _db, workspace, jobs, service = _services(tmp_path)
+    student = _job(702, description="Python 实习，接受在校生")
+    graduate = _job(703, description="Python 应届生，提供全职岗位")
+    senior = _job(704, description="Python 工程师，要求五年经验")
+    for job in (student, graduate, senior):
+        jobs.upsert(workspace.workspace_id, job)
+    api_filters = DesktopSearchFilters(
+        experience_profile="graduate", employment_type="full_time"
+    )
+    parsed = parse_intent(
+        "Python", filters=DesktopJobFilters(**api_filters.model_dump())
+    )
+    assert parsed.payload()["filters"]["experience_profile"] == "graduate"
+    run_id = service.create_snapshot(
+        workspace_id=workspace.workspace_id,
+        intent=parsed.query,
+        job_ids=[student.job_id, graduate.job_id, senior.job_id],
+        resume_version=None,
+        filters=parsed.filters,
+    )
+    page = service.page(
+        workspace_id=workspace.workspace_id, run_id=run_id, page=1, page_size=10
+    )
+    assert [item["job"]["job_id"] for item in page["items"]] == [graduate.job_id]
+    from fastapi.testclient import TestClient
+
+    from jobfindsme.desktop_api.app import create_app
+
+    client = TestClient(create_app(token="test-secret", database_path=_db.path))
+    headers = {"Authorization": "Bearer test-secret"}
+    endpoint = f"/v1/search-runs/{run_id}/refilter"
+    student_page = client.post(
+        endpoint,
+        headers=headers,
+        json={
+            "workspace_id": workspace.workspace_id,
+            "filters": {"experience_profile": "student"},
+        },
+    )
+    assert student_page.status_code == 200, student_page.text
+    assert [item["job"]["job_id"] for item in student_page.json()["items"]] == [
+        student.job_id
+    ]
+    reset = client.post(
+        endpoint,
+        headers=headers,
+        json={"workspace_id": workspace.workspace_id, "filters": {}},
+    )
+    assert reset.status_code == 200 and reset.json()["total"] == 3
+    part_time = client.post(
+        endpoint,
+        headers=headers,
+        json={
+            "workspace_id": workspace.workspace_id,
+            "filters": {"employment_type": "part_time"},
+        },
+    )
+    assert part_time.status_code == 200 and part_time.json()["total"] == 0
+    with pytest.raises(ValueError):
+        DesktopJobFilters(experience_profile="unsupported").validate()
+
+
+def test_interactive_work_type_excludes_unknown_but_legacy_snapshots_keep_policy():
+    from jobfindsme.contracts import EmploymentType
+
+    unknown = _job(801).model_copy(update={"employment_type": EmploymentType.UNKNOWN})
+    part_time = _job(802).model_copy(
+        update={"employment_type": EmploymentType.PART_TIME}
+    )
+    full_time = _job(803)
+    strict = DesktopJobFilters(
+        employment_type="part_time", require_known_employment=True
+    )
+    assert not DesktopJobService._matches(unknown, filters=strict, read_ids=set())
+    assert not DesktopJobService._matches(full_time, filters=strict, read_ids=set())
+    assert DesktopJobService._matches(part_time, filters=strict, read_ids=set())
+    legacy = DesktopJobFilters(employment_type="part_time")
+    assert DesktopJobService._matches(unknown, filters=legacy, read_ids=set())
+    assert DesktopJobService._matches(
+        unknown, filters=DesktopJobFilters(), read_ids=set()
+    )

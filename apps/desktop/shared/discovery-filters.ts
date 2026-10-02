@@ -2,11 +2,14 @@ import type {SearchFilters,SourceCapability} from './contracts';
 export function defaultDiscoveryFilters():SearchFilters{return {unknown_policy:'include',read:'any',salary_mode:'overlap'};}
 // Interactive searches use fixed defaults; frozen scheduled snapshots are separate.
 export function normalizeDiscoveryFilters(filters:SearchFilters={}):SearchFilters{return {...filters,unknown_policy:filters.unknown_policy??'include',salary_mode:filters.salary_mode??'overlap'};}
-// Only the simplified interactive UI drops retired controls; stored snapshots
+// Only the simplified interactive UI drops unsupported controls; stored snapshots
 // and other API callers retain their original filter contracts.
 export function simpleDiscoveryFilters(filters:SearchFilters={}):SearchFilters {
  const next=normalizeDiscoveryFilters(filters);
- delete next.recruitment_track;delete next.employment_type;
+ delete next.recruitment_track;
+ if(next.employment_type!=="full_time"&&next.employment_type!=="part_time"){delete next.employment_type;delete next.require_known_employment;}
+ else next.require_known_employment=true;
+ if(next.experience_profile){delete next.experience_min_years;delete next.experience_max_years;}
  next.read=filters.read==='unread'?'unread':'any';
  return next;
 }

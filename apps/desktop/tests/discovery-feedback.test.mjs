@@ -52,7 +52,7 @@ test('assistant setup and model failures survive the IPC wrapper without exposin
 test('bounded model waits distinguish timeout from local-service failure',()=>{for(const error of ['Error invoking remote method: assistant_failure:timeout','Error invoking remote method: 研究时间预算已用完']){const result=userError(error);assert.match(result.message,/超时/);assert.match(result.message,/保留/);assert.doesNotMatch(result.message,/本地服务.*异常/);}});
 
 
-test('simplified interactive search removes retired constraints without changing stored snapshots',()=>{
+test('interactive filters retain supported types and remove hidden constraints without changing stored snapshots',()=>{
  const stored={cities:['上海'],salary_min_k:20,experience_min_years:1,recruitment_track:'campus',employment_type:'contract',read:'read',unknown_policy:'exclude'};
  const before=structuredClone(stored);
  const interactive=simpleDiscoveryFilters(stored);
@@ -66,4 +66,18 @@ test('simplified interactive search removes retired constraints without changing
  assert.equal(simpleDiscoveryFilters({...stored,read:'unread'}).read,'unread');
  assert.deepEqual(stored,before);
  assert.equal(normalizeDiscoveryFilters(stored).employment_type,'contract');
+});
+
+test('student and graduate choices replace years ranges, while work type remains independent',()=>{
+ const filters=simpleDiscoveryFilters({experience_profile:'student',experience_min_years:3,experience_max_years:5,employment_type:'part_time',cities:['上海']});
+ assert.equal(filters.experience_profile,'student');
+ assert.equal(filters.experience_min_years,undefined);
+ assert.equal(filters.experience_max_years,undefined);
+ assert.equal(filters.employment_type,'part_time');
+ assert.equal(filters.require_known_employment,true);
+ assert.equal(simpleDiscoveryFilters({...filters,employment_type:undefined}).require_known_employment,undefined);
+ assert.deepEqual(filters.cities,['上海']);
+ assert.equal(simpleDiscoveryFilters({employment_type:'full_time'}).employment_type,'full_time');
+ assert(!hasDiscoveryFilters(defaultDiscoveryFilters()));
+ assert(hasDiscoveryFilters(filters));
 });

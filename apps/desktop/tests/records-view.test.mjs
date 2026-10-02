@@ -28,3 +28,13 @@ test('next dates precede undated actions and empty rows; legacy applied flags re
  assert.deepEqual(selectRecords([noAction,undated,later,first],'all','','','next').map(item=>item.job.job_id),['first','later','undated','none']);
  assert.equal(selectRecords([row('legacy',{applied:true})],'all','','applied','recent').length,1);
 });
+
+test('saved and applied entrances keep independent flags and closed saved jobs discoverable',()=>{
+ const saved=row('saved',{saved:true}), closed=row('closed',{saved:true},{stage:'closed'});
+ const interview=row('interview',{}, {stage:'interview'}), applied=row('applied',{applied:true});
+ const items=[saved,closed,interview,applied,row('browsed')];
+ assert.deepEqual(selectRecords(items,'saved','','','recent').map(x=>x.job.job_id),['saved','closed']);
+ assert.deepEqual(selectRecords(items,'applied','','','recent').map(x=>x.job.job_id),['interview','applied']);
+ assert.equal(selectRecords(items,'all','','','recent').length,5);
+ assert.equal(selectRecords(items,'saved','无匹配','','recent').length,0);
+});

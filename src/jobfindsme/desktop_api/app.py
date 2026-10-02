@@ -104,6 +104,8 @@ class DesktopSearchFilters(StrictResponse):
     salary_mode: str = "overlap"
     recruitment_track: str | None = None
     employment_type: str | None = None
+    require_known_employment: bool = False
+    experience_profile: Literal["student", "graduate"] | None = None
     experience_min_years: int | None = Field(default=None, ge=0, le=80)
     experience_max_years: int | None = Field(default=None, ge=0, le=80)
     source_names: list[str] = Field(default_factory=list, max_length=20)
@@ -991,6 +993,8 @@ def create_app(
                 salary_mode=request.filters.salary_mode,
                 recruitment_track=request.filters.recruitment_track,
                 employment_type=request.filters.employment_type,
+                require_known_employment=request.filters.require_known_employment,
+                experience_profile=request.filters.experience_profile,
                 experience_min_years=request.filters.experience_min_years,
                 experience_max_years=request.filters.experience_max_years,
                 source_names=tuple(request.filters.source_names),
