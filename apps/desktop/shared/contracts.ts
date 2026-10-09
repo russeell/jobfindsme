@@ -59,6 +59,8 @@ export type DesktopBridge = {
   getSearchPage(workspaceId: string, runId: string, page: number, pageSize: number): Promise<SearchResultPage>;
   setJobTracking(input: JobTrackingInput): Promise<JobTrackingState>;
   listJobTracking(workspaceId: string): Promise<TrackedJob[]>;
+  listApplicationRecords(workspaceId:string,jobId?:string):Promise<ApplicationRecord[]>;
+  saveApplicationRecord(input:ApplicationRecordInput):Promise<ApplicationRecord>;
   getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>;
   saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>;
   openSourceBrowser(sourceId: string, bounds: SourceBrowserBounds): Promise<void>;
@@ -562,3 +564,6 @@ export type TaskNotification = {
   title: string;
   body: string;
 };
+
+export type ApplicationRecordInput={workspace_id:string;job_id:string;record_id:string;resume_version_id:string|null;message:string;status:'prepared'|'opened'|'contacted'|'resume_sent'|'uncertain'};
+export type ApplicationRecord=ApplicationRecordInput&{created_at:string;updated_at:string};

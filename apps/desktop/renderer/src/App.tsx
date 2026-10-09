@@ -1,3 +1,4 @@
+import {ResumePage} from "./resume/ResumePage";
 import {RecordsPage} from "./preparation/RecordsPage";
 import {JobPreparation} from "./preparation/JobPreparation";
 import type {AssistantSkillId} from "../../shared/assistant-skills";
@@ -20,10 +21,10 @@ import type {
   SearchResultItem,
 } from "../../shared/contracts";
 
-type WorkPage = "discover" | "research" | "records";
+type WorkPage = "discover" | "research" | "records" | "resume";
 type Page = WorkPage | "settings";
 type SettingsTab = "sources" | "models" | "about" | "archive";
-const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["我的岗位", "records"]];
+const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["我的岗位", "records"], ["我的简历", "resume"]];
 const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["对话归档", "archive"], ["模型设置", "models"], ["版本更新", "about"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
@@ -109,6 +110,7 @@ export function App() {
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={setPreparationJob} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={setPreparationJob} onDiscover={()=>setPage("discover")} onError={setError}/></div>
+      <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={setPreparationJob}/></div>
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
     {preparationJob&&data?.workspaces[0]&&<JobPreparation key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}

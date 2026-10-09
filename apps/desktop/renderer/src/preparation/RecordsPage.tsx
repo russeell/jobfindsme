@@ -1,3 +1,4 @@
+import {dueJobs,localDay} from "../../../shared/job-follow-up";
 import {useEffect,useState} from 'react';
 import type {BootstrapData,SearchResultItem,TrackedJob} from '../../../shared/contracts';
 import {preparationStages} from '../../../shared/job-preparation';
@@ -23,6 +24,7 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const openBrowser=useOriginalBrowser();
   const selected=selectRecords(items,filter,query,'',sort);
+  const todos=dueJobs(items);
   const upcoming=selectRecords(items,'following','','','next').find(item=>item.preparation?.next_action);
   useEffect(()=>setLimit(recordsPageSize),[filter,query,sort]);
   useEffect(()=>{setItems([]);setLoaded(false);setQuery('');setFilter('saved');},[workspaceId]);
@@ -44,7 +46,8 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   function clearFilters(){setQuery('');}
   return <section className="records-page">
     <div className="records-heading"><div><span className="preparation-eyebrow">机会与进度</span><h1>我的岗位</h1><p>收藏值得继续的机会，把下一步留在这里。</p></div><button type="button" className="records-find" onClick={onDiscover}>找更多岗位 <span aria-hidden="true">↗</span></button></div>
-    {upcoming&&<section className="records-next"><div><span className="preparation-eyebrow">接下来{upcoming.preparation?.due_date&&` · ${upcoming.preparation.due_date}`}</span><strong>{upcoming.preparation!.next_action}</strong><p>{upcoming.job.company} · {upcoming.job.title}</p></div><button type="button" onClick={()=>onPrepare(upcoming.job)}>继续准备 →</button></section>}
+    {todos.length>0&&<section className="records-today"><div className="heading-row"><h2>今日待办 <small>{todos.length}</small></h2><span className="note">含未完成的到期事项</span></div>{todos.slice(0,3).map(item=><button type="button" className="records-todo" key={item.job.job_id} onClick={()=>onPrepare(item.job)}><span><strong>{item.preparation!.next_action}</strong><small>{item.job.company} · {item.job.title}</small></span><span>{item.preparation!.due_date!<localDay()?'已逾期':'今天'} →</span></button>)}{todos.length>3&&<p className="note">另有 {todos.length-3} 项，可按下一步日期查看全部岗位。</p>}</section>}
+    {!todos.length&&upcoming&&<section className="records-next"><div><span className="preparation-eyebrow">接下来{upcoming.preparation?.due_date&&` · ${upcoming.preparation.due_date}`}</span><strong>{upcoming.preparation!.next_action}</strong><p>{upcoming.job.company} · {upcoming.job.title}</p></div><button type="button" onClick={()=>onPrepare(upcoming.job)}>继续准备 →</button></section>}
     <div className="records-controls">
       <nav className="records-tabs" aria-label="岗位记录分类">{tabs.map(([key,label])=><button type="button" key={key} aria-current={filter===key?'page':undefined} className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<small>{items.filter(item=>matchesRecordFilter(item,key)).length}</small></button>)}</nav>
       <div className="records-tools"><label className="records-search"><Icon name="discover"/><input aria-label="搜索我的岗位" placeholder="搜索岗位、公司或城市" value={query} onChange={event=>setQuery(event.target.value)}/>{query&&<button type="button" aria-label="清空岗位搜索" onClick={()=>setQuery('')}>×</button>}</label><select aria-label="岗位排列方式" value={sort} onChange={event=>setSort(event.target.value as RecordsSort)}><option value="recent">最近记录</option><option value="next">下一步日期</option></select></div>

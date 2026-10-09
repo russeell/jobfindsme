@@ -2679,6 +2679,86 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D157",
+      "title": "我的简历固定入口与版本管理",
+      "depends_on": [
+        "D156"
+      ],
+      "status": "done",
+      "scope": [
+        "我的简历固定入口与版本管理",
+        "复用现有本地架构，保留原数据"
+      ],
+      "acceptance": [
+        "相关回归与本地App验证；不发送真实申请"
+      ],
+      "verification": "固定侧栏入口、基础编辑新版本、岗位专属稿、经典/紧凑导出与历史恢复；原生虚构材料验收编辑v3/恢复v4/保留专属v2/PDF及切页保留核对输入。PDF、DOCX导出回归通过。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D158",
+      "title": "岗位准备自动复用材料",
+      "depends_on": [
+        "D157"
+      ],
+      "status": "done",
+      "scope": [
+        "岗位准备自动复用材料",
+        "复用现有本地架构，保留原数据"
+      ],
+      "acceptance": [
+        "相关回归与本地App验证；不发送真实申请"
+      ],
+      "verification": "岗位ID与已保存JD复用、缺失JD单次补全、面试读取关联专属简历；API隔离与显式岗位草稿验证通过。本轮未调用模型，未复验联网JD或实际模型使用材料的效果。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D159",
+      "title": "辅助投递材料与记录",
+      "depends_on": [
+        "D158"
+      ],
+      "status": "done",
+      "scope": [
+        "首版辅助投递材料、手动原页与本人确认记录",
+        "复用现有本地架构，保留原数据；不自动提交或宣称平台确认"
+      ],
+      "acceptance": [
+        "相关回归与本地App验证；不发送真实申请"
+      ],
+      "verification": "首版辅助投递为选择简历、编辑/复制开场白、导出、保存后打开原页与本人确认记录。虚构材料原生验收关闭保护、原页可见、发送确认与下一步并发合并；历史投递状态与材料版本保留回归通过。平台辅助填入、自动提交及平台实际发送结果核验未实现。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D160",
+      "title": "今日待办与面试复习",
+      "depends_on": [
+        "D159"
+      ],
+      "status": "done",
+      "scope": [
+        "今日待办与面试复习",
+        "复用现有本地架构，保留原数据"
+      ],
+      "acceptance": [
+        "相关回归与本地App验证；不发送真实申请"
+      ],
+      "verification": "到期/逾期待办复用原日期与下一步，面试复习使用已完成轮次的真实记录。原生虚构反馈验收入口及练习草稿，不自动发送；日期、去重与中断排除回归通过。未验收新增模型反馈质量。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

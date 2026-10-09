@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {proposalMatchesJob,preparationDraft,preparationHasChanges} from '../dist-electron/shared/job-preparation.js';
+import {proposalMatchesJob,preparationDraft,preparationHasChanges,mergePreparation} from '../dist-electron/shared/job-preparation.js';
 import {resolveResearchSession} from '../dist-electron/shared/research-session.js';
 
 test('preparation proposals use job identity and legacy exact URL only',()=>{
@@ -13,6 +13,18 @@ test('preparation proposals use job identity and legacy exact URL only',()=>{
    const draft=preparationDraft(skill,job);
    assert.equal(resolveResearchSession(draft,undefined,job,{}).activeJobId,'selected');
  }
+});
+
+test('background application confirmation keeps server stage while preserving local notes',()=>{
+ const saved={workspace_id:'test',job_id:'test-job',stage:'considering',next_action:'',due_date:null,note:'',resume_version_id:null,updated_at:null};
+ const fresh={...saved,stage:'applied',resume_version_id:'tailored',updated_at:'2026-10-10'};
+ const merged=mergePreparation({...saved,next_action:'准备项目介绍',note:'待核对'},saved,fresh);
+ assert.equal(merged.stage,'applied');
+ assert.equal(merged.next_action,'准备项目介绍');
+ assert.equal(merged.note,'待核对');
+ assert.equal(merged.resume_version_id,'tailored');
+ assert.equal(mergePreparation({...saved,stage:'interview'},saved,fresh).stage,'interview');
+ assert.match(preparationDraft('interview-prep',{company:'虚构公司',title:'工程师'}),/请读取并结合这个岗位的专属简历/);
 });
 
 

@@ -300,6 +300,14 @@ ipcMain.handle("desktop:set-job-tracking", (event, input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.setJobTracking(input);
 });
+ipcMain.handle("desktop:list-application-records", (event, workspaceId:string, jobId?:string) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.listApplicationRecords(workspaceId,jobId);
+});
+ipcMain.handle("desktop:save-application-record", (event,input) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.saveApplicationRecord(input);
+});
 ipcMain.handle("desktop:get-job-preparation", (event, workspaceId:string, jobId:string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.getJobPreparation(workspaceId,jobId);
@@ -815,7 +823,7 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
           return runDesktopSearch({workspace_id:input.workspace_id,intent:query,filters:normalizeDiscoveryFilters({cities}),source_ids:sourceIds,source_cursors:cursors,existing_run_id:previous?.result_page.run_id,max_pages:1,time_budget_seconds:Math.min(15,ms/1000),page_size:10},signal);
         },
         browser:(operation,value,signal,ms)=>{if(!sourceBrowserManager)throw Error("browser unavailable");return sourceBrowserManager.taskBrowser(input.workspace_id+"/"+input.request_id,operation,value,signal,ms);},
-        readResume:()=>apiClient!.agentResume(input.workspace_id),
+        readResume:()=>apiClient!.agentResume(input.workspace_id,input.skill_id==="interview-prep"?input.job_id:undefined),
         findLocalJobs:title=>apiClient!.findAgentLocalJobs(input.workspace_id,title),
         proposeResume:proposal=>apiClient!.proposeAgentResume({...proposal,workspace_id:input.workspace_id,connection_id:connection.connection_id,question:input.question,job_id:input.job_id}),
         listSavedJobs:()=>apiClient!.listJobTracking(input.workspace_id),

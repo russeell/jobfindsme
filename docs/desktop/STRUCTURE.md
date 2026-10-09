@@ -61,8 +61,8 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 
 聊天任务由 `main/research/run-controller.ts` 按请求管理，renderer只显示当前会话的流与进度。`shared/research-chat-history.ts` 负责复制前缀的新分支及关系序列化，关系存入现有 conversation context；复制通过受限 preload clipboard IPC，不使用页面读写权限。
 
-`renderer/src/preparation/JobPreparation.tsx` 是岗位准备卡；`shared/job-preparation.ts` 管阶段、目标匹配与显式入口草稿。`search/preparation.py` 与0040迁移保存工作区内阶段/下一步/日期/备注及岗位简历关联，复用既有job tracking和resume版本。`resume_editor/prompt.py` 的目标岗位提案保存为独立副本；通用编辑仍沿用原有基础版本规则。没有新增Agent或调度器。
+`renderer/src/preparation/JobPreparation.tsx` 是岗位准备卡；`shared/job-preparation.ts` 管阶段、目标匹配与显式入口草稿。`search/preparation.py` 与0040/0041迁移保存工作区内阶段/下一步/日期/备注、岗位简历关联及投递材料记录，复用既有job tracking和resume版本。`resume_editor/prompt.py` 的目标岗位提案保存为独立副本；通用编辑仍沿用原有基础版本规则。没有新增Agent或调度器。
 
-`renderer/src/preparation/RecordsPage.tsx` 提供收藏/已投递/全部三项直接导航及本地记录筛选状态，`shared/records-view.ts` 负责收藏/投递分类与实际跟进/阶段、全部记录搜索与排序，先筛选再每批展示20条；不增加后端查询或模型调用。`resume/ResumeDialog.tsx` 使用原生dialog管理焦点与关闭，`ResumePage.tsx` 复用原有导入/核对/版本接口；待核对稿与当前版本分开显示，没有新增迁移。
+`renderer/src/preparation/RecordsPage.tsx` 提供收藏/已投递/全部三项直接导航及本地记录筛选状态，`shared/records-view.ts` 负责收藏/投递分类与实际跟进/阶段、全部记录搜索与排序，先筛选再每批展示20条；不增加后端查询或模型调用。`resume/ResumeDialog.tsx` 使用原生dialog管理焦点与关闭，`ResumePage.tsx` 是固定“我的简历”入口，复用导入/核对、基础编辑、版本恢复与两种导出模板，集中展示岗位专属稿；待核对稿与当前版本分开显示。`ApplicationPreparation.tsx` 保存选定简历版本和开场白、复制/导出/打开原页及本人确认状态，不执行外部提交；确认后的材料保留为独立记录。`shared/job-follow-up.ts` 从原有准备日期生成今日待办，从会话已完成的面试状态生成复习项，点击练习只填写草稿。
 
 `shared/discovery-filters.ts` 的 `simpleDiscoveryFilters` 仅用于精简搜索界面的条件、预检返回与续查，清除隐藏的退休条件并保留全职/兼职；界面类型筛选要求来源类型已知，历史快照与其他调用方沿用原契约。搜索界面保留城市、薪资、经验（含在校生/应届生）、工作类型、平台和直接未读开关。身份依据原文或来源实习/校招标记，由Python本地过滤，不调用模型。
