@@ -26,6 +26,8 @@ class FactStatus(StrEnum):
 
 
 class FactType(StrEnum):
+    BASIC_INFORMATION = "basic_information"
+    SKILL_DETAIL = "skill_detail"
     SKILL = "skill"
     PROJECT = "project"
     EXPERIENCE = "experience"

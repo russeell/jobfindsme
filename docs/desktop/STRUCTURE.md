@@ -66,3 +66,5 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 `renderer/src/preparation/RecordsPage.tsx` 提供收藏/已投递/全部三项直接导航及本地记录筛选状态，`shared/records-view.ts` 负责收藏/投递分类与实际跟进/阶段、全部记录搜索与排序，先筛选再每批展示20条；不增加后端查询或模型调用。`resume/ResumeDialog.tsx` 使用原生dialog管理焦点与关闭，`ResumePage.tsx` 是固定“我的简历”入口，复用导入/核对、基础编辑、版本恢复与两种导出模板，以基础/岗位专属两类展示材料；待核对稿与当前版本分开显示。`ResumeDialogs.tsx` 提供独立预览导出、通用/目标岗位 AI 修改选择与焦点管理；`shared/resume-library.ts` 管章节、无实质改动判断、审阅数量和明确入口草稿。基础编辑按章节切换，旧版本并发更新时保留输入并阻止过期保存。`ResumeProposal.tsx` 在简历库、岗位准备、聊天中复用原文对照、接受/保留/重新审阅和显式版本保存。`ApplicationPreparation.tsx` 保存选定简历版本和开场白、复制/导出/打开原页及本人确认状态，不执行外部提交；确认后的材料保留为独立记录。`shared/job-follow-up.ts` 从原有准备日期生成今日待办，从会话已完成的面试状态生成复习项，点击练习只填写草稿。
 
 `shared/discovery-filters.ts` 的 `simpleDiscoveryFilters` 仅用于精简搜索界面的条件、预检返回与续查，清除隐藏的退休条件并保留全职/兼职；界面类型筛选要求来源类型已知，历史快照与其他调用方沿用原契约。搜索界面保留城市、薪资、经验（含在校生/应届生）、工作类型、平台和直接未读开关。身份依据原文或来源实习/校招标记，由Python本地过滤，不调用模型。
+
+简历导入 `profiles/parser.py` 保留本机个人信息与完整技能描述，Word换行按原文保留；`profiles/service.py` 将这些写入版本，匹配摘要只使用适合检索的已确认事实。Agent读取仍过滤个人信息并脱敏。`ResumePage.tsx` 的导入核对按章节切换并保留修改；过期提案由 `ResumeProposal.tsx` 提示重新生成。`shared/assistant-quality.ts` 与 Pi 运行器为明确要求但缺失的简历提案提供预算内一次补交机会，最终保存仍需用户显式审阅。

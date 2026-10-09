@@ -82,7 +82,7 @@ class ResumeProfileService:
                 )
             return existing
 
-        parsed = self.parser.parse(extracted.text)
+        parsed = self.parser.parse(extracted.text, include_basic_information=True)
         if not parsed:
             raise ProfileError("no supported profile facts found")
 
@@ -338,12 +338,19 @@ class ResumeProfileService:
             "skills": [],
         }
         section_by_type = {
+            FactType.BASIC_INFORMATION: "basic_information",
+            FactType.SKILL_DETAIL: "skills",
             FactType.EDUCATION: "education",
             FactType.EXPERIENCE: "experience",
             FactType.PROJECT: "projects",
             FactType.SKILL: "skills",
         }
+        details = [value for kind, value in facts if kind is FactType.SKILL_DETAIL]
         for fact_type, value in facts:
+            if fact_type is FactType.SKILL and any(
+                value.casefold() in detail.casefold() for detail in details
+            ):
+                continue
             content[section_by_type[fact_type]].append(value)
 
         now = datetime.now(UTC)
@@ -400,7 +407,12 @@ class ResumeProfileService:
         return ProfileSummary(
             profile_id=profile.profile_id,
             workspace_id=profile.workspace_id,
-            facts=profile.facts,
+            facts=tuple(
+                fact
+                for fact in profile.facts
+                if fact.fact_type
+                not in (FactType.BASIC_INFORMATION, FactType.SKILL_DETAIL)
+            ),
         )
 
     def latest_confirmed_summary(

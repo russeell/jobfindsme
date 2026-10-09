@@ -31,3 +31,13 @@ test('interview preparation does not require a JD or masquerade as an answer',()
  assert.equal(deliveredInterviewQuestion('请解释工具调用超时后的处理过程。'),'请解释工具调用超时后的处理过程');
  assert.equal(interviewResponseIssue('请解释工具调用超时后的处理过程。','开始模拟面试',false),undefined);
 });
+
+test('explicit reviewable resume edits require a proposal only after confirmed material is available',async()=>{
+ const {resumeProposalRequired}=await import('../dist-electron/shared/assistant-quality.js');
+ assert.equal(resumeProposalRequired('请生成可逐项审阅的修改提案','resume-tailor',true,false),true);
+ assert.equal(resumeProposalRequired('优化为可保存修改稿','resume-tailor',true,false),true);
+ assert.equal(resumeProposalRequired('只要建议，不用提案','resume-tailor',true,false),false);
+ assert.equal(resumeProposalRequired('请生成提案','resume-tailor',false,false),false);
+ assert.equal(resumeProposalRequired('请生成提案','resume-tailor',true,true),false);
+ assert.equal(resumeProposalRequired('请生成提案','interview-prep',true,false),false);
+});

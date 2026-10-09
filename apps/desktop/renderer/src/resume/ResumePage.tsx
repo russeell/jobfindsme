@@ -6,7 +6,7 @@ import {Icon} from "../shared/Icon";
 import {resumeContentChanged,resumeSections,resumeReviewCounts} from "../../../shared/resume-library";
 import {ResumeImproveDialog,ResumeModal,ResumePreview} from "./ResumeDialogs";
 
-const factLabels:Record<string,string>={skill:"专业技能",project:"项目经历",experience:"工作经历",education:"教育经历"};
+const factLabels:Record<string,string>={basic_information:"基本信息（仅本机保存）",skill_detail:"技能描述",skill:"识别到的技能",project:"项目经历",experience:"工作经历",education:"教育经历"};
 
 export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImprove}:{onChanged?:(state:ResumeState)=>void;embedded?:boolean;active?:boolean;onPrepare?:(job:SearchResultItem["job"])=>void;onImprove?:(job:SearchResultItem["job"]|undefined,instruction:string)=>void}={}){
   const [state,setState]=useState<ResumeState>();
@@ -17,6 +17,7 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImp
   const [jobs,setJobs]=useState<TrackedJob[]>([]);
   const [preview,setPreview]=useState<ResumeVersion>();
   const [editing,setEditing]=useState<{base:string;content:ResumeContent}>();
+  const [reviewSection,setReviewSection]=useState('');
   const [restore,setRestore]=useState<ResumeVersion>();
   const [tab,setTab]=useState<"base"|"tailored">("base");
   const [section,setSection]=useState<keyof ResumeContent>("experience");
@@ -29,7 +30,8 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImp
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState(""),[confirmClear,setConfirmClear]=useState(false);
   const draft:ResumeDraft|null|undefined=state?.active_draft;
   const reviewedDraft=useRef<string|null>(null);
-  const factGroups=draft?[...new Set(draft.facts.map(fact=>fact.fact_type))]:[];
+  const factGroups=['basic_information','experience','project','education','skill_detail','skill'].filter(type=>draft?.facts.some(fact=>fact.fact_type===type));
+  const activeReviewSection=factGroups.includes(reviewSection)?reviewSection:factGroups[0];
   async function reload(){
     const sequence=++loadSequence.current;
     const next=await window.jobfindsme!.getResumeState();
@@ -45,7 +47,7 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImp
     setSessions(proposals.filter(p=>p.status!=="cancelled"&&(p.patches.length>0||p.saved_version_id)));
     setJobs(rows);setApplications(records);setCurrent(versions.find(version=>version.is_current));
     const draftKey=next.active_draft?`${workspace}:${next.active_draft.profile_id}`:null;
-    if(next.active_draft&&draftKey!==reviewedDraft.current){setAccepted(new Set(next.active_draft.facts.map(f=>f.fact_id)));setCorrections(Object.fromEntries(next.active_draft.facts.map(f=>[f.fact_id,f.value])));}
+    if(next.active_draft&&draftKey!==reviewedDraft.current){setReviewSection('');setAccepted(new Set(next.active_draft.facts.map(f=>f.fact_id)));setCorrections(Object.fromEntries(next.active_draft.facts.map(f=>[f.fact_id,f.value])));}
     reviewedDraft.current=draftKey;
   }
   useEffect(()=>{if(!active){setPreview(undefined);setImprove(false);setReview(undefined);return;}const refresh=()=>void reload().catch(reason=>setError(userError(reason).message));refresh();window.addEventListener('jfm:job-updated',refresh);return()=>{loadSequence.current++;window.removeEventListener('jfm:job-updated',refresh);};},[active]);
@@ -57,7 +59,7 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImp
   const tailoredIds=new Set(tailored.map(p=>p.saved_version_id).filter(Boolean));
   const history=versions.filter(v=>!v.is_current&&!tailoredIds.has(v.version_id));
   async function run(action:()=>Promise<void>){setBusy(true);setError("");setMessage("");try{await action();}catch(reason){setError(userError(reason).message);}finally{setBusy(false);}}
-  async function importResume(){await run(async()=>{const value=await window.jobfindsme!.chooseAndImportResume();if(value){await reload();setMessage("请核对解析内容。确认前，新导入内容不会参与检索。");}});}
+  async function importResume(){await run(async()=>{const value=await window.jobfindsme!.chooseAndImportResume();if(value){await reload();setMessage(value.status==='confirmed'?"此文件已确认过，没有重复导入。可编辑当前简历，或在历史版本中预览、恢复原稿。":"请核对解析内容。确认前，新导入内容不会参与检索。");}});}
   async function confirm(){if(!draft)return;await run(async()=>{await window.jobfindsme!.confirmResume({workspace_id:draft.workspace_id,profile_id:draft.profile_id,accepted_fact_ids:[...accepted],corrections:Object.fromEntries([...accepted].map(id=>[id,corrections[id]??""]))});await reload();setMessage("简历已确认，下一次检索可使用其中的技能和经历。");});}
   async function abandon(){if(!draft)return;await run(async()=>{await window.jobfindsme!.abandonResume(draft.workspace_id,draft.profile_id);await reload();setMessage("本次导入已放弃。");});}
   async function clearResume(){if(!state?.workspace_id)return;await run(async()=>{await window.jobfindsme!.clearCurrentResume(state.workspace_id!);await reload();setConfirmClear(false);setMessage("当前简历已清除；现在可不使用简历搜索。已有检索和研究快照保留。");});}
@@ -69,8 +71,8 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,onImp
     {draft&&<section className="resume-confirm resume-review">
       <h3>核对解析内容</h3><p className="note">{draft.file_name} · 已选择 {accepted.size} / {draft.facts.length} 条。取消勾选不准确的内容，也可直接修改。</p>
       <div className="resume-review-tools"><button type="button" disabled={busy} onClick={()=>setAccepted(new Set(draft.facts.map(fact=>fact.fact_id)))}>全选</button><button type="button" disabled={busy} onClick={()=>setAccepted(new Set())}>取消全选</button></div>
-      <div className="fact-list">{factGroups.map(type=>{const facts=draft.facts.filter(fact=>fact.fact_type===type);const label=factLabels[type]??'简历信息';return <section className="fact-group" key={type} aria-label={label}><h3>{label}<small>{facts.length} 条</small></h3>{facts.map((fact,index)=><div className="fact-row" key={fact.fact_id}><input type="checkbox" disabled={busy} aria-label={`${label} ${index+1}`} checked={accepted.has(fact.fact_id)} onChange={event=>setAccepted(previous=>{const next=new Set(previous);event.target.checked?next.add(fact.fact_id):next.delete(fact.fact_id);return next;})}/><textarea aria-label={`${label} ${index+1} 内容`} value={corrections[fact.fact_id]??fact.value} disabled={!accepted.has(fact.fact_id)||busy} onChange={event=>setCorrections(previous=>({...previous,[fact.fact_id]:event.target.value}))}/></div>)}</section>;})}</div>
-      <div className="resume-review-footer"><span>{current?'确认后更新当前简历；原版本仍保留。':'确认前不会用于岗位匹配。'}</span><div><button type="button" disabled={busy} onClick={()=>void abandon()}>暂不使用</button><button type="button" className="primary-button" disabled={busy||!accepted.size} onClick={()=>void confirm()}>{busy?'处理中…':'确认并使用'}</button></div></div>
+      <nav className="resume-review-sections" aria-label="核对章节">{factGroups.map(type=><button key={type} aria-pressed={activeReviewSection===type} onClick={()=>setReviewSection(type)}>{factLabels[type]}<small>{draft.facts.filter(fact=>fact.fact_type===type).length}</small></button>)}</nav><div className="fact-list resume-fact-scroll">{factGroups.filter(type=>type===activeReviewSection).map(type=>{const facts=draft.facts.filter(fact=>fact.fact_type===type);const label=factLabels[type]??'简历信息';return <section className="fact-group" key={type} aria-label={label}><h3>{label}<small>{facts.length} 条</small></h3>{facts.map((fact,index)=><div className="fact-row" key={fact.fact_id}><input type="checkbox" disabled={busy} aria-label={`${label} ${index+1}`} checked={accepted.has(fact.fact_id)} onChange={event=>setAccepted(previous=>{const next=new Set(previous);event.target.checked?next.add(fact.fact_id):next.delete(fact.fact_id);return next;})}/><textarea aria-label={`${label} ${index+1} 内容`} value={corrections[fact.fact_id]??fact.value} disabled={!accepted.has(fact.fact_id)||busy} onChange={event=>setCorrections(previous=>({...previous,[fact.fact_id]:event.target.value}))}/></div>)}</section>;})}</div>
+      <div className="resume-review-footer"><span>{current?'确认后更新当前简历；原版本仍保留。':'确认前不会用于岗位匹配。'}</span><div><button type="button" disabled={busy} onClick={()=>void abandon()}>暂不使用</button><button type="button" className="primary-button" disabled={busy||!accepted.size} onClick={()=>void confirm()}>{busy?'处理中…':'确认并使用'}</button>{factGroups.indexOf(activeReviewSection)<factGroups.length-1&&<button disabled={busy} onClick={()=>setReviewSection(factGroups[factGroups.indexOf(activeReviewSection)+1])}>核对下一项 →</button>}</div></div>
     </section>}
     {!embedded&&!draft&&<nav className="resume-library-tabs" aria-label="简历分类"><button aria-current={tab==='base'?'page':undefined} disabled={!!editing} onClick={()=>setTab('base')}>基础简历</button><button aria-current={tab==='tailored'?'page':undefined} disabled={!!editing} onClick={()=>setTab('tailored')}>岗位专属{tailored.length>0&&<span>{tailored.length}</span>}</button></nav>}
     {current&&!draft&&!embedded&&tab==='base'&&!editing&&<div className="resume-document-bar"><div><strong>基础简历</strong><small>v{current.version_number} · {new Date(current.created_at).toLocaleDateString()} · 已确认</small></div><div className="button-row"><button disabled={busy} onClick={()=>{setSection(current.content.experience.length?'experience':'projects');setEditing({base:current.version_id,content:structuredClone(current.content)});}}>编辑</button><button disabled={busy} onClick={()=>setPreview(current)}>预览与导出</button>{onImprove&&<button className="primary-button" disabled={busy} onClick={()=>setImprove(true)}>AI 修改</button>}</div></div>}

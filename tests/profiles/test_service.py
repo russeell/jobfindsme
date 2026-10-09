@@ -182,3 +182,41 @@ def test_same_resume_import_is_idempotent(tmp_path: Path) -> None:
     )
 
     assert first == second
+
+
+def test_local_resume_retains_contact_and_skill_prose_but_summary_excludes_private_data(
+    tmp_path,
+):
+    from jobfindsme.profiles.models import FactType
+    from jobfindsme.profiles.service import ResumeProfileService
+    from jobfindsme.storage import Database
+    from jobfindsme.workspaces import WorkspaceService
+
+    db = Database(tmp_path / "full-resume.db")
+    db.migrate()
+    workspace = WorkspaceService(db).create()
+    service = ResumeProfileService(db)
+    source = tmp_path / "synthetic.md"
+    source.write_text(
+        "姓名：虚构候选人\n电话：13800138000\nqa@example.com\n"
+        "# 项目经历\n实现本地求职工具\n# 专业技能\n熟悉 Python，能编写单元测试。",
+        encoding="utf-8",
+    )
+    draft = service.import_resume(
+        workspace_id=workspace.workspace_id, source_path=source
+    )
+    summary = service.confirm_profile(
+        workspace_id=workspace.workspace_id,
+        profile_id=draft.profile_id,
+        accepted_fact_ids=[f.fact_id for f in draft.facts],
+    )
+    version = service.current_version(workspace_id=workspace.workspace_id)
+    assert "电话：13800138000" in version.content["basic_information"]
+    assert version.content["skills"] == ("熟悉 Python，能编写单元测试。",)
+    assert all(
+        f.fact_type not in (FactType.BASIC_INFORMATION, FactType.SKILL_DETAIL)
+        for f in summary.facts
+    )
+    assert "13800138000" not in summary.model_dump_json()
+    assert "qa@example.com" not in summary.model_dump_json()
+    assert any(f.value == "Python" for f in summary.facts)

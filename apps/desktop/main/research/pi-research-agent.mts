@@ -11,7 +11,7 @@ import {createHash} from "node:crypto";
 import type {InterviewState,ModelConnection,ResearchEvidence,ResearchReport,ResearchChatProcessStep,SearchResultItem,SourceSearchResponse} from "../../shared/contracts.js";
 import {checkResearchClaim,researchClaimText,type SupportedResearchClaim} from "../../shared/research-claim-support.js";
 import {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
-import {deliveredInterviewQuestion,interviewModeFor,interviewSetupQuestion,interviewResponseIssue,researchDomainMatches} from "../../shared/assistant-quality.js";
+import {resumeProposalRequired,deliveredInterviewQuestion,interviewModeFor,interviewSetupQuestion,interviewResponseIssue,researchDomainMatches} from "../../shared/assistant-quality.js";
 export {modelHistoryWithinBudget} from "../../shared/research-chat-ipc.js";
 
 export type AgentConversationTurn={attachments?:ChatAttachment[];role:"user"|"assistant";text:string};
@@ -170,7 +170,7 @@ export async function runPiResearchAgent(context:AgentResearchContext,connection
   const readUrls=new Set<string>(),browserReadUrls=new Set<string>(),contentKeys=new Map<string,string>();let noNewSearches=0,progressCount=0,lastTurnProgress=0,stagnantTurns=0,sameHostPaths=0;let completionRepair=false, retrievalFinalization=false;
   researchState.findings=researchState.findings.filter(item=>evidence.has(item.evidence_id));
   for(const item of evidence.values()){if(!item.url)continue;readUrls.add(item.url);contentKeys.set(researchContentKey(item),item.evidence_id);pageCache.set(item.url,item);}
-  const actions:Array<Record<string,unknown>>=[];const failures:string[]=[];let answerRepair=false,interviewRepair=false;let searches=0,reads=0,turns=0,raw="",answer="",report:ResearchReport|undefined;
+  const actions:Array<Record<string,unknown>>=[];const failures:string[]=[];let answerRepair=false,interviewRepair=false,resumeRepair=false;let searches=0,reads=0,turns=0,raw="",answer="",report:ResearchReport|undefined;
   let directChat=false,directStreamed=false,finalEmitted=false,rejectedBeforeRepair=0;let retainedClaims:SupportedResearchClaim[]=[];
   let searchErrors=0,emptySearches=0,readFailures=0,entityMismatches=0;
   let modelUsage:Record<string,number>|null=null;let savedJobStatus:ReturnType<typeof jobSourceStatus>|null=null;
@@ -373,6 +373,13 @@ finishTurn:async turn=>{
     if(turns>=budget.turns||searches>0&&stagnantTurns>=4)return {action:"end"};
     // A terminal model response is not proof that evidence acquisition is complete.
     // Repair once inside the existing Pi loop, sharing every original budget.
+    if(terminal&&!resumeRepair&&tools.proposeResume&&turns<budget.turns-1&&!runController.signal.aborted&&resumeProposalRequired(context.question,context.skillId,actions.some(item=>item.tool==='read_confirmed_resume'),!!proposalSessionId)){
+      resumeRepair=true;raw="";
+      actions.push({tool:"answer_check",status:"repair_required",reason:"resume_proposal_missing"});
+      await persist();guard();
+      agent.steer({role:"user",timestamp:Date.now(),content:"用户已明确要求可审阅提案。请使用刚才读取的版本和 evidence_ids 调用 propose_resume_changes，只提交有依据的修改，不重复征求生成提案的许可。提交提案不等于接受或保存，保存仍由用户操作。没有可修改的真实事实时说明具体缺口，不编造。"});
+      return {action:"continue"};
+    }
     const interviewAnswer=modelMessage(raw);
     const interviewIssue=interviewResponseIssue(interviewAnswer,context.question,answeredPreviousQuestion,interviewMode);
     if(context.skillId==="interview-prep"&&terminal&&!interviewRepair&&interviewIssue&&!signal.aborted){
@@ -481,6 +488,7 @@ finishTurn:async turn=>{
   let deadline:ReturnType<typeof setTimeout>|undefined;
   const timedOut=new Promise<never>((_,reject)=>{deadline=setTimeout(()=>{runController.abort();agent.abort();reject(Error("研究时间预算已用完"));},Math.max(1,deadlineAt-Date.now()));});
   try{await Promise.race([persist(),timedOut]);await Promise.race([agent.prompt(prompt,context.attachments?.filter(item=>item.image).map(item=>({type:"image" as const,data:item.image!.data,mimeType:item.image!.mimeType}))),timedOut]);collectUsage();if(signal.aborted)throw Error("cancelled");if(agent.state.errorMessage){if(context.attachments?.some(item=>item.image)&&/image|vision|multimodal|图片|视觉/i.test(agent.state.errorMessage))throw Error("当前模型未接受图片，请换用支持视觉的模型，或提供文本材料。");throw Error(`模型请求失败：${agent.state.errorMessage}`);}
+    if(resumeProposalRequired(context.question,context.skillId,actions.some(item=>item.tool==='read_confirmed_resume'),!!proposalSessionId))raw="本轮尚未生成可保存提案，以下仅为文字回复；可重试生成提案。\n\n"+modelMessage(raw);
     if(context.skillId==="interview-prep"){
       const text=modelMessage(raw);
       if(interviewResponseIssue(text,context.question,answeredPreviousQuestion,interviewMode))throw Error("assistant_failure:interview_output");

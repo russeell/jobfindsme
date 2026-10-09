@@ -135,7 +135,14 @@ def _extract_docx(content: bytes) -> str:
     paragraphs = []
     for paragraph in root.iter(f"{namespace}p"):
         value = "".join(
-            node.text or "" for node in paragraph.iter(f"{namespace}t")
+            (node.text or "")
+            if node.tag == f"{namespace}t"
+            else "\n"
+            if node.tag in (f"{namespace}br", f"{namespace}cr")
+            else "\t"
+            for node in paragraph.iter()
+            if node.tag
+            in (f"{namespace}t", f"{namespace}br", f"{namespace}cr", f"{namespace}tab")
         ).strip()
         if value:
             paragraphs.append(value)
@@ -151,14 +158,29 @@ SKILLS = {
 SECTION_PATTERNS: tuple[tuple[re.Pattern[str], FactType | None], ...] = (
     (
         re.compile(
-            r"^(?:项目经历|项目经验|个人项目|独立项目|项目实践|projects?)$",
+            r"^(?:个人信息|基本信息|联系方式|contact|personal information)$", re.I
+        ),
+        FactType.BASIC_INFORMATION,
+    ),
+    (
+        re.compile(
+            r"^(?:技能|专业技能|技能清单|技术栈|职业技能|skills?|technical skills)$",
+            re.I,
+        ),
+        FactType.SKILL_DETAIL,
+    ),
+    (
+        re.compile(
+            r"^(?:项目经历|项目经验|个人项目|独立项目|项目实践|项目介绍|"
+            r"projects?|project experience)$",
             re.I,
         ),
         FactType.PROJECT,
     ),
     (
         re.compile(
-            r"^(?:工作经历|工作经验|实习经历|职业经历|独立实践与工作经历|experience)$",
+            r"^(?:工作经历|工作经验|实习经历|职业经历|独立实践与工作经历|实习经验|"
+            r"experience|work experience|professional experience)$",
             re.I,
         ),
         FactType.EXPERIENCE,
@@ -169,7 +191,7 @@ SECTION_PATTERNS: tuple[tuple[re.Pattern[str], FactType | None], ...] = (
     ),
     (
         re.compile(
-            r"^(?:技能|专业技能|技能清单|技术栈|个人信息|基本信息|求职意向|"
+            r"^(?:求职意向|"
             r"个人优势|自我评价|证书|获奖经历|skills?)$",
             re.I,
         ),
@@ -203,7 +225,7 @@ class _Line:
 class DeterministicResumeParser:
     """Extract reviewable facts without treating every PDF line as a project."""
 
-    version = "deterministic-resume-v4"
+    version = "deterministic-resume-v5"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)
@@ -213,9 +235,17 @@ class DeterministicResumeParser:
             flags=re.IGNORECASE,
         )
 
-    def parse(self, text: str) -> list[ParsedFact]:
+    def parse(
+        self, text: str, *, include_basic_information: bool = False
+    ) -> list[ParsedFact]:
         facts = self._skills(text)
         facts.extend(self._section_blocks(text))
+        if not include_basic_information:
+            facts = [
+                fact
+                for fact in facts
+                if fact.fact_type is not FactType.BASIC_INFORMATION
+            ]
         return _deduplicate(facts)
 
     def _skills(self, text: str) -> list[ParsedFact]:
@@ -233,16 +263,21 @@ class DeterministicResumeParser:
     def _section_blocks(self, text: str) -> list[ParsedFact]:
         lines = _lines(text)
         facts: list[ParsedFact] = []
-        current_type: FactType | None = None
+        current_type: FactType | None = FactType.BASIC_INFORMATION
         current: list[_Line] = []
 
         def flush() -> None:
             if current_type is None or not current:
                 current.clear()
                 return
-            for block in _split_entries(current):
+            blocks = (
+                [[line] for line in current]
+                if current_type in (FactType.BASIC_INFORMATION, FactType.SKILL_DETAIL)
+                else _split_entries(current)
+            )
+            for block in blocks:
                 value = _normalize_block(block)
-                if len(value) < 8:
+                if not value:
                     continue
                 start, end = block[0].start, block[-1].end
                 facts.append(
@@ -257,6 +292,12 @@ class DeterministicResumeParser:
             current.clear()
 
         for line in lines:
+            if re.fullmatch(
+                r"(?:个人)?简历|resume|curriculum vitae",
+                line.text.strip().strip("#*_ "),
+                re.I,
+            ):
+                continue
             inline = re.match(r"^([^：:]{2,24})[：:]\s*(\S.*)$", line.text)
             if inline:
                 inline_type = _section_heading(inline.group(1))
@@ -284,7 +325,8 @@ _NOT_A_HEADING = object()
 
 
 def _section_heading(value: str) -> FactType | None | object:
-    normalized = value.strip().lstrip("#").strip().rstrip(":：").strip()
+    normalized = value.strip().lstrip("#").strip().strip("*_ ").rstrip(":：").strip()
+    normalized = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", normalized)
     for pattern, fact_type in SECTION_PATTERNS:
         if pattern.fullmatch(normalized):
             return fact_type

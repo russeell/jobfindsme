@@ -31,3 +31,10 @@ export function researchDomainMatches(url:string,domains:string[]):boolean {
  if(!domains.length)return true;
  try{const host=new URL(url).hostname.toLowerCase();return domains.some(value=>{const domain=value.toLowerCase();return host===domain||host.endsWith(`.${domain}`);});}catch{return false;}
 }
+
+// A reviewable proposal is a local draft, never permission to save a version.
+export function resumeProposalRequired(question:string,skill:string|undefined,hasConfirmedResume:boolean,hasProposal:boolean):boolean {
+ if(skill!=='resume-tailor'||!hasConfirmedResume||hasProposal)return false;
+ if(/(?:不要|不用|无需|不必).{0,8}(?:提案|结构化)|只(?:需|要)?.{0,5}(?:建议|点评|解释)/u.test(question))return false;
+ return /提案|可.{0,5}(?:审阅|保存)|逐项.{0,5}(?:审阅|接受)/u.test(question);
+}

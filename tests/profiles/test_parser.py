@@ -83,3 +83,59 @@ def test_inline_section_labels_yield_reviewable_facts_without_private_basics():
         for item in facts
         if item.fact_type is FactType.PROJECT
     )
+
+
+def test_full_resume_preserves_local_basics_skill_descriptions_and_short_entries():
+    text = (
+        "个人简历\n姓名：虚构候选人\n电话：13800138000\nqa@example.com\n"
+        "**工作经历**\n示例公司\n负责内部工具维护。\n"
+        "教 育 背 景\n示例大学 本科\n"
+        "专业技能\n熟悉 Python，能编写单元测试和排查服务问题。\n"
+    )
+    parser = DeterministicResumeParser()
+    facts = parser.parse(text, include_basic_information=True)
+    assert [f.value for f in facts if f.fact_type is FactType.BASIC_INFORMATION] == [
+        "姓名：虚构候选人",
+        "电话：13800138000",
+        "qa@example.com",
+    ]
+    assert any(
+        f.fact_type is FactType.SKILL_DETAIL and "单元测试" in f.value for f in facts
+    )
+    assert any(
+        f.fact_type is FactType.EDUCATION and f.value == "示例大学 本科" for f in facts
+    )
+    assert any(
+        f.fact_type is FactType.EXPERIENCE and "示例公司" in f.value for f in facts
+    )
+    assert all(
+        text[f.evidence_start : f.evidence_end] == f.evidence_snippet for f in facts
+    )
+    assert all(
+        f.fact_type is not FactType.BASIC_INFORMATION for f in parser.parse(text)
+    )
+
+
+def test_docx_preserves_soft_line_breaks_and_tabs():
+    import io
+
+    from docx import Document
+
+    from jobfindsme.profiles.parser import ResumeTextExtractor
+
+    document = Document()
+    run = document.add_paragraph().add_run("工作经历")
+    run.add_break()
+    run.add_text("虚构公司")
+    run.add_tab()
+    run.add_text("后端开发，维护 Python 服务。")
+    output = io.BytesIO()
+    document.save(output)
+    extracted = ResumeTextExtractor().extract(
+        file_name="synthetic.docx", content=output.getvalue()
+    )
+    facts = DeterministicResumeParser().parse(extracted.text)
+    assert any(
+        f.fact_type is FactType.EXPERIENCE and "虚构公司" in f.value for f in facts
+    )
+    assert "\t" in extracted.text
