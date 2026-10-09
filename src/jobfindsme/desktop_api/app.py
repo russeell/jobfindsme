@@ -280,6 +280,15 @@ class JobPreparationRequest(StrictResponse):
     note: str = Field(default="", max_length=2000)
 
 
+class ApplicationRecordRequest(StrictResponse):
+    workspace_id: str
+    job_id: str
+    record_id: str = Field(min_length=1, max_length=100)
+    resume_version_id: str | None = None
+    message: str = Field(default="", max_length=3000)
+    status: Literal["prepared", "opened", "contacted", "resume_sent", "uncertain"]
+
+
 class JobTrackingResponse(StrictResponse):
     read: bool
     saved: bool
@@ -1327,6 +1336,25 @@ def create_app(
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
 
+    @app.get("/v1/application-records", dependencies=[Depends(require_token)])
+    def list_application_records(
+        workspace_id: str, job_id: str | None = None
+    ) -> list[dict]:
+        return JobPreparationService(core.database).list_applications(
+            workspace_id, job_id
+        )
+
+    @app.post("/v1/application-records", dependencies=[Depends(require_token)])
+    def save_application_record(request: ApplicationRecordRequest) -> dict:
+        try:
+            return JobPreparationService(core.database).record_application(
+                **request.model_dump()
+            )
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="job not found") from error
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
     def resolve_workspace(workspace_id: str | None, *, create: bool = False):
         if workspace_id:
             return core.context.resolve_workspace(workspace_id)
@@ -2028,11 +2056,23 @@ def create_app(
         return provider_status()
 
     @app.get("/v1/research-agent/resume", dependencies=[Depends(require_token)])
-    def agent_resume(workspace_id: str) -> dict:
+    def agent_resume(workspace_id: str, job_id: str | None = None) -> dict:
         from jobfindsme.privacy import create_analysis_copy
         from jobfindsme.resume_editor.prompt import _evidence_map
 
         current = core.profiles.current_version(workspace_id=workspace_id)
+        if job_id:
+            try:
+                preparation = JobPreparationService(core.database).get(
+                    workspace_id, job_id
+                )
+                version_id = preparation["preparation"]["resume_version_id"]
+                if version_id:
+                    current = core.resume_editor.get_version(
+                        workspace_id=workspace_id, version_id=version_id
+                    )
+            except LookupError as error:
+                raise HTTPException(status_code=404, detail="job not found") from error
         if current is None:
             raise HTTPException(status_code=409, detail="no confirmed resume")
         content = {

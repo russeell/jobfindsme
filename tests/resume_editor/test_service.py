@@ -247,3 +247,20 @@ def test_edit_preserves_spacing_and_hide_keeps_referenced_snapshots(tmp_path) ->
         editor.hide_version(
             workspace_id=other.workspace_id, version_id=first.version_id
         )
+
+
+def test_restore_after_current_resume_cleared_retains_old_version(tmp_path):
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    editor = ResumeEditorService(database)
+    first = profiles.current_version(workspace_id=workspace.workspace_id)
+    with database.connect() as db:
+        db.execute(
+            "UPDATE resume_versions SET is_current=0 WHERE workspace_id=?",
+            (workspace.workspace_id,),
+        )
+    restored = editor.restore_version(
+        workspace_id=workspace.workspace_id, version_id=first.version_id
+    )
+    assert restored.content == first.content
+    assert restored.version_id != first.version_id
+    assert len(editor.list_versions(workspace_id=workspace.workspace_id)) == 2

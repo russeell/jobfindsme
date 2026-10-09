@@ -103,3 +103,116 @@ class JobPreparationService:
                     ),
                 )
         return self.get(workspace_id, job_id)
+
+    def list_applications(
+        self, workspace_id: str, job_id: str | None = None
+    ) -> list[dict]:
+        with self.database.connect() as db:
+            rows = db.execute(
+                "SELECT * FROM application_records WHERE workspace_id=? "
+                "AND (? IS NULL OR job_id=?) ORDER BY created_at DESC, record_id",
+                (workspace_id, job_id, job_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def record_application(
+        self,
+        workspace_id: str,
+        job_id: str,
+        *,
+        record_id: str,
+        resume_version_id: str | None,
+        message: str,
+        status: str,
+    ) -> dict:
+        """Only a user-confirmed send changes tracking; opening a page never does."""
+        self.jobs.get(workspace_id=workspace_id, job_id=job_id)
+        if status not in {
+            "prepared",
+            "opened",
+            "contacted",
+            "resume_sent",
+            "uncertain",
+        }:
+            raise ValueError("invalid application status")
+        if not record_id or len(record_id) > 100 or len(message) > 3000:
+            raise ValueError("invalid application record")
+        if status == "resume_sent" and not resume_version_id:
+            raise ValueError("请先选择实际使用的简历版本")
+        now = datetime.now(UTC).isoformat()
+        with self.database.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            if (
+                resume_version_id
+                and not db.execute(
+                    "SELECT 1 FROM resume_versions WHERE workspace_id=? AND "
+                    "version_id=?",
+                    (workspace_id, resume_version_id),
+                ).fetchone()
+            ):
+                raise ValueError("resume version does not belong to workspace")
+            old = db.execute(
+                "SELECT * FROM application_records WHERE record_id=?", (record_id,)
+            ).fetchone()
+            if old and (old["workspace_id"] != workspace_id or old["job_id"] != job_id):
+                raise ValueError("application record scope mismatch")
+            if old and old["status"] in {"contacted", "resume_sent", "uncertain"}:
+                # Preserve confirmed materials; corrections create a new record.
+                raise ValueError("已确认的记录不能覆盖，请新建记录")
+            db.execute(
+                "INSERT INTO application_records VALUES(?,?,?,?,?,?,?,?) "
+                "ON CONFLICT(record_id) DO UPDATE SET "
+                "resume_version_id=excluded.resume_version_id,"
+                "message=excluded.message,status=excluded.status,u"
+                "pdated_at=excluded.updated_at",
+                (
+                    record_id,
+                    workspace_id,
+                    job_id,
+                    resume_version_id,
+                    message.strip(),
+                    status,
+                    now,
+                    now,
+                ),
+            )
+            applied = db.execute(
+                "SELECT applied FROM job_tracking_flags "
+                "WHERE workspace_id=? AND job_id=?",
+                (workspace_id, job_id),
+            ).fetchone()
+            db.execute(
+                "INSERT INTO job_preparations(workspace_id,job_id,stage,updated_at) "
+                "VALUES(?,?,?,?) ON CONFLICT(workspace_id,job_id) DO NOTHING",
+                (
+                    workspace_id,
+                    job_id,
+                    "applied" if applied and applied["applied"] else "considering",
+                    now,
+                ),
+            )
+            if status == "resume_sent":
+                db.execute(
+                    "UPDATE job_preparations SET "
+                    "stage='applied',updated_at=? WHERE workspace_id=? AND "
+                    "job_id=? AND stage='considering'",
+                    (now, workspace_id, job_id),
+                )
+                db.execute(
+                    "INSERT INTO "
+                    "job_tracking_flags(workspace_id,job_id,saved,applied,updated_at) "
+                    "VALUES(?,?,0,1,?) ON CONFLICT(workspace_id,job_id) DO "
+                    "UPDATE SET applied=1,updated_at=excluded.updated_at",
+                    (workspace_id, job_id, now),
+                )
+                db.execute(
+                    "INSERT INTO "
+                    "job_tracking_events(event_id,workspace_id,job"
+                    "_id,event_type,enabled,created_at) VALUES(?,?,?,'applied',1,?)",
+                    (f"tracking_{uuid4().hex}", workspace_id, job_id, now),
+                )
+        return next(
+            row
+            for row in self.list_applications(workspace_id, job_id)
+            if row["record_id"] == record_id
+        )

@@ -650,3 +650,173 @@ def test_interactive_work_type_excludes_unknown_but_legacy_snapshots_keep_policy
     assert DesktopJobService._matches(
         unknown, filters=DesktopJobFilters(), read_ids=set()
     )
+
+
+def test_application_materials_survive_resume_changes_and_require_explicit_send(
+    tmp_path,
+):
+    from jobfindsme.profiles.service import ResumeProfileService
+    from jobfindsme.resume_editor import ResumeEditorService
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(990)
+    jobs.upsert(workspace.workspace_id, job)
+    service = JobPreparationService(database)
+    profiles = ResumeProfileService(database)
+    file = tmp_path / "synthetic.md"
+    file.write_text("# Skills\nPython\n# Projects\n虚构离线测试项目")
+    draft = profiles.import_resume(
+        workspace_id=workspace.workspace_id, source_path=file
+    )
+    profiles.confirm_profile(
+        workspace_id=workspace.workspace_id,
+        profile_id=draft.profile_id,
+        accepted_fact_ids=[f.fact_id for f in draft.facts],
+    )
+    version = profiles.current_version(workspace_id=workspace.workspace_id)
+    payload = dict(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        record_id="local-test",
+        resume_version_id=version.version_id,
+        message="虚构测试开场白",
+    )
+    service.save(
+        workspace.workspace_id, job.job_id, stage="considering", next_action="下次跟进"
+    )
+    for status in ["prepared", "opened"]:
+        service.record_application(**payload, status=status)
+        assert not tracking.list_tracking(workspace_id=workspace.workspace_id)[0][
+            "tracking"
+        ]["applied"]
+    service.record_application(**payload, status="resume_sent")
+    assert tracking.list_tracking(workspace_id=workspace.workspace_id)[0]["tracking"][
+        "applied"
+    ]
+    assert (
+        service.get(workspace.workspace_id, job.job_id)["preparation"]["stage"]
+        == "applied"
+    )
+    assert (
+        service.get(workspace.workspace_id, job.job_id)["preparation"]["next_action"]
+        == "下次跟进"
+    )
+    ResumeEditorService(database).save_edit(
+        workspace_id=workspace.workspace_id,
+        base_version_id=version.version_id,
+        content={**version.content, "skills": ["Python", "SQL"]},
+    )
+    stored = service.list_applications(workspace.workspace_id)[0]
+    assert stored["resume_version_id"] == version.version_id
+    with pytest.raises(ValueError, match="不能覆盖"):
+        service.record_application(
+            **{**payload, "message": "changed"}, status="prepared"
+        )
+    with pytest.raises(ValueError, match="workspace"):
+        service.record_application(
+            **{**payload, "record_id": "other", "resume_version_id": "wrong-workspace"},
+            status="prepared",
+        )
+    assert len(service.list_applications(workspace.workspace_id)) == 1
+    assert service.list_applications("other-workspace") == []
+    from fastapi.testclient import TestClient
+
+    from jobfindsme.desktop_api.app import create_app
+
+    client = TestClient(
+        create_app(token="fixture-token", database_path=tmp_path / "desktop-jobs.db")
+    )
+    headers = {"Authorization": "Bearer fixture-token"}
+    assert (
+        client.get(
+            "/v1/application-records", params={"workspace_id": workspace.workspace_id}
+        ).status_code
+        == 401
+    )
+    response = client.get(
+        "/v1/application-records",
+        headers=headers,
+        params={"workspace_id": workspace.workspace_id},
+    )
+    assert response.json()[0]["resume_version_id"] == version.version_id
+    response = client.post(
+        "/v1/application-records",
+        headers=headers,
+        json={**payload, "record_id": "api-new", "status": "opened"},
+    )
+    assert response.status_code == 200
+    response = client.post(
+        "/v1/application-records",
+        headers=headers,
+        json={
+            **payload,
+            "record_id": "api-bad",
+            "status": "resume_sent",
+            "resume_version_id": None,
+        },
+    )
+    assert response.status_code == 400
+    # Interview reads the associated version; general edits use the base.
+    with database.connect() as db:
+        db.execute(
+            "UPDATE job_preparations SET resume_version_id=? "
+            "WHERE workspace_id=? AND job_id=?",
+            (version.version_id, workspace.workspace_id, job.job_id),
+        )
+    response = client.get(
+        "/v1/research-agent/resume",
+        headers=headers,
+        params={"workspace_id": workspace.workspace_id, "job_id": job.job_id},
+    )
+    assert response.status_code == 200
+    assert response.json()["source_version_id"] == version.version_id
+    response = client.get(
+        "/v1/research-agent/resume",
+        headers=headers,
+        params={"workspace_id": workspace.workspace_id},
+    )
+    assert response.json()["source_version_id"] != version.version_id
+    assert (
+        client.get(
+            "/v1/research-agent/resume",
+            headers=headers,
+            params={"workspace_id": "other", "job_id": job.job_id},
+        ).status_code
+        == 404
+    )
+
+
+def test_preparing_new_materials_keeps_legacy_applied_state(tmp_path) -> None:
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, search = _services(tmp_path)
+    job = _job(912)
+    jobs.upsert(workspace.workspace_id, job)
+    search.set_tracking(
+        workspace_id=workspace.workspace_id, job_id=job.job_id, event_type="applied"
+    )
+    service = JobPreparationService(database)
+    assert (
+        service.get(workspace.workspace_id, job.job_id)["preparation"]["stage"]
+        == "applied"
+    )
+    service.record_application(
+        workspace.workspace_id,
+        job.job_id,
+        record_id="new-materials",
+        resume_version_id=None,
+        message="虚构开场白",
+        status="prepared",
+    )
+    preparation = service.get(workspace.workspace_id, job.job_id)["preparation"]
+    assert preparation["stage"] == "applied"
+    service.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage=preparation["stage"],
+        next_action="准备项目介绍",
+    )
+    assert search.tracking_states(workspace.workspace_id, [job.job_id])[
+        job.job_id
+    ].applied

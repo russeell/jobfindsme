@@ -123,7 +123,14 @@ class ResumeEditorService:
                 (workspace_id,),
             ).fetchone()
         if current is None:
-            raise ResumeEditorError("current resume version not found")
+            with self.database.connect() as connection:
+                return self._create_from_base_in_transaction(
+                    connection=connection,
+                    workspace_id=workspace_id,
+                    base_version_id=target.version_id,
+                    content=target.content,
+                    allow_missing_current=True,
+                )
         return self._create_from_base(
             workspace_id=workspace_id,
             base_version_id=current["version_id"],
@@ -153,6 +160,7 @@ class ResumeEditorService:
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
         make_current: bool = True,
+        allow_missing_current: bool = False,
     ) -> ResumeVersion:
         """Create a version on a caller-owned transaction.
 
@@ -174,7 +182,8 @@ class ResumeEditorService:
             (workspace_id,),
         ).fetchone()
         if make_current and (
-            current is None or current["version_id"] != base_version_id
+            (current is None and not allow_missing_current)
+            or (current is not None and current["version_id"] != base_version_id)
         ):
             raise ResumeEditorError(
                 "resume version conflict: reload the current version before saving"
