@@ -1,3 +1,4 @@
+import {resumeImprovementDraft} from "../../shared/resume-library";
 import {ResumePage} from "./resume/ResumePage";
 import {RecordsPage} from "./preparation/RecordsPage";
 import {JobPreparation} from "./preparation/JobPreparation";
@@ -60,7 +61,7 @@ export function App() {
   const [error, setError] = useState<string>();
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
   const [preparationJob,setPreparationJob]=useState<SearchResultItem["job"]>();
-  const [preparationRequest,setPreparationRequest]=useState<{job:SearchResultItem["job"];skill:AssistantSkillId;nonce:number;chatId?:string}>();
+  const [preparationRequest,setPreparationRequest]=useState<{job?:SearchResultItem["job"];skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string}>();
   function startPreparation(job:SearchResultItem["job"],skill:AssistantSkillId,chatId?:string){setPreparationJob(undefined);setResearchTarget(undefined);setPreparationRequest({job,skill,nonce:Date.now(),chatId});setPage("research");}
   const [researchTarget,setResearchTarget]=useState<SearchResultItem["job"]>();
   const [researchBusy,setResearchBusy]=useState(false);
@@ -110,7 +111,7 @@ export function App() {
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={setPreparationJob} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={setPreparationJob} onDiscover={()=>setPage("discover")} onError={setError}/></div>
-      <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={setPreparationJob}/></div>
+      <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={setPreparationJob} onImprove={(job,instruction)=>{setResearchTarget(undefined);setPreparationRequest({job,skill:"resume-tailor",nonce:Date.now(),draft:resumeImprovementDraft(instruction,job)});setPage("research");}}/></div>
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
     {preparationJob&&data?.workspaces[0]&&<JobPreparation key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}

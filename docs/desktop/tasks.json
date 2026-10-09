@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D134",
+  "current_task": "D162",
   "tasks": [
     {
       "id": "D01",
@@ -2759,6 +2759,46 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D161",
+      "title": "简历库分区编辑与明确的 AI 修改入口",
+      "depends_on": [
+        "D160"
+      ],
+      "status": "in_progress",
+      "scope": [
+        "简历库分区编辑与明确的 AI 修改入口",
+        "复用现有版本和提案服务，保留用户数据"
+      ],
+      "acceptance": [
+        "相关回归与虚构材料原生 App 验收；区分模型生成质量与界面验收"
+      ],
+      "verification": "实现、类型构建与包审计完成，15项简历后端及6项Node回归通过。隔离原生已验证提案接受/撤回/保留与保存禁用；其余界面与最终包原生验收未完成。未调用模型，不计为生成质量验收。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D162",
+      "title": "统一简历提案审阅与本地界面验收",
+      "depends_on": [
+        "D161"
+      ],
+      "status": "blocked",
+      "scope": [
+        "统一简历提案审阅与本地界面验收",
+        "复用现有版本和提案服务，保留用户数据"
+      ],
+      "acceptance": [
+        "相关回归与虚构材料原生 App 验收；区分模型生成质量与界面验收"
+      ],
+      "verification": "实现、类型构建与包审计完成，15项简历后端及6项Node回归通过。隔离原生已验证提案接受/撤回/保留与保存禁用；其余界面与最终包原生验收未完成。未调用模型，不计为生成质量验收。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": "computer use 原生窗口不可用/无效元素，随后桌面清单超时；等待 Mac 窗口恢复后完成编辑、预览、入口草稿及正常目录验收。"
     }
   ]
 }

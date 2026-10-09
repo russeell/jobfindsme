@@ -20,7 +20,7 @@ import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={preparationRequest?:{job:Job;skill:AssistantSkillId;nonce:number;chatId?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
+type Props={preparationRequest?:{job?:Job;skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
 export function ResearchPage({preparationRequest,selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
@@ -145,9 +145,9 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
   useEffect(()=>{
     if(busy||!preparationRequest||loadedWorkspace!==workspaceId||openedPreparation.current===preparationRequest.nonce)return;
     openedPreparation.current=preparationRequest.nonce;
-    const previous=preparationRequest.chatId?chats.find(item=>item.id===preparationRequest.chatId&&item.jobId===preparationRequest.job.job_id):undefined;
+    const previous=preparationRequest.chatId?chats.find(item=>item.id===preparationRequest.chatId&&item.jobId===preparationRequest.job?.job_id):undefined;
     if(previous){selectHistoryChat(previous);setJob(preparationRequest.job);return;}
-    rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(preparationRequest.skill);setAttachments([]);setAddMenu(false);setJob(preparationRequest.job);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion(preparationDraft(preparationRequest.skill,preparationRequest.job));setMessage("");setBusy(null);
+    rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(preparationRequest.skill);setAttachments([]);setAddMenu(false);setJob(preparationRequest.job);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion(preparationRequest.draft??(preparationRequest.job?preparationDraft(preparationRequest.skill,preparationRequest.job):""));setMessage("");setBusy(null);
     requestAnimationFrame(()=>inputRef.current?.focus());
   },[preparationRequest,loadedWorkspace,workspaceId,chats,busy]);
   const lastNewChatNonce=useRef(newChatNonce);
