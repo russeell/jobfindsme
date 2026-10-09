@@ -1,3 +1,4 @@
+import {jobDetailKey,mergeJobDetail,type JobDetail} from "../../../shared/job-detail-state";
 import {alternativeSearchKeywords} from "../../../shared/search-keywords";
 import {jobDescriptionParagraphs} from "../../../shared/job-description";
 import {reportMatchesJob,hasFullDescription} from "../../../shared/research-reports";
@@ -41,7 +42,10 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   useEffect(()=>{const outside=(event:PointerEvent)=>{if(!statusMenuRef.current?.contains(event.target as Node))statusMenuRef.current?.removeAttribute("open");if(!continueMenuRef.current?.contains(event.target as Node))continueMenuRef.current?.removeAttribute("open");};const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")closeSearchMenus();};document.addEventListener("pointerdown",outside);document.addEventListener("keydown",escape);return()=>{document.removeEventListener("pointerdown",outside);document.removeEventListener("keydown",escape);};},[]);
   const [resultRequest,setResultRequest]=useState<{sourceIds:string[];intent:string;filters:SearchFilters}>();
   const activeRequest=useRef<{sourceIds:string[];intent:string;filters:SearchFilters}|undefined>(undefined);
-  const [readingDetail,setReadingDetail]=useState(false);
+  const [pendingDetails,setPendingDetails]=useState<Set<string>>(()=>new Set());
+  const [detailErrors,setDetailErrors]=useState<Record<string,ReturnType<typeof userError>>>({});
+  const detailCache=useRef(new Map<string,{value:JobDetail;at:number}>());
+  const currentWorkspace=useRef(workspaceId);currentWorkspace.current=workspaceId;
   const [resumeState,setResumeState]=useState<ResumeState>();
   const [resumeOpen,setResumeOpen]=useState(false);
   const resumeTrigger=useRef<HTMLButtonElement>(null);
@@ -82,6 +86,16 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   const [page, setPage] = useState<SearchResultPage>();
   const [pageSize, setPageSize] = useState<10 | 20 | 50>(10);
   const [selected, setSelected] = useState<SearchResultItem>();
+  const selectedDetailKey=selected&&workspaceId?jobDetailKey(workspaceId,selected.job):"";
+  const readingDetail=pendingDetails.has(selectedDetailKey);
+  const detailError=detailErrors[selectedDetailKey];
+  // Read only the visible selection; other platforms may still be collecting.
+  useEffect(()=>{
+    if(!active||showingPrevious||!selected||!workspaceId||hasFullDescription(selected.job)
+      ||!sourceBrowserIdForSourceName(selected.job.source.source_name)||readingDetail||detailError)return;
+    const timer=setTimeout(()=>void completeDetail(selected),250);
+    return()=>clearTimeout(timer);
+  },[active,showingPrevious,selected,workspaceId,readingDetail,detailError]);
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const pageRef=useRef<HTMLDivElement>(null);
   const controlsRef=useRef<HTMLDivElement>(null);
@@ -208,13 +222,28 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
     } catch(error){onError(messageOf(error));} finally {searchStarting.current=false;}
   }
   async function completeDetail(item=selected) {
-    if(!item||detailPending.current.has(item.job.job_id))return;detailPending.current.add(item.job.job_id);setReadingDetail(true);onError(undefined);
-    try {const sourceId=sourceBrowserIdForSourceName(item.job.source.source_name);if(!sourceId)throw Error("来源尚未接入详情读取");const detail=sourceId==="boss"?await window.jobfindsme!.readBossDetail(item.job.apply_url,workspaceId,item.job.job_id):await window.jobfindsme!.readSourceDetail(sourceId,item.job.apply_url,workspaceId,item.job.job_id);
-      const updated:SearchResultItem={...item,job:detail.job||{...item.job,title:detail.title||item.job.title,company:detail.company||item.job.company,locations:detail.location?[detail.location]:item.job.locations,description:detail.description,source:{...item.job.source,detail_level:"detail_page"}},score:null,details:undefined,components:{},model_match:undefined,score_basis_outdated:true};
-      setSelected(current=>current?.job.job_id===item.job.job_id?updated:current);
-      setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?updated:row)}));
+    if(!item||!workspaceId)return;
+    const requestWorkspace=workspaceId;
+    const key=jobDetailKey(requestWorkspace,item.job);
+    if(detailPending.current.has(key))return;
+    detailPending.current.add(key);setPendingDetails(new Set(detailPending.current));
+    setDetailErrors(current=>{const next={...current};delete next[key];return next;});
+    try {
+      const sourceId=sourceBrowserIdForSourceName(item.job.source.source_name);
+      if(!sourceId)throw Error("来源尚未接入详情读取");
+      const cached=detailCache.current.get(key);
+      const detail=cached&&Date.now()-cached.at<30*60*1000?cached.value:sourceId==="boss"
+        ?await window.jobfindsme!.readBossDetail(item.job.apply_url,requestWorkspace,item.job.job_id)
+        :await window.jobfindsme!.readSourceDetail(sourceId,item.job.apply_url,requestWorkspace,item.job.job_id);
+      if(!detail.description.trim()||(detail.job&&detail.job.job_id!==item.job.job_id))throw Error("未能确认岗位详情，请查看原页后重试。");
+      detailCache.current.set(key,{value:detail,at:cached?.value===detail?cached.at:Date.now()});
+      if(detailCache.current.size>100)detailCache.current.delete(detailCache.current.keys().next().value!);
+      if(currentWorkspace.current!==requestWorkspace)return;
+      setSelected(current=>current?mergeJobDetail(current,item.job,detail):current);
+      setPage(current=>current&&({...current,items:current.items.map(row=>mergeJobDetail(row,item.job,detail))}));
       setDetailTimes(current=>({...current,[item.job.apply_url]:{fetched_at:detail.fetched_at,elapsed_ms:detail.elapsed_ms}}));
-    }catch(error){onError(messageOf(error));}finally{detailPending.current.delete(item.job.job_id);setReadingDetail(detailPending.current.size>0);}
+    }catch(error){if(currentWorkspace.current===requestWorkspace)setDetailErrors(current=>({...current,[key]:userError(error)}));}
+    finally{detailPending.current.delete(key);setPendingDetails(new Set(detailPending.current));}
   }
   async function changePage(next: number) {
     if (!workspaceId || !page) return;
@@ -228,15 +257,16 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
   async function track(eventType: "read" | "saved" | "applied" | "apply_opened", enabledValue = true) {
     if (!workspaceId || !selected) return;
     const tracking = await window.jobfindsme!.setJobTracking({ workspace_id: workspaceId, job_id: selected.job.job_id, event_type: eventType, enabled: enabledValue });
-    const updated = { ...selected, tracking }; setSelected(current=>current?.job.job_id===updated.job.job_id?updated:current);
-    setPage((value) => value && ({ ...value, items: value.items.map((item) => item.job.job_id === updated.job.job_id ? updated : item) }));
+    if(currentWorkspace.current!==workspaceId)return;
+    setSelected(current=>current?.job.job_id===selected.job.job_id?{...current,tracking}:current);
+    setPage(value=>value&&({...value,items:value.items.map(item=>item.job.job_id===selected.job.job_id?{...item,tracking}:item)}));
   }
   async function openOriginal() { if (!selected) return; const sourceId = sourceBrowserIdForSourceName(selected.job.source.source_name) || "web"; try { await track("apply_opened"); openBrowser({ sourceId, url: selected.job.apply_url, title: selected.job.title }); } catch (e) { onError(messageOf(e)); } }
   function selectItem(item:SearchResultItem){
     setSelected(item);switchMobileView("detail");
-    if(!hasFullDescription(item.job))void completeDetail(item);
     if(!workspaceId)return;
     void window.jobfindsme!.setJobTracking({workspace_id:workspaceId,job_id:item.job.job_id,event_type:"read",enabled:true}).then(tracking=>{
+      if(currentWorkspace.current!==workspaceId)return;
       setSelected(current=>current?.job.job_id===item.job.job_id?{...current,tracking}:current);
       setPage(current=>current&&({...current,items:current.items.map(row=>row.job.job_id===item.job.job_id?{...row,tracking}:row)}));
     }).catch(error=>onError(messageOf(error)));
@@ -271,10 +301,10 @@ export function Discovery({ active, data, onError, onResearch,selectedSources,on
       <div className="pagination"><button disabled={!page||page.page<=1} onClick={()=>void changePage((page?.page??1)-1)}>上一页</button><span>{page?.page??0} / {page?.page_count??0}</span><button disabled={!page||page.page>=page.page_count} onClick={()=>void changePage((page?.page??1)+1)}>下一页</button><select value={pageSize} onChange={event=>void changePageSize(Number(event.target.value) as 10|20|50)}><option value="10">10/页</option><option value="20">20/页</option><option value="50">50/页</option></select></div>
     </section>
       <aside ref={detailRef} className={`detail-pane ${mobileView==="list"?"mobile-detail":""}`}><div className="detail-heading">岗位详情</div>{selected?<div className="job-detail">
-        <div className="job-detail-top"><div className="heading-row"><div><h3>{selected.job.title}</h3><p>{selected.job.company} · {selected.job.locations.join("/")||"地点未知"} · {formatSalary(selected.job)}</p><small>{selected.job.source.source_name}{(result?.cache_fallback_used||showingPrevious)?` · 本地读取：${selected.job.source.fetched_at?new Date(selected.job.source.fetched_at).toLocaleString():"未知"}`:""} · 发布：{selected.job.source.published_at?new Date(selected.job.source.published_at).toLocaleDateString():"未知"}</small>{selected.snapshot_status==="unknown"&&<p className="note">这次历史检索的岗位版本无法恢复；下方为当前岗位内容，旧评分和重排不可用。</p>}{selected.score_basis_outdated&&<p className="note">JD 已补充；搜索时的旧评分依据仍保留在原快照，此处不再显示为新 JD 的评分。</p>}</div></div>
+        <div className="job-detail-top"><div className="heading-row"><div><h3>{selected.job.title}</h3><p>{selected.job.company} · {selected.job.locations.join("/")||"地点未知"} · {formatSalary(selected.job)}</p><small>{selected.job.source.source_name}{(result?.cache_fallback_used||showingPrevious)?` · 本地读取：${selected.job.source.fetched_at?new Date(selected.job.source.fetched_at).toLocaleString():"未知"}`:""} · 发布：{selected.job.source.published_at?new Date(selected.job.source.published_at).toLocaleDateString():"未知"}</small>{selected.snapshot_status==="unknown"&&<p className="note">这次历史检索的岗位版本无法恢复；下方为当前岗位内容，旧评分和重排不可用。</p>}{selected.score_basis_outdated&&<p className="note">已更新岗位详情，请重新核对匹配条件。</p>}</div></div>
           <JobActions hasReport={reports.some(r=>reportMatchesJob(r,selected.job))} tracking={selected.tracking} onTrack={(event,enabled)=>track(event,enabled)} onOpen={openOriginal} onResearch={()=>onResearch(selected.job)} onError={onError}/>
         </div>
-        {hasFullDescription(selected.job)?<section className="job-jd"><h4>岗位职责</h4>{detailTimes[selected.job.apply_url]?.elapsed_ms!==undefined&&<small className="note">JD 读取并保存：{(detailTimes[selected.job.apply_url].elapsed_ms!/1000).toFixed(1)} 秒</small>}<div className="job-description">{jobDescriptionParagraphs(selected.job.description).map((paragraph,index)=><p key={index}>{paragraph}</p>)}</div></section>:<section className="job-jd"><p className="note">完整岗位职责尚未读取；可查看岗位原页。{sourceBrowserIdForSourceName(selected.job.source.source_name)&&<button type="button" disabled={readingDetail||searching} onClick={()=>void completeDetail()}>{readingDetail?"读取中…":"尝试补全 JD"}</button>}</p></section>}
+        {hasFullDescription(selected.job)?<section className="job-jd"><h4>岗位职责</h4>{detailTimes[selected.job.apply_url]?.elapsed_ms!==undefined&&<small className="note">JD 读取并保存：{(detailTimes[selected.job.apply_url].elapsed_ms!/1000).toFixed(1)} 秒</small>}<div className="job-description">{jobDescriptionParagraphs(selected.job.description).map((paragraph,index)=><p key={index}>{paragraph}</p>)}</div></section>:<section className="job-jd"><p className="note" role="status">{readingDetail?"正在读取岗位原文…":detailError?detailError.message:"完整岗位职责尚未读取；可查看岗位原页。"}{detailError?.action==="source"&&<button type="button" onClick={()=>openBrowser({sourceId:sourceBrowserIdForSourceName(selected.job.source.source_name)||"web",url:selected.job.apply_url,title:selected.job.title})}>打开原页处理</button>}{sourceBrowserIdForSourceName(selected.job.source.source_name)&&<button type="button" disabled={readingDetail} onClick={()=>void completeDetail()}>{readingDetail?"读取中…":detailError?"重试读取":"补全 JD"}</button>}</p></section>}
         {selected.query_relevance&&<p className="note">查询相关性：{selected.query_relevance.score} / 100 · 信息完整度：{Math.round((selected.information_coverage?.ratio||0)*100)}%。这是当前证据下的线索，不是录用概率。</p>}
         {page?.resume_version_id&&<details className="scoring-details"><summary>岗位与简历的对应线索</summary><p className="note">依据岗位描述和已确认简历；请核对原文，未知条件不视为满足。</p>{Object.entries(selected.details||{}).map(([key,value])=><p key={key}>{({skills:"技能",projects:"项目经历",education:"学历",experience:"工作经验"} as Record<string,string>)[key]||key}：{value.explanation.replaceAll("暂不计分","仍需核对").replace("，按达成比例计分","")}</p>)}</details>}
         {selected.model_match&&<details className="model-evidence"><summary>历史模型分析记录</summary>{selected.model_match.evidence.map((entry,index)=><p className="note" key={index}>简历：{entry.resume_quote}<br/>JD：{entry.jd_quote}</p>)}<p className="note">未知：{selected.model_match.unknowns.join("；")||"未列出"}</p></details>}

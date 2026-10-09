@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-02",
+  "updated_at": "2026-10-10",
   "status_values": [
     "pending",
     "in_progress",
@@ -2657,6 +2657,24 @@
         "收藏/已投递/全部直接导航，移除总进度筛选"
       ],
       "verification": "62项相关Python、27项Node、Ruff、类型构建及最终包审计通过。真实用户App验收工作经验身份/年限切换、工作类型三选、两次公开猎聘检索中未知兼职混入问题修复、清空恢复42候选及应届原文标记筛到1条；收藏/取消回到原状态、已投递1及全部118条/首批20条。未调用模型、读取真实简历或修改投递状态，不宣称其他平台或AI生成质量通过。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D156",
+      "title": "英文岗位匹配与选中详情读取体验",
+      "status": "done",
+      "depends_on": [
+        "D155"
+      ],
+      "scope": [
+        "英文词边界不被空格压缩破坏",
+        "当前可见岗位有界自动补JD、详情请求按岗位隔离",
+        "失败就地恢复、晚到详情不覆盖收藏或投递状态"
+      ],
+      "verification": "49项相关Python、10项Node、Ruff、类型构建与包审计通过。真实App首项/切换/分页自动JD、原页比对、AI Agent词匹配与收藏保留通过；四平台范围取得81条、首批1.3秒，BOSS登录待确认但其余三来源继续。详情失败重试/验证码/超时取消未实测，不扩大D134验收范围。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
