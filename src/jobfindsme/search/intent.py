@@ -182,21 +182,25 @@ def suggested_roles(content: dict) -> tuple[str, ...]:
 
 
 def query_relevance(job, query: str) -> dict:
-    query = query.casefold().replace(" ", "")
-    title = job.title.casefold().replace(" ", "")
-    body = job.description.casefold().replace(" ", "")
-    families = [
-        aliases
-        for key, aliases in ROLE_ALIASES.items()
-        if key in query or any(alias in query for alias in aliases)
-    ]
-    terms = set(re.findall(r"[a-z][a-z0-9+#.-]*|[\u3400-\u9fff]+", query))
-    terms = {re.sub(r"工程师|开发|岗位|职位", "", term) or term for term in terms}
+    # Keep Latin word boundaries: removing spaces turns "AI Agent" into "aiagent".
+    query = " ".join(query.casefold().split())
+    title = " ".join(job.title.casefold().split())
+    body = " ".join(job.description.casefold().split())
 
     def contains(text, term):
+        if not term:
+            return False
         if term.isascii():
             return bool(re.search(r"(?<![a-z])" + re.escape(term) + r"(?![a-z])", text))
         return term in text
+
+    families = [
+        aliases
+        for key, aliases in ROLE_ALIASES.items()
+        if contains(query, key) or any(contains(query, alias) for alias in aliases)
+    ]
+    terms = set(re.findall(r"[a-z][a-z0-9+#.-]*|[\u3400-\u9fff]+", query))
+    terms = {re.sub(r"工程师|开发|岗位|职位", "", term) or term for term in terms}
 
     hits = [any(contains(title, alias) for alias in family) for family in families]
     title_match = (

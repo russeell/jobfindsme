@@ -1229,6 +1229,35 @@ def test_query_lexical_boundaries_do_not_confuse_java_and_javascript():
     )
 
 
+@pytest.mark.parametrize(
+    "query,title,description,score",
+    [
+        ("AI", "AI Agent工程师", "", 100),
+        ("AI", "Retail Manager", "", 0),
+        ("AI", "产品工程师", "开发 AI Agent 应用", 45),
+        ("AI Agent", "Senior AI Agent Engineer", "", 100),
+        ("data analyst", "Senior Data   Analyst", "", 100),
+        ("数据分析", "Data Analyst", "", 100),
+        ("JavaScript", "Java工程师", "", 0),
+        ("Java", "JavaScript Engineer", "", 0),
+        ("Python", "Python3工程师", "", 100),
+        ("智能体", "AI Agent Engineer", "", 100),
+        ("", "AI Agent", "", 0),
+    ],
+)
+def test_query_relevance_preserves_english_word_boundaries(
+    query, title, description, score
+):
+    from jobfindsme.search.intent import query_relevance
+
+    assert (
+        query_relevance(SimpleNamespace(title=title, description=description), query)[
+            "score"
+        ]
+        == score
+    )
+
+
 @pytest.mark.parametrize("configured", [False, True])
 def test_search_conditions_and_local_resume_matching_never_call_model(
     tmp_path, configured
