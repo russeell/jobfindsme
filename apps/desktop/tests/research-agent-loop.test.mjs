@@ -779,3 +779,16 @@ test('JD gating is repaired once into usable role preparation',async()=>{
   assert.equal(turns,2);assert.match(result.text,/工具调用/);assert.equal(result.interviewState.current_question,'');assert(rows.at(-1).actions.some(r=>r.reason==='interview_jd_required'));
  }finally{server.close();}
 });
+
+test('cursor-only job journals are not empty caches and source selection scopes continuation',async()=>{
+ for(const [sources,continuing,expectPrevious] of [[['liepin'],false,false],[['liepin'],true,true],[['boss'],true,false]]){
+  let turns=0,searches=0;const prior=[];
+  const server=http.createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/event-stream'});turns++;const next=turns===1?tool('search_jobs',{query:'Python 工程师',cities:['上海'],continue:continuing},turns):{role:'assistant',content:'本轮检索完成，请核对岗位。'};sse(res,next,next.tool_calls?'tool_calls':'stop');});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const previous={allowed_source_ids:['liepin'],source_runs:[{source_id:'liepin',can_continue:true,next_cursor:'next'}],result_page:{run_id:'old',total:20,items:[]}};
+  try{
+   const result=await runPiResearchAgent({workspaceId:'w',requestId:'cursor-test',question:'继续找上海 Python 工程师',selectedSourceIds:sources,history:[],research:false,previousState:{job_searches:[{key:JSON.stringify(['python 工程师',['上海'],['liepin']]),response:previous}]}},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',{saveExecution:async()=>{},searchJobs:async(_query,_cities,p)=>{searches++;prior.push(p);return {...previous,result_page:{run_id:'fresh',total:1,items:[{job:{job_id:'fresh-job',title:'Python 工程师',company:'虚构公司'}}]}};}},()=>{},new AbortController().signal);
+   assert.equal(searches,1);assert.equal(!!prior[0],expectPrevious);assert.equal(result.jobs[0].job_id,'fresh-job');
+  }finally{server.close();}
+ }
+});

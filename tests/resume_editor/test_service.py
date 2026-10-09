@@ -264,3 +264,56 @@ def test_restore_after_current_resume_cleared_retains_old_version(tmp_path):
     assert restored.content == first.content
     assert restored.version_id != first.version_id
     assert len(editor.list_versions(workspace_id=workspace.workspace_id)) == 2
+
+
+@pytest.mark.parametrize(
+    "template,first,second",
+    [
+        ("campus", "教育经历", "项目经历"),
+        ("professional", "工作经历", "项目经历"),
+        ("compact", "工作经历", "项目经历"),
+    ],
+)
+def test_template_exports_keep_all_facts_and_use_expected_order(
+    tmp_path, template, first, second
+):
+    database, workspace, profiles = _confirmed_resume(tmp_path)
+    editor = ResumeEditorService(database)
+    original = profiles.current_version(workspace_id=workspace.workspace_id)
+    version = editor.save_edit(
+        workspace_id=workspace.workspace_id,
+        base_version_id=original.version_id,
+        content={
+            "basic_information": ["虚构候选人"],
+            "education": ["示例大学本科"],
+            "experience": ["示例公司开发"],
+            "projects": ["本地工具项目"],
+            "skills": ["Python与SQL"],
+        },
+    )
+    for format in ("pdf", "docx", "md"):
+        export = editor.export(
+            workspace_id=workspace.workspace_id,
+            version_id=version.version_id,
+            destination=tmp_path / f"{template}.{format}",
+            template=template,
+            format=format,
+        )
+        if format == "pdf":
+            text = "\n".join(
+                page.extract_text() for page in PdfReader(export.path).pages
+            )
+        elif format == "docx":
+            text = "\n".join(p.text for p in Document(export.path).paragraphs)
+        else:
+            text = export.path.read_text()
+        assert text.index("基本信息") < text.index(first) < text.index(second)
+        for values in version.content.values():
+            for value in values:
+                assert value in text
+    assert (
+        editor.get_version(
+            workspace_id=workspace.workspace_id, version_id=version.version_id
+        ).content
+        == version.content
+    )

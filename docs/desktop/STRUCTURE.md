@@ -68,3 +68,5 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 `shared/discovery-filters.ts` 的 `simpleDiscoveryFilters` 仅用于精简搜索界面的条件、预检返回与续查，清除隐藏的退休条件并保留全职/兼职；界面类型筛选要求来源类型已知，历史快照与其他调用方沿用原契约。搜索界面保留城市、薪资、经验（含在校生/应届生）、工作类型、平台和直接未读开关。身份依据原文或来源实习/校招标记，由Python本地过滤，不调用模型。
 
 简历导入 `profiles/parser.py` 保留本机个人信息与完整技能描述，Word换行按原文保留；`profiles/service.py` 将这些写入版本，匹配摘要只使用适合检索的已确认事实。Agent读取仍过滤个人信息并脱敏。`ResumePage.tsx` 的导入核对按章节切换并保留修改；过期提案由 `ResumeProposal.tsx` 提示重新生成。`shared/assistant-quality.ts` 与 Pi 运行器为明确要求但缺失的简历提案提供预算内一次补交机会，最终保存仍需用户显式审阅。
+
+D164：简历主页由外层 `.content` 统一滚动，弹窗正文单独滚动；`resume-library.ts` 与 Python `resume_editor/service.py` 同步社招/校招/紧凑章节顺序，旧classic导出兼容。`application-greeting.ts` 处理工作区招呼语占位替换，投递材料仍由现有服务保存、外部发送仍由用户完成。Agent岗位查询键包含当前所选来源，只有带岗位正文的查询结果才可复用为缓存，持久化游标不视为正文缓存。

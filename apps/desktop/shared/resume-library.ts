@@ -17,3 +17,15 @@ export function resumeImprovementDraft(instruction:string,job?:SearchResultItem[
 export function resumeReviewCounts(session:PromptSession){
   return {accepted:session.patches.filter(p=>p.status==='accepted').length,pending:session.patches.filter(p=>p.status==='proposed').length,needsInput:session.patches.filter(p=>p.needs_user_input.length>0).length};
 }
+
+export type ResumeTemplate='classic'|'compact'|'campus'|'professional';
+export const resumeTemplates=[
+ {id:'professional',name:'社招',description:'工作成果在前，突出职责与贡献'},
+ {id:'campus',name:'校招',description:'教育与项目在前，突出实践能力'},
+ {id:'compact',name:'紧凑',description:'更小间距，适合内容较多的简历'},
+] as const;
+export function resumeTemplateSections(template:ResumeTemplate):Array<keyof ResumeContent>{
+ if(template==='campus')return ['basic_information','education','projects','experience','skills'];
+ if(template==='classic')return ['basic_information','education','experience','projects','skills'];
+ return ['basic_information','experience','projects','skills','education'];
+}

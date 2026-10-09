@@ -11,7 +11,7 @@ from uuid import uuid4
 from jobfindsme.profiles.models import ResumeVersion
 from jobfindsme.storage import Database
 
-ResumeTemplate = Literal["classic", "compact"]
+ResumeTemplate = Literal["classic", "compact", "campus", "professional"]
 ResumeFormat = Literal["pdf", "docx", "md"]
 SECTION_ORDER = (
     "basic_information",
@@ -233,7 +233,7 @@ class ResumeEditorService:
     ) -> ResumeExport:
         if format not in {"pdf", "docx", "md"}:
             raise ResumeEditorError("unsupported export format")
-        if template not in {"classic", "compact"}:
+        if template not in {"classic", "compact", "campus", "professional"}:
             raise ResumeEditorError("unsupported resume template")
         version = self.get_version(workspace_id=workspace_id, version_id=version_id)
         path = Path(destination).expanduser()
@@ -269,9 +269,17 @@ def _normalize_content(
     return normalized
 
 
+def _template_sections(template: ResumeTemplate) -> tuple[str, ...]:
+    if template == "campus":
+        return ("basic_information", "education", "projects", "experience", "skills")
+    if template in {"professional", "compact"}:
+        return ("basic_information", "experience", "projects", "skills", "education")
+    return SECTION_ORDER
+
+
 def _markdown(content: dict[str, tuple[str, ...]], template: ResumeTemplate) -> str:
     lines = ["# 简历", ""]
-    for section in SECTION_ORDER:
+    for section in _template_sections(template):
         values = content.get(section, ())
         if not values:
             continue
@@ -308,7 +316,7 @@ def _write_docx(
     normal.font.size = Pt(9.5 if template == "compact" else 10.5)
     title = document.add_heading("简历", level=0)
     title.alignment = 1
-    for name in SECTION_ORDER:
+    for name in _template_sections(template):
         values = content.get(name, ())
         if not values:
             continue
@@ -391,7 +399,7 @@ def _write_pdf(
         wordWrap="CJK",
     )
     story = [Paragraph("简历", title)]
-    for name in SECTION_ORDER:
+    for name in _template_sections(template):
         values = content.get(name, ())
         if not values:
             continue

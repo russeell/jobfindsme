@@ -117,8 +117,8 @@ input, select, textarea { color-scheme: light; accent-color: var(--accent); }
 .source-picker fieldset {min-inline-size:0;}.filter-popover .source-picker-grid input[type=checkbox] {width:14px;height:14px;padding:0;margin:2px 0 0;flex:0 0 14px;}.source-picker-grid label>span {min-width:0;flex:1;overflow-wrap:anywhere;}
 
 /* The maintenance view has one scroll surface at every window width. */
-.resume-maintenance {overflow-y:auto;overscroll-behavior:contain;padding-right:4px;gap:0;}
-.resume-maintenance .resume-heading {position:sticky;top:0;z-index:2;background:var(--surface);padding:4px 0 12px;margin-bottom:0;}
+.resume-maintenance {overflow:visible;overscroll-behavior:auto;padding:0;gap:0;display:block;}
+.resume-maintenance .resume-heading {position:static;background:var(--surface);padding:0;margin-bottom:0;}
 .resume-maintenance .resume-current,.resume-maintenance .resume-confirm,.resume-maintenance .resume-history,.resume-maintenance .resume-export {width:100%;max-width:980px;flex-shrink:0;}
 .resume-maintenance .resume-summary {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;margin-top:14px;}
 .resume-maintenance .resume-summary section {min-width:0;border-top:1px solid var(--line);padding-top:8px;}
@@ -723,3 +723,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .filter-row .filter-unread:hover{background:#f3f5f8;color:#546479}
 .filter-row .filter-unread[aria-pressed="true"]{background:#edf3fc;border-color:#dbe7f9;color:#3169b5}
 .filter-unread>span{width:11px;font-size:11px}
+
+/* The workbench owns page scrolling; only modal bodies scroll independently. */
+.content.resume-content{padding:16px 24px 24px;overflow:auto;scrollbar-gutter:stable}
+.resume-page:not(.embedded){margin:0 auto;max-width:1000px}
+.resume-content .resume-heading h1{font-size:23px}.resume-content .resume-heading p{margin:3px 0 0;font-size:11px}
+.resume-content .resume-library-tabs{margin-top:10px}.resume-content .resume-library-tabs button{padding:9px 0}
+.resume-content .resume-document-bar{margin:14px 0 10px}.resume-document-bar>div:first-child{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.resume-document-bar small{margin-top:0}
+.resume-ready .resume-summary{margin-top:0}.resume-maintenance .resume-summary{display:block;padding:18px 22px}.resume-maintenance .resume-summary section{border:0;padding:0;margin-bottom:20px}.resume-ready .resume-summary p{color:var(--text);font-size:13px}
+.resume-modal-shell{overflow:hidden}.resume-preview-tools{flex-shrink:0;display:block;padding:14px 20px}.resume-preview-tools .resume-template-picker{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.resume-template-picker button{text-align:left;border:1px solid var(--line);background:white;padding:10px 12px;border-radius:9px}.resume-template-picker button[aria-pressed=true]{border-color:#7ba3d6;background:#f0f5fd}.resume-template-picker strong,.resume-template-picker small{display:block}.resume-template-picker small{font-size:10px;line-height:1.5;color:#7d8998;margin-top:4px}.resume-preview-tools .resume-export-actions{display:flex;align-items:center;gap:8px;margin-top:12px}.resume-export-actions span{margin-right:auto;color:#8893a0;font-size:11px}.resume-preview-scroll,.resume-improve-body,.resume-review-scroll{flex:1;min-height:0;overscroll-behavior:contain}.resume-preview-scroll{padding:18px}.resume-paper{min-height:0;padding:24px 32px!important}.resume-paper section{margin-top:0}.resume-paper h3{color:#344257}.resume-paper.campus h3{border-bottom-color:#b9cadc}
+.resume-audience{display:flex;align-items:center;gap:6px;margin:16px 0}.resume-audience span{color:#7d8794;font-size:12px;margin-right:8px}.resume-audience button,.resume-quick-prompts button{font-size:12px;padding:5px 10px;background:#f7f9fc;border:1px solid transparent}.resume-audience button[aria-pressed=true]{border-color:#ccdcf2;color:#245d9e;background:#edf3fc}.resume-quick-prompts{display:flex;gap:6px;flex-wrap:wrap;margin-top:16px}
+@media(max-width:800px){.resume-template-picker small{display:none}.resume-export-actions span{font-size:10px}.content.resume-content{padding:14px 18px 22px}}

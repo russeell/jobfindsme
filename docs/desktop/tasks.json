@@ -2819,6 +2819,26 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D164",
+      "title": "简历模板与滚动体验及Agent续查修复",
+      "depends_on": [
+        "D163"
+      ],
+      "status": "done",
+      "scope": [
+        "简历校招社招模板与页面滚动",
+        "Agent检索缓存续查与辅助投递开场白"
+      ],
+      "acceptance": [
+        "相关回归与虚构资料原生App验收，真实发送不执行"
+      ],
+      "verification": "18项Python、90项Node、类型构建与包审计通过。原生虚构资料验证滚轮修复、模板/导出、校招AI草稿、招呼语复制与原页打开，JD读取不再锁住窗口。Agent缓存使用本地模拟模型测试；未复验真实检索或投递。自动填写/发送仅完成边界设计，未实现。详见HANDOFF。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

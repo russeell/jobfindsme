@@ -20,6 +20,8 @@ export function JobPreparation({workspaceId,job:initialJob,onClose,onStart}:Prop
  const progress=useRef<HTMLDetailsElement>(null);
  const leavePrompt=useRef<HTMLDivElement>(null);
  const autoRead=useRef(false);
+ const mounted=useRef(true);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  const [editingResume,setEditingResume]=useState(false);
  const [data,setData]=useState<JobPreparationData>();
  const [saved,setSaved]=useState<JobPreparationInput>();
@@ -29,7 +31,7 @@ export function JobPreparation({workspaceId,job:initialJob,onClose,onStart}:Prop
  const progressDirty=preparationHasChanges(data?.preparation,saved);
  const dirty=progressDirty||!!applicationGuard?.dirty;
  const savedRef=useRef(saved);savedRef.current=saved;
- function proceed(run:()=>void){if(busy||reading||applicationGuard?.busy)return;if(dirty)setLeaving({run});else run();}
+ function proceed(run:()=>void){if(busy||applicationGuard?.busy)return;if(dirty)setLeaving({run});else run();}
  useEffect(()=>{if(leaving){leavePrompt.current?.scrollIntoView({block:'nearest'});leavePrompt.current?.querySelector<HTMLButtonElement>('button')?.focus();}},[leaving]);
  useEffect(()=>{if(!dirty)setLeaving(undefined);},[dirty]);
  const [resume,setResume]=useState<ResumeState>();
@@ -60,8 +62,8 @@ export function JobPreparation({workspaceId,job:initialJob,onClose,onStart}:Prop
  async function readJd(){
   const source=sourceBrowserIdForSourceName(job.source.source_name);if(!source)return;
   setReading(true);setError('');
-  try{await (source==='boss'?window.jobfindsme!.readBossDetail(job.apply_url,workspaceId,job.job_id):window.jobfindsme!.readSourceDetail(source,job.apply_url,workspaceId,job.job_id));setMatch(undefined);const fresh=await window.jobfindsme!.getJobPreparation(workspaceId,job.job_id);setData(current=>current?{...current,job:fresh.job}:fresh);setNotice('岗位原文已补齐并保存在本机。');window.dispatchEvent(new Event('jfm:job-updated'));}
-  catch(e){setError(userError(e).message);}finally{setReading(false);}
+  try{await (source==='boss'?window.jobfindsme!.readBossDetail(job.apply_url,workspaceId,job.job_id):window.jobfindsme!.readSourceDetail(source,job.apply_url,workspaceId,job.job_id));if(!mounted.current)return;setMatch(undefined);const fresh=await window.jobfindsme!.getJobPreparation(workspaceId,job.job_id);if(!mounted.current)return;setData(current=>current?{...current,job:fresh.job}:fresh);setNotice('岗位原文已补齐并保存在本机。');window.dispatchEvent(new Event('jfm:job-updated'));}
+  catch(e){if(mounted.current)setError(userError(e).message);}finally{if(mounted.current)setReading(false);}
  }
  async function saveProgress(){if(!data||busy)return false;setBusy(true);setError('');setNotice('');
   try{const value=await window.jobfindsme!.saveJobPreparation(data.preparation);setData(value);setSaved(value.preparation);setNotice('进度和下一步已保存。');window.dispatchEvent(new Event('jfm:job-updated'));return true;}
@@ -75,14 +77,14 @@ export function JobPreparation({workspaceId,job:initialJob,onClose,onStart}:Prop
  const tiles=[{id:'resume-tailor',icon:'resume',title:'修改简历',description:'保留基础简历，准备岗位专属副本。'},{id:'interview-prep',icon:'interview',title:'模拟面试',description:'准备重点、逐题练习和回答点评。'},{id:'deep-research',icon:'research',title:'深度研究',description:'核对公司与岗位原文，保留来源。'}] as const;
  return <dialog ref={dialog} className="preparation-dialog" aria-labelledby="preparation-title" onCancel={event=>{event.preventDefault();proceed(onClose);}} onClick={event=>{if(event.target===event.currentTarget)proceed(onClose);}}>
   <div className="preparation-shell">
-   <header className="preparation-header"><div><span className="preparation-eyebrow">岗位准备</span><h2 id="preparation-title">{job.title}</h2><p>{job.company} · {job.locations.join(' / ')||'地点未知'} · {formatSalary(job)}</p></div><button className="preparation-close" type="button" aria-label="关闭岗位准备" onClick={()=>proceed(onClose)} disabled={busy||reading}>×</button></header>
+   <header className="preparation-header"><div><span className="preparation-eyebrow">岗位准备</span><h2 id="preparation-title">{job.title}</h2><p>{job.company} · {job.locations.join(' / ')||'地点未知'} · {formatSalary(job)}</p></div><button className="preparation-close" type="button" aria-label="关闭岗位准备" onClick={()=>proceed(onClose)} disabled={busy}>×</button></header>
    <div className="preparation-body">{editingResume?<><button type="button" className="preparation-back" onClick={()=>setEditingResume(false)}>← 返回岗位准备</button><ResumePage embedded onChanged={setResume}/></>:<>
-    <div className="preparation-source"><span><i className={hasFullDescription(job)?'ready':''}/>{hasFullDescription(job)?'完整 JD 已保存':'JD 尚不完整'} · {job.source.source_name}</span><div>{!hasFullDescription(job)&&sourceBrowserIdForSourceName(job.source.source_name)&&<button type="button" disabled={reading} onClick={()=>void readJd()}>{reading?'正在读取…':'补全 JD'}</button>}<button type="button" disabled={!job.apply_url||busy||reading} onClick={()=>proceed(()=>{onClose();openBrowser({sourceId:sourceBrowserIdForSourceName(job.source.source_name)||'web',url:job.apply_url,title:job.title});})}>核对原页 ↗</button></div></div>
-    <button type="button" className="primary-button preparation-apply" disabled={!data||reading||!!applicationGuard?.dirty||!!applicationGuard?.busy} onClick={()=>setApplicationOpen(value=>!value)}>{applicationOpen?"收起投递材料":"准备投递"}</button>
+    <div className="preparation-source"><span><i className={hasFullDescription(job)?'ready':''}/>{hasFullDescription(job)?'完整 JD 已保存':'JD 尚不完整'} · {job.source.source_name}</span><div>{!hasFullDescription(job)&&sourceBrowserIdForSourceName(job.source.source_name)&&<button type="button" disabled={reading} onClick={()=>void readJd()}>{reading?'正在读取…':'补全 JD'}</button>}<button type="button" disabled={!job.apply_url||busy} onClick={()=>proceed(()=>{onClose();openBrowser({sourceId:sourceBrowserIdForSourceName(job.source.source_name)||'web',url:job.apply_url,title:job.title});})}>核对原页 ↗</button></div></div>
+    <button type="button" className="primary-button preparation-apply" disabled={!data||!!applicationGuard?.dirty||!!applicationGuard?.busy} onClick={()=>setApplicationOpen(value=>!value)}>{applicationOpen?"收起投递材料":"准备投递"}</button>
     {applicationOpen&&data&&<ApplicationPreparation workspaceId={workspaceId} job={job} resumeId={data.preparation.resume_version_id} onGuard={setApplicationGuard} onOpenOriginal={()=>{const run=()=>{onClose();openBrowser({sourceId:sourceBrowserIdForSourceName(job.source.source_name)||'web',url:job.apply_url,title:job.title});};if(progressDirty)setLeaving({run});else run();}}/>}
     <section className="preparation-section"><div className="preparation-section-heading"><h3>为这个机会做好准备</h3><span>{resume?.search_profile_state==='ready'?(data?.preparation.resume_version_id?'面试复用岗位专属简历':'已确认基础简历可复用'):'面试和研究可直接开始'}</span></div><div className="preparation-tiles">{tiles.map(tile=>{
      const previous=[...chats].sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).find(chat=>chat.turns.some(turn=>turn.skillId===tile.id));
-     return <div className="preparation-tile" key={tile.id}><Icon name={tile.icon}/><h4>{tile.title}</h4><p>{tile.description}</p><div className="preparation-tile-footer"><button type="button" disabled={!data||!resume||busy||reading} onClick={()=>tile.id==='resume-tailor'&&resume?.search_profile_state!=='ready'?setEditingResume(true):proceed(()=>onStart(job,tile.id,previous?.id))}>{tile.id==='resume-tailor'&&resume?.search_profile_state!=='ready'?'添加简历':previous?'继续上次':'开始准备'}<span aria-hidden="true"> →</span></button>{previous&&<button type="button" className="preparation-continue" disabled={!data||!resume||busy||reading} onClick={()=>proceed(()=>onStart(job,tile.id))}>重新开始</button>}</div></div>;
+     return <div className="preparation-tile" key={tile.id}><Icon name={tile.icon}/><h4>{tile.title}</h4><p>{tile.description}</p><div className="preparation-tile-footer"><button type="button" disabled={!data||!resume||busy} onClick={()=>tile.id==='resume-tailor'&&resume?.search_profile_state!=='ready'?setEditingResume(true):proceed(()=>onStart(job,tile.id,previous?.id))}>{tile.id==='resume-tailor'&&resume?.search_profile_state!=='ready'?'添加简历':previous?'继续上次':'开始准备'}<span aria-hidden="true"> →</span></button>{previous&&<button type="button" className="preparation-continue" disabled={!data||!resume||busy} onClick={()=>proceed(()=>onStart(job,tile.id))}>重新开始</button>}</div></div>;
     })}</div></section>
     {data?.preparation.resume_version_id&&<div className="preparation-document"><div><Icon name="resume"/><span><strong>岗位专属简历已保存</strong><small>与这个岗位关联，基础简历保持不变。</small></span></div><button type="button" disabled={busy} onClick={()=>void exportResume()}>导出 PDF</button></div>}
     {!data?.preparation.resume_version_id&&sessions.length>0&&<details className="preparation-evidence"><summary>查看岗位修改提案（{sessions.length}）</summary>{sessions.map(session=><ResumeProposal key={session.session_id} workspaceId={workspaceId} sessionId={session.session_id}/>)}</details>}

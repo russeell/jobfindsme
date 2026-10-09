@@ -814,11 +814,11 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     if(run.signal.aborted)throw Error("cancelled");
     phase="agent";
     const previousState=await apiClient.agentContinuation(input.workspace_id,input.session_id);
-    return await runPiResearchAgent({previousState,skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
+    return await runPiResearchAgent({selectedSourceIds:input.source_ids,previousState,skillId:input.skill_id,workspaceId:input.workspace_id,sessionId:input.session_id,requestId:input.request_id,question:input.question,attachments:input.attachments,research:input.research,reportRequested:explicitReportRequest(input.question),jobId:input.job_id,company:input.company,title:input.title,history:input.history,interviewState:input.interview_state},connection,apiKey,
       {
         searchJobs:(query,cities,previous,signal,ms)=>{
           const cursors=Object.fromEntries((previous?.source_runs||[]).filter(source=>source.can_continue&&source.next_cursor).map(source=>[source.source_id,source.next_cursor!]));
-          const sourceIds=previous?previous.allowed_source_ids.filter(id=>Object.hasOwn(cursors,id)):input.source_ids||[];
+          const sourceIds=previous?previous.allowed_source_ids.filter(id=>(input.source_ids||[]).includes(id)&&Object.hasOwn(cursors,id)):input.source_ids||[];
           if(previous&&!sourceIds.length)return Promise.resolve(previous);
           return runDesktopSearch({workspace_id:input.workspace_id,intent:query,filters:normalizeDiscoveryFilters({cities}),source_ids:sourceIds,source_cursors:cursors,existing_run_id:previous?.result_page.run_id,max_pages:1,time_budget_seconds:Math.min(15,ms/1000),page_size:10},signal);
         },
