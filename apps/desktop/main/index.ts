@@ -657,9 +657,28 @@ ipcMain.handle("desktop:list-model-connections", async () => {
     ),
   }));
 });
+let greetingRun:{id:string;controller:AbortController}|undefined;
+ipcMain.handle("desktop:polish-greeting",async(event,input:{requestId:string;connectionId:string;message:string})=>{
+ if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+ if(!input||typeof input.requestId!=="string"||!input.requestId||input.requestId.length>100||typeof input.connectionId!=="string"||!input.connectionId||input.connectionId.length>200||typeof input.message!=="string"||!input.message.trim()||input.message.length>3000)throw Error("招呼语内容无效。");
+ if(greetingRun||modelConfigurationBusy)throw Error("请等待当前润色完成。");
+ const controller=new AbortController();greetingRun={id:input.requestId,controller};
+ const timer=setTimeout(()=>controller.abort("timeout"),45000);
+ try{
+  const connection=await apiClient.modelConnection(input.connectionId);
+  if(controller.signal.aborted)throw Error("润色已取消。");
+  const key=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
+  const {polishGreeting}=await import("./research/greeting-polish.mjs");
+  return await polishGreeting(connection,key,input.message,controller.signal);
+ }catch(error){if(controller.signal.aborted)throw Error(controller.signal.reason==="timeout"?"greeting_polish:timeout":"greeting_polish:cancelled");throw error;}finally{clearTimeout(timer);if(greetingRun?.id===input.requestId)greetingRun=undefined;}
+});
+ipcMain.handle("desktop:cancel-greeting",(event,id:string)=>{
+ if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
+ if(greetingRun?.id===id)greetingRun.controller.abort();
+});
 ipcMain.handle("desktop:save-model-connection", async (event, input: ModelConnectionInput) => {
   if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
-  if (modelConfigurationBusy) throw Error("model_configuration_busy");
+  if (modelConfigurationBusy || greetingRun) throw Error("model_configuration_busy");
   modelConfigurationBusy = true;
   try {
     return await saveModelConnectionWithSecret(apiClient, secretStore, input, () => `model-secret-${randomUUID()}`);
@@ -667,13 +686,13 @@ ipcMain.handle("desktop:save-model-connection", async (event, input: ModelConnec
 });
 ipcMain.handle("desktop:delete-model-connection", async (event, connectionId:string) => {
   if (event.sender !== mainWindow?.webContents || !apiClient || typeof connectionId !== "string" || !connectionId || connectionId.length > 200) throw Error("unauthorized caller");
-  if (modelConfigurationBusy || modelTestController || promptController || researchController || chatRuns.current || matchingRequest) throw Error("model_configuration_busy");
+  if (modelConfigurationBusy || greetingRun || modelTestController || promptController || researchController || chatRuns.current || matchingRequest) throw Error("model_configuration_busy");
   modelConfigurationBusy = true;
   try { await deleteModelConnectionWithSecret(apiClient, secretStore, connectionId); }
   finally { modelConfigurationBusy = false; }
 });
 ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: string) => {
-  if (modelConfigurationBusy) throw Error("model_configuration_busy");
+  if (modelConfigurationBusy || greetingRun) throw Error("model_configuration_busy");
   if (!apiClient) throw new Error("desktop API is not ready");
   const connection = await apiClient.modelConnection(connectionId);
   const apiKey = connection.credential_ref
@@ -927,6 +946,7 @@ app.whenReady().then(async () => {
 
 app.on("before-quit", (event) => {
   event.preventDefault();
+  greetingRun?.controller.abort();
   void shutdownAndExit();
 });
 

@@ -1,6 +1,8 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
  const text=error instanceof Error?error.message:String(error||'');
+ const greeting=text.match(/greeting_polish:(cancelled|timeout|incomplete|credentials)/)?.[1];
+ if(greeting){const message={cancelled:'已停止润色，原文已保留。',timeout:'润色等待超时，原文已保留，可以重试。',incomplete:'模型未返回完整招呼语，原文已保留，请重试或检查模型连接。',credentials:'模型密钥不可用，请到模型设置检查连接。'}[greeting];return {kind:'service',message:message!,action:'retry'};}
  if(/assistant_failure:timeout|研究时间预算已用完/.test(text))return {kind:"service",message:"本轮等待已超时，提问和材料已保留。可重试，或到模型设置测试连接。",action:"retry"};
  if(/model_configuration_busy/.test(text))return {kind:"service",message:"模型仍在使用或配置处理中，请结束当前任务后重试。",action:"retry"};
  if(/assistant_failure:interview_output/.test(text))return {kind:'service',message:'本轮面试回复未满足逐题练习要求，未将其作为完成的练习。提问已保留，可重试。',action:'retry'};

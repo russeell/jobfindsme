@@ -1,3 +1,5 @@
+import {runArchiveBatch} from "../../../shared/archive-batch";
+import {ArchivePanel} from "./ArchivePanel";
 import {interviewReview} from "../../../shared/job-follow-up";
 import {preparationDraft} from "../../../shared/job-preparation";
 import {ResumeProposal} from "./ResumeProposal";
@@ -29,7 +31,6 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
   const [reports,setReports]=useState<ResearchReport[]>([]);
   const [mode,setMode]=useState<"start"|"report">("start");
   const [archivedChats,setArchivedChats]=useState<SavedResearchChat[]>([]);
-  const [deleteId,setDeleteId]=useState("");
   const [historyMenu,setHistoryMenu]=useState<"sort"|null>(null);
   const [historySort,setHistorySort]=useState<"recent"|"oldest"|"title">(()=>{const saved=localStorage.getItem("jobfindsme:chat-sort");return saved==="oldest"||saved==="title"?saved:"recent";});
   const [historySearchOpen,setHistorySearchOpen]=useState(false);
@@ -222,6 +223,23 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     savedChats.current=new Map(remote.map(item=>[item.id,JSON.stringify(toStoredResearchChat(id,item))]));
     setChats(current=>mergeResearchChats(current.filter(chat=>requestsRef.current.has(chat.id)),activeChats));setArchivedChats(archived);
   }
+  async function changeArchivedChats(ids:string[],action:"restore"|"delete"){
+    if(!workspaceId||loadedWorkspace!==workspaceId||busy||savePending)throw Error("请等待当前保存完成后重试。");
+    const workspace=workspaceId,allowed=new Set(archivedChats.map(item=>item.id));
+    setBusy("history");
+    try{
+      await saveQueue.current;
+      const {succeeded,failed}=await runArchiveBatch(ids,async id=>{
+        if(!allowed.has(id)||requestsRef.current.has(id)||pendingResearchChats(workspace).some(chat=>chat.id===id))throw Error("chat not ready");
+        if(action==="restore")await window.jobfindsme!.restoreResearchChat(workspace,id);
+        else {await window.jobfindsme!.deleteArchivedResearchChat(workspace,id);removeResearchChatRecovery(workspace,id);}
+      },()=>workspaceRef.current===workspace);
+      // Keep successful rows removed even if the follow-up refresh fails.
+      if(workspaceRef.current===workspace)setArchivedChats(current=>current.filter(item=>!succeeded.includes(item.id)));
+      await refreshChatHistory(workspace);
+      return {succeeded,failed};
+    }finally{if(workspaceRef.current===workspace)setBusy(null);}
+  }
   async function changeChatHistory(item:SavedResearchChat,action:"archive"|"restore"|"delete"){
     if(!workspaceId||loadedWorkspace!==workspaceId||requestsRef.current.has(item.id)||busy||savePending)return;
     setBusy("history");setMessage("");
@@ -237,7 +255,6 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
       if(workspaceRef.current!==workspaceId)return;
       await refreshChatHistory(workspaceId);
       if(action==="archive"&&chatId===item.id){setChatId(null);setReport(undefined);setMode("start");}
-      if(action==="delete")setDeleteId("");
       setMessage(action==="archive"?"对话已归档。":action==="restore"?"对话已恢复。":"归档对话已删除。");
     }catch(error){if(workspaceRef.current===workspaceId)setMessage(userError(error).message);}finally{if(workspaceRef.current===workspaceId)setBusy(null);}
   }
@@ -326,7 +343,7 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
         {visibleChats.length?<div className="research-history-list">{visibleChats.map((item,index)=><div key={item.id}>{historySort!=="title"&&(index===0||historyGroup(visibleChats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button className="research-history-item" title={item.title} aria-current={active&&chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.branchOf&&<span className="research-history-branch-icon"><Icon name="branch"/></span>}{item.title}{requestsRef.current.has(item.id)&&<span className="research-history-running" aria-label="正在运行"> ···</span>}</button><button className="research-history-archive" type="button" title="归档聊天" disabled={historyBusy||requestsRef.current.has(item.id)} aria-label={`归档聊天：${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}><Icon name="archive"/></button></div></div>)}</div>:<p className="research-empty-note">{historyQuery?"没有匹配的聊天。":"还没有对话。"}</p>}
       </div>
     </aside>,sidebarTarget)}
-    {archiveVisible&&archiveTarget&&createPortal(<div className="research-archive-settings"><div className="heading-row settings-heading"><div><h1>对话归档</h1><p>在这里恢复或删除已归档的对话。</p></div><span className="settings-count">{archivedChats.length} 条对话</span></div>{archivedChats.length?<div className="research-archive-list">{archivedChats.map(item=><div className="research-archive-item" key={item.id}><div className="research-archive-info"><strong title={item.title}>{item.title}</strong><time dateTime={item.updatedAt}>{Number.isFinite(Date.parse(item.updatedAt))?new Date(item.updatedAt).toLocaleString("zh-CN",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"}):"时间未知"}</time></div><div className="button-row research-archive-actions"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"restore")}>恢复对话</button><button className="archive-delete" title="删除归档对话" aria-label={`删除归档对话：${item.title}`} disabled={!!busy} onClick={()=>setDeleteId(item.id)}><Icon name="trash"/></button></div>{deleteId===item.id&&<div className="history-confirm" role="alert"><p>永久删除这条归档对话？</p><div className="button-row"><button disabled={!!busy} onClick={()=>void changeChatHistory(item,"delete")}>确认删除</button><button onClick={()=>setDeleteId("")}>取消</button></div></div>}</div>)}</div>:<p className="research-empty-note">还没有归档对话。</p>}</div>,archiveTarget)}
+    {archiveVisible&&archiveTarget&&createPortal(<ArchivePanel key={workspaceId} items={archivedChats} disabled={historyBusy} onChange={changeArchivedChats}/>,archiveTarget)}
     {message&&<p className="research-inline-status" role="status">{message}</p>}
     {activeChat&&interviewReview(activeChat.turns).length>0&&<details className="interview-review"><summary>面试复习卡 · {interviewReview(activeChat.turns).length} 个待加强点</summary><p className="note">来自这段练习的反馈，继续练习会沿用原会话。</p>{interviewReview(activeChat.turns).map((point,index)=><div key={index}><span>{point}</span><button type="button" disabled={!!busy||!!question.trim()} onClick={()=>{setSkillId('interview-prep');setQuestion(`针对上次练习中的薄弱点「${point}」，请从一道练习题开始，等我回答后再点评。`);}}>练习这一项</button></div>)}{question.trim()&&<p className="note">先发送或清空当前输入，再选择练习项。</p>}</details>}
     <form className="research-composer" aria-label="求职助手输入框" onSubmit={event=>{event.preventDefault();submitInput();}}>

@@ -100,6 +100,8 @@ export type DesktopBridge = {
   cancelPromptTurn(): Promise<PromptSession | undefined>;
   decidePromptPatch(sessionId: string, patchId: string, decision: PromptPatchDecision): Promise<PromptSession>;
   savePromptSession(sessionId: string): Promise<ResumeVersion>;
+  polishGreeting(input:{requestId:string;connectionId:string;message:string}):Promise<string>;
+  cancelGreeting(requestId:string):Promise<void>;
   listModelConnections(): Promise<ModelConnection[]>;
   saveModelConnection(input: ModelConnectionInput): Promise<ModelConnection>;
   deleteModelConnection(connectionId: string): Promise<void>;

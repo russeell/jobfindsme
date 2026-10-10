@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D166",
   "tasks": [
     {
       "id": "D01",
@@ -2859,6 +2859,26 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D166",
+      "title": "平台全选、归档批量管理与直接投递材料工作台",
+      "depends_on": [
+        "D165"
+      ],
+      "status": "in_progress",
+      "scope": [
+        "来源全选与归档批量恢复删除",
+        "岗位直接准备投递、常用招呼语与可审阅AI润色"
+      ],
+      "acceptance": [
+        "隔离数据原生验收选择、批量操作、材料入口与润色审阅，不发送真实申请"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": "Mac锁屏，待用户解锁后继续最终原生验收；源码已实现，本地构建已审计。",
+      "verification": "91项Node、87项Python、类型构建、diff和最终macOS包审计通过；隔离App验证来源全选、归档批量恢复/删除确认取消、材料入口、模板和模拟模型建议/取消。最后Mac锁屏，最终布局、修复提示和采用建议尚待原生复验。没有平台自动发送或真实模型质量通过结论。详见HANDOFF。"
     }
   ]
 }

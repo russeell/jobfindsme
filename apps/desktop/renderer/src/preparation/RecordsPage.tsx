@@ -11,7 +11,7 @@ import {Icon} from '../shared/Icon';
 import {useOriginalBrowser} from '../shared/Workbench';
 
 const tabs:Array<[RecordsFilter,string]>=[['saved','收藏'],['applied','已投递'],['all','全部']];
-type Props={active:boolean;data?:BootstrapData;onError(message?:string):void;onPrepare(job:SearchResultItem['job']):void;onDiscover():void};
+type Props={active:boolean;data?:BootstrapData;onError(message?:string):void;onPrepare(job:SearchResultItem['job'],apply?:boolean):void;onDiscover():void};
 export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   const [items,setItems]=useState<TrackedJob[]>([]);
   const [loaded,setLoaded]=useState(false);
@@ -59,7 +59,7 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
         <div className="record-meta"><span>{item.job.company}</span><span>{item.job.locations.join(' / ')||'地点未知'}</span>{item.job.source.source_name!==item.job.company&&<span className="record-source">{item.job.source.source_name}</span>}</div>
         <p className="record-salary">{formatSalary(item.job)}</p>
         {item.preparation?.next_action&&<p className="records-action"><span>下一步</span>{item.preparation.next_action}{item.preparation.due_date&&<time>{item.preparation.due_date}</time>}</p>}
-        <JobActions compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>
+        <JobActions onApply={()=>onPrepare(item.job,true)} compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>
       </article>;})}</div>
       <div className="records-pagination"><span>显示 {Math.min(limit,selected.length)} / {selected.length} 条岗位</span>{limit<selected.length&&<button type="button" onClick={()=>setLimit(value=>value+recordsPageSize)}>再显示 {Math.min(recordsPageSize,selected.length-limit)} 条</button>}</div>
     </>:<div className="records-empty"><Icon name="records"/><h2>{query?'没有匹配的岗位':filter==='saved'?'还没有收藏岗位':filter==='applied'?'还没有已投递岗位':'这里还没有岗位'}</h2><p>{query?'试试其他关键词，或清空筛选。':filter==='saved'?'点击岗位上的星标，喜欢的机会就会留在这里。':filter==='applied'?'投递后在岗位上标记，不会把打开原页当作已投递。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter!=='all'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}
