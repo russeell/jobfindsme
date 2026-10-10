@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D166",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -2866,7 +2866,7 @@
       "depends_on": [
         "D165"
       ],
-      "status": "in_progress",
+      "status": "done",
       "scope": [
         "来源全选与归档批量恢复删除",
         "岗位直接准备投递、常用招呼语与可审阅AI润色"
@@ -2877,8 +2877,8 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": "Mac锁屏，待用户解锁后继续最终原生验收；源码已实现，本地构建已审计。",
-      "verification": "91项Node、87项Python、类型构建、diff和最终macOS包审计通过；隔离App验证来源全选、归档批量恢复/删除确认取消、材料入口、模板和模拟模型建议/取消。最后Mac锁屏，最终布局、修复提示和采用建议尚待原生复验。没有平台自动发送或真实模型质量通过结论。详见HANDOFF。"
+      "blocker": null,
+      "verification": "91项Node、87项Python、类型构建、diff和最终macOS包审计通过。隔离原生App验证来源全选、归档批量恢复/删除确认取消、模板持久化/关闭保护、模拟模型建议采用/原文过期保护/停止、复制并打开原页与未投递状态；最终正常工作区启动保留原选择和资料。批量永久删除执行由API与批处理自动测试覆盖。未实现平台自动填写/发送，未宣称真实模型润色质量通过。详见HANDOFF。"
     }
   ]
 }
