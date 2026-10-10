@@ -658,9 +658,10 @@ ipcMain.handle("desktop:list-model-connections", async () => {
   }));
 });
 let greetingRun:{id:string;controller:AbortController}|undefined;
-ipcMain.handle("desktop:polish-greeting",async(event,input:{requestId:string;connectionId:string;message:string})=>{
+ipcMain.handle("desktop:polish-greeting",async(event,input:{requestId:string;connectionId:string;message:string;purpose?:"greeting"|"resume_rewrite"|"resume_shorten"|"resume_proofread"})=>{
  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
  if(!input||typeof input.requestId!=="string"||!input.requestId||input.requestId.length>100||typeof input.connectionId!=="string"||!input.connectionId||input.connectionId.length>200||typeof input.message!=="string"||!input.message.trim()||input.message.length>3000)throw Error("招呼语内容无效。");
+ if(input.purpose&&!["greeting","resume_rewrite","resume_shorten","resume_proofread"].includes(input.purpose))throw Error("修改方式无效。");
  if(greetingRun||modelConfigurationBusy)throw Error("请等待当前润色完成。");
  const controller=new AbortController();greetingRun={id:input.requestId,controller};
  const timer=setTimeout(()=>controller.abort("timeout"),45000);
@@ -669,7 +670,7 @@ ipcMain.handle("desktop:polish-greeting",async(event,input:{requestId:string;con
   if(controller.signal.aborted)throw Error("润色已取消。");
   const key=connection.credential_ref?secretStore.get(connection.credential_ref)||"":"";
   const {polishGreeting}=await import("./research/greeting-polish.mjs");
-  return await polishGreeting(connection,key,input.message,controller.signal);
+  return await polishGreeting(connection,key,input.message,controller.signal,input.purpose);
  }catch(error){if(controller.signal.aborted)throw Error(controller.signal.reason==="timeout"?"greeting_polish:timeout":"greeting_polish:cancelled");throw error;}finally{clearTimeout(timer);if(greetingRun?.id===input.requestId)greetingRun=undefined;}
 });
 ipcMain.handle("desktop:cancel-greeting",(event,id:string)=>{

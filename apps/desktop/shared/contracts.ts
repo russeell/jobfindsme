@@ -100,7 +100,7 @@ export type DesktopBridge = {
   cancelPromptTurn(): Promise<PromptSession | undefined>;
   decidePromptPatch(sessionId: string, patchId: string, decision: PromptPatchDecision): Promise<PromptSession>;
   savePromptSession(sessionId: string): Promise<ResumeVersion>;
-  polishGreeting(input:{requestId:string;connectionId:string;message:string}):Promise<string>;
+  polishGreeting(input:{requestId:string;connectionId:string;message:string;purpose?:"greeting"|"resume_rewrite"|"resume_shorten"|"resume_proofread"}):Promise<string>;
   cancelGreeting(requestId:string):Promise<void>;
   listModelConnections(): Promise<ModelConnection[]>;
   saveModelConnection(input: ModelConnectionInput): Promise<ModelConnection>;
@@ -353,11 +353,14 @@ export type ResumeContent = Record<
   string[]
 >;
 
+export type ResumeDocumentNode = {type:string; text?:string; attrs?:Record<string,unknown>; marks?:Array<{type:string}>; content?:ResumeDocumentNode[]};
+
 export type ResumeVersion = {
   version_id: string;
   parent_version_id: string | null;
   version_number: number;
   content: ResumeContent;
+  document?: ResumeDocumentNode | null;
   is_current: boolean;
   created_at: string;
 };
@@ -366,6 +369,7 @@ export type ResumeEditInput = {
   workspace_id: string;
   base_version_id: string;
   content: ResumeContent;
+  document?: ResumeDocumentNode | null;
 };
 
 export type ResumeExportInput = {

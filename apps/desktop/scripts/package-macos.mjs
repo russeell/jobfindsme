@@ -1,3 +1,4 @@
+import {writeEditorLicenses} from "./editor-licenses.mjs";
 import {copyRuntimeDependencies} from "./runtime-dependencies.mjs";
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
@@ -64,6 +65,7 @@ copyRuntimeDependencies(desktopRoot,path.join(appRoot,"node_modules"),["@earendi
 mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
 cpSync(path.join(desktopRoot,"node_modules/pdfjs-dist/LICENSE"),path.join(resources,"third-party/PDFJS_LICENSE.txt"));
+writeEditorLicenses(desktopRoot,path.join(resources,"third-party/EDITOR_LICENSES.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
   JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildLabel, previewUserData, qa, main: "dist-electron/main/index.js" }),

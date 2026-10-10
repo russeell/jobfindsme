@@ -21,3 +21,7 @@ test('missing credentials and pre-cancelled requests never call provider',async(
 });
 
 test('IPC-wrapped cancellation and timeout retain precise recovery messages',async()=>{const {userError}=await import('../dist-electron/shared/user-errors.js');assert.match(userError(new Error("Error invoking remote method: greeting_polish:cancelled")).message,/已停止润色/);assert.match(userError(new Error("Error invoking remote method: greeting_polish:timeout")).message,/等待超时/);});
+test('resume selection mode sends only selected text with a separate fact-preserving instruction',async()=>fixture(async(connection,received)=>{
+ await polishGreeting(connection,'','负责虚构项目的接口实现',new AbortController().signal,'resume_shorten');
+ const body=received();assert.equal(body.messages.at(-1).content,'负责虚构项目的接口实现');assert.match(body.messages[0].content,/简历选段编辑/);assert.match(body.messages[0].content,/不新增/);assert.ok(!body.tools?.length);assert.ok(body.max_tokens<=1400||body.max_completion_tokens<=1400);
+}));

@@ -33,9 +33,11 @@ function Paper({pdf,number,width,onRetry}:{pdf:PDFDocumentProxy;number:number;wi
   </figure>;
 }
 
-export function ResumeDocument({workspaceId,version}:{workspaceId:string;version:ResumeVersion}){
+export function ResumeDocument({workspaceId,version,template:controlledTemplate,onTemplateChange}:{workspaceId:string;version:ResumeVersion;template?:ResumeTemplate;onTemplateChange?:(value:ResumeTemplate)=>void}){
   const preference=`jfm.resume.template.${workspaceId}`;
-  const [template,setTemplate]=useState<ResumeTemplate>(()=>{try{const saved=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===saved)?saved as ResumeTemplate:'professional';}catch{return 'professional';}});
+  const [localTemplate,setLocalTemplate]=useState<ResumeTemplate>(()=>{try{const saved=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===saved)?saved as ResumeTemplate:'professional';}catch{return 'professional';}});
+  const template=controlledTemplate??localTemplate;
+  function setTemplate(value:ResumeTemplate){setLocalTemplate(value);onTemplateChange?.(value);}
   const [pdf,setPdf]=useState<PDFDocumentProxy>(),[error,setError]=useState(''),[retry,setRetry]=useState(0);
   const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[available,setAvailable]=useState(680),[zoom,setZoom]=useState<'fit'|'actual'>('fit');
   const surface=useRef<HTMLDivElement>(null);

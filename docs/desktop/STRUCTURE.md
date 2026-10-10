@@ -72,3 +72,9 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 D164：简历主页由外层 `.content` 统一滚动，弹窗正文单独滚动；`resume-library.ts` 与 Python `resume_editor/service.py` 同步社招/校招/紧凑章节顺序，旧classic导出兼容。`application-greeting.ts` 处理工作区招呼语占位替换，投递材料仍由现有服务保存、外部发送仍由用户完成。Agent岗位查询键包含当前所选来源，只有带岗位正文的查询结果才可复用为缓存，持久化游标不视为正文缓存。
 
 简历纸张预览：`renderer/src/resume/ResumeDocument.tsx` 使用 PDF.js legacy 本地 worker 显示连续页面；`main/resume-preview.ts` 共用后端 PDF 导出并清理临时文件，预览与 PDF 同模板同排版。编辑/移动仍通过现有版本 API 保存，不覆盖原稿。
+
+D167 简历文档编辑：`ResumeWordEditor.tsx` 在主页面用 Tiptap 开源核心直接编辑，`shared/resume-editor-schema.ts` 限定五个章节、段落、列表与文字格式；PDF/DOCX 导入仍先提取事实并核对，原文件保留，确认后统一进入文档。0042 迁移给不可变版本新增可选 document_json；`resume_editor/document.py` 验证节点、限制大小/深度并核对纯文本与结构一致。旧版本无需回写；原有 AI 提案/章节编辑仅替换变化条目，保留其余格式。Word 导出保留文字格式，PDF 继续使用实际导出的连续分页预览；编辑区为流式文稿，不宣称任意 PDF/Word 原版式无损转换或编辑区逐页所见即所得。
+
+草稿按工作区与基础版本留在本机；显式保存生成新版本，并发版本冲突保留输入。`ResumeSelectionAI.tsx` 复用既有 Pi 单次润色通道，仅发送用户选中的一个段落，三个固定编辑目的、无工具、无联网搜索、45秒/1400输出tokens/不重试；建议需审阅、文档变化后禁止套用，采用支持撤销。整份岗位定制仍沿用原审阅机制。选段接口名沿用 polishGreeting，purpose 缺省时原招呼语逻辑不变。
+
+参考 Reactive Resume 的[富文本工具栏](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/rich-text-editor.tsx)与[局部 AI 修改](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/improve.tsx)（MIT）；独立实现，没有复制源文件。Tiptap 3.31.4、ProseMirror 等编辑依赖的许可证由 `scripts/editor-licenses.mjs` 随 macOS/Windows 包收集，未引入其商业分页/协作服务。

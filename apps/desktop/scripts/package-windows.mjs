@@ -1,3 +1,4 @@
+import {writeEditorLicenses} from "./editor-licenses.mjs";
 import {cpSync,existsSync,mkdirSync,readFileSync,renameSync,rmSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -20,5 +21,6 @@ cpSync(runtime,path.join(resources,'python/jobfindsme-api'),{recursive:true});
 mkdirSync(path.join(resources,'third-party'),{recursive:true});
 cpSync(path.join(root,'../../docs/desktop/PI_LICENSE.txt'),path.join(resources,'third-party/PI_LICENSE.txt'));
 cpSync(path.join(root,'node_modules/pdfjs-dist/LICENSE'),path.join(resources,'third-party/PDFJS_LICENSE.txt'));
+writeEditorLicenses(root,path.join(resources,'third-party/EDITOR_LICENSES.txt'));
 cpSync(path.join(root,'../../LICENSE'),path.join(output,'LICENSE-JobFindsMe.txt'));
 console.log(output);

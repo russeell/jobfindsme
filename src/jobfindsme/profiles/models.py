@@ -82,5 +82,6 @@ class ResumeVersion(StrictModel):
     parent_version_id: str | None = None
     version_number: int = Field(gt=0)
     content: dict[str, tuple[str, ...]]
+    document: dict | None = None
     is_current: bool
     created_at: datetime

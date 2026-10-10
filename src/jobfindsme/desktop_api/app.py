@@ -364,6 +364,7 @@ class ResumeVersionResponse(StrictResponse):
     parent_version_id: str | None
     version_number: int
     content: dict[str, list[str]]
+    document: dict | None = None
     is_current: bool
     created_at: str
 
@@ -372,6 +373,7 @@ class ResumeEditRequest(StrictResponse):
     workspace_id: str
     base_version_id: str
     content: dict[str, list[str]]
+    document: dict | None = None
 
 
 class ResumeRestoreRequest(StrictResponse):
@@ -1680,6 +1682,7 @@ def create_app(
                 workspace_id=request.workspace_id,
                 base_version_id=request.base_version_id,
                 content=request.content,
+                document=request.document,
             )
         except ResumeEditorError as error:
             code = 409 if "conflict" in str(error) else 400
@@ -2636,6 +2639,7 @@ def _resume_version_payload(version) -> ResumeVersionResponse:
         parent_version_id=version.parent_version_id,
         version_number=version.version_number,
         content={key: list(values) for key, values in version.content.items()},
+        document=version.document,
         is_current=version.is_current,
         created_at=version.created_at.isoformat(),
     )

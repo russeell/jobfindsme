@@ -17,6 +17,11 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "0.87.1",
     "@earendil-works/pi-ai": "0.87.1",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-list": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/react": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "@vitejs/plugin-react": "latest",
     "electron": "latest",
     "pdfjs-dist": "6.4.299",

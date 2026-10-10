@@ -9,6 +9,13 @@ from typing import Literal
 from uuid import uuid4
 
 from jobfindsme.profiles.models import ResumeVersion
+from jobfindsme.resume_editor.document import (
+    document_content,
+    paragraphs,
+    pdf_markup,
+    reconcile_document,
+    validate_document,
+)
 from jobfindsme.storage import Database
 
 ResumeTemplate = Literal["classic", "compact", "campus", "professional"]
@@ -96,12 +103,21 @@ class ResumeEditorService:
         workspace_id: str,
         base_version_id: str,
         content: dict[str, list[str] | tuple[str, ...]],
+        document: dict | None = None,
     ) -> ResumeVersion:
         normalized = _normalize_content(content)
+        if document is not None:
+            try:
+                document = validate_document(document)
+            except (ValueError, TypeError, AttributeError) as error:
+                raise ResumeEditorError("invalid resume document") from error
+            if document_content(document) != normalized:
+                raise ResumeEditorError("resume document text does not match content")
         return self._create_from_base(
             workspace_id=workspace_id,
             base_version_id=base_version_id,
             content=normalized,
+            document=document,
         )
 
     def restore_version(
@@ -129,12 +145,14 @@ class ResumeEditorService:
                     workspace_id=workspace_id,
                     base_version_id=target.version_id,
                     content=target.content,
+                    document=reconcile_document(target.content, target.document),
                     allow_missing_current=True,
                 )
         return self._create_from_base(
             workspace_id=workspace_id,
             base_version_id=current["version_id"],
             content=target.content,
+            document=reconcile_document(target.content, target.document),
         )
 
     def _create_from_base(
@@ -143,6 +161,7 @@ class ResumeEditorService:
         workspace_id: str,
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
+        document: dict | None = None,
     ) -> ResumeVersion:
         with self.database.connect() as connection:
             return self._create_from_base_in_transaction(
@@ -150,6 +169,7 @@ class ResumeEditorService:
                 workspace_id=workspace_id,
                 base_version_id=base_version_id,
                 content=content,
+                document=document,
             )
 
     def _create_from_base_in_transaction(
@@ -159,6 +179,7 @@ class ResumeEditorService:
         workspace_id: str,
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
+        document: dict | None = None,
         make_current: bool = True,
         allow_missing_current: bool = False,
     ) -> ResumeVersion:
@@ -188,6 +209,11 @@ class ResumeEditorService:
             raise ResumeEditorError(
                 "resume version conflict: reload the current version before saving"
             )
+        if document is None:
+            document = reconcile_document(
+                content,
+                json.loads(base["document_json"]) if base["document_json"] else None,
+            )
         next_number = connection.execute(
             """SELECT COALESCE(MAX(version_number), 0) + 1
             FROM resume_versions WHERE workspace_id = ?""",
@@ -202,8 +228,8 @@ class ResumeEditorService:
             """INSERT INTO resume_versions (
                 version_id, workspace_id, profile_id, source_document_id,
                 parent_version_id, version_number, content_json,
-                is_current, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                is_current, created_at, document_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 version_id,
                 workspace_id,
@@ -214,6 +240,7 @@ class ResumeEditorService:
                 json.dumps(content, ensure_ascii=False),
                 int(make_current),
                 now.isoformat(),
+                json.dumps(document, ensure_ascii=False),
             ),
         )
         created = connection.execute(
@@ -243,9 +270,9 @@ class ResumeEditorService:
         if format == "md":
             path.write_text(_markdown(version.content, template), encoding="utf-8")
         elif format == "docx":
-            _write_docx(path, version.content, template)
+            _write_docx(path, version.content, template, version.document)
         else:
-            _write_pdf(path, version.content, template)
+            _write_pdf(path, version.content, template, version.document)
         os.chmod(path, 0o600)
         return ResumeExport(path, format, template, version.version_id)
 
@@ -294,6 +321,7 @@ def _write_docx(
     path: Path,
     content: dict[str, tuple[str, ...]],
     template: ResumeTemplate,
+    rich_document: dict | None = None,
 ) -> None:
     try:
         from docx import Document
@@ -304,8 +332,12 @@ def _write_docx(
         raise ResumeEditorError(
             "DOCX export requires the python-docx dependency"
         ) from error
+    rich = reconcile_document(content, rich_document)
+    blocks = {s["attrs"]["section"]: s["content"] for s in rich["content"]}
     document = Document()
     section = document.sections[0]
+    section.page_width = Cm(21)
+    section.page_height = Cm(29.7)
     section.top_margin = Cm(1.45 if template == "compact" else 1.8)
     section.bottom_margin = section.top_margin
     section.left_margin = Cm(1.65 if template == "compact" else 2.0)
@@ -322,15 +354,24 @@ def _write_docx(
             continue
         heading = document.add_heading(SECTION_TITLES[name], level=1)
         heading.runs[0].font.color.rgb = RGBColor(48, 48, 46)
-        for value in values:
-            paragraph = document.add_paragraph(style=None)
-            if template == "classic":
-                paragraph.style = document.styles["List Bullet"]
-            paragraph.paragraph_format.space_after = Pt(
-                2 if template == "compact" else 5
-            )
-            paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-            paragraph.add_run(value)
+        for block in blocks[name]:
+            for prefix, node in paragraphs(block):
+                p = document.add_paragraph()
+                if template == "classic" and not prefix:
+                    p.style = document.styles["List Bullet"]
+                p.paragraph_format.space_after = Pt(2 if template == "compact" else 5)
+                p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+                if prefix:
+                    p.add_run(prefix)
+                for child in node.get("content", []):
+                    run = p.add_run(
+                        "\n" if child["type"] == "hardBreak" else child["text"]
+                    )
+                    marks = {m["type"] for m in child.get("marks", [])}
+                    run.bold = "bold" in marks
+                    run.italic = "italic" in marks
+                    run.underline = "underline" in marks
+                    run.font.strike = "strike" in marks
     document.save(path)
 
 
@@ -338,6 +379,7 @@ def _write_pdf(
     path: Path,
     content: dict[str, tuple[str, ...]],
     template: ResumeTemplate,
+    rich_document: dict | None = None,
 ) -> None:
     try:
         from reportlab.lib import colors
@@ -352,7 +394,30 @@ def _write_pdf(
         raise ResumeEditorError(
             "PDF export requires the reportlab dependency"
         ) from error
+    rich = reconcile_document(content, rich_document)
+    blocks = {s["attrs"]["section"]: s["content"] for s in rich["content"]}
     font_name = _register_cjk_font(pdfmetrics, TTFont)
+    bold_font = font_name
+    for candidate in (
+        Path("/System/Library/Fonts/STHeiti Medium.ttc"),
+        Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts/msyhbd.ttc",
+    ):
+        if candidate.exists():
+            try:
+                pdfmetrics.registerFont(
+                    TTFont("JobFindsMeCJKBold", str(candidate), subfontIndex=0)
+                )
+                bold_font = "JobFindsMeCJKBold"
+                break
+            except Exception:
+                continue
+    pdfmetrics.registerFontFamily(
+        font_name,
+        normal=font_name,
+        bold=bold_font,
+        italic=font_name,
+        boldItalic=bold_font,
+    )
     margin = (15 if template == "compact" else 19) * mm
     document = SimpleDocTemplate(
         str(path),
@@ -404,11 +469,14 @@ def _write_pdf(
         if not values:
             continue
         story.extend([Paragraph(SECTION_TITLES[name], heading), Spacer(1, 0.5 * mm)])
-        for value in values:
-            prefix = "• " if template == "classic" else ""
-            story.append(
-                Paragraph(prefix + _xml_escape(value).replace("\n", "<br/>"), body)
-            )
+        for block in blocks[name]:
+            for prefix, node in paragraphs(block):
+                if template == "classic" and not prefix:
+                    prefix = "• "
+                markup = _xml_escape(prefix) + "".join(
+                    pdf_markup(c) for c in node.get("content", [])
+                )
+                story.append(Paragraph(markup or "<br/>", body))
     document.build(story)
 
 
@@ -453,6 +521,7 @@ def _version_from_row(row) -> ResumeVersion:
         parent_version_id=row["parent_version_id"],
         version_number=row["version_number"],
         content={key: tuple(values) for key, values in content.items()},
+        document=json.loads(row["document_json"]) if row["document_json"] else None,
         is_current=bool(row["is_current"]),
         created_at=datetime.fromisoformat(row["created_at"]),
     )

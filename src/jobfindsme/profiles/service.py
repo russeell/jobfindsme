@@ -669,6 +669,7 @@ def _version_from_row(row) -> ResumeVersion:
         version_number=row["version_number"],
         content={key: tuple(values) for key, values in content.items()},
         is_current=bool(row["is_current"]),
+        document=json.loads(row["document_json"]) if row["document_json"] else None,
         created_at=datetime.fromisoformat(row["created_at"]),
     )
 
