@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-10",
+  "updated_at": "2026-10-11",
   "status_values": [
     "pending",
     "in_progress",
@@ -2915,6 +2915,23 @@
       ],
       "blocker": null,
       "verification": "64项Python、42项Node、类型构建、Ruff、diff和最终macOS包审计通过。原生隔离验收模板/空章节/编辑撤销、模拟模型直接生成与审阅保存新版本、话术采用保存、投递记录删除恢复/重启/关闭保护；三模板Word/PDF内容保留。最终正常工作区启动成功。仅固定模板+AI内容提案，非任意版式生成；真实模型质量与Windows未验收。详见HANDOFF。"
+    },
+    {
+      "id": "D169",
+      "title": "简历修改统一回到我的简历工作区",
+      "status": "done",
+      "depends_on": [
+        "D168"
+      ],
+      "scope": [
+        "生成、审阅和版本保存不再进入聊天",
+        "岗位与助手入口统一跳转，保留旧提案"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null,
+      "verification": "95 项 Node、类型构建、diff 与最终包审计通过。隔离原生 App 使用虚构简历/本机模拟模型验收基础与岗位专属生成、页内审阅保存、停止/切页取消、失败重试、入口路由、旧提案及草稿保护；会话数不增加。真实模型质量与 Windows 未验收。详见 HANDOFF。"
     }
   ]
 }

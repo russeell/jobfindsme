@@ -2,7 +2,6 @@ import {runArchiveBatch} from "../../../shared/archive-batch";
 import {ArchivePanel} from "./ArchivePanel";
 import {interviewReview} from "../../../shared/job-follow-up";
 import {preparationDraft} from "../../../shared/job-preparation";
-import {ResumeProposal} from "./ResumeProposal";
 import {attachmentLimits,type ChatAttachment} from "../../../shared/chat-attachments";
 import {assistantSkills,assistantSkill,skillDraft,isAssistantSkillId,type AssistantSkillId} from "../../../shared/assistant-skills";
 import {useEffect,useRef,useState} from "react";
@@ -22,9 +21,9 @@ import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={preparationRequest?:{job?:Job;skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string;generateWith?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
+type Props={onEditResume(job?:Job,sessionId?:string,instruction?:string):void;preparationRequest?:{job?:Job;skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
-export function ResearchPage({preparationRequest,selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
+export function ResearchPage({onEditResume,preparationRequest,selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const [job,setJob]=useState<Job|undefined>(target);
   const [report,setReport]=useState<ResearchReport>();
@@ -65,7 +64,7 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
   const [addMenu,setAddMenu]=useState(false);
   const [attachments,setAttachments]=useState<ChatAttachment[]>([]);
   const [attachmentBusy,setAttachmentBusy]=useState(false);
-  function chooseSkill(id:AssistantSkillId|undefined){setSkillId(id);setAddMenu(false);setQuestion(skillDraft(id,question,target&&job?.job_id===target.job_id?job:undefined));inputRef.current?.focus();}
+  function chooseSkill(id:AssistantSkillId|undefined){if(id==="resume-tailor"){setAddMenu(false);onEditResume(job);return;}setSkillId(id);setAddMenu(false);setQuestion(skillDraft(id,question,target&&job?.job_id===target.job_id?job:undefined));inputRef.current?.focus();}
   async function pickAttachments(kind:"files"|"folder"|"mixed"){
     if(attachmentBusy||chatBusy)return;const selectionSequence=sequence.current;setAddMenu(false);setMessage("");setAttachmentBusy(true);
     try{const selected=await window.jobfindsme!.pickChatAttachments(kind);if(selectionSequence!==sequence.current)return;setAttachments(current=>{const combined=[...current];let total=combined.reduce((sum,item)=>sum+item.text.length,0),imageChars=combined.reduce((sum,item)=>sum+(item.image?.data.length||0),0);for(const item of selected.attachments){if(combined.length>=attachmentLimits.files||total+item.text.length>attachmentLimits.totalChars||imageChars+(item.image?.data.length||0)>8_000_000){setMessage("已达到附件数量或文本限制，部分新文件未添加。请移除一些附件后再添加。");break;}combined.push(item);total+=item.text.length;imageChars+=item.image?.data.length||0;}return combined;});if(selected.warnings.length)setMessage(selected.warnings.join("；"));}
@@ -142,8 +141,6 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     refreshRequests(value=>value+1);
   }),[]);
   useEffect(()=>{if(!target)return;rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
-  const [pendingGeneration,setPendingGeneration]=useState<{nonce:number;sequence:number;connection:string;question:string}>();
-  const consumedGeneration=useRef<number|undefined>(undefined);
   const openedPreparation=useRef<number|undefined>(undefined);
   useEffect(()=>{
     if(busy||!preparationRequest||loadedWorkspace!==workspaceId||openedPreparation.current===preparationRequest.nonce)return;
@@ -151,16 +148,8 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     const previous=preparationRequest.chatId?chats.find(item=>item.id===preparationRequest.chatId&&item.jobId===preparationRequest.job?.job_id):undefined;
     if(previous){selectHistoryChat(previous);setJob(preparationRequest.job);return;}
     rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(preparationRequest.skill);setAttachments([]);setAddMenu(false);setJob(preparationRequest.job);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion(preparationRequest.draft??(preparationRequest.job?preparationDraft(preparationRequest.skill,preparationRequest.job):""));setMessage("");setBusy(null);
-    if(preparationRequest.generateWith&&preparationRequest.draft){setModelId(preparationRequest.generateWith);setPendingGeneration({nonce:preparationRequest.nonce,sequence:sequence.current,connection:preparationRequest.generateWith,question:preparationRequest.draft});}
     requestAnimationFrame(()=>inputRef.current?.focus());
   },[preparationRequest,loadedWorkspace,workspaceId,chats,busy]);
-  useEffect(()=>{
-    if(!pendingGeneration||consumedGeneration.current===pendingGeneration.nonce)return;
-    if(!active||pendingGeneration.sequence!==sequence.current||question!==pendingGeneration.question||modelId!==pendingGeneration.connection||skillId!=='resume-tailor'){setPendingGeneration(undefined);return;}
-    if(busy||chatBusy||loadedWorkspace!==workspaceId||question!==pendingGeneration.question||modelId!==pendingGeneration.connection||!connections.some(m=>m.connection_id===pendingGeneration.connection&&m.status==='verified')||skillId!=='resume-tailor')return;
-    consumedGeneration.current=pendingGeneration.nonce;setPendingGeneration(undefined);
-    void sendChat(pendingGeneration.question);
-  },[pendingGeneration,active,busy,chatBusy,loadedWorkspace,workspaceId,question,modelId,skillId,connections]);
   const lastNewChatNonce=useRef(newChatNonce);
   useEffect(()=>{if(lastNewChatNonce.current===newChatNonce)return;lastNewChatNonce.current=newChatNonce;rememberDraft();scrollRef.current?.scrollTo({top:0});sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(undefined);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);requestAnimationFrame(()=>inputRef.current?.focus());},[newChatNonce]);
   useEffect(()=>{const input=inputRef.current;if(!input)return;input.style.height="auto";input.style.height=`${Math.min(input.scrollHeight,window.innerHeight<650?74:112)}px`;},[question,active]);
@@ -180,6 +169,7 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     finally{if(id===sequence.current)setBusy(null);}
   }
   async function sendChat(value:string){
+    if(skillId==="resume-tailor"){onEditResume(job,undefined,value);return;}
     if(!workspaceId||chatBusy||loadedWorkspace!==workspaceId)return;
     const prior=chats.find(item=>item.id===chatId);
     const {decision,newSubject,current,currentCompany,activeJobId}=resolveResearchSession(value,prior,job,{company:contextCompany,title:contextTitle});
@@ -331,7 +321,7 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
             {item.role==="assistant"&&!!item.jobs?.length&&<div className="agent-job-results" aria-label="实时岗位结果">{item.jobs.map(candidate=><div key={candidate.job_id} className="agent-job-card"><strong>{candidate.title}</strong><p>{candidate.company} · {candidate.locations.join(" / ")||"地点未知"} · {candidate.source.source_name}</p><div className="button-row"><button onClick={()=>openOriginal(candidate.apply_url)}>查看原页 ↗</button><button onClick={()=>{if(workspaceId)void window.jobfindsme!.setJobTracking({workspace_id:workspaceId,job_id:candidate.job_id,event_type:"saved",enabled:true}).then(()=>setMessage("已收藏岗位")).catch(error=>setMessage(userError(error).message));}}>收藏</button><button onClick={()=>{setJob(candidate);setContextCompany(candidate.company);setContextTitle(candidate.title);setChats(items=>items.map(chat=>chat.id===chatId?{...chat,jobId:candidate.job_id,subjectCompany:candidate.company,subjectTitle:candidate.title}:chat));inputRef.current?.focus();}}>继续分析</button></div></div>)}</div>}
             {item.role==="user"&&!!item.attachments?.length&&<div className="research-attachment-list">{item.attachments.map(file=><span key={file.id}>{file.image?<img src={`data:${file.image.mimeType};base64,${file.image.data}`} alt="图片附件"/>:<Icon name="attachment"/>}<span>{file.name}</span>{file.truncated?" · 部分文本":""}</span>)}</div>}
             {item.role==="user"&&assistantSkill(item.skillId)&&<small className="research-skill-badge">{assistantSkill(item.skillId)!.title}</small>}
-            {item.resumeProposalId&&workspaceId&&<ResumeProposal workspaceId={workspaceId} sessionId={item.resumeProposalId}/>}
+            {item.resumeProposalId&&workspaceId&&<button className="resume-chat-link" onClick={()=>onEditResume(job,item.resumeProposalId)}>在我的简历中审阅修改 →</button>}
             {item.role==="assistant"?<MessageContent text={item.text} sources={attachedReport?.evidence||item.evidence} onCitation={number=>showCitation(index,number)}/>:<p>{item.text}</p>}
             {item.interrupted&&<small className="note" role="status">已停止 · 内容未完成</small>}
             {attachedReport?<details id={`research-sources-${index}`}><summary>来源与核验详情（{attachedReport.evidence.length}）</summary><ReputationEvidence report={attachedReport} workspaceId={workspaceId!} onReport={updateShownReport} onSource={value=>openBrowser({sourceId:"web",url:value,title:"研究来源"})} focusedEvidenceId={focusedCitation?.turn===index?attachedReport.evidence[focusedCitation.number-1]?.evidence_id:undefined}/></details>:item.evidence?.length?<details id={`research-sources-${index}`}><summary>来源片段（{item.evidence.length}）</summary>{item.evidence.map((source,sourceIndex)=><article id={`research-source-${index}-${sourceIndex+1}`} tabIndex={-1} className={`evidence-card${focusedCitation?.turn===index&&focusedCitation.number===sourceIndex+1?" research-source-focused":""}`} key={source.evidence_id}><strong>原文片段 [{sourceIndex+1}] · {source.platform}</strong><small>{source.context?.page?`第 ${source.context.page} 页 · `:""}{source.published_at||"发布时间未知"}</small><blockquote>{source.excerpt}</blockquote><p className="note">{source.limitations} · 读取于 {source.retrieved_at}</p>{source.url&&<button type="button" onClick={()=>openBrowser({sourceId:"web",url:source.url!,title:"研究来源"})}>查看原页 ↗</button>}</article>)}</details>:null}

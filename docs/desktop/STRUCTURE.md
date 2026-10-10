@@ -82,3 +82,5 @@ D167 简历文档编辑：`ResumeWordEditor.tsx` 在主页面用 Tiptap 开源�
 D168：投递工作台分为材料/记录，0043 为 application_records 新增 deleted_at；删除/恢复按工作区和岗位限定，保留简历及独立投递状态，记录写入改为显式字段列表。简历空章节用 ProseMirror decoration 隐藏，仍保留原结构与添加入口；模板画廊沿用三种模板 ID，调整配色/间距/章节顺序，PDF/Word 不再增加泛称“简历”的额外标题。
 
 简历 AI 对话框显式选择已验证模型并说明发送范围，生成按钮将单次请求带入既有 resume-tailor 会话/提案链路；nonce、页面/序列、输入/模型/技能检查防止重复或过期启动，生成不自动保存。DeepSeek 官方端点的短文本润色复用 Pi thinkingFormat=deepseek 显式关闭默认思考，不扩大请求预算或自动重试。参考 [Reactive Resume 富文本编辑](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/rich-text-editor.tsx)（MIT）、[Novel 的 AI 选区菜单](https://github.com/steven-tey/novel/blob/main/apps/web/components/tailwind/generative/ai-selector.tsx)（Apache-2.0），借鉴少量工具和先审阅后采用的交互，没有复制代码或新增编辑框架。DeepSeek 参数依据其[思考模式文档](https://api-docs.deepseek.com/guides/thinking_mode)。
+
+D169：简历修改统一在 `ResumePage.tsx` 内运行与审阅；`ResumeOpenRequest` 将岗位/旧提案 ID 从岗位卡或助手带入。生成复用 runResearchChat IPC 与 resume-tailor 技能，但使用独立运行 ID、不写聊天列表；主进程仅为该技能提供 proposeResume。离开简历页或显式停止取消当前运行，过期响应丢弃；提案仍在本地持久保存。`ResearchPage` 不再嵌入可编辑的 ResumeProposal，旧记录提供简历页链接。D168 的 generateWith 自动进入聊天方案已移除。单段 AI、富文本编辑与所有导出沿用原实现。
