@@ -105,15 +105,40 @@ class JobPreparationService:
         return self.get(workspace_id, job_id)
 
     def list_applications(
-        self, workspace_id: str, job_id: str | None = None
+        self, workspace_id: str, job_id: str | None = None, *, deleted: bool = False
     ) -> list[dict]:
         with self.database.connect() as db:
             rows = db.execute(
                 "SELECT * FROM application_records WHERE workspace_id=? "
-                "AND (? IS NULL OR job_id=?) ORDER BY created_at DESC, record_id",
-                (workspace_id, job_id, job_id),
+                "AND (? IS NULL OR job_id=?) AND ((deleted_at IS NOT NULL)=?) "
+                "ORDER BY created_at DESC, record_id",
+                (workspace_id, job_id, job_id, int(deleted)),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def set_application_deleted(
+        self, workspace_id: str, job_id: str, record_id: str, deleted: bool
+    ) -> dict:
+        with self.database.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT 1 FROM application_records WHERE workspace_id=? "
+                "AND job_id=? AND record_id=?",
+                (workspace_id, job_id, record_id),
+            ).fetchone()
+            if not row:
+                raise LookupError("application record not found")
+            db.execute(
+                "UPDATE application_records SET deleted_at=? WHERE workspace_id=? "
+                "AND job_id=? AND record_id=?",
+                (
+                    datetime.now(UTC).isoformat() if deleted else None,
+                    workspace_id,
+                    job_id,
+                    record_id,
+                ),
+            )
+        return {"record_id": record_id, "deleted": deleted}
 
     def record_application(
         self,
@@ -156,11 +181,15 @@ class JobPreparationService:
             ).fetchone()
             if old and (old["workspace_id"] != workspace_id or old["job_id"] != job_id):
                 raise ValueError("application record scope mismatch")
+            if old and old["deleted_at"]:
+                raise ValueError("记录已删除，请新建材料或先恢复记录")
             if old and old["status"] in {"contacted", "resume_sent", "uncertain"}:
                 # Preserve confirmed materials; corrections create a new record.
                 raise ValueError("已确认的记录不能覆盖，请新建记录")
             db.execute(
-                "INSERT INTO application_records VALUES(?,?,?,?,?,?,?,?) "
+                "INSERT INTO application_records (record_id,workspace_id,job_id,"
+                "resume_version_id,message,status,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?) "
                 "ON CONFLICT(record_id) DO UPDATE SET "
                 "resume_version_id=excluded.resume_version_id,"
                 "message=excluded.message,status=excluded.status,u"

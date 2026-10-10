@@ -20,9 +20,9 @@ export function resumeReviewCounts(session:PromptSession){
 
 export type ResumeTemplate='classic'|'compact'|'campus'|'professional';
 export const resumeTemplates=[
- {id:'professional',name:'社招',description:'工作成果在前，突出职责与贡献'},
- {id:'campus',name:'校招',description:'教育与项目在前，突出实践能力'},
- {id:'compact',name:'紧凑',description:'更小间距，适合内容较多的简历'},
+ {id:'professional',name:'简洁专业',description:'单栏细线 · 工作成果优先'},
+ {id:'campus',name:'校园清新',description:'蓝色标题 · 教育与项目优先'},
+ {id:'compact',name:'极简紧凑',description:'黑白小间距 · 适合较多经历'},
 ] as const;
 export function resumeTemplateSections(template:ResumeTemplate):Array<keyof ResumeContent>{
  if(template==='campus')return ['basic_information','education','projects','experience','skills'];

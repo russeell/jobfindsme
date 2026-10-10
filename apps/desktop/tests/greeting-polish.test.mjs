@@ -25,3 +25,24 @@ test('resume selection mode sends only selected text with a separate fact-preser
  await polishGreeting(connection,'','负责虚构项目的接口实现',new AbortController().signal,'resume_shorten');
  const body=received();assert.equal(body.messages.at(-1).content,'负责虚构项目的接口实现');assert.match(body.messages[0].content,/简历选段编辑/);assert.match(body.messages[0].content,/不新增/);assert.ok(!body.tools?.length);assert.ok(body.max_tokens<=1400||body.max_completion_tokens<=1400);
 }));
+
+test('DeepSeek short edits explicitly disable its default thinking mode without changing other providers',async()=>{
+ const {editingModel}=await import('../dist-electron/main/research/greeting-polish.mjs');
+ const deep=editingModel({...base,endpoint:'https://api.deepseek.com',model_id:'deepseek-v4-flash'});
+ assert.equal(deep.reasoning,true);assert.equal(deep.compat.thinkingFormat,'deepseek');
+ const other=editingModel({...base,endpoint:'https://example.com'});assert.equal(other.reasoning,false);
+ await fixture(async(connection,received)=>{
+  const result=await polishGreeting(connection,'','你好',new AbortController().signal);assert.ok(result);assert.equal(received().thinking,undefined);
+ });
+});
+test('DeepSeek adapter actually emits disabled thinking for a short editing request',async()=>{
+ const {editingModel}=await import('../dist-electron/main/research/greeting-polish.mjs');
+ const {streamSimple}=await import('@earendil-works/pi-ai/api/openai-completions');
+ let sent;
+ const model=editingModel({...base,endpoint:'https://api.deepseek.com',model_id:'deepseek-v4-flash'});
+ const response=await streamSimple(model,{messages:[{role:'user',content:'虚构测试',timestamp:Date.now()}]}, {apiKey:'fixture',maxTokens:600,maxRetries:0,fetch:async(_url,init)=>{
+  sent=JSON.parse(init.body);
+  return new Response('data: '+JSON.stringify({choices:[{index:0,delta:{role:'assistant',content:'test'},finish_reason:'stop'}]})+'\n\ndata: [DONE]\n\n',{headers:{'Content-Type':'text/event-stream'}});
+ }}).result();
+ assert.equal(response.stopReason,'stop');assert.deepEqual(sent.thinking,{type:'disabled'});assert.ok(!sent.tools?.length);
+});

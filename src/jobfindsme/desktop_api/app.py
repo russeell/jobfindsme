@@ -1340,11 +1340,24 @@ def create_app(
 
     @app.get("/v1/application-records", dependencies=[Depends(require_token)])
     def list_application_records(
-        workspace_id: str, job_id: str | None = None
+        workspace_id: str, job_id: str | None = None, deleted: bool = False
     ) -> list[dict]:
         return JobPreparationService(core.database).list_applications(
-            workspace_id, job_id
+            workspace_id, job_id, deleted=deleted
         )
+
+    @app.patch(
+        "/v1/application-records/{record_id}", dependencies=[Depends(require_token)]
+    )
+    def change_application_visibility(
+        record_id: str, workspace_id: str, job_id: str, deleted: bool
+    ) -> dict:
+        try:
+            return JobPreparationService(core.database).set_application_deleted(
+                workspace_id, job_id, record_id, deleted
+            )
+        except LookupError as error:
+            raise HTTPException(status_code=404, detail="record not found") from error
 
     @app.post("/v1/application-records", dependencies=[Depends(require_token)])
     def save_application_record(request: ApplicationRecordRequest) -> dict:

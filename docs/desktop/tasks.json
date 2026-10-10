@@ -2897,6 +2897,24 @@
       ],
       "blocker": null,
       "verification": "72项Python、16项Node、类型构建、Ruff、diff及最终macOS包审计通过；隔离虚构PDF原生验收导入、富文本编辑、新版本、草稿重载、Word/PDF实际导出与逐页核对、模板同步及重启恢复。本机模拟模型验证选中内容生成/采用/撤销、过期保护和停止；不代表真实模型质量通过。正常工作区D167启动保留原简历状态，未修改真实简历。连续编辑不承诺原PDF无损还原，OCR/复杂版式/Windows原生及中文IME未验收。详见HANDOFF。"
+    },
+    {
+      "id": "D168",
+      "title": "投递工作台收简、可恢复删除与可视化简历模板",
+      "status": "done",
+      "depends_on": [
+        "D167"
+      ],
+      "scope": [
+        "投递材料与记录分离、删除恢复",
+        "隐藏空章节、模板画廊与简洁编辑工具栏",
+        "沿用AI审阅流程并修复短输出预算"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null,
+      "verification": "64项Python、42项Node、类型构建、Ruff、diff和最终macOS包审计通过。原生隔离验收模板/空章节/编辑撤销、模拟模型直接生成与审阅保存新版本、话术采用保存、投递记录删除恢复/重启/关闭保护；三模板Word/PDF内容保留。最终正常工作区启动成功。仅固定模板+AI内容提案，非任意版式生成；真实模型质量与Windows未验收。详见HANDOFF。"
     }
   ]
 }

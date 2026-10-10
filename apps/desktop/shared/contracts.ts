@@ -59,7 +59,8 @@ export type DesktopBridge = {
   getSearchPage(workspaceId: string, runId: string, page: number, pageSize: number): Promise<SearchResultPage>;
   setJobTracking(input: JobTrackingInput): Promise<JobTrackingState>;
   listJobTracking(workspaceId: string): Promise<TrackedJob[]>;
-  listApplicationRecords(workspaceId:string,jobId?:string):Promise<ApplicationRecord[]>;
+  listApplicationRecords(workspaceId:string,jobId?:string,deleted?:boolean):Promise<ApplicationRecord[]>;
+  setApplicationDeleted(workspaceId:string,jobId:string,recordId:string,deleted:boolean):Promise<{record_id:string;deleted:boolean}>;
   saveApplicationRecord(input:ApplicationRecordInput):Promise<ApplicationRecord>;
   getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>;
   saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>;

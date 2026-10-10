@@ -820,3 +820,78 @@ def test_preparing_new_materials_keeps_legacy_applied_state(tmp_path) -> None:
     assert search.tracking_states(workspace.workspace_id, [job.job_id])[
         job.job_id
     ].applied
+
+
+def test_application_record_trash_is_scoped_reversible_and_preserves_tracking(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from jobfindsme.desktop_api.app import create_app
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(991)
+    jobs.upsert(workspace.workspace_id, job)
+    service = JobPreparationService(database)
+    row = service.record_application(
+        workspace.workspace_id,
+        job.job_id,
+        record_id="trash-fixture",
+        resume_version_id=None,
+        message="虚构话术",
+        status="opened",
+    )
+    service.save(
+        workspace.workspace_id, job.job_id, stage="applied", next_action="保持跟进"
+    )
+    before = tracking.list_tracking(workspace_id=workspace.workspace_id)
+    client = TestClient(
+        create_app(token="fixture-token", database_path=tmp_path / "desktop-jobs.db")
+    )
+    headers = {"Authorization": "Bearer fixture-token"}
+    params = {
+        "workspace_id": workspace.workspace_id,
+        "job_id": job.job_id,
+        "deleted": True,
+    }
+    url = "/v1/application-records/trash-fixture"
+    assert client.patch(url, params=params).status_code == 401
+    assert (
+        client.patch(
+            url, headers=headers, params={**params, "workspace_id": "elsewhere"}
+        ).status_code
+        == 404
+    )
+    assert (
+        client.patch(
+            url, headers=headers, params={**params, "job_id": "wrong"}
+        ).status_code
+        == 404
+    )
+    assert client.patch(url, headers=headers, params=params).status_code == 200
+    assert service.list_applications(workspace.workspace_id) == []
+    assert (
+        service.list_applications(workspace.workspace_id, deleted=True)[0]["message"]
+        == row["message"]
+    )
+    with pytest.raises(ValueError, match="已删除"):
+        service.record_application(
+            workspace.workspace_id,
+            job.job_id,
+            record_id="trash-fixture",
+            resume_version_id=None,
+            message="不得复活",
+            status="prepared",
+        )
+    assert (
+        client.patch(
+            url, headers=headers, params={**params, "deleted": False}
+        ).status_code
+        == 200
+    )
+    assert len(service.list_applications(workspace.workspace_id)) == 1
+    assert service.list_applications(workspace.workspace_id, deleted=True) == []
+    assert tracking.list_tracking(workspace_id=workspace.workspace_id) == before
+    assert (
+        service.get(workspace.workspace_id, job.job_id)["preparation"]["next_action"]
+        == "保持跟进"
+    )

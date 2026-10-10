@@ -308,7 +308,7 @@ def _markdown(content: dict[str, tuple[str, ...]], template: ResumeTemplate) -> 
     lines = ["# 简历", ""]
     for section in _template_sections(template):
         values = content.get(section, ())
-        if not values:
+        if not any(value.strip() for value in values):
             continue
         lines.extend([f"## {SECTION_TITLES[section]}", ""])
         marker = "- " if template == "classic" else ""
@@ -346,14 +346,14 @@ def _write_docx(
     normal.font.name = "Arial"
     normal._element.rPr.rFonts.set(qn("w:eastAsia"), "PingFang SC")
     normal.font.size = Pt(9.5 if template == "compact" else 10.5)
-    title = document.add_heading("简历", level=0)
-    title.alignment = 1
     for name in _template_sections(template):
         values = content.get(name, ())
-        if not values:
+        if not any(value.strip() for value in values):
             continue
         heading = document.add_heading(SECTION_TITLES[name], level=1)
-        heading.runs[0].font.color.rgb = RGBColor(48, 48, 46)
+        heading.runs[0].font.color.rgb = (
+            RGBColor(37, 99, 150) if template == "campus" else RGBColor(48, 48, 46)
+        )
         for block in blocks[name]:
             for prefix, node in paragraphs(block):
                 p = document.add_paragraph()
@@ -383,7 +383,6 @@ def _write_pdf(
 ) -> None:
     try:
         from reportlab.lib import colors
-        from reportlab.lib.enums import TA_CENTER
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import mm
@@ -430,24 +429,14 @@ def _write_pdf(
         author="JobFindsMe",
     )
     styles = getSampleStyleSheet()
-    title = ParagraphStyle(
-        "ResumeTitle",
-        parent=styles["Title"],
-        fontName=font_name,
-        fontSize=18,
-        leading=23,
-        alignment=TA_CENTER,
-        textColor=colors.HexColor("#30302e"),
-        spaceAfter=8 * mm,
-    )
     heading = ParagraphStyle(
         "ResumeHeading",
         parent=styles["Heading2"],
         fontName=font_name,
         fontSize=11.5,
         leading=15,
-        textColor=colors.HexColor("#30302e"),
-        spaceBefore=4 * mm,
+        textColor=colors.HexColor("#256396" if template == "campus" else "#30302e"),
+        spaceBefore=(2.5 if template == "compact" else 4) * mm,
         spaceAfter=2 * mm,
         borderWidth=0,
         borderPadding=0,
@@ -463,10 +452,10 @@ def _write_pdf(
         spaceAfter=1.5 * mm if template == "compact" else 2.5 * mm,
         wordWrap="CJK",
     )
-    story = [Paragraph("简历", title)]
+    story = []
     for name in _template_sections(template):
         values = content.get(name, ())
-        if not values:
+        if not any(value.strip() for value in values):
             continue
         story.extend([Paragraph(SECTION_TITLES[name], heading), Spacer(1, 0.5 * mm)])
         for block in blocks[name]:

@@ -1,3 +1,4 @@
+import {ResumeModal} from './ResumeDialogs';
 import {useEffect,useRef,useState} from 'react';
 import {EditorContent,useEditor,useEditorState} from '@tiptap/react';
 import {getSchema} from '@tiptap/core';
@@ -10,10 +11,11 @@ import {ResumeDocument} from './ResumeDocument';
 import {ResumeSelectionAI} from './ResumeSelectionAI';
 
 
-export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;active:boolean;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:()=>void}){
+export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;active:boolean;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:(instruction?:string)=>void}){
  const preference=`jfm.resume.template.${workspaceId}`;
  const [template,setTemplate]=useState<ResumeTemplate>(()=>{try{const value=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===value)?value as ResumeTemplate:'professional';}catch{return 'professional';}});
  const [mode,setMode]=useState<'edit'|'preview'>('edit'),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[discard,setDiscard]=useState(false);
+ const [templatesOpen,setTemplatesOpen]=useState(false),[showEmpty,setShowEmpty]=useState(false);
  const [base,setBase]=useState(version),[aiOpen,setAiOpen]=useState(false);
  const cacheKey=(id:string)=>`jfm.resume.document-draft.${workspaceId}.${id}`;
  const [loaded]=useState(()=>{
@@ -53,10 +55,11 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
    <div className="resume-word-toolbar" aria-label="文档工具栏">
      <div className="resume-word-modes"><button aria-pressed={mode==='edit'} disabled={busy} onClick={()=>setMode('edit')}>编辑</button><button aria-pressed={mode==='preview'} disabled={busy||stale} onClick={()=>void preview()}>{dirty?'保存并预览':'分页预览'}</button></div>
      <span className="resume-word-status">{busy?'处理中…':dirty?'草稿 · 未保存版本':`v${base.version_number} · 已保存`}</span>
-     <button disabled={busy||dirty} onClick={onOrganize}>整理章节</button>{onImprove&&<button disabled={busy||dirty} title={dirty?"保存后再修改整份简历":undefined} onClick={onImprove}>AI 修改</button>}
+     <button disabled={busy} onClick={()=>setTemplatesOpen(true)}>模板与排版</button>{onImprove&&<button disabled={busy||dirty} title={dirty?"保存后再修改整份简历":undefined} onClick={()=>onImprove()}>✦ AI 修改</button>}
      <button disabled={busy||stale} onClick={()=>void exportWord()}>{dirty?'保存并导出 Word':'导出 Word'}</button>
-     <button className="primary-button" disabled={busy||stale||!dirty} onClick={()=>void save()}>保存版本</button>
+     <button className="primary-button" disabled={busy||stale||!dirty} onClick={()=>void save()}>保存</button>
    </div>
+   {templatesOpen&&<ResumeModal title="选择简历模板" onClose={()=>setTemplatesOpen(false)}><div className="resume-template-body"><p className="note">只改变排版，不改动你的经历。导出沿用所选模板。</p><div className="resume-template-gallery">{resumeTemplates.map(t=><button className={`resume-template-card ${t.id}`} key={t.id} aria-pressed={template===t.id} onClick={()=>applyTemplate(t.id)}><span className="resume-template-thumb" aria-hidden="true"><b/><i/><i/><strong/><i/><i/><i/><strong/><i/><i/></span><b>{t.name}</b><small>{t.description}</small></button>)}</div><div className="resume-template-options"><button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onOrganize();}}>调整内容归属</button><span>空章节自动隐藏，可在编辑栏添加。</span></div></div><footer><p>AI 按真实经历提出修改，审阅后保存。</p>{onImprove&&<button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onImprove(`按“${resumeTemplates.find(t=>t.id===template)?.name}”模板组织内容；${template==='campus'?'教育、项目与实习优先':template==='compact'?'精简重复表达，保留关键事实':'突出真实工作成果'}。检查错分的章节，将项目与工作内容归回对应章节，不能遗漏原有经历`);}}>✦ AI 生成修改稿</button>}<button className="primary-button" onClick={()=>setTemplatesOpen(false)}>完成</button></footer></ResumeModal>}
    {error&&<p className="notice" role="alert">{error}</p>}{notice&&<p className="resume-feedback" role="status">{notice}</p>}
    {stale&&<p className="notice">基础简历已有新版本，当前草稿保留。请复制需要的内容，再放弃草稿以读取最新版本。</p>}
    {mode==='edit'?<>
@@ -65,10 +68,11 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
        <button aria-label="加粗" aria-pressed={state?.bold} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleBold().run()}><b>B</b></button><button aria-label="斜体" aria-pressed={state?.italic} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleItalic().run()}><i>I</i></button><button aria-label="下划线" aria-pressed={state?.underline} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleUnderline().run()}><u>U</u></button>
        <button aria-label="项目符号列表" aria-pressed={state?.bullet} disabled={busy} onClick={()=>editor.chain().focus().toggleBulletList().run()}>• 列表</button><button aria-label="编号列表" aria-pressed={state?.ordered} disabled={busy} onClick={()=>editor.chain().focus().toggleOrderedList().run()}>1. 列表</button><span className="toolbar-divider"/>
        <button disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={()=>setAiOpen(v=>!v)}>✦ 修改选中文字</button>
-       <select aria-label="文档模板" disabled={busy} value={template} onChange={e=>applyTemplate(e.target.value as ResumeTemplate)}>{resumeTemplates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>
+       <button className="resume-sections-toggle" aria-pressed={showEmpty} onClick={()=>setShowEmpty(value=>!value)}>{showEmpty?'隐藏空章节':'＋ 添加章节'}</button>
+
      </div>
      {aiOpen&&<ResumeSelectionAI editor={editor} workspaceId={workspaceId} disabled={busy} onClose={()=>setAiOpen(false)}/>}
-     <div className={`resume-word-surface ${template}`}><EditorContent editor={editor}/></div>
+     <div className={`resume-word-surface ${template}${showEmpty?' show-empty-sections':''}`}><EditorContent editor={editor}/></div>
      <div className="resume-word-footer"><span>直接编辑 · 草稿仅存本机 · 导出分页请查看预览</span>{dirty&&<button disabled={busy} onClick={()=>setDiscard(true)}>放弃草稿</button>}</div>
      {discard&&<div className="notice" role="alert">放弃当前未保存的草稿？<button onClick={()=>setDiscard(false)}>继续编辑</button><button disabled={busy} onClick={reset}>放弃草稿并恢复</button></div>}
    </>:<ResumeDocument key={`${base.version_id}:${template}`} workspaceId={workspaceId} version={base} template={template} onTemplateChange={applyTemplate}/>}

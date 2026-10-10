@@ -301,9 +301,14 @@ ipcMain.handle("desktop:set-job-tracking", (event, input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.setJobTracking(input);
 });
-ipcMain.handle("desktop:list-application-records", (event, workspaceId:string, jobId?:string) => {
+ipcMain.handle("desktop:list-application-records", (event, workspaceId:string, jobId?:string, deleted=false) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.listApplicationRecords(workspaceId,jobId);
+  return apiClient.listApplicationRecords(workspaceId,jobId,deleted);
+});
+ipcMain.handle("desktop:set-application-deleted", (event,workspaceId:string,jobId:string,recordId:string,deleted:boolean) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  if(typeof deleted!=="boolean")throw new Error("invalid record action");
+  return apiClient.setApplicationDeleted(workspaceId,jobId,recordId,deleted);
 });
 ipcMain.handle("desktop:save-application-record", (event,input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");

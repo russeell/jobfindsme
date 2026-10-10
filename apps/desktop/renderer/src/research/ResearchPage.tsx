@@ -22,7 +22,7 @@ import {getCurrentModel,setCurrentModel} from "../settings/current-model";
 import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
-type Props={preparationRequest?:{job?:Job;skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
+type Props={preparationRequest?:{job?:Job;skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string;generateWith?:string};selectedSources:string[];onReports(value:ResearchReport[]):void;onBusyChange(value:boolean):void;active:boolean;archiveVisible:boolean;newChatNonce:number;onOpenChat():void;data?:BootstrapData;target?:Job;onSearchJobs(query:string):void;onError(message?:string):void};
 
 export function ResearchPage({preparationRequest,selectedSources,active,archiveVisible,newChatNonce,onOpenChat,data,target,onSearchJobs,onError,onReports,onBusyChange}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
@@ -142,6 +142,8 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     refreshRequests(value=>value+1);
   }),[]);
   useEffect(()=>{if(!target)return;rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(target);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);},[target?.job_id]);
+  const [pendingGeneration,setPendingGeneration]=useState<{nonce:number;sequence:number;connection:string;question:string}>();
+  const consumedGeneration=useRef<number|undefined>(undefined);
   const openedPreparation=useRef<number|undefined>(undefined);
   useEffect(()=>{
     if(busy||!preparationRequest||loadedWorkspace!==workspaceId||openedPreparation.current===preparationRequest.nonce)return;
@@ -149,8 +151,16 @@ export function ResearchPage({preparationRequest,selectedSources,active,archiveV
     const previous=preparationRequest.chatId?chats.find(item=>item.id===preparationRequest.chatId&&item.jobId===preparationRequest.job?.job_id):undefined;
     if(previous){selectHistoryChat(previous);setJob(preparationRequest.job);return;}
     rememberDraft();sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(preparationRequest.skill);setAttachments([]);setAddMenu(false);setJob(preparationRequest.job);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion(preparationRequest.draft??(preparationRequest.job?preparationDraft(preparationRequest.skill,preparationRequest.job):""));setMessage("");setBusy(null);
+    if(preparationRequest.generateWith&&preparationRequest.draft){setModelId(preparationRequest.generateWith);setPendingGeneration({nonce:preparationRequest.nonce,sequence:sequence.current,connection:preparationRequest.generateWith,question:preparationRequest.draft});}
     requestAnimationFrame(()=>inputRef.current?.focus());
   },[preparationRequest,loadedWorkspace,workspaceId,chats,busy]);
+  useEffect(()=>{
+    if(!pendingGeneration||consumedGeneration.current===pendingGeneration.nonce)return;
+    if(!active||pendingGeneration.sequence!==sequence.current||question!==pendingGeneration.question||modelId!==pendingGeneration.connection||skillId!=='resume-tailor'){setPendingGeneration(undefined);return;}
+    if(busy||chatBusy||loadedWorkspace!==workspaceId||question!==pendingGeneration.question||modelId!==pendingGeneration.connection||!connections.some(m=>m.connection_id===pendingGeneration.connection&&m.status==='verified')||skillId!=='resume-tailor')return;
+    consumedGeneration.current=pendingGeneration.nonce;setPendingGeneration(undefined);
+    void sendChat(pendingGeneration.question);
+  },[pendingGeneration,active,busy,chatBusy,loadedWorkspace,workspaceId,question,modelId,skillId,connections]);
   const lastNewChatNonce=useRef(newChatNonce);
   useEffect(()=>{if(lastNewChatNonce.current===newChatNonce)return;lastNewChatNonce.current=newChatNonce;rememberDraft();scrollRef.current?.scrollTo({top:0});sequence.current++;lastOpened.current=undefined;setChatId(null);setSkillId(undefined);setAttachments([]);setAddMenu(false);setJob(undefined);setReport(undefined);setMode("start");setCandidate(undefined);setContextCompany("");setContextTitle("");setQuestion("");setMessage("");setBusy(null);requestAnimationFrame(()=>inputRef.current?.focus());},[newChatNonce]);
   useEffect(()=>{const input=inputRef.current;if(!input)return;input.style.height="auto";input.style.height=`${Math.min(input.scrollHeight,window.innerHeight<650?74:112)}px`;},[question,active]);
