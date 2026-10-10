@@ -1,3 +1,11 @@
+D165 连续纸张简历预览（2026-10-10，本地）：基础简历直接显示连续 A4 页面、页数、适合宽度/原尺寸以及校招/社招/紧凑模板；预览直接复用既有 ReportLab PDF 导出，使用 PDF.js 兼容入口按需绘制可见页，避免另造 HTML 分页与 PDF 不一致。主页面沿用外层滚动；编辑仍在工具弹窗里，逐条保留内部换行、支持明确移动章节，关闭修改先确认，保存生成新版本并更新整份预览。已确认旧内容不自动重分类，错分可手动移动或重新导入；编号章节、开源贡献与核心技能标题识别已修复，新导入保留经历换行，PDF 同步保留换行。Word 排版由原导出器处理，不宣称与 PDF 分页一致。
+
+参考 Reactive Resume（MIT，apps/web/src/features/resume/preview/pdf-canvas.tsx）的 PDF 直接预览与生命周期、Resume Matcher（Apache-2.0，apps/frontend/components/preview/paginated-preview.tsx、use-pagination.ts）的连续纸张和适合宽度；未复制源码。新增 PDF.js 6.4.299（Apache-2.0）浏览器依赖及随包许可证，懒加载主体与本地 worker。修复本机 Electron 不支持新版 Map 方法导致空白页的问题，改用库提供的 legacy 入口；临时 PDF 目录权限 0700，完成或失败均清理，无额外持久简历副本。旧 Electron 壳构建先清除旧 app/python payload，避免旧运行时残留。锁定依赖的 source-map-js 漏洞修复到安全补丁版，npm audit 无已知漏洞。
+
+验证：47 项相关 Python、8 项 Node、类型构建、Ruff、diff 与最终 macOS 包审计通过。隔离虚构长简历原生 App 验证两页渲染/滚动、三模板切换、原尺寸、校招 PDF 实际保存（两页正文逐页与同模板后端生成相同）、编辑保留换行、关闭保护、保存为 v2、原 v1 保留、预览更新、移动内容后放弃不落库。测试发现并修复画布兼容问题和旧测试包运行时问题后复验；最终包包含窄屏关闭提示显示的小修，此窄屏提示未单独原生复验。没有调用模型、没有修改真实简历、没有发送招聘消息；扫码 PDF/OCR 和任意复杂版式解析不在本轮验收范围。
+
+最新 App：`apps/desktop/release/local-D165-final/mac-arm64/JobFindsMe.app`，已在原工作区打开，原已确认版本仍在、真实两页预览可见；D164压缩回退，临时App已清理，仅D165保留启动入口。只更新本地；不推送、不发布、不制作分享包。测试材料和输出仅在隔离临时目录，不进入 Git。D134/D151 状态不变。
+
 D164 简历模板、滚动与岗位准备（2026-10-10，本地）：原生复现D163正文上滚轮不移动，修复简历内层overflow/overscroll与外层页面竞争；主页面只保留外层滚动，预览弹窗正文独立滚动。收紧顶部标题、分类与工具栏，同一1050×720窗口正文起点约上移85px；单列正文增强阅读对比。新增社招/校招/紧凑模板（旧classic接口兼容），预览与PDF/Word/Markdown章节顺序一致、保留所有内容，模板偏好按工作区保存。AI入口增加求职阶段和三项常用修改要求，生成可编辑草稿、不自动发送。
 
 参考并核对Reactive Resume的局部修改取舍（MIT，apps/web/src/features/resume/editor/write/improve.tsx）和Resume Matcher的分区差异审阅（Apache-2.0，apps/frontend/components/tailor/diff-preview-modal.tsx）；只借鉴交互，没有复制源码或新增依赖。投递方向查看FuckJob的任务预算与结果判定实际实现，未移植其自动发送。

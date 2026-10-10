@@ -1,3 +1,4 @@
+import {createResumePreview} from "./resume-preview";
 import {createPublicRetrieval} from "./research/public-retrieval";
 import {collectChatAttachments} from "./research/chat-attachments";
 import {foregroundZhilianVerification} from "./sources/source-actions";
@@ -567,6 +568,11 @@ ipcMain.handle("desktop:save-resume-version", (_event, input: ResumeEditInput) =
 ipcMain.handle("desktop:restore-resume-version", (_event, workspaceId: string, versionId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.restoreResumeVersion(workspaceId, versionId);
+});
+ipcMain.handle("desktop:preview-resume", async (event, input: Omit<ResumeExportInput,'format'>) => {
+  if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
+  const client=apiClient;
+  return createResumePreview(input,(value,destination)=>client.exportResume(value,destination));
 });
 ipcMain.handle("desktop:export-resume", async (_event, input: ResumeExportInput) => {
   if (!apiClient || !mainWindow) throw new Error("desktop API is not ready");

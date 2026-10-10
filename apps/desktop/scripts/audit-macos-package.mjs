@@ -20,7 +20,7 @@ const visit = (directory) => {
     const absolute = path.join(directory, entry);
     const relative = path.relative(appRoot, absolute);
     const dependencyCode=relative.startsWith("Contents/Resources/app/node_modules/");
-    if (forbidden.some((rule, index) => !(index === 1 && (relative.startsWith("Contents/Resources/python/jobfindsme-api/_internal/") || relative === "Contents/Resources/third-party/PI_LICENSE.txt" || skillFiles.has(relative) || dependencyCode)) && !(dependencyCode && (index === 2 || index === 4)) && rule.test(relative))) violations.push(relative);
+    if (forbidden.some((rule, index) => !(index === 1 && (relative.startsWith("Contents/Resources/python/jobfindsme-api/_internal/") || (relative === "Contents/Resources/third-party/PI_LICENSE.txt" || relative === "Contents/Resources/third-party/PDFJS_LICENSE.txt") || skillFiles.has(relative) || dependencyCode)) && !(dependencyCode && (index === 2 || index === 4)) && rule.test(relative))) violations.push(relative);
     const stat = lstatSync(absolute);
     if (stat.isSymbolicLink()) {
       const target = realpathSync(absolute);
@@ -46,6 +46,7 @@ for (const required of [
   "Contents/Resources/app/dist-electron/main/research/pi-research-agent.mjs",
   "Contents/Resources/app/node_modules/@earendil-works/pi-agent-core/dist/index.js",
   "Contents/Resources/third-party/PI_LICENSE.txt",
+  "Contents/Resources/third-party/PDFJS_LICENSE.txt",
   "Contents/Resources/app/dist-electron/main/browser/source-browser.js",
   "Contents/Resources/app/dist-electron/main/backend/python-service.js",
   "Contents/Resources/app/dist-electron/shared/source-browser-policy.js",

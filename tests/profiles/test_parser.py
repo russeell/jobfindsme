@@ -139,3 +139,35 @@ def test_docx_preserves_soft_line_breaks_and_tabs():
         f.fact_type is FactType.EXPERIENCE and "虚构公司" in f.value for f in facts
     )
     assert "\t" in extracted.text
+
+
+def test_numbered_headings_do_not_swallow_projects_into_skills():
+    text = (
+        "01 专业技能\nPython、SQL\n"
+        "02 项目经历\n虚构工具 2024.03-2025.01\n"
+        "负责接口维护。\n编写回归测试。\n"
+        "03 开源贡献\n参与示例文档修订。\n"
+        "（四）教 育 背 景\n示例大学 本科\n"
+    )
+    facts = DeterministicResumeParser().parse(text)
+    skills = [f.value for f in facts if f.fact_type is FactType.SKILL_DETAIL]
+    assert skills == ["Python、SQL"]
+    projects = [f.value for f in facts if f.fact_type is FactType.PROJECT]
+    assert "负责接口维护。\n编写回归测试。" in projects[0]
+    assert any("示例文档" in value for value in projects)
+    assert any(f.fact_type is FactType.EDUCATION for f in facts)
+    assert all(
+        text[f.evidence_start : f.evidence_end] == f.evidence_snippet for f in facts
+    )
+
+
+def test_numbered_achievements_and_dates_are_not_section_headings():
+    text = "项目经历\n示例项目 2024.01-2025.01\n01 完成接口整理\n02 验证接口返回"
+    projects = [
+        f.value
+        for f in DeterministicResumeParser().parse(text)
+        if f.fact_type is FactType.PROJECT
+    ]
+    assert len(projects) == 1
+    assert "01 完成接口整理" in projects[0]
+    assert "02 验证接口返回" in projects[0]

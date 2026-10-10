@@ -19,5 +19,6 @@ writeFileSync(path.join(app,'package.json'),JSON.stringify({name:'jobfindsme-des
 cpSync(runtime,path.join(resources,'python/jobfindsme-api'),{recursive:true});
 mkdirSync(path.join(resources,'third-party'),{recursive:true});
 cpSync(path.join(root,'../../docs/desktop/PI_LICENSE.txt'),path.join(resources,'third-party/PI_LICENSE.txt'));
+cpSync(path.join(root,'node_modules/pdfjs-dist/LICENSE'),path.join(resources,'third-party/PDFJS_LICENSE.txt'));
 cpSync(path.join(root,'../../LICENSE'),path.join(output,'LICENSE-JobFindsMe.txt'));
 console.log(output);

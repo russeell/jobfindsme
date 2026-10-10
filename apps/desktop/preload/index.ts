@@ -53,6 +53,7 @@ const bridge: DesktopBridge = Object.freeze({
   hideResumeVersion: (workspaceId, versionId) => ipcRenderer.invoke("desktop:hide-resume-version", workspaceId, versionId),
   saveResumeVersion: (input) => ipcRenderer.invoke("desktop:save-resume-version", input),
   restoreResumeVersion: (workspaceId, versionId) => ipcRenderer.invoke("desktop:restore-resume-version", workspaceId, versionId),
+  previewResume: (input) => ipcRenderer.invoke("desktop:preview-resume", input),
   exportResume: (input) => ipcRenderer.invoke("desktop:export-resume", input),
   listPromptSessions:workspaceId=>ipcRenderer.invoke("desktop:list-prompt-sessions",workspaceId),
   createPromptSession: (input) => ipcRenderer.invoke("desktop:create-prompt-session", input),

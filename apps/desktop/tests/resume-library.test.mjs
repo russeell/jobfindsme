@@ -30,3 +30,14 @@ test('greetings substitute only explicit placeholders and isolate workspace pref
  assert.equal(renderGreeting('保留{未知}，{岗位}',{company:'示例',title:'$&'}),'保留{未知}，$&');
  assert.notEqual(greetingKey('a'),greetingKey('b'));
 });
+
+test('moving an entry preserves multiline content, duplicates and original version',async()=>{
+ const {moveResumeEntry}=await import('../dist-electron/shared/resume-library.js');
+ const content={...base,skills:['Python','虚构项目\n维护服务','Python']};
+ const moved=moveResumeEntry(content,'skills',1,'projects');
+ assert.deepEqual(moved.skills,['Python','Python']);
+ assert.equal(moved.projects.at(-1),'虚构项目\n维护服务');
+ assert.equal(content.skills.length,3);
+ assert.equal(moveResumeEntry(content,'skills',5,'projects'),content);
+ assert.equal(moveResumeEntry(content,'skills',1,'skills'),content);
+});

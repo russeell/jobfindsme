@@ -406,7 +406,9 @@ def _write_pdf(
         story.extend([Paragraph(SECTION_TITLES[name], heading), Spacer(1, 0.5 * mm)])
         for value in values:
             prefix = "• " if template == "classic" else ""
-            story.append(Paragraph(prefix + _xml_escape(value), body))
+            story.append(
+                Paragraph(prefix + _xml_escape(value).replace("\n", "<br/>"), body)
+            )
     document.build(story)
 
 

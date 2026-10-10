@@ -29,3 +29,8 @@ export function resumeTemplateSections(template:ResumeTemplate):Array<keyof Resu
  if(template==='classic')return ['basic_information','education','experience','projects','skills'];
  return ['basic_information','experience','projects','skills','education'];
 }
+
+export function moveResumeEntry(content:ResumeContent,from:keyof ResumeContent,index:number,to:keyof ResumeContent):ResumeContent {
+  if(from===to||!(to in resumeSections)||index<0||index>=content[from].length)return content;
+  return {...content,[from]:content[from].filter((_,i)=>i!==index),[to]:[...content[to],content[from][index]]};
+}

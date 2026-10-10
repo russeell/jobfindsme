@@ -70,3 +70,5 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 简历导入 `profiles/parser.py` 保留本机个人信息与完整技能描述，Word换行按原文保留；`profiles/service.py` 将这些写入版本，匹配摘要只使用适合检索的已确认事实。Agent读取仍过滤个人信息并脱敏。`ResumePage.tsx` 的导入核对按章节切换并保留修改；过期提案由 `ResumeProposal.tsx` 提示重新生成。`shared/assistant-quality.ts` 与 Pi 运行器为明确要求但缺失的简历提案提供预算内一次补交机会，最终保存仍需用户显式审阅。
 
 D164：简历主页由外层 `.content` 统一滚动，弹窗正文单独滚动；`resume-library.ts` 与 Python `resume_editor/service.py` 同步社招/校招/紧凑章节顺序，旧classic导出兼容。`application-greeting.ts` 处理工作区招呼语占位替换，投递材料仍由现有服务保存、外部发送仍由用户完成。Agent岗位查询键包含当前所选来源，只有带岗位正文的查询结果才可复用为缓存，持久化游标不视为正文缓存。
+
+简历纸张预览：`renderer/src/resume/ResumeDocument.tsx` 使用 PDF.js legacy 本地 worker 显示连续页面；`main/resume-preview.ts` 共用后端 PDF 导出并清理临时文件，预览与 PDF 同模板同排版。编辑/移动仍通过现有版本 API 保存，不覆盖原稿。

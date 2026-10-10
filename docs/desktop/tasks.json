@@ -2839,6 +2839,26 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D165",
+      "title": "连续纸张预览与导出一致的简历工作台",
+      "depends_on": [
+        "D164"
+      ],
+      "status": "done",
+      "scope": [
+        "以实际PDF显示连续A4页面，共用导出排版和模板",
+        "保留就近编辑与版本保护，修复编号章节识别"
+      ],
+      "acceptance": [
+        "虚构资料长简历分页、模板、编辑保存与PDF核对；保留用户原稿"
+      ],
+      "verification": "47项Python、8项Node、类型构建、Ruff及最终包审计通过；虚构长简历原生验收连续PDF两页、模板、实际导出比对、编辑新版本/换行/关闭保护/移动后放弃。修复渲染兼容与打包旧运行时残留后复验；最终窄屏提示样式未单独原生复验。无模型调用和真实简历修改，详见HANDOFF。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

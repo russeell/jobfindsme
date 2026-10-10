@@ -92,6 +92,7 @@ export type DesktopBridge = {
   hideResumeVersion(workspaceId:string,versionId:string):Promise<void>;
   saveResumeVersion(input: ResumeEditInput): Promise<ResumeVersion>;
   restoreResumeVersion(workspaceId: string, versionId: string): Promise<ResumeVersion>;
+  previewResume(input: Omit<ResumeExportInput, 'format'>): Promise<Uint8Array>;
   exportResume(input: ResumeExportInput): Promise<ResumeExport | undefined>;
   listPromptSessions(workspaceId:string):Promise<PromptSession[]>;
   createPromptSession(input: PromptSessionInput): Promise<PromptSession>;

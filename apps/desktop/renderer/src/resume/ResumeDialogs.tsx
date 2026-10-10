@@ -1,7 +1,6 @@
 import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import type {ResumeVersion,SearchResultItem} from '../../../shared/contracts';
-import {resumeSections,resumeTemplates,resumeTemplateSections,type ResumeTemplate} from '../../../shared/resume-library';
-import {userError} from '../../../shared/user-errors';
+import {ResumeDocument} from "./ResumeDocument";
 
 type Job=SearchResultItem['job'];
 export function ResumeModal({title,children,onClose,busy=false,wide=false}:{title:string;children:ReactNode;onClose():void;busy?:boolean;wide?:boolean}){
@@ -13,21 +12,7 @@ export function ResumeModal({title,children,onClose,busy=false,wide=false}:{titl
 }
 
 export function ResumePreview({workspaceId,version,onClose}:{workspaceId:string;version:ResumeVersion;onClose():void}){
-  const preference=`jfm.resume.template.${workspaceId}`;
-  const [template,setTemplate]=useState<ResumeTemplate>(()=>{try{const saved=localStorage.getItem(preference);return resumeTemplates.some(item=>item.id===saved)?saved as ResumeTemplate:'professional';}catch{return 'professional';}});
-  const previewScroll=useRef<HTMLDivElement>(null);
-  useEffect(()=>{previewScroll.current?.scrollTo({top:0});try{localStorage.setItem(preference,template);}catch{/* Export remains available without local preferences. */}},[template,preference]);
-  const [busy,setBusy]=useState(false),[notice,setNotice]=useState(''),[error,setError]=useState('');
-  async function exportFile(format:'pdf'|'docx'){
-    setBusy(true);setNotice('');setError('');
-    try{const result=await window.jobfindsme!.exportResume({workspace_id:workspaceId,version_id:version.version_id,format,template});if(result)setNotice('已导出到所选位置。');}
-    catch(e){setError(userError(e).message);}finally{setBusy(false);}
-  }
-  return <ResumeModal title={`简历预览 · v${version.version_number}`} onClose={onClose} busy={busy} wide>
-    <div className="resume-preview-tools"><div className="resume-template-picker" aria-label="简历模板">{resumeTemplates.map(item=><button key={item.id} disabled={busy} aria-pressed={template===item.id} onClick={()=>setTemplate(item.id)}><strong>{item.name}</strong><small>{item.description}</small></button>)}</div><div className="resume-export-actions"><span>切换模板只调整排版，保留全部经历。</span><button disabled={busy} onClick={()=>void exportFile('docx')}>Word</button><button className="primary-button" disabled={busy} onClick={()=>void exportFile('pdf')}>导出 PDF</button></div></div>
-    {error&&<p className="notice" role="alert">{error}</p>}{notice&&<p className="resume-feedback" role="status">{notice}</p>}
-    <div ref={previewScroll} className="resume-preview-scroll"><article className={`resume-paper ${template}`} aria-label="简历内容预览">{resumeTemplateSections(template).map(key=>version.content[key as keyof typeof version.content].some(line=>line.trim())&&<section key={key}><h3>{resumeSections[key]}</h3>{version.content[key as keyof typeof version.content].filter(line=>line.trim()).map((line,i)=><p key={i}>{line}</p>)}</section>)}</article></div>
-  </ResumeModal>;
+  return <ResumeModal title={`简历预览 · v${version.version_number}`} onClose={onClose} wide><div className="resume-preview-scroll"><ResumeDocument workspaceId={workspaceId} version={version}/></div></ResumeModal>;
 }
 
 export function ResumeImproveDialog({jobs,onClose,onStart,initialTarget='general'}:{jobs:Job[];initialTarget?:'general'|'job';onClose():void;onStart(job:Job|undefined,instruction:string):void}){

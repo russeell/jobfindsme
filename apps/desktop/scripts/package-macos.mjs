@@ -51,6 +51,10 @@ const resources = path.join(contents, "Resources");
 rmSync(path.join(resources, "default_app.asar"), { force: true });
 cpSync(path.join(desktopRoot, "public/brand.icns"), path.join(resources, "jobfindsme.icns"));
 const appRoot = path.join(resources, "app");
+// Local builds may reuse an Electron shell extracted from a previous bundle.
+// Remove its generated payload before copying so an old runtime cannot survive.
+rmSync(appRoot,{recursive:true,force:true});
+rmSync(path.join(resources,"python"),{recursive:true,force:true});
 mkdirSync(appRoot, { recursive: true });
 cpSync(path.join(desktopRoot, "dist"), path.join(appRoot, "dist"), { recursive: true });
 cpSync(path.join(desktopRoot, "dist-electron"), path.join(appRoot, "dist-electron"), { recursive: true });
@@ -59,6 +63,7 @@ cpSync(path.join(desktopRoot,"skills"),path.join(appRoot,"skills"),{recursive:tr
 copyRuntimeDependencies(desktopRoot,path.join(appRoot,"node_modules"),["@earendil-works/pi-agent-core","@earendil-works/pi-ai","typebox"]);
 mkdirSync(path.join(resources,"third-party"),{recursive:true});
 cpSync(path.join(projectRoot,"docs/desktop/PI_LICENSE.txt"),path.join(resources,"third-party/PI_LICENSE.txt"));
+cpSync(path.join(desktopRoot,"node_modules/pdfjs-dist/LICENSE"),path.join(resources,"third-party/PDFJS_LICENSE.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
   JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildLabel, previewUserData, qa, main: "dist-electron/main/index.js" }),

@@ -164,14 +164,15 @@ SECTION_PATTERNS: tuple[tuple[re.Pattern[str], FactType | None], ...] = (
     ),
     (
         re.compile(
-            r"^(?:技能|专业技能|技能清单|技术栈|职业技能|skills?|technical skills)$",
+            r"^(?:技能|专业技能|核心技能|技能清单|技术栈|职业技能|"
+            r"skills?|technical skills)$",
             re.I,
         ),
         FactType.SKILL_DETAIL,
     ),
     (
         re.compile(
-            r"^(?:项目经历|项目经验|个人项目|独立项目|项目实践|项目介绍|"
+            r"^(?:项目经历|项目经验|个人项目|独立项目|项目实践|项目介绍|开源贡献|开源项目|"
             r"projects?|project experience)$",
             re.I,
         ),
@@ -179,7 +180,7 @@ SECTION_PATTERNS: tuple[tuple[re.Pattern[str], FactType | None], ...] = (
     ),
     (
         re.compile(
-            r"^(?:工作经历|工作经验|实习经历|职业经历|独立实践与工作经历|实习经验|"
+            r"^(?:工作经历|工作经验|实习经历|职业经历|独立实践与工作经历|实习经验|工作与实习经历|"
             r"experience|work experience|professional experience)$",
             re.I,
         ),
@@ -225,7 +226,7 @@ class _Line:
 class DeterministicResumeParser:
     """Extract reviewable facts without treating every PDF line as a project."""
 
-    version = "deterministic-resume-v5"
+    version = "deterministic-resume-v6"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)
@@ -327,6 +328,13 @@ _NOT_A_HEADING = object()
 def _section_heading(value: str) -> FactType | None | object:
     normalized = value.strip().lstrip("#").strip().strip("*_ ").rstrip(":：").strip()
     normalized = re.sub(r"(?<=[\u4e00-\u9fff])\s+(?=[\u4e00-\u9fff])", "", normalized)
+    # Strip numbering only before matching a complete known heading. Ordinary
+    # numbered achievements and date-bearing project titles remain content.
+    normalized = re.sub(
+        r"^(?:(?:\d{1,2}|[一二三四五六七八九十]+)[.、．)）\s]+|[（(](?:\d{1,2}|[一二三四五六七八九十]+)[)）]\s*)",
+        "",
+        normalized,
+    ).strip()
     for pattern, fact_type in SECTION_PATTERNS:
         if pattern.fullmatch(normalized):
             return fact_type
@@ -366,7 +374,7 @@ def _normalize_block(lines: list[_Line]) -> str:
     parts = [
         re.sub(r"^(?:[-*•·+]\s*|\d+[.)、]\s+)", "", line.text).strip() for line in lines
     ]
-    return " ".join(part for part in parts if part)
+    return "\n".join(part for part in parts if part)
 
 
 def _deduplicate(facts: list[ParsedFact]) -> list[ParsedFact]:
