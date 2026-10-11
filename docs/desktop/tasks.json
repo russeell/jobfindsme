@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D183",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -3157,7 +3157,7 @@
     {
       "id": "D183",
       "title": "v0.15.1双平台下载包更新",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D182"
       ],
@@ -3167,7 +3167,8 @@
         "发布附件与校验文件"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.15.1"
       ],
       "blocker": null
     }

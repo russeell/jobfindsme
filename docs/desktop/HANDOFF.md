@@ -1,3 +1,9 @@
+D183 v0.15.1下载包已发布（2026-10-12）：用户授权更新下载包，将D181图钉置顶与D182来源状态/计数修复一并发布，版本升至0.15.1。两端均从50e30aa5b89d65276f7dab6446e4f7253574bbca构建，tag及包内sourceCommit一致；已设为latest，README既有latest链接自动更新。补充实际包的置顶→退出→重启保留→取消后排序验收。
+
+验证：主CI六项通过；macOS与Windows分别通过Python554项、桌面388项、包审计、两次实际启动和四入口验收。两端附件重新下载通过ZIP CRC、版本/源码提交、Python元数据、运行时/应用技能及私有数据检查；SHA256与GitHub上传摘要一致，校验文件随版本发布。仅虚构隔离测试，无真实模型、简历或投递。macOS下载包原样解至`apps/desktop/release/v0.15.1/mac-arm64/JobFindsMe.app`，未替换用户App或数据。包仍未签名/公证，仅macOS Apple Silicon与Windows x64。
+
+[Release](https://github.com/russeell/jobfindsme/releases/tag/v0.15.1) · [macOS](https://github.com/russeell/jobfindsme/actions/runs/38153874431) · [Windows](https://github.com/russeell/jobfindsme/actions/runs/38153874379) · [CI](https://github.com/russeell/jobfindsme/actions/runs/38153874582)。mac-arm64.zip SHA256：20f47bb0a1ff8fbf6633d3f9a1dda46dcc3a9b844338247920f186abb1593905；windows-x64.zip：f57989259502099c589b931d1a0c1689bf3751a0bfb9aca6fb924e992ce81554。
+
 D182 来源检查状态一致（2026-10-11，本地）：修正“平台验证中”误导为正在运行，受阻显示“需要验证”；连接失败、检查超时、需要登录和智联需前台核对分别展示。平台行与选中可检索数量共用同一当前证据，单源检查首次失败也会记录，不再依赖先运行批量检查。结果保留在App状态，切换设置页不丢失；缓存/跳过不会清除先前失败，新实时成功或更新的验证证据可恢复。来源失败在对应行显示，服务错误仍全局可见，刷新失败不覆盖已成功的检查结论。
 
 验证：生产/类型构建及17项来源展示、检查队列、错误映射测试通过，涵盖旧可用记录+本次失败的计数一致、旧受阻状态优先级、单源首检、跳过不误报恢复和新成功恢复。原生隔离Electron无账号/简历/模型配置实测一次猎聘检查成功，显示部分覆盖；智联无前台已登录证据显示“需核对登录”，往返找工作/设置仍保留，未发起登录或绕过验证。截图中原猎聘失败的原始网络原因未复现，不宣称连接器网络故障已修复；Windows未原生复验。测试实例已退出，仅本地提交，v0.15.0下载包未更新。
