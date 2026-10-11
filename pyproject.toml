@@ -23,6 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "certifi>=2024.8.30",
+  "curl_cffi>=0.7,<1",
   "fastapi>=0.116,<0.120",
   "pydantic>=2.10,<3",
   "pypdf>=5,<7",
@@ -36,7 +37,6 @@ dependencies = [
 browser = [
   "requests>=2.32,<3",
   "websocket-client>=1.8,<2",
-  "curl_cffi>=0.7,<1",
 ]
 dev = [
   "httpx>=0.27,<1",

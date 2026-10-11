@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D184",
   "tasks": [
     {
       "id": "D01",
@@ -3169,6 +3169,23 @@
       "evidence": [
         "docs/desktop/HANDOFF.md",
         "https://github.com/russeell/jobfindsme/releases/tag/v0.15.1"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D184",
+      "title": "四平台真实检索登录与正式包网络运行时修复",
+      "status": "in_progress",
+      "depends_on": [
+        "D183"
+      ],
+      "scope": [
+        "真实用户环境猎聘失败与智联登录复现",
+        "必需网络依赖和冻结程序HTTP验收",
+        "四平台登录/检索实测与修复"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
     }

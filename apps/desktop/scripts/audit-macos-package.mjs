@@ -68,3 +68,6 @@ console.log("package audit passed");
 const manifest=JSON.parse(readManifest(path.join(appRoot,'Contents/Resources/app/package.json'),'utf8'));
 if(!/^[a-f0-9]{40}$/.test(manifest.sourceCommit)||manifest.sourceCommit!==execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim())throw Error('Package source commit does not match checkout');
 if(!manifest.jobfindsmePreview&&(!manifest.build.includes('+local.')&&(manifest.build!==`v${manifest.version}`||manifest.releaseTag!==manifest.build||manifest.qa)))throw Error('Invalid release version or QA configuration');
+const runtime=JSON.parse(execFileSync(path.join(appRoot,'Contents/Resources/python/jobfindsme-api/jobfindsme-api'),['--check-runtime'],{encoding:'utf8',timeout:30000}));
+if(runtime.curl_http!=='ok'||runtime.ca_bundle!=='ok')throw Error('Packaged HTTP runtime failed');
+console.log('Frozen HTTP request and CA bundle passed');

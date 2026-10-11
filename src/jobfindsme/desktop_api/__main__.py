@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import sys
 from pathlib import Path
 
 import uvicorn
@@ -18,6 +20,11 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    if sys.argv[1:] == ["--check-runtime"]:
+        from jobfindsme.desktop_api.runtime_check import check_runtime
+
+        print(json.dumps(check_runtime()))
+        return 0
     args = _parser().parse_args()
     if args.host not in {"127.0.0.1", "::1", "localhost"}:
         raise SystemExit("desktop API must bind to a loopback host")
