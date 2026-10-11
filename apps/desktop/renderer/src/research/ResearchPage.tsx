@@ -1,3 +1,4 @@
+import {loadChatPins,toggleChatPin,sortPinnedChats} from "../../../shared/chat-pins";
 import {runArchiveBatch} from "../../../shared/archive-batch";
 import {ArchivePanel} from "./ArchivePanel";
 import {interviewReview} from "../../../shared/job-follow-up";
@@ -34,13 +35,28 @@ export function ResearchPage({onEditResume,preparationRequest,selectedSources,ac
   const [historySort,setHistorySort]=useState<"recent"|"oldest"|"title">(()=>{const saved=localStorage.getItem("jobfindsme:chat-sort");return saved==="oldest"||saved==="title"?saved:"recent";});
   const [historySearchOpen,setHistorySearchOpen]=useState(false);
   const [historyQuery,setHistoryQuery]=useState("");
+  const [pinState,setPinState]=useState<{workspace?:string;ids:string[]}>({ids:[]});
+  const [pinError,setPinError]=useState("");
+  const pinnedIds=pinState.workspace===workspaceId?pinState.ids:[];
+  useEffect(()=>{
+    setPinError("");
+    if(!workspaceId){setPinState({ids:[]});return;}
+    try{setPinState({workspace:workspaceId,ids:loadChatPins(localStorage,workspaceId)});}
+    catch{setPinState({workspace:workspaceId,ids:[]});setPinError("置顶记录暂时无法读取，请重试。");}
+  },[workspaceId]);
+  function togglePin(id:string){
+    if(!workspaceId)return;
+    try{const ids=toggleChatPin(localStorage,workspaceId,id);setPinState({workspace:workspaceId,ids});setPinError("");}
+    catch{setPinError("置顶未保存，请检查本机存储后重试。");}
+  }
+
   useEffect(()=>{
     if(!historyMenu&&!historySearchOpen)return;
     const dismiss=(event:PointerEvent)=>{
       if(event.target instanceof Element&&event.target.closest(".research-history-menu, .research-history-toolbar, .research-history-search"))return;
-      setHistoryMenu(null);setHistorySearchOpen(false);
+      setHistoryMenu(null);setHistorySearchOpen(false);setHistoryQuery("");
     };
-    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"){setHistoryMenu(null);setHistorySearchOpen(false);}};
+    const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"){setHistoryMenu(null);setHistorySearchOpen(false);setHistoryQuery("");}};
     document.addEventListener("pointerdown",dismiss);
     document.addEventListener("keydown",escape);
     return()=>{document.removeEventListener("pointerdown",dismiss);document.removeEventListener("keydown",escape);};
@@ -260,7 +276,7 @@ export function ResearchPage({onEditResume,preparationRequest,selectedSources,ac
   }
   function openOriginal(value:string){const id=Object.keys(sourceBrowserSpecs).find(key=>isSourceBrowserId(key)&&isAllowedSourceUrl(key,value));if(isPublicWebUrl(value))openBrowser({sourceId:id||"web",url:value,title:job?.title||"岗位原页"});else setMessage("该岗位原页链接不是可打开的公共网页。");}
   const historyBusy=!!busy||savePending;
-  const visibleChats=chats.filter(item=>item.title.toLocaleLowerCase().includes(historyQuery.trim().toLocaleLowerCase())).sort((a,b)=>historySort==="title"?a.title.localeCompare(b.title,"zh-CN"):historySort==="oldest"?a.updatedAt.localeCompare(b.updatedAt):b.updatedAt.localeCompare(a.updatedAt));
+  const visibleChats=sortPinnedChats(chats.filter(item=>item.title.toLocaleLowerCase().includes(historyQuery.trim().toLocaleLowerCase())),pinnedIds,historySort);
   const showingReport=mode==="report"&&!!report;
   function submitInput(){
     if(busy||chatBusy||attachmentBusy)return;
@@ -340,8 +356,9 @@ export function ResearchPage({onEditResume,preparationRequest,selectedSources,ac
       <div className="research-history-toolbar"><button className="research-history-sort-trigger" type="button" aria-label="聊天排序方式" aria-expanded={historyMenu==="sort"} onClick={()=>{setHistoryMenu(value=>value==="sort"?null:"sort");setHistorySearchOpen(false);}}>{historySort==="recent"?"最近":historySort==="oldest"?"最早":"名称"}<span aria-hidden="true">⌄</span></button><div><button type="button" aria-label="搜索聊天" title="搜索聊天" aria-expanded={historySearchOpen} onClick={()=>{setHistorySearchOpen(value=>!value);setHistoryQuery("");setHistoryMenu(null);}}><Icon name="discover"/></button></div></div>
       {historySearchOpen&&<input className="research-history-search" type="search" aria-label="搜索聊天名称" value={historyQuery} onChange={event=>setHistoryQuery(event.target.value)} placeholder="搜索聊天"/>}
       {historyMenu&&<div className="research-history-menu research-history-menu-sort" role="group" aria-label="聊天排序方式">{([ ["recent","最近更新"],["oldest","最早更新"],["title","名称"] ] as const).map(([value,label])=><button key={value} type="button" aria-pressed={historySort===value} onClick={()=>{setHistorySort(value);setHistoryMenu(null);}}>{label}{historySort===value&&" ✓"}</button>)}</div>}
+      {pinError&&<p className="research-empty-note" role="status">{pinError}</p>}
       <div className="research-history-body">
-        {visibleChats.length?<div className="research-history-list">{visibleChats.map((item,index)=><div key={item.id}>{historySort!=="title"&&(index===0||historyGroup(visibleChats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row"><button className="research-history-item" title={item.title} aria-current={active&&chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.branchOf&&<span className="research-history-branch-icon"><Icon name="branch"/></span>}{item.title}{requestsRef.current.has(item.id)&&<span className="research-history-running" aria-label="正在运行"> ···</span>}</button><button className="research-history-archive" type="button" title="归档聊天" disabled={historyBusy||requestsRef.current.has(item.id)} aria-label={`归档聊天：${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}><Icon name="archive"/></button></div></div>)}</div>:<p className="research-empty-note">{historyQuery?"没有匹配的聊天。":"还没有对话。"}</p>}
+        {visibleChats.length?<div className="research-history-list">{visibleChats.map((item,index)=><div key={item.id}>{!pinnedIds.includes(item.id)&&historySort!=="title"&&(index===0||pinnedIds.includes(visibleChats[index-1].id)||historyGroup(visibleChats[index-1].updatedAt)!==historyGroup(item.updatedAt))&&<p className="history-day">{historyGroup(item.updatedAt)}</p>}<div className="research-history-row" data-pinned={pinnedIds.includes(item.id)||undefined}><button className="research-history-item" title={item.title} aria-current={active&&chatId===item.id?"true":undefined} onClick={()=>selectHistoryChat(item)}>{item.branchOf&&<span className="research-history-branch-icon"><Icon name="branch"/></span>}{item.title}{requestsRef.current.has(item.id)&&<span className="research-history-running" aria-label="正在运行"> ···</span>}</button><button className="research-history-pin" type="button" title={pinnedIds.includes(item.id)?"取消置顶":"置顶聊天"} aria-label={`${pinnedIds.includes(item.id)?"取消置顶":"置顶聊天"}：${item.title}`} aria-pressed={pinnedIds.includes(item.id)} onClick={()=>togglePin(item.id)}><Icon name="pin"/></button><button className="research-history-archive" type="button" title="归档聊天" disabled={historyBusy||requestsRef.current.has(item.id)} aria-label={`归档聊天：${item.title}`} onClick={()=>void changeChatHistory(item,"archive")}><Icon name="archive"/></button></div></div>)}</div>:<p className="research-empty-note">{historyQuery?"没有匹配的聊天。":"还没有对话。"}</p>}
       </div>
     </aside>,sidebarTarget)}
     {archiveVisible&&archiveTarget&&createPortal(<ArchivePanel key={workspaceId} items={archivedChats} disabled={historyBusy} onChange={changeArchivedChats}/>,archiveTarget)}

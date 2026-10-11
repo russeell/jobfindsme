@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 const shapes: Record<string, ReactNode> = {
+ pin:<><path d="m15 3 6 6-3 1-3 5v3l-9-9h3l5-3 1-3ZM9 15l-6 6"/></>,
  check:<><path d="m5 12 4 4L19 6"/></>,
  chatBranch:<><path d="M4 12h5l10-9M14 3h5v5M12 15l7 6M14 21h5v-5"/></>,
  copy:<><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></>,

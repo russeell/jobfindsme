@@ -3121,6 +3121,22 @@
         "https://github.com/russeell/jobfindsme/releases/tag/v0.15.0"
       ],
       "blocker": null
+    },
+    {
+      "id": "D181",
+      "title": "侧边栏图标置顶聊天",
+      "status": "done",
+      "depends_on": [
+        "D180"
+      ],
+      "scope": [
+        "图钉置顶/取消与稳定排序，不增加文字分组",
+        "按工作区本地持久化及搜索、归档兼容验证"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
