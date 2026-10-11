@@ -3187,7 +3187,7 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "blocker": "智联与 BOSS 当前未登录，需用户在内置浏览器完成登录/验证码后继续实际读取验收；其余修复与打包检查已完成。"
     }
   ]
 }
