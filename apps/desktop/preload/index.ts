@@ -22,6 +22,7 @@ const bridge: DesktopBridge = Object.freeze({
   listApplicationRecords:(workspaceId,jobId,deleted)=>ipcRenderer.invoke("desktop:list-application-records",workspaceId,jobId,deleted),
   setApplicationDeleted:(workspaceId,jobId,recordId,deleted)=>ipcRenderer.invoke("desktop:set-application-deleted",workspaceId,jobId,recordId,deleted),
   saveApplicationRecord:input=>ipcRenderer.invoke("desktop:save-application-record",input),
+  updateNextAction:input=>ipcRenderer.invoke("desktop:update-next-action",input),
   getJobPreparation:(workspaceId,jobId)=>ipcRenderer.invoke("desktop:get-job-preparation",workspaceId,jobId),
   saveJobPreparation:input=>ipcRenderer.invoke("desktop:save-job-preparation",input),
   listJobTracking: (workspaceId) => ipcRenderer.invoke("desktop:list-job-tracking", workspaceId),

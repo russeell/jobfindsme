@@ -62,6 +62,7 @@ export type DesktopBridge = {
   listApplicationRecords(workspaceId:string,jobId?:string,deleted?:boolean):Promise<ApplicationRecord[]>;
   setApplicationDeleted(workspaceId:string,jobId:string,recordId:string,deleted:boolean):Promise<{record_id:string;deleted:boolean}>;
   saveApplicationRecord(input:ApplicationRecordInput):Promise<ApplicationRecord>;
+  updateNextAction(input:NextActionInput):Promise<JobPreparationData>;
   getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>;
   saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>;
   openSourceBrowser(sourceId: string, bounds: SourceBrowserBounds): Promise<void>;
@@ -217,6 +218,7 @@ export type JobTrackingInput = {
   enabled?: boolean;
 };
 export type PreparationStage="considering"|"applied"|"interview"|"offer"|"closed";
+export type NextActionInput={workspace_id:string;job_id:string;expected_updated_at:string;next_action:string;due_date:string|null};
 export type JobPreparationInput={workspace_id:string;job_id:string;stage:PreparationStage;next_action:string;due_date:string|null;note:string};
 export type JobPreparation=JobPreparationInput&{resume_version_id:string|null;updated_at:string|null};
 export type JobPreparationData={job:SearchResultItem["job"];preparation:JobPreparation};

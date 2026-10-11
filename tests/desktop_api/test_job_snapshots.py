@@ -895,3 +895,77 @@ def test_application_record_trash_is_scoped_reversible_and_preserves_tracking(tm
         service.get(workspace.workspace_id, job.job_id)["preparation"]["next_action"]
         == "保持跟进"
     )
+
+
+def test_next_action_completion_undo_is_scoped_atomic_and_preserves_application(
+    tmp_path,
+):
+    from fastapi.testclient import TestClient
+
+    from jobfindsme.desktop_api.app import create_app
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(997)
+    jobs.upsert(workspace.workspace_id, job)
+    service = JobPreparationService(database)
+    initial = service.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage="interview",
+        next_action="复习虚构项目",
+        due_date="2026-10-11",
+        note="保留备注",
+    )["preparation"]
+    flags = tracking.tracking_states(workspace.workspace_id, [job.job_id])
+    client = TestClient(create_app(token="fixture-token", database_path=database.path))
+    headers = {"Authorization": "Bearer fixture-token"}
+    url = f"/v1/jobs/{job.job_id}/next-action"
+    payload = dict(
+        workspace_id=workspace.workspace_id,
+        expected_updated_at=initial["updated_at"],
+        next_action="",
+        due_date=None,
+    )
+    assert client.patch(url, json=payload).status_code == 401
+    assert (
+        client.patch(
+            url, headers=headers, json={**payload, "workspace_id": "other"}
+        ).status_code
+        == 404
+    )
+    response = client.patch(url, headers=headers, json=payload)
+    assert response.status_code == 200
+    completed = response.json()["preparation"]
+    assert completed["next_action"] == "" and completed["due_date"] is None
+    for key in ("stage", "note", "resume_version_id"):
+        assert completed[key] == initial[key]
+    assert tracking.tracking_states(workspace.workspace_id, [job.job_id]) == flags
+    assert client.patch(url, headers=headers, json=payload).status_code == 409
+    undo = {
+        **payload,
+        "expected_updated_at": completed["updated_at"],
+        "next_action": initial["next_action"],
+        "due_date": initial["due_date"],
+    }
+    restored = client.patch(url, headers=headers, json=undo)
+    assert restored.status_code == 200
+    assert restored.json()["preparation"]["next_action"] == initial["next_action"]
+    assert restored.json()["preparation"]["due_date"] == initial["due_date"]
+    # A later user edit wins over stale completion or undo, including its note/stage.
+    fresh = service.save(
+        workspace.workspace_id,
+        job.job_id,
+        stage="offer",
+        next_action="核对薪资",
+        due_date="2026-10-15",
+        note="新备注",
+    )
+    assert client.patch(url, headers=headers, json=undo).status_code == 409
+    assert service.get(workspace.workspace_id, job.job_id) == fresh
+    assert (
+        JobPreparationService(Database(database.path)).get(
+            workspace.workspace_id, job.job_id
+        )
+        == fresh
+    )

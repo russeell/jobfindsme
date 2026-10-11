@@ -1,6 +1,7 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
  const text=error instanceof Error?error.message:String(error||'');
+ if(text.includes('待办已在其他操作中更新'))return {kind:'unknown',message:'待办已更新，已重新读取。请核对最新内容后再操作。',action:'retry'};
  const greeting=text.match(/greeting_polish:(cancelled|timeout|incomplete|credentials)/)?.[1];
  if(greeting){const message={cancelled:'已停止润色，原文已保留。',timeout:'润色等待超时，原文已保留，可以重试。',incomplete:'模型回复不完整，原文已保留；可缩短文字后重试，或更换模型。',credentials:'模型密钥不可用，请到模型设置检查连接。'}[greeting];return {kind:'service',message:message!,action:'retry'};}
  if(/assistant_failure:timeout|研究时间预算已用完/.test(text))return {kind:"service",message:"本轮等待已超时，提问和材料已保留。可重试，或到模型设置测试连接。",action:"retry"};

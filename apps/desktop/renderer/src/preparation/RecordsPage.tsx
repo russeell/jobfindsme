@@ -1,6 +1,6 @@
 import {dueJobs,localDay} from "../../../shared/job-follow-up";
-import {useEffect,useState} from 'react';
-import type {BootstrapData,SearchResultItem,TrackedJob} from '../../../shared/contracts';
+import {useEffect,useRef,useState} from 'react';
+import type {BootstrapData,SearchResultItem,TrackedJob,NextActionInput} from '../../../shared/contracts';
 import {preparationStages} from '../../../shared/job-preparation';
 import {matchesRecordFilter,recordStage,recordsPageSize,selectRecords,type RecordsFilter,type RecordsSort} from '../../../shared/records-view';
 import {isAllowedSourceUrl,sourceBrowserSpecs,type SourceBrowserId} from '../../../shared/source-browser-policy';
@@ -24,13 +24,32 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const openBrowser=useOriginalBrowser();
   const selected=selectRecords(items,filter,query,'',sort);
-  const todos=dueJobs(items);
+  const [today,setToday]=useState(localDay),[showAllTodos,setShowAllTodos]=useState(false);
+  const [actionBusy,setActionBusy]=useState(false),[actionError,setActionError]=useState('');
+  const [undo,setUndo]=useState<NextActionInput>();
+  const actionRun=useRef(false),workspaceRef=useRef(workspaceId);workspaceRef.current=workspaceId;
+  useEffect(()=>{if(!active)return;const refresh=()=>setToday(localDay());refresh();const timer=window.setInterval(refresh,60_000);return()=>window.clearInterval(timer);},[active]);
+  useEffect(()=>{setUndo(undefined);setActionError('');setShowAllTodos(false);},[workspaceId]);
+  const todos=dueJobs(items,today);
+  async function changeAction(input:NextActionInput,previous?:TrackedJob){
+    if(actionRun.current)return;actionRun.current=true;setActionBusy(true);setActionError('');
+    try{
+      const value=await window.jobfindsme!.updateNextAction(input);
+      if(workspaceRef.current!==input.workspace_id)return;
+      setItems(rows=>rows.map(row=>row.job.job_id===input.job_id?{...row,preparation:value.preparation}:row));
+      setUndo(previous?{workspace_id:input.workspace_id,job_id:input.job_id,expected_updated_at:value.preparation.updated_at!,next_action:previous.preparation!.next_action,due_date:previous.preparation!.due_date}:undefined);
+      window.dispatchEvent(new Event('jfm:job-updated'));
+    }catch(reason){if(workspaceRef.current===input.workspace_id){setActionError(userError(reason).message);setReloadNonce(value=>value+1);}}
+    finally{actionRun.current=false;setActionBusy(false);}
+  }
+  function complete(item:TrackedJob){if(!workspaceId||!item.preparation?.updated_at)return;void changeAction({workspace_id:workspaceId,job_id:item.job.job_id,expected_updated_at:item.preparation.updated_at,next_action:'',due_date:null},item);}
+
   const upcoming=selectRecords(items,'following','','','next').find(item=>item.preparation?.next_action);
   useEffect(()=>setLimit(recordsPageSize),[filter,query,sort]);
   useEffect(()=>{setItems([]);setLoaded(false);setQuery('');setFilter('saved');},[workspaceId]);
   useEffect(()=>{
-    if(!workspaceId||!active)return;let cancelled=false;
-    const load=()=>{setLoadError('');void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(!cancelled){setItems(rows);setLoaded(true);}}).catch(error=>{if(!cancelled)setLoadError(userError(error).message);});};
+    if(!workspaceId||!active)return;let cancelled=false,sequence=0;
+    const load=()=>{const request=++sequence;setLoadError('');void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(!cancelled&&request===sequence){setItems(rows);setLoaded(true);}}).catch(error=>{if(!cancelled&&request===sequence)setLoadError(userError(error).message);});};
     load();window.addEventListener('jfm:job-updated',load);
     return()=>{cancelled=true;window.removeEventListener('jfm:job-updated',load);};
   },[workspaceId,active,reloadNonce]);
@@ -46,7 +65,9 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
   function clearFilters(){setQuery('');}
   return <section className="records-page">
     <div className="records-heading"><div><span className="preparation-eyebrow">机会与进度</span><h1>我的岗位</h1><p>收藏值得继续的机会，把下一步留在这里。</p></div><button type="button" className="records-find" onClick={onDiscover}>找更多岗位 <span aria-hidden="true">↗</span></button></div>
-    {todos.length>0&&<section className="records-today"><div className="heading-row"><h2>今日待办 <small>{todos.length}</small></h2><span className="note">含未完成的到期事项</span></div>{todos.slice(0,3).map(item=><button type="button" className="records-todo" key={item.job.job_id} onClick={()=>onPrepare(item.job)}><span><strong>{item.preparation!.next_action}</strong><small>{item.job.company} · {item.job.title}</small></span><span>{item.preparation!.due_date!<localDay()?'已逾期':'今天'} →</span></button>)}{todos.length>3&&<p className="note">另有 {todos.length-3} 项，可按下一步日期查看全部岗位。</p>}</section>}
+    {undo&&<div className="records-completed" role="status"><span>已完成：{undo.next_action}</span><button disabled={actionBusy} onClick={()=>void changeAction(undo)}>撤销完成</button></div>}
+    {actionError&&<p className="records-load-error" role="alert">{actionError}</p>}
+    {todos.length>0&&<section className="records-today"><div className="heading-row"><h2>今日待办 <small>{todos.length}</small></h2><span className="note">按你设置的下一步与日期</span></div>{todos.slice(0,showAllTodos?undefined:3).map(item=><div className="records-todo-row" key={item.job.job_id}><button type="button" className="records-todo" onClick={()=>onPrepare(item.job)}><span><strong>{item.preparation!.next_action}</strong><small>{item.job.company} · {item.job.title}</small></span><span>{item.preparation!.due_date!<today?'已逾期':'今天'} →</span></button><button className="records-todo-complete" disabled={actionBusy} aria-label={`完成待办：${item.preparation!.next_action}`} onClick={()=>complete(item)}>完成</button></div>)}{todos.length>3&&<button className="records-todo-more" onClick={()=>setShowAllTodos(value=>!value)}>{showAllTodos?'收起':`查看全部 ${todos.length} 项`}</button>}</section>}
     {!todos.length&&upcoming&&<section className="records-next"><div><span className="preparation-eyebrow">接下来{upcoming.preparation?.due_date&&` · ${upcoming.preparation.due_date}`}</span><strong>{upcoming.preparation!.next_action}</strong><p>{upcoming.job.company} · {upcoming.job.title}</p></div><button type="button" onClick={()=>onPrepare(upcoming.job)}>继续准备 →</button></section>}
     <div className="records-controls">
       <nav className="records-tabs" aria-label="岗位记录分类">{tabs.map(([key,label])=><button type="button" key={key} aria-current={filter===key?'page':undefined} className={filter===key?'active':''} onClick={()=>setFilter(key)}>{label}<small>{items.filter(item=>matchesRecordFilter(item,key)).length}</small></button>)}</nav>

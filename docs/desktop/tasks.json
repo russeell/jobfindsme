@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D170",
   "tasks": [
     {
       "id": "D01",
@@ -2932,6 +2932,22 @@
       ],
       "blocker": null,
       "verification": "95 项 Node、类型构建、diff 与最终包审计通过。隔离原生 App 使用虚构简历/本机模拟模型验收基础与岗位专属生成、页内审阅保存、停止/切页取消、失败重试、入口路由、旧提案及草稿保护；会话数不增加。真实模型质量与 Windows 未验收。详见 HANDOFF。"
+    },
+    {
+      "id": "D170",
+      "title": "优先岗位判断依据与可完成的求职待办",
+      "status": "done",
+      "depends_on": [
+        "D169"
+      ],
+      "scope": [
+        "前置真实线索和证据缺口",
+        "待办完成撤销且不改变投递及简历状态"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

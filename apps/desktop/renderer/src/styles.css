@@ -605,3 +605,7 @@ nav button.active{background:var(--surface-selected);color:var(--text);box-shado
 @keyframes resume-ai-pulse{50%{opacity:.3}}
 @media(prefers-reduced-motion:reduce){.resume-ai-pulse{animation:none}}
 @media(max-width:700px){.resume-ai-workspace>header{align-items:flex-start;flex-direction:column}}
+
+.job-decision{margin:16px 0;padding:16px 18px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:12px}
+.job-decision h4{margin:0 0 12px;font-size:13px}.job-decision small{font-size:11px;color:#687589}.job-decision p{font-size:12px;line-height:1.65;margin:6px 0;color:#344255}.job-decision-signals{margin-bottom:12px}.job-decision-gaps small{color:#866444}.job-decision details{margin-top:10px;font-size:11px;color:#687589}.job-decision details summary{cursor:pointer}
+.records-todo-row{display:flex;align-items:center;gap:12px;border-top:1px solid #e8edf3}.records-todo-row .records-todo{flex:1;min-width:0;border:0!important;margin:0}.records-todo-complete{flex:none;margin-right:12px;font-size:12px}.records-todo-more{font-size:12px;margin-top:10px}.records-completed{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;margin:16px 0;border:1px solid #dce9df;border-radius:10px;background:#f6faf7;color:#3a6045;font-size:13px}.records-completed button{white-space:nowrap}

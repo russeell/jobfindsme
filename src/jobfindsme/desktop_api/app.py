@@ -280,6 +280,13 @@ class JobPreparationRequest(StrictResponse):
     note: str = Field(default="", max_length=2000)
 
 
+class NextActionRequest(StrictResponse):
+    workspace_id: str
+    expected_updated_at: str = Field(min_length=1, max_length=80)
+    next_action: str = Field(max_length=200)
+    due_date: str | None = None
+
+
 class ApplicationRecordRequest(StrictResponse):
     workspace_id: str
     job_id: str
@@ -1337,6 +1344,20 @@ def create_app(
             raise HTTPException(status_code=404, detail="job not found") from error
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
+
+    @app.patch("/v1/jobs/{job_id}/next-action", dependencies=[Depends(require_token)])
+    def update_next_action(job_id: str, request: NextActionRequest) -> dict:
+        try:
+            return JobPreparationService(core.database).update_next_action(
+                job_id=job_id,
+                **request.model_dump(),
+            )
+        except LookupError as error:
+            raise HTTPException(
+                status_code=404, detail="preparation not found"
+            ) from error
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
 
     @app.get("/v1/application-records", dependencies=[Depends(require_token)])
     def list_application_records(

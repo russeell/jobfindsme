@@ -1,4 +1,4 @@
-import type {ApplicationRecord,ApplicationRecordInput,JobPreparationData,JobPreparationInput,MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
+import type {NextActionInput,ApplicationRecord,ApplicationRecordInput,JobPreparationData,JobPreparationInput,MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
 import type {
   AnalysisPreview,
   AnalysisPreviewInput,
@@ -132,6 +132,7 @@ export class DesktopApiClient {
   listApplicationRecords(workspaceId:string,jobId?:string,deleted=false):Promise<ApplicationRecord[]>{return this.json(`/v1/application-records?${new URLSearchParams({workspace_id:workspaceId,...(jobId?{job_id:jobId}:{}),deleted:String(deleted)})}`);}
   setApplicationDeleted(workspaceId:string,jobId:string,recordId:string,deleted:boolean):Promise<{record_id:string;deleted:boolean}>{return this.json(`/v1/application-records/${encodeURIComponent(recordId)}?${new URLSearchParams({workspace_id:workspaceId,job_id:jobId,deleted:String(deleted)})}`,{method:"PATCH"});}
   saveApplicationRecord(input:ApplicationRecordInput):Promise<ApplicationRecord>{return this.json('/v1/application-records',{method:'POST',body:JSON.stringify(input)});}
+  updateNextAction(input:NextActionInput):Promise<JobPreparationData>{const {job_id,...body}=input;return this.json(`/v1/jobs/${encodeURIComponent(job_id)}/next-action`,{method:"PATCH",body:JSON.stringify(body)});}
   getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>{return this.json(`/v1/jobs/${encodeURIComponent(jobId)}/preparation?${new URLSearchParams({workspace_id:workspaceId})}`);}
   saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>{const {job_id,workspace_id,stage,next_action,due_date,note}=input;return this.json(`/v1/jobs/${encodeURIComponent(job_id)}/preparation`,{method:"PUT",body:JSON.stringify({workspace_id,stage,next_action,due_date,note})});}
 

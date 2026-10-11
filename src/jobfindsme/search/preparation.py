@@ -104,6 +104,48 @@ class JobPreparationService:
                 )
         return self.get(workspace_id, job_id)
 
+    def update_next_action(
+        self,
+        workspace_id: str,
+        job_id: str,
+        *,
+        expected_updated_at: str,
+        next_action: str,
+        due_date: str | None = None,
+    ) -> dict:
+        """Complete/undo a reminder without changing application or resume state."""
+        job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
+        if len(next_action) > 200:
+            raise ValueError("next action is too long")
+        if due_date:
+            date.fromisoformat(due_date)
+        with self.database.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                "SELECT * FROM job_preparations WHERE workspace_id=? AND job_id=?",
+                (workspace_id, job_id),
+            ).fetchone()
+            if not row:
+                raise LookupError("preparation not found")
+            if row["updated_at"] != expected_updated_at:
+                raise ValueError("待办已在其他操作中更新，请重新读取后再操作。")
+            db.execute(
+                "UPDATE job_preparations SET next_action=?,due_date=?,updated_at=? "
+                "WHERE workspace_id=? AND job_id=?",
+                (
+                    next_action.strip(),
+                    due_date if next_action.strip() else None,
+                    datetime.now(UTC).isoformat(),
+                    workspace_id,
+                    job_id,
+                ),
+            )
+            saved = db.execute(
+                "SELECT * FROM job_preparations WHERE workspace_id=? AND job_id=?",
+                (workspace_id, job_id),
+            ).fetchone()
+        return {"job": job.model_dump(mode="json"), "preparation": dict(saved)}
+
     def list_applications(
         self, workspace_id: str, job_id: str | None = None, *, deleted: bool = False
     ) -> list[dict]:

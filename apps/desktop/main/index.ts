@@ -314,6 +314,10 @@ ipcMain.handle("desktop:save-application-record", (event,input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.saveApplicationRecord(input);
 });
+ipcMain.handle("desktop:update-next-action", (event,input) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
+  return apiClient.updateNextAction(input);
+});
 ipcMain.handle("desktop:get-job-preparation", (event, workspaceId:string, jobId:string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.getJobPreparation(workspaceId,jobId);
