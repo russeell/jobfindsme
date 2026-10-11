@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D180",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -3107,7 +3107,7 @@
     {
       "id": "D180",
       "title": "v0.15.0 macOS与Windows验证发行",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D179"
       ],
@@ -3117,7 +3117,8 @@
         "校验文件、Release与下载说明更新"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.15.0"
       ],
       "blocker": null
     }

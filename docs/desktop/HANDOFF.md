@@ -1,4 +1,8 @@
-D180 v0.15.0发行准备（2026-10-11，进行中）：用户明确授权macOS/Windows新版安装包与GitHub Release。统一Python/Electron版本为0.15.0，包内新增sourceCommit并在审计/Windows附件流程核对。Windows历史打包失败定位为预览测试硬断言POSIX权限，改为Windows沿用用户目录ACL、其他平台继续校验0700；清理与原文断言不变。Windows启动测试补充四个导航入口与重启工作区一致性。构建、最终包验收及发布结果待完成，不把既有源码CI等同安装包通过。
+D180 v0.15.0已发布（2026-10-11）：用户授权后完成macOS Apple Silicon与Windows x64安装包更新，Release已设为latest。两包均来自源码6473cae297ca909801d40001ab5b99d764c62c35，包内sourceCommit、版本和Python元数据均验证一致；之后只更新附件上传流程和发行记录，产品源码未变。中英文README移除旧包落后说明，下载链接自动指向新版。Windows预览测试按平台验证权限，保留清理与原件断言；补齐macOS自动打包，共用两次启动/四入口/工作区保留验收，正式包不再复用旧Electron外壳。
+
+验证：两端打包分别通过Python554项、桌面382项、包审计及两次实际启动；主CI六项通过。macOS原生computer use连接恢复后，在隔离虚构资料下验证Word导入、编辑副本、中文分页预览、四入口；无模型配置猎聘公开查询Python返回42条、完整JD读取1.8秒。未把单次实测当普遍速度/精度；不重验所有平台或真实模型。最终macOS下载包解出后，后端再次实际导入/原件字节保留、三种模板PDF/Word导出、重启保留及44项迁移通过。两份Release附件本地重新下载，ZIP CRC、版本/源码、运行时/许可证与私有文件检查通过，SHA256与云端上传摘要一致。无付费调用、真实简历写入或外部投递。
+
+[Release](https://github.com/russeell/jobfindsme/releases/tag/v0.15.0) · [macOS构建](https://github.com/russeell/jobfindsme/actions/runs/38150449407) · [Windows构建](https://github.com/russeell/jobfindsme/actions/runs/38150449380) · [CI](https://github.com/russeell/jobfindsme/actions/runs/38150449521)。两包未签名，macOS未公证；不提供macOS Intel/Windows ARM，登录/验证及真实模型质量仍有原有限制。最新本地App为下载包原样解出的`apps/desktop/release/v0.15.0/mac-arm64/JobFindsMe.app`；旧用户App及数据未替换。临时QA App退出后清理，测试资料只留本机。
 
 D179 README与源码集成检查（2026-10-11）：用户授权更新GitHub。中英文README围绕四平台检索、内嵌浏览器、简历/面试/研究材料复用和辅助投递组织，更新“我的简历”页内审阅截图，明确原件保留、模板导出与平台确认发送。截图来自D178隔离App、虚构资料和已有本机模拟提案，不代表真实模型效果；未调用外部模型、未上传用户简历或会话数据。保留早期公开岗位与技能演示图并标注版本差异。下载仍指向v0.14.0，本轮不发行新安装包。
 
