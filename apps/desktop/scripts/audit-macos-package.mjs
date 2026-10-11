@@ -1,3 +1,5 @@
+import {execFileSync} from 'node:child_process';
+import {readFileSync as readManifest} from 'node:fs';
 import { existsSync, lstatSync, readdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,3 +64,7 @@ for (const stale of ["source-browser", "source-browser-policy", "api-client", "p
   }
 }
 console.log("package audit passed");
+
+const manifest=JSON.parse(readManifest(path.join(appRoot,'Contents/Resources/app/package.json'),'utf8'));
+if(!/^[a-f0-9]{40}$/.test(manifest.sourceCommit)||manifest.sourceCommit!==execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim())throw Error('Package source commit does not match checkout');
+if(!manifest.jobfindsmePreview&&(!manifest.build.includes('+local.')&&(manifest.build!==`v${manifest.version}`||manifest.releaseTag!==manifest.build||manifest.qa)))throw Error('Invalid release version or QA configuration');

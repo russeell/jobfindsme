@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import {writeEditorLicenses} from "./editor-licenses.mjs";
 import {cpSync,existsSync,mkdirSync,readFileSync,renameSync,rmSync,writeFileSync} from 'node:fs';
 import path from 'node:path';
@@ -5,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {copyRuntimeDependencies} from './runtime-dependencies.mjs';
 if(process.platform!=='win32')throw Error('Build Windows packages on Windows');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 const output=path.join(root,'release/windows/JobFindsMe');
 const runtime=path.join(root,'runtime/python/jobfindsme-api');
 if(!existsSync(path.join(runtime,'jobfindsme-api.exe')))throw Error('Build the Windows Python runtime first');
@@ -16,7 +18,7 @@ rmSync(path.join(resources,'default_app.asar'),{force:true});mkdirSync(app,{recu
 for(const dir of ['dist','dist-electron','skills'])cpSync(path.join(root,dir),path.join(app,dir),{recursive:true});
 copyRuntimeDependencies(root,path.join(app,'node_modules'),['@earendil-works/pi-agent-core','@earendil-works/pi-ai','typebox']);
 const {version}=JSON.parse(readFileSync(path.join(root,'package.json'),'utf8'));
-writeFileSync(path.join(app,'package.json'),JSON.stringify({name:'jobfindsme-desktop',version,build:`v${version}`,releaseTag:`v${version}`,main:'dist-electron/main/index.js'}));
+writeFileSync(path.join(app,'package.json'),JSON.stringify({name:'jobfindsme-desktop',version,sourceCommit,build:`v${version}`,releaseTag:`v${version}`,main:'dist-electron/main/index.js'}));
 cpSync(runtime,path.join(resources,'python/jobfindsme-api'),{recursive:true});
 mkdirSync(path.join(resources,'third-party'),{recursive:true});
 cpSync(path.join(root,'../../docs/desktop/PI_LICENSE.txt'),path.join(resources,'third-party/PI_LICENSE.txt'));

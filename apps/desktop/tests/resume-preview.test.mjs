@@ -8,7 +8,8 @@ test('preview uses the export pipeline and removes its private file',async()=>{
  let destination;
  const bytes=await createResumePreview(input,async(value,file)=>{
   destination=file;assert.deepEqual(value,{...input,format:'pdf'});
-  assert.equal((await stat(path.dirname(file))).mode&0o777,0o700);
+  // Windows uses the user-profile ACL; POSIX permission bits are not available.
+  if(process.platform!=='win32')assert.equal((await stat(path.dirname(file))).mode&0o777,0o700);
   await writeFile(file,'%PDF-1.4\nsynthetic');
  });
  assert.equal(Buffer.from(bytes).toString(),'%PDF-1.4\nsynthetic');

@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D180",
   "tasks": [
     {
       "id": "D01",
@@ -3098,6 +3098,23 @@
       "scope": [
         "中英文README同步当前能力、截图及发布包差异",
         "整体验证并修复旧迁移断言和格式问题"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D180",
+      "title": "v0.15.0 macOS与Windows验证发行",
+      "status": "in_progress",
+      "depends_on": [
+        "D179"
+      ],
+      "scope": [
+        "版本一致性与源码提交溯源",
+        "macOS/Windows正式包构建审计和启动验收",
+        "校验文件、Release与下载说明更新"
       ],
       "evidence": [
         "docs/desktop/HANDOFF.md"

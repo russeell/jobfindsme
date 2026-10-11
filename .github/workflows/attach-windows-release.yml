@@ -49,6 +49,7 @@ jobs:
                       assert name == 'JobFindsMe/resources/python/jobfindsme-api/_internal/docx/templates/default.docx', name
               info = json.loads(archive.read('JobFindsMe/resources/app/package.json'))
               assert info['version'] == tag[1:] and info['build'] == tag and info['releaseTag'] == tag
+              assert info['sourceCommit'] == build['head_sha'], 'Embedded source commit differs'
               assert not info.get('qa') and not info.get('jobfindsmePreview')
           digest = hashlib.file_digest(package.open('rb'), 'sha256').hexdigest()
           existing = next((item for item in release['assets'] if item['name'] == 'windows-x64.zip'), None)
