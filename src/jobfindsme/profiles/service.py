@@ -345,11 +345,12 @@ class ResumeProfileService:
             FactType.PROJECT: "projects",
             FactType.SKILL: "skills",
         }
-        details = [value for kind, value in facts if kind is FactType.SKILL_DETAIL]
+        has_authored_content = any(kind is not FactType.SKILL for kind, _ in facts)
         for fact_type, value in facts:
-            if fact_type is FactType.SKILL and any(
-                value.casefold() in detail.casefold() for detail in details
-            ):
+            # Matching tags are an index, not authored resume text. Preserve
+            # legacy tag-only confirmations, but never append generated labels
+            # to a document that already has its original content.
+            if fact_type is FactType.SKILL and has_authored_content:
                 continue
             content[section_by_type[fact_type]].append(value)
 

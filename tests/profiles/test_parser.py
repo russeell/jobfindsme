@@ -171,3 +171,48 @@ def test_numbered_achievements_and_dates_are_not_section_headings():
     assert len(projects) == 1
     assert "01 完成接口整理" in projects[0]
     assert "02 验证接口返回" in projects[0]
+
+
+def test_nested_technology_and_description_do_not_steal_project_body():
+    text = (
+        "项目经历\n虚构检索项目 2024.01-2024.12\n"
+        "项目介绍：供内部使用的检索工具。\n技术栈：Python、Redis\n"
+        "负责索引更新。\n在2024.03-2024.06期间补充测试。\n"
+        "虚构助手项目 2025.01-至今\n技术栈：TypeScript\n负责交互设计。\n"
+        "工作经历\n虚构公司 2023.01-2025.01\n技术栈：SQL\n负责报表。\n"
+        "专业技能\n熟悉 Python。\n能够独立维护服务。\n"
+    )
+    facts = DeterministicResumeParser().parse(text)
+    projects = [f for f in facts if f.fact_type is FactType.PROJECT]
+    assert len(projects) == 2
+    assert "技术栈：Python、Redis" in projects[0].value
+    assert "项目介绍：供内部使用" in projects[0].value
+    assert "补充测试" in projects[0].value
+    assert "负责交互设计" in projects[1].value
+    assert [f.value for f in facts if f.fact_type is FactType.SKILL_DETAIL] == [
+        "熟悉 Python。\n能够独立维护服务。"
+    ]
+    assert any(
+        "负责报表" in f.value for f in facts if f.fact_type is FactType.EXPERIENCE
+    )
+    assert all(
+        text[f.evidence_start : f.evidence_end] == f.evidence_snippet for f in facts
+    )
+
+
+def test_unindexed_sections_and_repeated_authored_lines_are_not_discarded():
+    text = (
+        "自我评价\n重视协作。\n证书：示例证书\n专业技能\nPython\n"
+        "项目经历\n示例项目\n负责测试\n工作经历\n负责测试\n"
+    )
+    parser = DeterministicResumeParser()
+    facts = parser.parse(text, include_basic_information=True)
+    basics = [f.value for f in facts if f.fact_type is FactType.BASIC_INFORMATION]
+    assert basics == ["自我评价", "重视协作。", "证书：示例证书"]
+    assert all(
+        f.fact_type is not FactType.BASIC_INFORMATION for f in parser.parse(text)
+    )
+    repeated = parser.parse(
+        "基本信息\n同一行\n同一行\n", include_basic_information=True
+    )
+    assert len(repeated) == 2

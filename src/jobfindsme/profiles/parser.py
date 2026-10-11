@@ -226,7 +226,7 @@ class _Line:
 class DeterministicResumeParser:
     """Extract reviewable facts without treating every PDF line as a project."""
 
-    version = "deterministic-resume-v6"
+    version = "deterministic-resume-v7"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)
@@ -273,7 +273,7 @@ class DeterministicResumeParser:
                 return
             blocks = (
                 [[line] for line in current]
-                if current_type in (FactType.BASIC_INFORMATION, FactType.SKILL_DETAIL)
+                if current_type is FactType.BASIC_INFORMATION
                 else _split_entries(current)
             )
             for block in blocks:
@@ -302,10 +302,18 @@ class DeterministicResumeParser:
             inline = re.match(r"^([^：:]{2,24})[：:]\s*(\S.*)$", line.text)
             if inline:
                 inline_type = _section_heading(inline.group(1))
-                if inline_type is not _NOT_A_HEADING:
+                # A technology list or project description inside an entry is
+                # content, not a new top-level resume section.
+                nested_label = current_type in (
+                    FactType.PROJECT,
+                    FactType.EXPERIENCE,
+                ) and inline.group(1).strip() in ("技术栈", "项目介绍")
+                if inline_type is not _NOT_A_HEADING and not nested_label:
                     flush()
-                    current_type = inline_type
-                    if inline_type is not None:
+                    current_type = inline_type or FactType.BASIC_INFORMATION
+                    if inline_type is None:
+                        current.append(line)
+                    else:
                         value = inline.group(2)
                         current.append(
                             _Line(value, line.start + inline.start(2), line.end)
@@ -314,7 +322,11 @@ class DeterministicResumeParser:
             heading = _section_heading(line.text)
             if heading is not _NOT_A_HEADING:
                 flush()
-                current_type = heading
+                current_type = heading or FactType.BASIC_INFORMATION
+                if heading is None:
+                    # Keep unindexed sections (awards, summary, objectives)
+                    # locally, including their label, instead of dropping them.
+                    current.append(line)
                 continue
             if current_type is not None and line.text.strip():
                 current.append(line)
@@ -360,7 +372,9 @@ def _split_entries(lines: list[_Line]) -> list[list[_Line]]:
     entries: list[list[_Line]] = []
     current: list[_Line] = []
     for line in lines:
-        starts_entry = bool(DATE_RANGE.search(line.text))
+        starts_entry = bool(DATE_RANGE.search(line.text)) and not re.match(
+            r"^(?:[-*•·+▪▎▌]|负责|参与|完成|期间|从|在|于)", line.text
+        )
         if starts_entry and current:
             entries.append(current)
             current = []
@@ -382,7 +396,7 @@ def _deduplicate(facts: list[ParsedFact]) -> list[ParsedFact]:
     result = []
     for fact in facts:
         key = (fact.fact_type, fact.value.casefold())
-        if key not in seen:
+        if fact.fact_type is not FactType.SKILL or key not in seen:
             seen.add(key)
             result.append(fact)
     return result

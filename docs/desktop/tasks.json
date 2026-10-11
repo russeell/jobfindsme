@@ -3002,6 +3002,23 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D174",
+      "title": "保留简历正文结构与连续导入核对",
+      "status": "done",
+      "depends_on": [
+        "D173"
+      ],
+      "scope": [
+        "修复项目内技术栈被误判为章节",
+        "保留完整正文并分离匹配标签",
+        "连续文稿核对与隔离原生验收"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

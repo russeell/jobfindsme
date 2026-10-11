@@ -67,7 +67,7 @@ Microsoft YaHei, SimSun or Microsoft JhengHei fonts. Windows ARM is not packaged
 
 `shared/discovery-filters.ts` 的 `simpleDiscoveryFilters` 仅用于精简搜索界面的条件、预检返回与续查，清除隐藏的退休条件并保留全职/兼职；界面类型筛选要求来源类型已知，历史快照与其他调用方沿用原契约。搜索界面保留城市、薪资、经验（含在校生/应届生）、工作类型、平台和直接未读开关。身份依据原文或来源实习/校招标记，由Python本地过滤，不调用模型。
 
-简历导入 `profiles/parser.py` 保留本机个人信息与完整技能描述，Word换行按原文保留；`profiles/service.py` 将这些写入版本，匹配摘要只使用适合检索的已确认事实。Agent读取仍过滤个人信息并脱敏。`ResumePage.tsx` 的导入核对按章节切换并保留修改；过期提案由 `ResumeProposal.tsx` 提示重新生成。`shared/assistant-quality.ts` 与 Pi 运行器为明确要求但缺失的简历提案提供预算内一次补交机会，最终保存仍需用户显式审阅。
+简历导入 `profiles/parser.py` 保留本机个人信息与完整技能描述，Word换行按原文保留；`profiles/service.py` 将这些写入版本，匹配摘要只使用适合检索的已确认事实。Agent读取仍过滤个人信息并脱敏。`ResumeImportReview.tsx` 按原稿顺序连续核对，段落自动伸展，匹配标签默认折叠且不追加到正文；过期提案由 `ResumeProposal.tsx` 提示重新生成。`shared/assistant-quality.ts` 与 Pi 运行器为明确要求但缺失的简历提案提供预算内一次补交机会，最终保存仍需用户显式审阅。
 
 D164：简历主页由外层 `.content` 统一滚动，弹窗正文单独滚动；`resume-library.ts` 与 Python `resume_editor/service.py` 同步社招/校招/紧凑章节顺序，旧classic导出兼容。`application-greeting.ts` 处理工作区招呼语占位替换，投递材料仍由现有服务保存、外部发送仍由用户完成。Agent岗位查询键包含当前所选来源，只有带岗位正文的查询结果才可复用为缓存，持久化游标不视为正文缓存。
 
@@ -98,3 +98,7 @@ D172：`main/shared-flight.ts` 将同条件的只读请求合并为一次执行�
 借鉴 Douyin_TikTok_Download_API v5 提交 `4f0bed8483c35a980315d9c7b3a1d4a1119ad2b2` 的错误分类、连接复用和请求合并思路，独立实现；未复制源码、未新增Redis/PostgreSQL/身份池。
 
 工作台的页面滚动位置由 `App.tsx` 按工作区/页面保留在内存中；侧栏导航保留当前聊天，新建聊天单独触发。搜索页只跳转简历库，避免重复维护界面。`ResumeWordEditor` 统一模板和 PDF/Word 导出工具，`ResumeDocument` 的 managedToolbar 模式只显示页数/缩放与实际分页。
+
+D174 简历导入：确定性解析器 v7 将项目/经历内行内“技术栈”“项目介绍”保留为正文，技能描述保留连续段落，正文不按相同文本去重；原先跳过的意向/评价/证书等保留为本机基本信息与补充内容。标签仍可单独核对并用于匹配，不自动添加为简历正文；仅标签的旧接口确认兼容。旧草稿与已保存版本不自动重写，重新导入时使用新解析版本。编辑/导出沿用已有五章节结构和模板，仍不还原任意 PDF 原版式。
+
+参考 [OpenResume 的章节识别](https://github.com/xitanggg/open-resume/blob/4f8255a2c763479837f69f1dccf2a3338730cd79/src/app/lib/parse-resume-from-pdf/group-lines-into-sections.ts)和经历分组思路；该仓库为 AGPL-3.0，本轮仅阅读设计并独立实现，没有复制代码或引入依赖。

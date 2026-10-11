@@ -1,3 +1,4 @@
+import {ResumeImportReview} from "./ResumeImportReview";
 import {ResumeEditorBoundary} from "./ResumeEditorBoundary";
 import {lazy,Suspense} from "react";
 const ResumeWordEditor=lazy(()=>import("./ResumeWordEditor").then(module=>({default:module.ResumeWordEditor})));
@@ -10,7 +11,7 @@ import {Icon} from "../shared/Icon";
 import {resumeContentChanged,resumeSections,resumeReviewCounts,moveResumeEntry,resumeImprovementDraft} from "../../../shared/resume-library";
 import {ResumeImproveDialog,ResumeModal,ResumePreview} from "./ResumeDialogs";
 
-const factLabels:Record<string,string>={basic_information:"基本信息（仅本机保存）",skill_detail:"技能描述",skill:"识别到的技能",project:"项目经历",experience:"工作经历",education:"教育经历"};
+
 
 export type ResumeOpenRequest={nonce:number;job?:SearchResultItem["job"];sessionId?:string;instruction?:string};
 export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openRequest}:{onChanged?:(state:ResumeState)=>void;embedded?:boolean;active?:boolean;onPrepare?:(job:SearchResultItem["job"])=>void;openRequest?:ResumeOpenRequest}={}){
@@ -23,7 +24,6 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openR
   const [jobs,setJobs]=useState<TrackedJob[]>([]);
   const [preview,setPreview]=useState<ResumeVersion>();
   const [editing,setEditing]=useState<{base:string;content:ResumeContent}>();
-  const [reviewSection,setReviewSection]=useState('');
   const [discardEdit,setDiscardEdit]=useState(false);
   const [restore,setRestore]=useState<ResumeVersion>();
   const [tab,setTab]=useState<"base"|"tailored">("base");
@@ -75,8 +75,6 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openR
   const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[error,setError]=useState(""),[confirmClear,setConfirmClear]=useState(false);
   const draft:ResumeDraft|null|undefined=state?.active_draft;
   const reviewedDraft=useRef<string|null>(null);
-  const factGroups=['basic_information','experience','project','education','skill_detail','skill'].filter(type=>draft?.facts.some(fact=>fact.fact_type===type));
-  const activeReviewSection=factGroups.includes(reviewSection)?reviewSection:factGroups[0];
   async function reload(){
     const sequence=++loadSequence.current;
     const next=await window.jobfindsme!.getResumeState();
@@ -92,7 +90,7 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openR
     setSessions(proposals.filter(p=>p.status!=="cancelled"&&(p.patches.length>0||p.saved_version_id)));
     setJobs(rows);setApplications(records);setCurrent(versions.find(version=>version.is_current));
     const draftKey=next.active_draft?`${workspace}:${next.active_draft.profile_id}`:null;
-    if(next.active_draft&&draftKey!==reviewedDraft.current){setReviewSection('');setAccepted(new Set(next.active_draft.facts.map(f=>f.fact_id)));setCorrections(Object.fromEntries(next.active_draft.facts.map(f=>[f.fact_id,f.value])));}
+    if(next.active_draft&&draftKey!==reviewedDraft.current){setAccepted(new Set(next.active_draft.facts.map(f=>f.fact_id)));setCorrections(Object.fromEntries(next.active_draft.facts.map(f=>[f.fact_id,f.value])));}
     reviewedDraft.current=draftKey;
   }
   useEffect(()=>{if(!active){setPreview(undefined);setImprove(false);setReview(undefined);return;}const refresh=()=>void reload().catch(reason=>setError(userError(reason).message));refresh();window.addEventListener('jfm:job-updated',refresh);return()=>{loadSequence.current++;window.removeEventListener('jfm:job-updated',refresh);};},[active]);
@@ -111,15 +109,10 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openR
   async function clearResume(){if(!state?.workspace_id)return;await run(async()=>{await window.jobfindsme!.clearCurrentResume(state.workspace_id!);await reload();setConfirmClear(false);setMessage("当前简历已清除；现在可不使用简历搜索。已有检索和研究快照保留。");});}
   return <div className={`resume-page resume-maintenance simple-profile${current&&!draft?' resume-has-document':''}${embedded?' embedded':''}`}>
     {!embedded&&<div className="heading-row resume-heading"><div><h1>我的简历</h1><p>维护真实经历，为每个机会准备合适的表达。</p></div></div>}
-    {error&&<p className="notice" role="alert">{error} <button type="button" disabled={busy} onClick={()=>void run(reload)}>重新读取</button></p>}{message&&<p className="resume-feedback" role="status">{message}</p>}
+    {error&&<p className="notice" role="alert">{error} <button type="button" disabled={busy} onClick={()=>void run(reload)}>重新读取</button></p>}{message&&!draft&&<p className="resume-feedback" role="status">{message}</p>}
     {!state&&!error?<p className="note" role="status">正在读取本地简历…</p>:<>
-    {(draft||(embedded&&current))&&<div className="resume-context"><span><i className={draft?'pending':''}/>{draft?'待核对':`已确认 · v${current!.version_number}`}</span><button type="button" disabled={busy||!!editing} onClick={()=>void importResume()}>{busy?'处理中…':'替换文件'}</button></div>}
-    {draft&&<section className="resume-confirm resume-review">
-      <h3>核对解析内容</h3><p className="note">{draft.file_name} · 已选择 {accepted.size} / {draft.facts.length} 条。取消勾选不准确的内容，也可直接修改。</p>
-      <div className="resume-review-tools"><button type="button" disabled={busy} onClick={()=>setAccepted(new Set(draft.facts.map(fact=>fact.fact_id)))}>全选</button><button type="button" disabled={busy} onClick={()=>setAccepted(new Set())}>取消全选</button></div>
-      <nav className="resume-review-sections" aria-label="核对章节">{factGroups.map(type=><button key={type} aria-pressed={activeReviewSection===type} onClick={()=>setReviewSection(type)}>{factLabels[type]}<small>{draft.facts.filter(fact=>fact.fact_type===type).length}</small></button>)}</nav><div className="fact-list resume-fact-scroll">{factGroups.filter(type=>type===activeReviewSection).map(type=>{const facts=draft.facts.filter(fact=>fact.fact_type===type);const label=factLabels[type]??'简历信息';return <section className="fact-group" key={type} aria-label={label}><h3>{label}<small>{facts.length} 条</small></h3>{facts.map((fact,index)=><div className="fact-row" key={fact.fact_id}><input type="checkbox" disabled={busy} aria-label={`${label} ${index+1}`} checked={accepted.has(fact.fact_id)} onChange={event=>setAccepted(previous=>{const next=new Set(previous);event.target.checked?next.add(fact.fact_id):next.delete(fact.fact_id);return next;})}/><textarea aria-label={`${label} ${index+1} 内容`} value={corrections[fact.fact_id]??fact.value} disabled={!accepted.has(fact.fact_id)||busy} onChange={event=>setCorrections(previous=>({...previous,[fact.fact_id]:event.target.value}))}/></div>)}</section>;})}</div>
-      <div className="resume-review-footer"><span>{current?'确认后更新当前简历；原版本仍保留。':'确认前不会用于岗位匹配。'}</span><div><button type="button" disabled={busy} onClick={()=>void abandon()}>暂不使用</button><button type="button" className="primary-button" disabled={busy||!accepted.size} onClick={()=>void confirm()}>{busy?'处理中…':'确认并使用'}</button>{factGroups.indexOf(activeReviewSection)<factGroups.length-1&&<button disabled={busy} onClick={()=>setReviewSection(factGroups[factGroups.indexOf(activeReviewSection)+1])}>核对下一项 →</button>}</div></div>
-    </section>}
+    {(!draft&&embedded&&current)&&<div className="resume-context"><span><i className={draft?'pending':''}/>{draft?'待核对':`已确认 · v${current!.version_number}`}</span><button type="button" disabled={busy||!!editing} onClick={()=>void importResume()}>{busy?'处理中…':'替换文件'}</button></div>}
+    {draft&&<ResumeImportReview draft={draft} accepted={accepted} corrections={corrections} busy={busy} hasCurrent={!!current} onToggle={(id,checked)=>setAccepted(previous=>{const next=new Set(previous);checked?next.add(id):next.delete(id);return next;})} onEdit={(id,value)=>setCorrections(previous=>({...previous,[id]:value}))} onConfirm={()=>void confirm()} onAbandon={()=>void abandon()} onReplace={()=>void importResume()}/>}
     {!embedded&&!draft&&<nav className="resume-library-tabs" aria-label="简历分类"><button aria-current={tab==='base'?'page':undefined} disabled={!!editing||generating||reviewBusy} onClick={()=>{setReview(undefined);setGenerationMessage('');setTab('base');}}>基础简历</button><button aria-current={tab==='tailored'?'page':undefined} disabled={!!editing||generating||reviewBusy} onClick={()=>{setReview(undefined);setGenerationMessage('');setTab('tailored');}}>岗位专属{tailored.length>0&&<span>{tailored.length}</span>}</button></nav>}
 
     {!embedded&&(generating||generationMessage||review)&&<section ref={reviewAnchor} className="resume-ai-workspace" aria-label="AI 修改工作区">
