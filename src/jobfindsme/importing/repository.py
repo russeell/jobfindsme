@@ -47,9 +47,8 @@ def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
         detail_at = left.source.description_fetched_at
         if (
             left.source.detail_level is JobDetailLevel.DETAIL_PAGE
-            and right.source.detail_level in (
-                JobDetailLevel.LIST_CARD, JobDetailLevel.STRUCTURED_SOURCE
-            )
+            and right.source.detail_level
+            in (JobDetailLevel.LIST_CARD, JobDetailLevel.STRUCTURED_SOURCE)
             and len(right.description) < len(left.description)
             and detail_at is not None
             and 0 <= (right.source.fetched_at - detail_at).total_seconds() <= 1800

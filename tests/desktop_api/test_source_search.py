@@ -210,7 +210,6 @@ def test_legacy_pending_resume_does_not_block_keyword_search(tmp_path) -> None:
     assert profiles.active_draft_profile_id(workspace_id=workspace.workspace_id)
 
 
-
 def test_budgeted_executor_reports_continuation_without_claiming_full_coverage() -> (
     None
 ):

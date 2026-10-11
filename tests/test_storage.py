@@ -89,6 +89,7 @@ def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> Non
         "0041_application_records",
         "0042_resume_document",
         "0043_deleted_application_records",
+        "0044_original_resume",
     ]
     assert foreign_keys == 1
 
