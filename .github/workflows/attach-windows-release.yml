@@ -1,9 +1,9 @@
-name: Attach verified Windows release
+name: Attach verified desktop release
 on:
   workflow_dispatch:
     inputs:
       run_id:
-        description: Successful Windows desktop package run ID
+        description: Successful macOS or Windows desktop package run ID
         required: true
       tag:
         description: Existing draft release tag
@@ -34,30 +34,38 @@ jobs:
           build = json.loads(gh('api', f'repos/{repo}/actions/runs/{run}'))
           release = json.loads(gh('release', 'view', tag, '--json', 'isDraft,targetCommitish,assets'))
           assert release['isDraft'], 'Only an unpublished draft may be changed'
-          assert build['conclusion'] == 'success' and build['name'] == 'Windows desktop package'
+          assert build['conclusion'] == 'success' and build['name'] in {'Windows desktop package', 'macOS desktop package'}
+          mac = build['name'] == 'macOS desktop package'
+          asset = 'mac-arm64.zip' if mac else 'windows-x64.zip'
+          artifact = 'JobFindsMe-mac-arm64' if mac else 'JobFindsMe-windows-x64'
+          prefix = 'JobFindsMe.app/Contents/Resources/' if mac else 'JobFindsMe/resources/'
           assert build['head_sha'] == release['targetCommitish'], 'Package and release commits differ'
           folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'verified-release'
-          gh('run', 'download', run, '--name', 'JobFindsMe-windows-x64', '--dir', str(folder))
-          package = folder / 'JobFindsMe-windows-x64.zip'
+          gh('run', 'download', run, '--name', artifact, '--dir', str(folder))
+          package = folder / ('mac-arm64.zip' if mac else 'JobFindsMe-windows-x64.zip')
           with zipfile.ZipFile(package) as archive:
               assert archive.testzip() is None
               names = archive.namelist()
               for name in names:
-                  assert name.startswith('JobFindsMe/') and '..' not in pathlib.PurePosixPath(name).parts
+                  assert not name.startswith('/') and '..' not in pathlib.PurePosixPath(name).parts
+                  assert name.startswith(('JobFindsMe.app/', '__MACOSX/')) if mac else name.startswith('JobFindsMe/')
+                  if mac and name.startswith('__MACOSX/'):
+                      continue
                   assert not re.search(r'(^|/)(Cookies|Local Storage|Session Storage|\.env)(/|$)|\.(db|sqlite|sqlite3)(-wal|-shm|-journal)?$', name, re.I), name
                   if re.search(r'\.(pdf|docx)$', name, re.I):
-                      assert name == 'JobFindsMe/resources/python/jobfindsme-api/_internal/docx/templates/default.docx', name
-              info = json.loads(archive.read('JobFindsMe/resources/app/package.json'))
+                      assert name == prefix + 'python/jobfindsme-api/_internal/docx/templates/default.docx', name
+              info = json.loads(archive.read(prefix + 'app/package.json'))
               assert info['version'] == tag[1:] and info['build'] == tag and info['releaseTag'] == tag
               assert info['sourceCommit'] == build['head_sha'], 'Embedded source commit differs'
               assert not info.get('qa') and not info.get('jobfindsmePreview')
           digest = hashlib.file_digest(package.open('rb'), 'sha256').hexdigest()
-          existing = next((item for item in release['assets'] if item['name'] == 'windows-x64.zip'), None)
+          existing = next((item for item in release['assets'] if item['name'] == asset), None)
           if existing:
               assert existing['state'] == 'uploaded' and existing['digest'] == 'sha256:' + digest
           else:
-              target = folder / 'windows-x64.zip'
-              package.rename(target)
+              target = folder / asset
+              if package != target:
+                  package.rename(target)
               gh('release', 'upload', tag, str(target))
-          print('windows-x64.zip SHA256=' + digest)
-          pathlib.Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('Verified package from ' + build['head_sha'] + '\n\nwindows-x64.zip SHA256=' + digest + '\n')
+          print(asset + ' SHA256=' + digest)
+          pathlib.Path(os.environ['GITHUB_STEP_SUMMARY']).write_text('Verified package from ' + build['head_sha'] + '\n\n' + asset + ' SHA256=' + digest + '\n')
