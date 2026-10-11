@@ -3019,6 +3019,24 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D175",
+      "title": "原文件优先的简历与岗位材料复用",
+      "status": "done",
+      "depends_on": [
+        "D174"
+      ],
+      "scope": [
+        "原文件展示与导出，后台本地提取免逐项确认",
+        "主动编辑另存副本，旧数据保留",
+        "投递选定简历同步面试材料与JD",
+        "隔离虚构资料原生验收"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

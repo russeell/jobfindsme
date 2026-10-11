@@ -189,7 +189,7 @@ def test_confirmed_resume_can_search_without_manual_keywords_then_clear(
     ).keywords == ("数据工程师",)
 
 
-def test_pending_resume_blocks_search_instead_of_falling_back(tmp_path) -> None:
+def test_legacy_pending_resume_does_not_block_keyword_search(tmp_path) -> None:
     database = Database(tmp_path / "desktop.db")
     database.migrate()
     workspace = WorkspaceService(database).create()
@@ -202,12 +202,13 @@ def test_pending_resume_blocks_search_instead_of_falling_back(tmp_path) -> None:
         sources=DesktopSourceService(database),
     )
 
-    with pytest.raises(SearchPreflightError, match="confirmed or abandoned"):
-        service.preflight(
-            workspace_id=workspace.workspace_id,
-            intent="后端工程师",
-            source_ids=["liepin"],
-        )
+    result = service.preflight(
+        workspace_id=workspace.workspace_id, intent="后端工程师", source_ids=["liepin"]
+    )
+    assert result.resume_version_id is None
+    assert result.keywords == ("后端工程师",)
+    assert profiles.active_draft_profile_id(workspace_id=workspace.workspace_id)
+
 
 
 def test_budgeted_executor_reports_continuation_without_claiming_full_coverage() -> (

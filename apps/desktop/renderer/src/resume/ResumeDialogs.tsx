@@ -1,3 +1,4 @@
+import {ResumeOriginal} from "./ResumeOriginal";
 import {useEffect,useId,useRef,useState,type ReactNode} from 'react';
 import {getCurrentModel,setCurrentModel} from '../settings/current-model';
 import type {ModelConnection,ResumeVersion,SearchResultItem} from '../../../shared/contracts';
@@ -13,7 +14,7 @@ export function ResumeModal({title,children,onClose,busy=false,wide=false}:{titl
 }
 
 export function ResumePreview({workspaceId,version,onClose}:{workspaceId:string;version:ResumeVersion;onClose():void}){
-  return <ResumeModal title={`简历预览 · v${version.version_number}`} onClose={onClose} wide><div className="resume-preview-scroll"><ResumeDocument workspaceId={workspaceId} version={version}/></div></ResumeModal>;
+  return <ResumeModal title={`简历预览 · v${version.version_number}`} onClose={onClose} wide><div className="resume-preview-scroll">{version.original_file&&version.source_document_id?<ResumeOriginal workspaceId={workspaceId} documentId={version.source_document_id} version={version}/>:<ResumeDocument workspaceId={workspaceId} version={version}/>}</div></ResumeModal>;
 }
 
 export function ResumeImproveDialog({jobs,onClose,onStart,workspaceId,initialTarget='general',initialInstruction='',initialJob}:{workspaceId:string;jobs:Job[];initialJob?:Job;initialInstruction?:string;initialTarget?:'general'|'job';onClose():void;onStart(job:Job|undefined,instruction:string,connectionId?:string):void}){

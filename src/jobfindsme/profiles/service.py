@@ -56,18 +56,26 @@ class ResumeProfileService:
         workspace_id: str,
         source_path: str | Path,
         mode: ResumeImportMode = ResumeImportMode.FORGET_SOURCE,
+        index_original: bool = False,
     ) -> CandidateProfile:
         self.database.migrate()
+        if index_original and mode is not ResumeImportMode.MANAGED:
+            raise ProfileError("original import requires managed storage")
         source = Path(source_path).expanduser().resolve(strict=True)
-        extracted = self.extractor.extract_path(source)
+        extracted = (
+            self.extractor.extract_path(source, allow_empty=True)
+            if index_original
+            else self.extractor.extract_path(source)
+        )
+        parser_version = self.parser.version + ("-original" if index_original else "")
         content_hash = hashlib.sha256(extracted.content).hexdigest()
         document_id = _stable_id(
             "document",
-            f"{workspace_id}\0{content_hash}\0{self.parser.version}",
+            f"{workspace_id}\0{content_hash}\0{parser_version}",
         )
         profile_id = _stable_id(
             "profile",
-            f"{workspace_id}\0{document_id}\0{self.parser.version}",
+            f"{workspace_id}\0{document_id}\0{parser_version}",
         )
 
         existing = self._find_existing_profile(
@@ -75,15 +83,41 @@ class ResumeProfileService:
             document_id=document_id,
         )
         if existing is not None:
+            if index_original:
+                try:
+                    self.original_document(
+                        workspace_id=workspace_id, document_id=document_id
+                    )
+                except (OSError, ProfileError):
+                    # An explicit re-import repairs the managed copy, never the
+                    # user-selected source or previously edited resume versions.
+                    managed = self._write_managed_copy(
+                        document_id=document_id,
+                        suffix=source.suffix.lower(),
+                        content=extracted.content,
+                    )
+                    with self.database.connect() as connection:
+                        connection.execute(
+                            "UPDATE source_documents SET managed_path=? "
+                            "WHERE workspace_id=? AND document_id=?",
+                            (str(managed), workspace_id, document_id),
+                        )
             if existing.status is ProfileStatus.DRAFT:
                 self._set_active_draft(
                     workspace_id=workspace_id,
                     profile_id=existing.profile_id,
                 )
+            if index_original and existing.status is ProfileStatus.DRAFT:
+                self.use_original(
+                    workspace_id=workspace_id, profile_id=existing.profile_id
+                )
+                return self.load_review(
+                    workspace_id=workspace_id, profile_id=existing.profile_id
+                )
             return existing
 
         parsed = self.parser.parse(extracted.text, include_basic_information=True)
-        if not parsed:
+        if not parsed and not index_original:
             raise ProfileError("no supported profile facts found")
 
         managed_path = None
@@ -109,7 +143,7 @@ class ResumeProfileService:
             import_mode=mode,
             source_path=source_reference,
             managed_path=managed_path,
-            parser_version=self.parser.version,
+            parser_version=parser_version,
             created_at=created_at,
         )
         facts = tuple(
@@ -133,7 +167,7 @@ class ResumeProfileService:
             workspace_id=workspace_id,
             document_id=document_id,
             status=ProfileStatus.DRAFT,
-            parser_version=self.parser.version,
+            parser_version=parser_version,
             facts=facts,
             created_at=created_at,
         )
@@ -143,7 +177,42 @@ class ResumeProfileService:
             if managed_path is not None:
                 Path(managed_path).unlink(missing_ok=True)
             raise
+        if index_original:
+            self.use_original(workspace_id=workspace_id, profile_id=profile.profile_id)
+            return self.load_review(
+                workspace_id=workspace_id, profile_id=profile.profile_id
+            )
         return profile
+
+    def original_document(self, *, workspace_id: str, document_id: str):
+        document = self.load_document(
+            workspace_id=workspace_id, document_id=document_id
+        )
+        if not document.managed_path:
+            raise ProfileError("原文件未保留，请重新导入")
+        path = Path(document.managed_path).resolve(strict=True)
+        root = (self.data_root / "documents" / "managed").resolve()
+        if path.parent != root or path.stat().st_size > 5 * 1024 * 1024:
+            raise ProfileError("原文件不可用，请重新导入")
+        content = path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != document.content_hash:
+            raise ProfileError("原文件内容已变化，请重新导入")
+        return document, content
+
+    def use_original(self, *, workspace_id: str, profile_id: str) -> None:
+        profile = self.load_review(workspace_id=workspace_id, profile_id=profile_id)
+        self.original_document(
+            workspace_id=workspace_id, document_id=profile.document_id
+        )
+        if profile.status is ProfileStatus.CONFIRMED:
+            return
+        # Internal index acceptance is not a claim that the user reviewed each fact.
+        self.confirm_profile(
+            workspace_id=workspace_id,
+            profile_id=profile_id,
+            accepted_fact_ids=[fact.fact_id for fact in profile.facts],
+            _original_file=True,
+        )
 
     def load_review(
         self,
@@ -164,6 +233,7 @@ class ResumeProfileService:
         profile_id: str,
         accepted_fact_ids: Sequence[str],
         corrections: Mapping[str, str] | None = None,
+        _original_file: bool = False,
     ) -> ProfileSummary:
         profile = self.load_review(
             workspace_id=workspace_id,
@@ -172,7 +242,7 @@ class ResumeProfileService:
         known_ids = {fact.fact_id for fact in profile.facts}
         accepted = set(accepted_fact_ids)
         corrections = dict(corrections or {})
-        if not accepted:
+        if not accepted and not _original_file:
             raise ProfileError("at least one fact must be confirmed")
         if not accepted <= known_ids:
             raise ProfileError("accepted_fact_ids contains an unknown fact")
@@ -224,6 +294,7 @@ class ResumeProfileService:
                 connection=connection,
                 profile=profile,
                 facts=confirmed_values,
+                original_file=_original_file,
             )
             connection.execute(
                 """
@@ -329,6 +400,7 @@ class ResumeProfileService:
         connection,
         profile: CandidateProfile,
         facts: list[tuple[FactType, str]],
+        original_file: bool = False,
     ) -> None:
         content: dict[str, list[str]] = {
             "basic_information": [],
@@ -379,8 +451,8 @@ class ResumeProfileService:
             INSERT INTO resume_versions (
                 version_id, workspace_id, profile_id, source_document_id,
                 parent_version_id, version_number, content_json,
-                is_current, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                is_current, created_at, original_file
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 f"resume_version_{uuid4().hex}",
@@ -391,6 +463,7 @@ class ResumeProfileService:
                 next_number,
                 json.dumps(content, ensure_ascii=False),
                 now.isoformat(),
+                int(original_file),
             ),
         )
 
@@ -670,6 +743,7 @@ def _version_from_row(row) -> ResumeVersion:
         version_number=row["version_number"],
         content={key: tuple(values) for key, values in content.items()},
         is_current=bool(row["is_current"]),
+        original_file=bool(row["original_file"]),
         document=json.loads(row["document_json"]) if row["document_json"] else None,
         created_at=datetime.fromisoformat(row["created_at"]),
     )

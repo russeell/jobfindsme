@@ -578,6 +578,25 @@ ipcMain.handle("desktop:restore-resume-version", (_event, workspaceId: string, v
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.restoreResumeVersion(workspaceId, versionId);
 });
+ipcMain.handle("desktop:resume-source", (event,input:import("../shared/contracts").ResumeSourceInput)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  return apiClient.resumeSource(input);
+});
+ipcMain.handle("desktop:use-original-resume", (event,workspaceId:string,profileId:string)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  return apiClient.useOriginalResume(workspaceId,profileId);
+});
+ipcMain.handle("desktop:export-resume-source", async (event,input:import("../shared/contracts").ResumeSourceInput)=>{
+  if(event.sender!==mainWindow?.webContents||!apiClient||!mainWindow)throw Error("unauthorized caller");
+  const source=await apiClient.resumeSource(input);
+  const extension=source.file_name.split('.').pop()?.toLowerCase();
+  if(!extension||!['pdf','docx','md','txt'].includes(extension))throw Error('原文件格式不支持');
+  const selection=await dialog.showSaveDialog(mainWindow,{title:'保存原文件',defaultPath:source.file_name,filters:[{name:'原始简历',extensions:[extension]}]});
+  if(selection.canceled||!selection.filePath)return false;
+  const destination=selection.filePath.toLowerCase().endsWith(`.${extension}`)?selection.filePath:`${selection.filePath}.${extension}`;
+  writeFileSync(destination,Buffer.from(source.content_base64,'base64'),{mode:0o600});
+  return true;
+});
 ipcMain.handle("desktop:preview-resume", async (event, input: Omit<ResumeExportInput,'format'>) => {
   if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
   const client=apiClient;

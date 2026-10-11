@@ -50,7 +50,7 @@ export type DesktopBridge = {
   rerankMatching(workspaceId:string,runId:string):Promise<RerankResult>;
   cancelMatching():Promise<void>;
 
-  previewMatching(input:{workspace_id:string;job_id:string;weights:MatchingWeights}):Promise<MatchingPreview>;
+  previewMatching(input:{workspace_id:string;job_id:string;resume_version_id?:string;weights:MatchingWeights}):Promise<MatchingPreview>;
   getBootstrap(): Promise<BootstrapData>;
   searchPreflight(input:SourceSearchInput):Promise<SourceSearchPreflight>;
   finalizeSearch(workspaceId:string,runId:string):Promise<SearchResultPage>;
@@ -94,6 +94,9 @@ export type DesktopBridge = {
   hideResumeVersion(workspaceId:string,versionId:string):Promise<void>;
   saveResumeVersion(input: ResumeEditInput): Promise<ResumeVersion>;
   restoreResumeVersion(workspaceId: string, versionId: string): Promise<ResumeVersion>;
+  resumeSource(input: ResumeSourceInput): Promise<ResumeSource>;
+  exportResumeSource(input: ResumeSourceInput): Promise<boolean>;
+  useOriginalResume(workspaceId:string,profileId:string): Promise<ResumeState>;
   previewResume(input: Omit<ResumeExportInput, 'format'>): Promise<Uint8Array>;
   exportResume(input: ResumeExportInput): Promise<ResumeExport | undefined>;
   listPromptSessions(workspaceId:string):Promise<PromptSession[]>;
@@ -358,7 +361,12 @@ export type ResumeContent = Record<
 
 export type ResumeDocumentNode = {type:string; text?:string; attrs?:Record<string,unknown>; marks?:Array<{type:string}>; content?:ResumeDocumentNode[]};
 
+export type ResumeSourceInput = {workspace_id:string;document_id:string};
+export type ResumeSource = {file_name:string;media_type:string;content_base64:string;text:string};
+
 export type ResumeVersion = {
+  source_document_id?: string;
+  original_file?: boolean;
   version_id: string;
   parent_version_id: string | null;
   version_number: number;

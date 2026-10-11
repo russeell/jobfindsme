@@ -122,8 +122,8 @@ def test_resume_import_confirmation_version_and_analysis_preview(tmp_path) -> No
     draft = imported.json()
     state = client.get("/v1/resumes/state", headers=headers).json()
     assert state["pending_confirmation"] is True
-    assert state["search_profile_state"] == "pending_confirmation"
-    assert state["search_block_reason"]
+    assert state["search_profile_state"] == "no_resume"
+    assert state["search_block_reason"] is None
     assert state["capabilities"]["doc_status"] == "unsupported"
     assert state["capabilities"]["ocr_status"] == "unavailable"
 

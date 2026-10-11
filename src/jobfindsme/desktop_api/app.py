@@ -239,6 +239,7 @@ class MatchingPreviewRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     workspace_id: str
     job_id: str
+    resume_version_id: str | None = None
     weights: dict[str, int]
 
 
@@ -347,6 +348,7 @@ class ResumeImportRequest(StrictResponse):
     source_path: str
     workspace_id: str | None = None
     mode: ResumeImportMode = ResumeImportMode.MANAGED
+    index_original: bool = False
 
 
 class ResumeConfirmationRequest(StrictResponse):
@@ -369,6 +371,8 @@ class AnalysisPreviewResponse(StrictResponse):
 
 
 class ResumeVersionResponse(StrictResponse):
+    source_document_id: str
+    original_file: bool = False
     version_id: str
     parent_version_id: str | None
     version_number: int
@@ -1251,7 +1255,14 @@ def create_app(
             job = core.jobs.get(
                 workspace_id=request.workspace_id, job_id=request.job_id
             )
-            resume = core.profiles.current_version(workspace_id=request.workspace_id)
+            resume = (
+                core.resume_editor.get_version(
+                    workspace_id=request.workspace_id,
+                    version_id=request.resume_version_id,
+                )
+                if request.resume_version_id
+                else core.profiles.current_version(workspace_id=request.workspace_id)
+            )
             return {
                 **evaluate(job, resume, weights),
                 "job_id": job.job_id,
@@ -1602,18 +1613,8 @@ def create_app(
             pending_confirmation=active_draft is not None,
             current_version_id=current.version_id if current else None,
             current_version_number=current.version_number if current else None,
-            search_profile_state=(
-                "pending_confirmation"
-                if active_draft is not None
-                else "ready"
-                if current is not None
-                else "no_resume"
-            ),
-            search_block_reason=(
-                "resume import must be confirmed before searching"
-                if active_draft is not None
-                else None
-            ),
+            search_profile_state="ready" if current else "no_resume",
+            search_block_reason=None,
             active_draft=active_draft,
             capabilities=_resume_capabilities(),
         )
@@ -1652,10 +1653,50 @@ def create_app(
                 workspace_id=workspace.workspace_id,
                 source_path=request.source_path,
                 mode=request.mode,
+                index_original=request.index_original,
             )
         except (OSError, ResumeExtractionError, ProfileError) as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return resume_payload(workspace.workspace_id, profile.profile_id)
+
+    @app.get("/v1/resumes/source/file", dependencies=[Depends(require_token)])
+    def resume_source(workspace_id: str, document_id: str):
+        try:
+            document, content = core.profiles.original_document(
+                workspace_id=workspace_id, document_id=document_id
+            )
+            text = ""
+            if document.media_type != "application/pdf":
+                text = core.profiles.extractor.extract(
+                    file_name=document.file_name, content=content, allow_empty=True
+                ).text
+            return {
+                "file_name": document.file_name,
+                "media_type": document.media_type,
+                "content_base64": base64.b64encode(content).decode("ascii"),
+                "text": text,
+            }
+        except (
+            OSError,
+            ProfileError,
+            ProfileNotFoundError,
+            ResumeExtractionError,
+        ) as error:
+            raise HTTPException(
+                status_code=404, detail="原文件无法读取，请重新导入"
+            ) from error
+
+    @app.post(
+        "/v1/resumes/{profile_id}/use-original", dependencies=[Depends(require_token)]
+    )
+    def use_original_resume(profile_id: str, workspace_id: str):
+        try:
+            core.profiles.use_original(workspace_id=workspace_id, profile_id=profile_id)
+        except (OSError, ProfileError, ProfileNotFoundError) as error:
+            raise HTTPException(
+                status_code=400, detail="原文件无法使用，请重新导入"
+            ) from error
+        return resume_state(workspace_id)
 
     @app.get(
         "/v1/resumes/{profile_id}",
@@ -2193,7 +2234,12 @@ def create_app(
                 _evidence_map(current, [], include_basic_information=False)
             ),
             "text": json.dumps(content, ensure_ascii=False),
-            "limitations": "脱敏且已确认简历；只能提出修改，不会自动保存。",
+            "limitations": (
+                "本机自动提取并脱敏的简历，可能有识别误差；不代表用户逐项确认。"
+                if current.original_file
+                else "本机保存并脱敏的简历。"
+            )
+            + "只能提出修改，不会自动保存。",
         }
 
     @app.post(
@@ -2714,7 +2760,7 @@ def _resume_capabilities() -> ResumeCapabilities:
         supported_formats=["PDF", "DOCX", "MD", "TXT"],
         doc_status="unsupported",
         ocr_status="unavailable",
-        detail="旧 DOC 需先转换为 DOCX；扫描 PDF 暂无 OCR，需换用文字版文件。",
+        detail="旧 DOC 需先转换为 DOCX；扫描 PDF 可保留和下载原件，暂无 OCR。",
     )
 
 
@@ -2733,6 +2779,8 @@ def _preflight_payload(preflight) -> SearchPreflightResponse:
 
 def _resume_version_payload(version) -> ResumeVersionResponse:
     return ResumeVersionResponse(
+        source_document_id=version.source_document_id,
+        original_file=version.original_file,
         version_id=version.version_id,
         parent_version_id=version.parent_version_id,
         version_number=version.version_number,

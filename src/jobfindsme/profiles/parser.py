@@ -40,13 +40,19 @@ class ExtractedResume:
 class ResumeTextExtractor:
     """Extract text from a small file allowlist without executing content."""
 
-    def extract_path(self, source_path: str | Path) -> ExtractedResume:
+    def extract_path(
+        self, source_path: str | Path, *, allow_empty: bool = False
+    ) -> ExtractedResume:
         path = Path(source_path).expanduser().resolve(strict=True)
         if not path.is_file():
             raise ResumeExtractionError("resume path must be a file")
-        return self.extract(file_name=path.name, content=path.read_bytes())
+        return self.extract(
+            file_name=path.name, content=path.read_bytes(), allow_empty=allow_empty
+        )
 
-    def extract(self, *, file_name: str, content: bytes) -> ExtractedResume:
+    def extract(
+        self, *, file_name: str, content: bytes, allow_empty: bool = False
+    ) -> ExtractedResume:
         safe_name = Path(file_name.replace("\\", "/")).name.strip()
         if not safe_name or safe_name in {".", ".."} or "\x00" in safe_name:
             raise ResumeExtractionError("invalid resume file name")
@@ -62,7 +68,7 @@ class ResumeTextExtractor:
         elif suffix == ".pdf":
             if not content.startswith(b"%PDF-"):
                 raise ResumeExtractionError("file content is not PDF")
-            text = _extract_pdf(content)
+            text = _extract_pdf(content, allow_empty=allow_empty)
             media_type = "application/pdf"
         elif suffix == ".docx":
             text = _extract_docx(content)
@@ -74,7 +80,7 @@ class ResumeTextExtractor:
             raise ResumeExtractionError("supported formats: PDF, DOCX, MD, TXT")
 
         normalized = "\n".join(line.rstrip() for line in text.splitlines()).strip()
-        if not normalized:
+        if not normalized and not allow_empty:
             raise ResumeExtractionError("resume contains no readable text")
         return ExtractedResume(safe_name, media_type, content, normalized)
 
@@ -92,7 +98,7 @@ def _decode_text(content: bytes) -> str:
     )
 
 
-def _extract_pdf(content: bytes) -> str:
+def _extract_pdf(content: bytes, *, allow_empty: bool = False) -> str:
     try:
         reader = PdfReader(io.BytesIO(content))
     except Exception as error:
@@ -105,7 +111,7 @@ def _extract_pdf(content: bytes) -> str:
         text = "\n".join(page.extract_text() or "" for page in reader.pages)
     except Exception as error:
         raise ResumeExtractionError("invalid PDF content") from error
-    if len(text.strip()) < MIN_READABLE_PDF_CHARS:
+    if len(text.strip()) < MIN_READABLE_PDF_CHARS and not allow_empty:
         raise ResumeExtractionError(
             "PDF looks like a scanned image with no text layer; "
             "provide a text-based PDF or export it as DOCX/TXT"

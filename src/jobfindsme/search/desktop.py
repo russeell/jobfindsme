@@ -175,10 +175,6 @@ class DesktopSearchService:
         attempt_unverified_login: bool = False,
         filters=None,
     ) -> SearchPreflight:
-        if self.profiles.active_draft_profile_id(workspace_id=workspace_id):
-            raise SearchPreflightError(
-                "resume import must be confirmed or abandoned before searching"
-            )
         current = self.profiles.current_version(workspace_id=workspace_id)
         if resume_version_id is not None:
             current = next(

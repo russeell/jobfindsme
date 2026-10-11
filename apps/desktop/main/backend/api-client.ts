@@ -156,13 +156,19 @@ export class DesktopApiClient {
   async importResume(sourcePath: string): Promise<ResumeDraft> {
     const draft = await this.json<ResumeDraft>("/v1/resumes/import", {
       method: "POST",
-      body: JSON.stringify({ source_path: sourcePath, mode: "managed" }),
+      body: JSON.stringify({ source_path: sourcePath, mode: "managed", index_original: true }),
     });
     const state = await this.resumeState();
     if (!state.workspace_id) throw new Error("简历工作区初始化失败");
     return { ...draft, workspace_id: state.workspace_id };
   }
 
+  resumeSource(input:import("../../shared/contracts").ResumeSourceInput):Promise<import("../../shared/contracts").ResumeSource>{
+    return this.json(`/v1/resumes/source/file?${new URLSearchParams(input)}`);
+  }
+  useOriginalResume(workspaceId:string,profileId:string):Promise<ResumeState>{
+    return this.json(`/v1/resumes/${encodeURIComponent(profileId)}/use-original?${new URLSearchParams({workspace_id:workspaceId})}`,{method:"POST",body:"{}"});
+  }
   confirmResume(input: ResumeConfirmation): Promise<ResumeState> {
     return this.json(`/v1/resumes/${input.profile_id}/confirm`, {
       method: "POST",

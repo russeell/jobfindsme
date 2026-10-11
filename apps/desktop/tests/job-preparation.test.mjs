@@ -24,7 +24,7 @@ test('background application confirmation keeps server stage while preserving lo
  assert.equal(merged.note,'待核对');
  assert.equal(merged.resume_version_id,'tailored');
  assert.equal(mergePreparation({...saved,stage:'interview'},saved,fresh).stage,'interview');
- assert.match(preparationDraft('interview-prep',{company:'虚构公司',title:'工程师'}),/请读取并结合这个岗位的专属简历/);
+ assert.match(preparationDraft('interview-prep',{company:'虚构公司',title:'工程师'}),/请读取并结合这个岗位选用的简历/);
 });
 
 

@@ -146,6 +146,7 @@ class ResumeEditorService:
                     base_version_id=target.version_id,
                     content=target.content,
                     document=reconcile_document(target.content, target.document),
+                    restored=target,
                     allow_missing_current=True,
                 )
         return self._create_from_base(
@@ -153,6 +154,7 @@ class ResumeEditorService:
             base_version_id=current["version_id"],
             content=target.content,
             document=reconcile_document(target.content, target.document),
+            restored=target,
         )
 
     def _create_from_base(
@@ -162,6 +164,7 @@ class ResumeEditorService:
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
         document: dict | None = None,
+        restored: ResumeVersion | None = None,
     ) -> ResumeVersion:
         with self.database.connect() as connection:
             return self._create_from_base_in_transaction(
@@ -170,6 +173,7 @@ class ResumeEditorService:
                 base_version_id=base_version_id,
                 content=content,
                 document=document,
+                restored=restored,
             )
 
     def _create_from_base_in_transaction(
@@ -180,6 +184,7 @@ class ResumeEditorService:
         base_version_id: str,
         content: dict[str, tuple[str, ...]],
         document: dict | None = None,
+        restored: ResumeVersion | None = None,
         make_current: bool = True,
         allow_missing_current: bool = False,
     ) -> ResumeVersion:
@@ -228,19 +233,20 @@ class ResumeEditorService:
             """INSERT INTO resume_versions (
                 version_id, workspace_id, profile_id, source_document_id,
                 parent_version_id, version_number, content_json,
-                is_current, created_at, document_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                is_current, created_at, document_json, original_file
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 version_id,
                 workspace_id,
-                base["profile_id"],
-                base["source_document_id"],
+                restored.profile_id if restored else base["profile_id"],
+                restored.source_document_id if restored else base["source_document_id"],
                 base_version_id,
                 next_number,
                 json.dumps(content, ensure_ascii=False),
                 int(make_current),
                 now.isoformat(),
                 json.dumps(document, ensure_ascii=False),
+                int(restored.original_file) if restored else 0,
             ),
         )
         created = connection.execute(
@@ -512,5 +518,6 @@ def _version_from_row(row) -> ResumeVersion:
         content={key: tuple(values) for key, values in content.items()},
         document=json.loads(row["document_json"]) if row["document_json"] else None,
         is_current=bool(row["is_current"]),
+        original_file=bool(row["original_file"]),
         created_at=datetime.fromisoformat(row["created_at"]),
     )

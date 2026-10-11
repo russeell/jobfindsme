@@ -102,3 +102,10 @@ D172：`main/shared-flight.ts` 将同条件的只读请求合并为一次执行�
 D174 简历导入：确定性解析器 v7 将项目/经历内行内“技术栈”“项目介绍”保留为正文，技能描述保留连续段落，正文不按相同文本去重；原先跳过的意向/评价/证书等保留为本机基本信息与补充内容。标签仍可单独核对并用于匹配，不自动添加为简历正文；仅标签的旧接口确认兼容。旧草稿与已保存版本不自动重写，重新导入时使用新解析版本。编辑/导出沿用已有五章节结构和模板，仍不还原任意 PDF 原版式。
 
 参考 [OpenResume 的章节识别](https://github.com/xitanggg/open-resume/blob/4f8255a2c763479837f69f1dccf2a3338730cd79/src/app/lib/parse-resume-from-pdf/group-lines-into-sections.ts)和经历分组思路；该仓库为 AGPL-3.0，本轮仅阅读设计并独立实现，没有复制代码或引入依赖。
+
+
+D175：导入主流程由 `ResumeOriginal.tsx` 展示原件，`ResumePage` 不再使用逐项事实确认组件。`profiles/service.py` 的 `index_original` 路径保留托管文件，在服务端自动生成用于匹配的索引版本；不改动文件或发起外部请求。原件版本由0044的 `original_file` 标识；旧版本默认false，手动/AI编辑新版本仍为false，恢复版本继承目标原件引用。`/v1/resumes/source/file` 只按工作区/文档ID读取哈希一致的托管文件，主进程受限IPC完成原件下载。
+
+`ResumeDocument` 复用PDF.js显示原字节或已有导出预览；Vite把官方 CMaps、标准字体与解码器（含各自许可证）带入安装包，开发服务器仅提供固定资源映射。Word原件暂提供文字预览，不宣称版式还原。旧确认API保留兼容；内部自动索引状态不是“用户核对过”的证明，Agent材料明确标注提取误差。
+
+`record_application` 同一事务更新岗位所选简历，面试沿用原有关联版本读取；`matching-preview` 支持工作区限定的指定版本，岗位准备传入同一关联ID。投递准备优先已关联版本，保留旧招呼语和未保存提示，不隐式发送或标记投递。新导入/基础编辑不会改动已有岗位材料。

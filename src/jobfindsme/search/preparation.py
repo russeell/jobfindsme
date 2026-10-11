@@ -262,6 +262,11 @@ class JobPreparationService:
                     now,
                 ),
             )
+            db.execute(
+                "UPDATE job_preparations SET resume_version_id=?, updated_at=? "
+                "WHERE workspace_id=? AND job_id=?",
+                (resume_version_id, now, workspace_id, job_id),
+            )
             if status == "resume_sent":
                 db.execute(
                     "UPDATE job_preparations SET "

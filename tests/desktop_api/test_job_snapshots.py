@@ -757,13 +757,13 @@ def test_application_materials_survive_resume_changes_and_require_explicit_send(
         },
     )
     assert response.status_code == 400
-    # Interview reads the associated version; general edits use the base.
-    with database.connect() as db:
-        db.execute(
-            "UPDATE job_preparations SET resume_version_id=? "
-            "WHERE workspace_id=? AND job_id=?",
-            (version.version_id, workspace.workspace_id, job.job_id),
-        )
+    # The saved application itself links interview materials, without a DB patch.
+    assert (
+        service.get(workspace.workspace_id, job.job_id)["preparation"][
+            "resume_version_id"
+        ]
+        == version.version_id
+    )
     response = client.get(
         "/v1/research-agent/resume",
         headers=headers,
@@ -771,6 +771,41 @@ def test_application_materials_survive_resume_changes_and_require_explicit_send(
     )
     assert response.status_code == 200
     assert response.json()["source_version_id"] == version.version_id
+    matched = client.post(
+        "/v1/matching-preview",
+        headers=headers,
+        json={
+            "workspace_id": workspace.workspace_id,
+            "job_id": job.job_id,
+            "resume_version_id": version.version_id,
+            "weights": {
+                "skills": 35,
+                "projects": 30,
+                "education": 15,
+                "experience": 20,
+            },
+        },
+    )
+    assert matched.status_code == 200
+    assert matched.json()["resume_version_id"] == version.version_id
+    assert (
+        client.post(
+            "/v1/matching-preview",
+            headers=headers,
+            json={
+                "workspace_id": workspace.workspace_id,
+                "job_id": job.job_id,
+                "resume_version_id": "other-workspace-version",
+                "weights": {
+                    "skills": 35,
+                    "projects": 30,
+                    "education": 15,
+                    "experience": 20,
+                },
+            },
+        ).status_code
+        == 400
+    )
     response = client.get(
         "/v1/research-agent/resume",
         headers=headers,
@@ -981,9 +1016,13 @@ def test_recent_full_jd_survives_unchanged_list_refresh_but_not_expiry(
 
     db, workspace, jobs, service = _services(tmp_path)
     base = _job(980)
-    base = base.model_copy(update={"source": base.source.model_copy(
-        update={"detail_level": JobDetailLevel(list_level)}
-    )})
+    base = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"detail_level": JobDetailLevel(list_level)}
+            )
+        }
+    )
     at = base.source.fetched_at
     detail = base.model_copy(
         update={
@@ -1012,9 +1051,9 @@ def test_recent_full_jd_survives_unchanged_list_refresh_but_not_expiry(
     assert saved.source.description_fetched_at == at
     # The newer observation is still recorded separately.
     assert (
-        jobs.source_records(
-            workspace_id=workspace.workspace_id, job_id=base.job_id
-        )[0].observed_at
+        jobs.source_records(workspace_id=workspace.workspace_id, job_id=base.job_id)[
+            0
+        ].observed_at
         == fresh.source.fetched_at
     )
     changed = fresh.model_copy(update={"title": "新的岗位职责"})
@@ -1042,9 +1081,6 @@ def test_recent_full_jd_survives_unchanged_list_refresh_but_not_expiry(
         }
     )
     jobs.upsert(workspace.workspace_id, expired)
-    assert (
-        jobs.get(
-            workspace_id=workspace.workspace_id, job_id=base.job_id
-        ).source.detail_level
-        is JobDetailLevel(list_level)
-    )
+    assert jobs.get(
+        workspace_id=workspace.workspace_id, job_id=base.job_id
+    ).source.detail_level is JobDetailLevel(list_level)
