@@ -11,7 +11,7 @@ import { ResearchPage } from "./research/ResearchPage";
 import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
 import { Discovery } from "./search/Discovery";
 import { Workbench, useOriginalBrowser } from "./shared/Workbench";
-import {presentSourceStatus,sourceCheckFailureOutcome} from "../../shared/source-presentation";
+import {sourceStatusRows,mergeSourceChecks,sourceCheckFailureOutcome} from "../../shared/source-presentation";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
@@ -31,6 +31,7 @@ export function App() {
   const hadSourcePreference=useRef(localStorage.getItem("jfm.sources.selected")!==null);
   useEffect(()=>localStorage.setItem("jfm.sources.selected",JSON.stringify(chosenSources)),[chosenSources]);
   const [reports,setReports]=useState<ResearchReport[]>([]);
+  const [sourceChecks,setSourceChecks]=useState<SourceCheckResult[]>([]);
   function chooseSource(id:string, selected:boolean) {setChosenSources(current => {const previous=current;const next=selected ? [...new Set([...previous,id])] : previous.filter(s=>s!==id);localStorage.setItem("jfm.sources.selected",JSON.stringify(next));return next;});}
   function chooseAllSources(selected:boolean) {setChosenSources(selected?(data?.sources.map(source=>source.source_id)??[]):[]);}
   const [page, setPage] = useState<Page>("discover");
@@ -124,33 +125,37 @@ export function App() {
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onEditResume={openResume} preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={openPreparation} onDiscover={()=>setPage("discover")}/></div>
       <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={openPreparation} openRequest={resumeRequest}/></div>
-      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
+      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage checks={sourceChecks} onChecks={rows=>setSourceChecks(current=>mergeSourceChecks(current,rows))} onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
     {preparationJob&&data?.workspaces[0]&&<JobPreparation initialApplicationView={applicationView} initialApplicationOpen={preparationApply} key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
   </Workbench>;
 }
 
-function SourcesPage({ data, selected, onSelect, onSelectAll, onRefresh, onError }: { onSelectAll(selected:boolean):void; selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
+function SourcesPage({ checks, onChecks, data, selected, onSelect, onSelectAll, onRefresh, onError }: { checks:SourceCheckResult[]; onChecks(rows:SourceCheckResult[]):void; onSelectAll(selected:boolean):void; selected:string[]; onSelect(id:string, selected:boolean):void; data?: BootstrapData; onRefresh(data: BootstrapData): void; onError(message?: string): void }) {
   const capabilityLabel=(status:string)=>({verified:"已验证",partial:"部分可用",blocked:"受阻",unverified:"待验证"})[status]??status;
   const [verifying, setVerifying] = useState<string[]>([]);
   const [audit,setAudit]=useState<{done:number;total:number;running:boolean;cancelled:boolean;rows:SourceCheckResult[];startedAt:string}>();
   const auditRunId=useRef("");
-  useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;setAudit(current=>current?.running?({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}):current);});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
+  const onChecksRef=useRef(onChecks);onChecksRef.current=onChecks;
+  useEffect(()=>{const unsubscribe=window.jobfindsme?.onSourceCheckProgress(value=>{if(value.runId!==auditRunId.current)return;onChecksRef.current([value.result]);setAudit(current=>current?.running?({...current,done:value.done,total:value.total,rows:[...current.rows,value.result]}):current);});return()=>{unsubscribe?.();if(auditRunId.current)void window.jobfindsme?.cancelAllSourceChecks();};},[]);
   const openBrowser = useOriginalBrowser();
   const platforms = data?.sources.filter(source => source.source_type === "platform") ?? [];
   async function verify(sourceId: string) {
+    const source=platforms.find(item=>item.source_id===sourceId);
+    if(!source)return;
     setVerifying(current=>current.includes(sourceId)?current:[...current,sourceId]);
     onError(undefined);
+    const started=Date.now();
     try {
-      const checked=await window.jobfindsme!.verifySource(sourceId);
-      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{source:checked,outcome:checked.live_search_enabled?"verified_now":"unverified",evidence:"live",attempted_at:new Date().toISOString(),detail:checked.detail,duration_ms:0}:row)}:current);
-      onRefresh(await window.jobfindsme!.getBootstrap());
-    } catch (error) {
-      const detail=messageOf(error);
-      const safe=userError(error).message;
-      setAudit(current=>current&&!current.running?{...current,rows:current.rows.map(row=>row.source.source_id===sourceId?{...row,outcome:sourceCheckFailureOutcome(detail),evidence:"live",attempted_at:new Date().toISOString(),detail:safe}:row)}:current);
-      onError(detail);
-      try{onRefresh(await window.jobfindsme!.getBootstrap());}catch{/* Keep the current view if status refresh also fails. */}
+      try {
+        const checked=await window.jobfindsme!.verifySource(sourceId);
+        onChecks([{source:checked,outcome:checked.live_search_enabled?"verified_now":"unverified",evidence:"live",attempted_at:new Date().toISOString(),detail:checked.detail,duration_ms:Date.now()-started}]);
+      } catch(error) {
+        const detail=messageOf(error),outcome=sourceCheckFailureOutcome(detail);
+        onChecks([{source,outcome,evidence:outcome==="skipped_cooldown"?"history":"live",attempted_at:new Date().toISOString(),detail:userError(error).message,duration_ms:Date.now()-started}]);
+        if(userError(error).kind==="service")onError(detail);
+      }
+      try{onRefresh(await window.jobfindsme!.getBootstrap());}catch(error){onError(messageOf(error));}
     } finally {
       setVerifying(current=>current.filter(id=>id!==sourceId));
     }
@@ -167,6 +172,7 @@ function SourcesPage({ data, selected, onSelect, onSelectAll, onRefresh, onError
       const results=await window.jobfindsme!.checkAllSources(runId);
       if(auditRunId.current!==runId)return;
       auditRunId.current="";
+      onChecks(results);
       setAudit({done:results.length,total:results.length,running:false,cancelled:results.some(result=>result.outcome==="cancelled"),rows:results,startedAt});
       onRefresh(await window.jobfindsme!.getBootstrap());
     } catch(error){
@@ -175,21 +181,19 @@ function SourcesPage({ data, selected, onSelect, onSelectAll, onRefresh, onError
     }finally{if(auditRunId.current===runId)auditRunId.current="";}
   }
   function cancelInspect(){setAudit(current=>current&&({...current,cancelled:true}));void window.jobfindsme!.cancelAllSourceChecks().catch(error=>onError(messageOf(error)));}
-  const rows = platforms;
+  const rows = sourceStatusRows(platforms,checks);
+  const availableCount=rows.filter(row=>selected.includes(row.source.source_id)&&row.presented.available).length;
   return <>
     <div className="heading-row settings-heading"><div><h1>岗位来源</h1><p>选择参与检索的平台，管理登录与读取状态。</p></div><span className="settings-count">{platforms.length} 个平台</span></div>
-    <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个平台 · 当前可检索 {data?.sources.filter(s=>selected.includes(s.source_id)&&s.live_search_enabled).length??0} 个{!selected.length&&" · 请至少选择一个平台"}</p><div className="source-toolbar-actions"><div className="button-row"><button disabled={!platforms.length} onClick={()=>onSelectAll(!platforms.every(s=>selected.includes(s.source_id)))}>{platforms.length>0&&platforms.every(s=>selected.includes(s.source_id))?"取消全选":"全选平台"}</button><button disabled={!!audit?.running||verifying.length>0||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部平台</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
+    <div className="source-toolbar"><p className="source-selection-summary" role="status">已选 {selected.length} 个平台 · 当前可检索 {availableCount} 个{!selected.length&&" · 请至少选择一个平台"}</p><div className="source-toolbar-actions"><div className="button-row"><button disabled={!platforms.length} onClick={()=>onSelectAll(!platforms.every(s=>selected.includes(s.source_id)))}>{platforms.length>0&&platforms.every(s=>selected.includes(s.source_id))?"取消全选":"全选平台"}</button><button disabled={!!audit?.running||verifying.length>0||!data?.sources.length} onClick={()=>void inspectAll()}>检查全部平台</button>{audit?.running&&<button onClick={cancelInspect}>{audit.cancelled?"停止中…":"取消"}</button>}</div></div></div>
     {audit&&<div className="source-audit-progress" role="status"><span>{audit.running?audit.cancelled?"正在停止":"检查中":audit.cancelled?"部分完成":"检查结束"} · 已评估 {audit.done}/{audit.total} 个来源{!audit.running&&` · 本次实际探测 ${audit.rows.filter(row=>row.evidence==="live").length} 个，通过 ${audit.rows.filter(row=>row.outcome==="verified_now").length} 个 · 复用缓存 ${audit.rows.filter(row=>row.evidence==="cache").length} 个 · 登录/风控跳过 ${audit.rows.filter(row=>row.evidence!=="live"&&["login_required","risk_control","skipped_cooldown"].includes(row.outcome)).length} 个 · 未检查 ${audit.rows.filter(row=>["not_checked_budget","cancelled"].includes(row.outcome)&&row.evidence!=="live").length} 个`}</span>{audit.running&&<progress value={audit.done} max={audit.total} aria-label="来源检查进度"/>}</div>}
-    <section className="source-grid source-catalog">{rows.map(source => {
-      const recorded=audit?.rows.find(result=>result.source.source_id===source.source_id);
-      const checked=recorded?.attempted_at&&source.last_verified_at&&Date.parse(source.last_verified_at)>Date.parse(recorded.attempted_at)?undefined:recorded;
-      const presented=presentSourceStatus(source,checked);
+    <section className="source-grid source-catalog">{rows.map(({source,checked,presented}) => {
       return <article className="panel source-card" key={source.source_id}>
         <div className="source-card-head"><label className="source-choice"><input type="checkbox" aria-label={`加入搜索范围：${source.name}`} checked={selected.includes(source.source_id)} onChange={event=>onSelect(source.source_id,event.target.checked)}/><strong>{source.name}</strong></label><span className={presented.available?"ready":"muted"}>{presented.title}</span></div>
         <p className="source-card-status">{presented.detail}</p>
         <div className="button-row source-card-actions">{presented.action==="login"?<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>登录 / 验证</button>:presented.action==="check"?<button disabled={verifying.includes(source.source_id)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying.includes(source.source_id)?"检查中…":"检查"}</button>:null}{presented.action!=="check"&&<button disabled={verifying.includes(source.source_id)||!!audit?.running} onClick={()=>void verify(source.source_id)}>{verifying.includes(source.source_id)?"检查中…":"检查"}</button>}{presented.action!=="login"&&<button onClick={()=>openBrowser({sourceId:source.source_id,title:source.name})}>打开官网</button>}</div>
         {checked?.outcome==="login_required"&&<p className="note source-login-help">请在应用内完成登录，再重试检查。</p>}
-        <details><summary>能力与限制</summary><p className="note">登录：{source.session_status==="verified"?"此前记录已登录":source.session_status==="anonymous"?"匿名使用":source.session_status==="expired"?"需要重新确认":source.session_status==="blocked"?"平台验证中":"未确认"} · 列表：{capabilityLabel(source.list_status)} · 详情：{capabilityLabel(source.detail_status)} · 字段：{capabilityLabel(source.fields_status)} · 网站续页：{capabilityLabel(source.pagination_status)}</p><p className="note">{checked?.detail||source.detail}</p>{source.last_verified_at&&<p className="note">上次验证：{new Date(source.last_verified_at).toLocaleString()}</p>}</details>
+        <details><summary>能力与限制</summary><p className="note">登录：{source.session_status==="verified"?"此前记录已登录":source.session_status==="anonymous"?"匿名使用":source.session_status==="expired"?"需要重新确认":source.session_status==="blocked"?"需要验证":"未确认"} · 列表：{capabilityLabel(source.list_status)} · 详情：{capabilityLabel(source.detail_status)} · 字段：{capabilityLabel(source.fields_status)} · 网站续页：{capabilityLabel(source.pagination_status)}</p><p className="note">{checked?.outcome==="failed"?userError(checked.detail).message:checked?.detail||source.detail}</p>{source.last_verified_at&&<p className="note">上次验证：{new Date(source.last_verified_at).toLocaleString()}</p>}</details>
       </article>;
     })}</section><details className="source-guidance"><summary>登录与检查说明</summary><p className="note">平台登录与检索能力分别核对；智联在应用内使用官方登录页，Chrome 登录状态不会同步。全部检查按原有单源和总预算执行，未轮到的来源不算本次通过；风险验证立即停源。关闭原页不清除已保存的会话，登录仍可能过期。</p></details>
   </>;

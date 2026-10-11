@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {presentSourceStatus,sourceCheckFailureOutcome} from '../dist-electron/shared/source-presentation.js';
+import {presentSourceStatus,sourceCheckFailureOutcome,sourceStatusRows,mergeSourceChecks} from '../dist-electron/shared/source-presentation.js';
 
 const source={source_id:'sample',source_type:'platform',name:'示例',login_required:false,live_search_enabled:true,session_status:'public',list_status:'verified',detail_status:'verified',fields_status:'verified',pagination_status:'verified',status:'ok',detail:'',last_verified_at:null};
 test('source presentation keeps search capability separate from session and check outcome',()=>{
@@ -9,9 +9,9 @@ test('source presentation keeps search capability separate from session and chec
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'expired'}).title,'会话待复查');
  assert.equal(presentSourceStatus({...source,live_search_enabled:false,list_status:'partial'}).action,'check');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'verified',live_search_enabled:false,list_status:'partial',detail:'当前平台页显示已登录'}).title,'已登录，检索待验');
- assert.equal(presentSourceStatus({...source,login_required:true,session_status:'blocked',list_status:'blocked'}).title,'平台验证中');
- assert.equal(presentSourceStatus(source,{outcome:'failed',detail:'本次读取失败'}).title,'本次未确认');
- assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}, {outcome:'failed',detail:'source_contract_error'}).title,'本次未确认');
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'blocked',list_status:'blocked'}).title,'需要验证');
+ assert.equal(presentSourceStatus(source,{outcome:'failed',detail:'本次读取失败'}).title,'检查未通过');
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false}, {outcome:'failed',detail:'source_contract_error'}).title,'检查未通过');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false,list_status:'unverified'}).title,'登录状态待确认');
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',live_search_enabled:false,list_status:'verified'}).title,'列表可读，登录未确认');
 });
@@ -30,4 +30,29 @@ test('current foreground evidence supersedes an older failed check without claim
 test('a confirmed login with a failed background search stays distinct from login failure',()=>{
  const result=presentSourceStatus({...source,source_id:'zhilian',session_status:'verified',live_search_enabled:false,list_status:'partial',detail:'后台有界检索未通过：source_timeout [source_stage=extract]'});
  assert.equal(result.title,'已登录，后台检索待修复');assert.equal(result.action,'check');assert.equal(result.available,false);
+});
+
+test('available count and source labels use the same current evidence',()=>{
+ const liepin={...source,source_id:'liepin'},zhilian={...source,source_id:'zhilian',session_status:'blocked'},wuyou={...source,source_id:'wuyou'};
+ const checks=[{source:liepin,outcome:'failed',evidence:'live',attempted_at:'2026-10-11T01:00:00Z',detail:'source_unavailable:503',duration_ms:3}];
+ const rows=sourceStatusRows([liepin,zhilian,wuyou],checks);
+ assert.deepEqual(rows.map(row=>row.presented.title),['连接失败','需要验证','可检索']);
+ assert.equal(rows.filter(row=>row.presented.available).length,1);
+ assert.equal(presentSourceStatus(liepin,{...checks[0],detail:'source_check_timeout'}).title,'检查超时');
+});
+test('current login observation overrides old blocked status; foreground check is an actionable request',()=>{
+ const blocked={...source,source_id:'zhilian',session_status:'blocked',list_status:'blocked'};
+ assert.equal(presentSourceStatus(blocked,{outcome:'login_required'}).title,'需要登录');
+ const result=presentSourceStatus(blocked,{outcome:'failed',detail:'source_visible_page_required:please open'});
+ assert.equal(result.title,'需核对登录');assert.equal(result.action,'login');assert.equal(result.available,false);
+});
+test('individual retry works without bulk audit, skips cannot erase failure, and fresh success recovers',()=>{
+ const failed={source,outcome:'failed',evidence:'live',attempted_at:'2026-10-11T01:00:00Z',detail:'source_unavailable:503'};
+ const first=mergeSourceChecks([],[failed]);assert.equal(first.length,1);
+ for(const outcome of ['cached_recent','skipped_cooldown','cancelled','not_checked_budget']){
+  assert.equal(mergeSourceChecks(first,[{...failed,outcome,evidence:'none'}])[0].outcome,'failed');
+ }
+ const recovered=mergeSourceChecks(first,[{...failed,outcome:'verified_now',attempted_at:'2026-10-11T02:00:00Z'}]);
+ assert.equal(sourceStatusRows([source],recovered)[0].presented.available,true);
+ assert.equal(first[0].outcome,'failed');
 });
