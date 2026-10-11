@@ -1,16 +1,21 @@
 import base64
 
+import pytest
 from fastapi.testclient import TestClient
 
 from jobfindsme.desktop_api import create_app
 
 
-def test_desktop_import_indexes_locally_and_serves_only_scoped_original(tmp_path):
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["LF", "CRLF"])
+def test_desktop_import_indexes_locally_and_serves_only_scoped_original(
+    tmp_path, newline
+):
     client = TestClient(create_app(token="test", database_path=tmp_path / "test.db"))
     headers = {"Authorization": "Bearer test"}
     source = tmp_path / "synthetic.md"
     original = "# Projects\n虚构岗位检索工具，Python 开发。\n# Skills\nPython"
-    source.write_text(original)
+    original_bytes = original.replace("\n", newline).encode("utf-8")
+    source.write_bytes(original_bytes)
     response = client.post(
         "/v1/resumes/import",
         headers=headers,
@@ -31,7 +36,7 @@ def test_desktop_import_indexes_locally_and_serves_only_scoped_original(tmp_path
     assert client.get(url, params=params).status_code == 401
     response = client.get(url, headers=headers, params=params)
     assert response.status_code == 200
-    assert base64.b64decode(response.json()["content_base64"]).decode() == original
+    assert base64.b64decode(response.json()["content_base64"]) == original_bytes
     assert "managed_path" not in response.text and str(tmp_path) not in response.text
     assert (
         client.get(
