@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {polishGreeting} from '../dist-electron/main/research/greeting-polish.mjs';
 const base={protocol:'openai_compatible',provider:'fixture',model_id:'fixture',status:'verified',auth_mode:'none'};
-async function fixture(run,finish='stop'){
+async function fixture(run,finish='stop',output='您好，希望了解{岗位}的工作内容，期待与您沟通。'){
  let received;
- const server=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;received=JSON.parse(body);res.writeHead(200,{'Content-Type':'text/event-stream'});for(const chunk of [{choices:[{index:0,delta:{role:'assistant',content:'您好，希望了解{岗位}的工作内容，期待与您沟通。'},finish_reason:null}]},{choices:[{index:0,delta:{},finish_reason:finish}]}])res.write(`data: ${JSON.stringify(chunk)}\n\n`);res.end('data: [DONE]\n\n');});
+ const server=createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;received=JSON.parse(body);res.writeHead(200,{'Content-Type':'text/event-stream'});for(const chunk of [{choices:[{index:0,delta:{role:'assistant',content:output},finish_reason:null}]},{choices:[{index:0,delta:{},finish_reason:finish}]}])res.write(`data: ${JSON.stringify(chunk)}\n\n`);res.end('data: [DONE]\n\n');});
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{await run({...base,endpoint:`http://127.0.0.1:${server.address().port}/v1`},()=>received);}finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
 }
@@ -46,3 +46,17 @@ test('DeepSeek adapter actually emits disabled thinking for a short editing requ
  }}).result();
  assert.equal(response.stopReason,'stop');assert.deepEqual(sent.thinking,{type:'disabled'});assert.ok(!sent.tools?.length);
 });
+
+for(const output of ['您好，想了解{岗位}。','您好！想了解 {岗位}'])test(`unchanged greeting is rejected: ${output}`,async()=>fixture(async connection=>{
+ await assert.rejects(polishGreeting(connection,'','您好，想了解{岗位}。',new AbortController().signal),/greeting_polish:unchanged/);
+},'stop',output));
+test('rewrites cannot silently drop reusable placeholders',async()=>fixture(async connection=>{
+ await assert.rejects(polishGreeting(connection,'','您好，想了解{公司}的{岗位}。',new AbortController().signal),/greeting_polish:placeholders/);
+}));
+test('style guides the same bounded request and no-op errors explain recovery',async()=>fixture(async(connection,received)=>{
+ await polishGreeting(connection,'','您好，想了解{岗位}。',new AbortController().signal,'greeting','concise');
+ assert.match(received().messages[0].content,/40.{0,2}80/);
+ assert.equal(received().messages.at(-1).content,'您好，想了解{岗位}。');
+ const {userError}=await import('../dist-electron/shared/user-errors.js');
+ assert.match(userError(new Error('greeting_polish:unchanged')).message,/原文|实际改动/);
+}));

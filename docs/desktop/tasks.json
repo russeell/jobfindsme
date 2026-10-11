@@ -3054,6 +3054,23 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D177",
+      "title": "简历后台修改与岗位投递状态一致性",
+      "depends_on": [
+        "D176"
+      ],
+      "status": "done",
+      "scope": [
+        "切页不取消简历AI，顶部简历操作",
+        "招呼语实际改动检查与润色方向",
+        "岗位管理默认全部，已投递进入记录"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

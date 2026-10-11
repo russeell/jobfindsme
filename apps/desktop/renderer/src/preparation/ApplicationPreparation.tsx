@@ -5,7 +5,7 @@ import type {ApplicationRecord,ApplicationRecordInput,ResumeVersion,SearchResult
 import {userError} from '../../../shared/user-errors';
 export type ApplicationGuard={dirty:boolean;busy:boolean;reveal():void;save():Promise<boolean>};
 export const applicationLabels={prepared:'材料已准备',opened:'已发起打开原页',contacted:'已发起沟通（本人确认）',resume_sent:'简历已发送（本人确认）',uncertain:'结果待确认'};
-export function ApplicationPreparation({workspaceId,job,resumeId,onGuard,onOpenOriginal}:{workspaceId:string;job:SearchResultItem['job'];resumeId?:string|null;onGuard(value:ApplicationGuard):void;onOpenOriginal():void}){
+export function ApplicationPreparation({workspaceId,job,resumeId,onGuard,onOpenOriginal,initialView='materials'}:{initialView?:'materials'|'records';workspaceId:string;job:SearchResultItem['job'];resumeId?:string|null;onGuard(value:ApplicationGuard):void;onOpenOriginal():void}){
  const [versions,setVersions]=useState<ResumeVersion[]>([]),[records,setRecords]=useState<ApplicationRecord[]>([]);
  const [draft,setDraft]=useState<ApplicationRecordInput>();
  const [saved,setSaved]=useState<ApplicationRecordInput>();
@@ -13,7 +13,7 @@ export function ApplicationPreparation({workspaceId,job,resumeId,onGuard,onOpenO
  const [greeting,setGreeting]=useState(()=>localStorage.getItem(greetingKey(workspaceId))||defaultGreeting);
  const [polishing,setPolishing]=useState(false);
  const [savedGreeting,setSavedGreeting]=useState(greeting);
- const [view,setView]=useState<'materials'|'records'>('materials'),[showDeleted,setShowDeleted]=useState(false),[deletedRecords,setDeletedRecords]=useState<ApplicationRecord[]>([]),[deleteTarget,setDeleteTarget]=useState<ApplicationRecord>();
+ const [view,setView]=useState<'materials'|'records'>(initialView),[showDeleted,setShowDeleted]=useState(false),[deletedRecords,setDeletedRecords]=useState<ApplicationRecord[]>([]),[deleteTarget,setDeleteTarget]=useState<ApplicationRecord>();
  const [confirm,setConfirm]=useState<ApplicationRecordInput['status']>();
  const dirty=greeting!==savedGreeting||!!draft&&JSON.stringify(draft)!==JSON.stringify(saved);
  useEffect(()=>{let alive=true;void Promise.all([window.jobfindsme!.listResumeVersions(workspaceId),window.jobfindsme!.listApplicationRecords(workspaceId,job.job_id)]).then(([v,r])=>{if(!alive)return;setVersions(v);setRecords(r);const previous=r.find(row=>row.status==='prepared'||row.status==='opened');const value=previous?{workspace_id:workspaceId,job_id:job.job_id,record_id:previous.record_id,resume_version_id:resumeId||previous.resume_version_id,message:previous.message,status:previous.status}:{workspace_id:workspaceId,job_id:job.job_id,record_id:crypto.randomUUID(),resume_version_id:resumeId||v.find(x=>x.is_current)?.version_id||null,message:renderGreeting(localStorage.getItem(greetingKey(workspaceId))||defaultGreeting,job),status:'prepared' as const};setDraft(value);setSaved(previous&&previous.resume_version_id!==value.resume_version_id?{...value,resume_version_id:previous.resume_version_id}:value);}).catch(e=>{if(alive)setError(userError(e).message);});return()=>{alive=false;};},[workspaceId,job.job_id]);
@@ -54,7 +54,7 @@ setRecords(current=>[value,...current.filter(x=>x.record_id!==value.record_id)])
   </div>
   <div hidden={view!=='records'}><div className="application-record-heading"><span>{showDeleted?'已删除记录':'投递记录'}</span><button disabled={busy||polishing} onClick={()=>void toggleDeleted()}>{showDeleted?'返回记录':'已删除'}</button></div>
    {(showDeleted?deletedRecords:records).map(row=><div className="application-record" key={row.record_id}><div className="application-record-top"><div><strong>{applicationLabels[row.status]}</strong><small>{new Date(row.updated_at).toLocaleString()} · {row.resume_version_id?`简历 v${versions.find(v=>v.version_id===row.resume_version_id)?.version_number||'已归档'}`:'未附简历'}</small></div><button disabled={busy||polishing} onClick={()=>showDeleted?void changeDeleted(row,false):setDeleteTarget(row)}>{showDeleted?'恢复':'删除'}</button></div><details><summary>查看招呼语</summary><p>{row.message}</p></details></div>)}
-   {!(showDeleted?deletedRecords:records).length&&<p className="application-empty">{showDeleted?'没有已删除记录':'暂无记录，保存材料后会显示在这里。'}</p>}
+   {!(showDeleted?deletedRecords:records).length&&<p className="application-empty">{showDeleted?'没有已删除记录':initialView==='records'?'此岗位已标记投递，尚未记录具体发送材料。可在“投递材料”中补充记录。':'暂无记录，保存材料后会显示在这里。'}</p>}
    {deleteTarget&&<div role="alert" className="history-confirm"><p>删除这条记录？可从“已删除”恢复，不影响简历和岗位投递状态。{deleteTarget.record_id===draft?.record_id?'当前材料会保留为一份新草稿。':''}</p><button onClick={()=>setDeleteTarget(undefined)}>取消</button><button className="danger-button" disabled={busy||polishing} onClick={()=>void changeDeleted(deleteTarget,true)}>删除记录</button></div>}
   </div>
   {error&&<p role="alert" className="preparation-error">{error}</p>}{notice&&<p role="status" className="note">{notice}</p>}

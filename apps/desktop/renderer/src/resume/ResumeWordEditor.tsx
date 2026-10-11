@@ -12,7 +12,7 @@ import {ResumeDocument} from './ResumeDocument';
 import {ResumeSelectionAI} from './ResumeSelectionAI';
 
 
-export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;active:boolean;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:(instruction?:string)=>void}){
+export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:(instruction?:string)=>void}){
  const toolbarRef=useRef<HTMLDivElement>(null);
  const preference=`jfm.resume.template.${workspaceId}`;
  const [template,setTemplate]=useState<ResumeTemplate>(()=>{try{const value=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===value)?value as ResumeTemplate:'professional';}catch{return 'professional';}});
@@ -40,7 +40,6 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
  useEffect(()=>{if(!editor||editor.isDestroyed||!stale||dirty||busy||version.version_number<base.version_number)return;setBase(version);editor.commands.setContent(resumeDocument(version.content,version.document,template),{emitUpdate:false});initial.current=resumeDocumentFingerprint(editor.getJSON());},[version.version_id,editor,dirty,busy]);
  useEffect(()=>{if(editor&&!editor.isDestroyed)editor.setEditable(!busy,false);},[busy,editor]);
 
- useEffect(()=>{if(!active)setAiOpen(false);},[active]);
  useEffect(()=>()=>onDirty(false),[]);
  async function save():Promise<ResumeVersion|undefined>{
    if(!editor||busy||stale)return;if(!dirty)return base;

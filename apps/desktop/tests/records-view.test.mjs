@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {followsRecord,matchesRecordFilter,selectRecords} from '../dist-electron/shared/records-view.js';
+import {followsRecord,matchesRecordFilter,selectRecords,recordStage} from '../dist-electron/shared/records-view.js';
 const row=(id,tracking={},preparation)=>({job:{job_id:id,title:'Python 工程师',company:'示例公司',locations:['上海'],source:{source_name:'测试来源',fetched_at:'2026-10-01T08:00:00Z'}},tracking:{read:true,saved:false,applied:false,...tracking},preparation});
 
 test('following excludes casual browsing and closed opportunities without losing history',()=>{
@@ -37,4 +37,10 @@ test('saved and applied entrances keep independent flags and closed saved jobs d
  assert.deepEqual(selectRecords(items,'applied','','','recent').map(x=>x.job.job_id),['interview','applied']);
  assert.equal(selectRecords(items,'all','','','recent').length,5);
  assert.equal(selectRecords(items,'saved','无匹配','','recent').length,0);
+});
+
+test('legacy applied flags supersede stale considering without regressing later stages',()=>{
+ assert.equal(recordStage(row('legacy',{applied:true},{stage:'considering'})),'applied');
+ for(const stage of ['interview','offer','closed'])assert.equal(recordStage(row(stage,{applied:true},{stage})),stage);
+ assert.equal(recordStage(row('new',{}, {stage:'considering'})),'considering');
 });

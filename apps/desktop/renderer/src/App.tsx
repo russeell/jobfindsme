@@ -24,7 +24,7 @@ import type {
 type WorkPage = "discover" | "research" | "records" | "resume";
 type Page = WorkPage | "settings";
 type SettingsTab = "sources" | "models" | "about" | "archive";
-const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["我的岗位", "records"], ["我的简历", "resume"]];
+const navItems: Array<[string, WorkPage]> = [["找工作", "discover"], ["岗位管理", "records"], ["我的简历", "resume"]];
 const settingsItems: Array<[string, SettingsTab]> = [["岗位来源", "sources"], ["对话归档", "archive"], ["模型设置", "models"], ["版本更新", "about"]];
 export function App() {
   const [chosenSources,setChosenSources] = useState<string[]>(()=>readSelectedSources(localStorage.getItem("jfm.sources.selected")));
@@ -69,7 +69,8 @@ export function App() {
   useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(()=>{if(!cancelled)setFailure({message:"研究记录暂时无法读取，请稍后重试。",route:`${workspace}:research:`});});return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id]);
   const [preparationJob,setPreparationJob]=useState<SearchResultItem["job"]>();
   const [preparationApply,setPreparationApply]=useState(false);
-  function openPreparation(job:SearchResultItem["job"],apply=false){setPreparationApply(apply);setPreparationJob(job);}
+  const [applicationView,setApplicationView]=useState<'materials'|'records'>('materials');
+  function openPreparation(job:SearchResultItem["job"],apply=false,view:'materials'|'records'='materials'){setApplicationView(view);setPreparationApply(apply);setPreparationJob(job);}
   const [preparationRequest,setPreparationRequest]=useState<{job?:SearchResultItem["job"];skill:AssistantSkillId;nonce:number;chatId?:string;draft?:string}>();
   const [resumeRequest,setResumeRequest]=useState<ResumeOpenRequest>();
   function openResume(job?:SearchResultItem["job"],sessionId?:string,instruction?:string){setResumeRequest({job,sessionId,instruction,nonce:Date.now()});setPage("resume");}
@@ -116,7 +117,7 @@ export function App() {
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label={availableUpdate?"设置，有新版本":"设置"} aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(availableUpdate?"about":settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span>{availableUpdate&&<span className="update-indicator" aria-hidden="true"/>}</button></div>
   </>}>
-    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"我的岗位",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
+    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"岗位管理",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
       {error&&<div className="operation-notice" role="alert"><span>{userError(error).message}</span>{userError(error).action==='source'?<button onClick={()=>{setError(undefined);openSettings('sources');}}>查看来源</button>:userError(error).message.includes('本地服务')&&<button disabled={checkingService} onClick={()=>void checkService()}>{checkingService?'正在检查…':'检查服务'}</button>}<button aria-label="关闭操作提示" onClick={()=>setError(undefined)}>×</button></div>}
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery onOpenResume={()=>setPage("resume")} active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports}/></div>
@@ -125,7 +126,7 @@ export function App() {
       <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={openPreparation} openRequest={resumeRequest}/></div>
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>
-    {preparationJob&&data?.workspaces[0]&&<JobPreparation initialApplicationOpen={preparationApply} key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
+    {preparationJob&&data?.workspaces[0]&&<JobPreparation initialApplicationView={applicationView} initialApplicationOpen={preparationApply} key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
   </Workbench>;
 }
 

@@ -5,7 +5,8 @@ export type RecordsSort='recent'|'next';
 export const recordsPageSize=20;
 
 export function recordStage(item:TrackedJob):PreparationStage|undefined {
-  return item.preparation?.stage || (item.tracking.applied?'applied':undefined);
+  const stage=item.preparation?.stage;
+  return item.tracking.applied&&(!stage||stage==='considering')?'applied':stage;
 }
 export function followsRecord(item:TrackedJob):boolean {
   return recordStage(item)!=='closed' && (item.tracking.saved||item.tracking.applied||!!item.preparation);
