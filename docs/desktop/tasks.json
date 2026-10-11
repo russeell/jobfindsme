@@ -2984,6 +2984,24 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D173",
+      "title": "统一工作台层级、导航与核心交互",
+      "status": "done",
+      "depends_on": [
+        "D172"
+      ],
+      "scope": [
+        "主页面导航与独立滚动位置",
+        "搜索、岗位、简历、助手和设置视觉层级统一",
+        "简历单一入口与直接导出、技能直接入口",
+        "真实App验证页面衔接、窄屏和弹窗"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

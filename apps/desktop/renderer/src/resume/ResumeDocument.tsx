@@ -33,7 +33,7 @@ function Paper({pdf,number,width,onRetry}:{pdf:PDFDocumentProxy;number:number;wi
   </figure>;
 }
 
-export function ResumeDocument({workspaceId,version,template:controlledTemplate,onTemplateChange}:{workspaceId:string;version:ResumeVersion;template?:ResumeTemplate;onTemplateChange?:(value:ResumeTemplate)=>void}){
+export function ResumeDocument({managedToolbar=false,workspaceId,version,template:controlledTemplate,onTemplateChange}:{managedToolbar?:boolean;workspaceId:string;version:ResumeVersion;template?:ResumeTemplate;onTemplateChange?:(value:ResumeTemplate)=>void}){
   const preference=`jfm.resume.template.${workspaceId}`;
   const [localTemplate,setLocalTemplate]=useState<ResumeTemplate>(()=>{try{const saved=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===saved)?saved as ResumeTemplate:'professional';}catch{return 'professional';}});
   const template=controlledTemplate??localTemplate;
@@ -65,10 +65,10 @@ export function ResumeDocument({workspaceId,version,template:controlledTemplate,
   }
   return <div className="resume-document">
     <div className="resume-paper-toolbar">
-      <div className="resume-paper-templates" aria-label="简历模板">{resumeTemplates.map(t=><button key={t.id} disabled={busy} aria-pressed={template===t.id} title={t.description} onClick={()=>setTemplate(t.id)}>{t.name}</button>)}</div>
+      {!managedToolbar&&<div className="resume-paper-templates" aria-label="简历模板">{resumeTemplates.map(t=><button key={t.id} disabled={busy} aria-pressed={template===t.id} title={t.description} onClick={()=>setTemplate(t.id)}>{t.name}</button>)}</div>}
       <span className="resume-paper-meta">A4{pdf?` · ${pdf.numPages} 页`:''}</span>
       <button disabled={busy} title={zoom==='fit'?'按实际纸张宽度显示':'适合窗口宽度'} onClick={()=>setZoom(zoom==='fit'?'actual':'fit')}>{zoom==='fit'?'100%':'适合宽度'}</button>
-      <div className="resume-paper-download"><button disabled={busy} onClick={()=>void exportFile('docx')}>Word</button><button disabled={busy||!pdf} onClick={()=>void exportFile('pdf')}>{busy?'导出中…':'导出 PDF'}</button></div>
+      {!managedToolbar&&<div className="resume-paper-download"><button disabled={busy} onClick={()=>void exportFile('docx')}>Word</button><button disabled={busy||!pdf} onClick={()=>void exportFile('pdf')}>{busy?'导出中…':'导出 PDF'}</button></div>}
     </div>
     {error&&<p className="notice" role="alert">{error} <button onClick={()=>setRetry(value=>value+1)}>重新加载</button></p>}
     {notice&&<p className="resume-feedback" role="status">{notice}</p>}

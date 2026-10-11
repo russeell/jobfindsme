@@ -763,3 +763,79 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .resume-word-toolbar{padding:9px 12px}.resume-word-format{padding:5px 12px}.resume-word-surface{padding:20px 26px}.resume-word-content{padding:32px 44px;line-height:1.65;min-height:900px}.resume-word-content section{margin-bottom:20px}.resume-word-content h2{font-size:14px;margin-bottom:9px;padding-bottom:6px}.resume-word-surface:not(.show-empty-sections) .resume-empty-section{display:none}.show-empty-sections .resume-empty-section{background:#fafbfc;border:1px dashed #d9e0e8;border-radius:5px;padding:12px}.show-empty-sections .resume-empty-section p:before{content:'点击填写内容';color:#a0a8b4;pointer-events:none}.resume-word-surface.campus h2{color:#256396;border-bottom:0;border-left:3px solid #4383b4;padding:0 0 0 10px}.resume-word-surface.compact .resume-word-content{color:#262626;padding:28px 36px;font-size:13px}.resume-word-surface.compact h2{border:0;color:#202020;padding-bottom:0}.resume-word-format .resume-sections-toggle{margin-left:auto;font-size:11px;color:#7b8795}.resume-template-body{padding:4px 24px 20px}.resume-template-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}.resume-template-card{display:flex;flex-direction:column;gap:8px;text-align:left;padding:12px;background:#fafbfc;border:1px solid #e5e9ee;border-radius:10px;min-width:0}.resume-template-card[aria-pressed=true]{border-color:#3777d8;background:#f1f6ff;box-shadow:0 0 0 1px #3777d8}.resume-template-card>b{font-size:13px}.resume-template-card small{font-size:11px;color:#7f8997;line-height:1.6}.resume-template-thumb{width:100%;height:166px;background:#fff;padding:18px;display:flex;flex-direction:column;gap:7px;box-shadow:0 2px 5px #24354a10}.resume-template-thumb b{height:6px;width:42%;background:#3d485a;margin-bottom:3px}.resume-template-thumb i{height:3px;background:#d9dfe7;width:95%}.resume-template-thumb i:nth-child(3n){width:68%}.resume-template-thumb strong{height:4px;width:38%;background:#5c6a80;margin:5px 0 0}.campus .resume-template-thumb strong{background:#3d8cba}.compact .resume-template-thumb{gap:5px}.resume-template-options{display:flex;align-items:center;gap:12px;color:#8490a0;font-size:11px}.resume-template-options button{font-size:12px}.resume-word-workspace .resume-modal footer{flex-wrap:wrap}.resume-word-workspace .resume-modal footer p{width:100%;font-size:12px;margin:0 0 6px}@media(max-width:760px){.resume-template-gallery{gap:8px}.resume-template-thumb{height:120px;padding:12px}.resume-word-surface{padding:10px}.resume-word-content{padding:24px}.application-actions{flex-wrap:wrap}}
 
 .preparation-source[hidden],.preparation-apply[hidden]{display:none!important}
+
+/* Workbench hierarchy: one primary task, quiet context, consistent controls. */
+:root {--text:#243044;--text-muted:#637084;--line:#e4e9f0;--surface-soft:#f6f8fb;--radius-control:8px;--radius-panel:12px}
+button,summary,[role=button] {-webkit-tap-highlight-color:transparent}
+button:not(:disabled),summary,[role=button] {cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible {outline:2px solid var(--accent);outline-offset:3px}
+button {transition:background-color .12s,border-color .12s,color .12s}
+.sidebar nav button,.sidebar-settings {min-height:40px;border-radius:9px}
+.sidebar nav button:not(.active):hover,.sidebar-settings:not(.active):hover {background:#edf1f6}
+.sidebar nav button.active {background:#e8f0fd;color:#215eb7}
+.workspace-name {display:flex;align-items:center;gap:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px}
+.workspace-name strong {font-size:13px;color:var(--text);font-weight:600}
+.workspace-divider {color:#bdc6d2}
+.topbar-actions {display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}
+.new-conversation-button {display:flex;align-items:center;gap:6px;white-space:nowrap;background:var(--surface);border:1px solid var(--line);padding:6px 10px;border-radius:8px;font-size:12px;color:var(--text)}
+.new-conversation-button svg {width:15px;height:15px}
+.content:not(.research-content) {scrollbar-gutter:stable;scroll-padding-block:18px}
+.content h1,.settings-heading h1,.model-page-heading h1,.records-heading h1 {font-size:24px;line-height:1.35;font-weight:650;letter-spacing:-.025em}
+.settings-page {max-width:1050px;margin:0 auto;padding:0 0 28px}
+.settings-heading,.model-page-heading,.records-heading {margin:0 0 20px;align-items:center}
+.settings-heading p,.model-page-heading p,.records-heading p {margin:6px 0 0;font-size:12px;line-height:1.6}
+.settings-tabs button.active {color:#215eb7}
+.source-catalog .source-card {padding:18px 20px;row-gap:6px}
+.source-catalog .source-card:has(input:checked) {background:#fafcff}
+.source-catalog .source-card-status {line-height:1.6}
+.model-card {box-shadow:none}
+.filter-popover {border-radius:12px;box-shadow:0 12px 36px #1d30441a,0 2px 6px #1d304409}
+.popover-heading {padding-bottom:10px}
+.popover-heading>button {width:30px;height:30px;border-radius:7px}
+.resume-modal,.preparation-dialog,.model-dialog,.research-branch-dialog {box-shadow:0 20px 70px #182a4629}
+.resume-word-format {top:calc(var(--document-toolbar-height,54px) - 16px)}
+.resume-word-toolbar>.popover-trigger {min-height:30px;padding:6px 10px;font-size:12px}
+.resume-word-status {color:#5e6d80}
+.discovery-controls .searchbar {min-height:46px;padding:5px;border-radius:11px;background:#fff}
+.discovery-controls .searchbar input {font-size:14px;min-width:0}
+.discovery-controls .searchbar .primary-button {min-height:34px;min-width:86px;border-radius:8px;font-weight:600}
+.discovery-controls .resume-search-action {margin:6px 0;gap:10px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--text-muted)}
+.discovery-controls .resume-search-action>button {min-height:28px;background:transparent;border-color:transparent;color:#426a9a;font-size:11px;padding:3px 6px}
+.search-recovery {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:10px 0;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:12px;background:var(--surface-soft)}
+.search-recovery button {font-size:12px;background:transparent;border:0;color:var(--accent);padding:3px}
+.discovery-page .job-card {margin:0 0 5px;border:1px solid transparent;border-radius:10px}
+.discovery-page .job-card.selected {border-color:#d7e4f7;box-shadow:inset 3px 0 0 #3977d2;background:#edf3fe}
+.discovery-page .job-card p {color:var(--text-muted)}
+.job-card-facts {display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:5px 0;font-size:12px}
+.job-card-facts>b {font-weight:600;color:#355d8a}
+.discovery-page .job-card small {font-size:11px;color:#68778a}
+.detail-heading {font-size:12px;color:var(--text-muted);padding:12px 16px;background:#fafbfc}
+.job-detail h3 {line-height:1.5}
+.job-action-buttons {gap:6px}
+.job-actions.compact .primary-button {background:#f0f5fd!important;color:#285f9f!important;border-color:#e1eaf7!important}
+.job-actions.compact .primary-button:hover {background:#e4eefc!important}
+.job-actions .save-job.is-saved {background:#f0f5fd;color:#285f9f;border-color:#dce7f6}
+.records-job-list>.record-card {border:1px solid var(--line);border-radius:12px;margin-bottom:10px;padding:16px 18px;background:#fff}
+.records-job-list>.record-card:hover {border-color:#cbd7e6}
+.record-title {line-height:1.5}.record-meta {line-height:1.6}.records-pagination {padding:14px 0}
+.assistant-shortcuts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:24px auto 6px;width:100%;max-width:720px}
+.assistant-shortcuts>button {display:grid;grid-template-columns:20px 1fr;align-items:center;gap:8px 10px;padding:16px;text-align:left;min-width:0;border:1px solid var(--line);background:#fff;border-radius:12px}
+.assistant-shortcuts>button:hover,.assistant-shortcuts>button[aria-pressed=true] {border-color:#c2d5ee;background:#f6f9ff}
+.assistant-shortcuts svg {width:18px;height:18px;color:#5c789e}
+.assistant-shortcuts strong {font-weight:600;font-size:13px;color:var(--text)}
+.assistant-shortcuts span {grid-column:1/-1;font-size:11px;line-height:1.6;color:var(--text-muted)}
+.research-empty-state .research-header h1 {font-size:26px;letter-spacing:-.03em}
+.research-empty-state .research-header p {font-size:13px;color:var(--text-muted)}
+@container(max-width:640px){
+ .workspace-name {font-size:0;gap:0}.workspace-divider {display:none}
+ .assistant-shortcuts {gap:6px;margin-top:18px}.assistant-shortcuts>button {padding:12px 9px;gap:7px}.assistant-shortcuts span {font-size:10px}
+ .records-job-list>.record-card {padding:14px}.settings-heading h1,.model-page-heading h1 {font-size:22px}
+ .source-catalog .source-card {padding:16px}.resume-word-status {display:block;font-size:10px;flex:1}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+.resume-word-workspace .resume-paper-toolbar {top:calc(var(--document-toolbar-height,54px) - 16px);border-radius:0;border-inline:0;padding:6px 14px;background:#fff;z-index:2}
+.resume-word-workspace .resume-paper-surface {border-inline:0;border-radius:0}
+@media(max-width:760px){.resume-word-workspace .resume-paper-toolbar{position:static}}
+.settings-panel .models-page {max-width:none;padding-top:0}
+/* Saving state remains visible even when the toolbar wraps. */
+.resume-word-status {display:block}

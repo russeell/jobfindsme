@@ -1,5 +1,6 @@
+import {PopoverButton} from '../shared/PopoverButton';
 import {ResumeModal} from './ResumeDialogs';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {EditorContent,useEditor,useEditorState} from '@tiptap/react';
 import {getSchema} from '@tiptap/core';
 import {resumeEditorExtensions} from '../../../shared/resume-editor-schema';
@@ -12,9 +13,12 @@ import {ResumeSelectionAI} from './ResumeSelectionAI';
 
 
 export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;active:boolean;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:(instruction?:string)=>void}){
+ const toolbarRef=useRef<HTMLDivElement>(null);
  const preference=`jfm.resume.template.${workspaceId}`;
  const [template,setTemplate]=useState<ResumeTemplate>(()=>{try{const value=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===value)?value as ResumeTemplate:'professional';}catch{return 'professional';}});
  const [mode,setMode]=useState<'edit'|'preview'>('edit'),[dirty,setDirty]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[discard,setDiscard]=useState(false);
+ const previousMode=useRef(mode);
+ useLayoutEffect(()=>{if(previousMode.current===mode)return;previousMode.current=mode;const toolbar=toolbarRef.current;const content=toolbar?.closest<HTMLElement>('.content');if(toolbar&&content)content.scrollTop+=toolbar.parentElement!.getBoundingClientRect().top-content.getBoundingClientRect().top-16;},[mode]);
  const [templatesOpen,setTemplatesOpen]=useState(false),[showEmpty,setShowEmpty]=useState(false);
  const [base,setBase]=useState(version),[aiOpen,setAiOpen]=useState(false);
  const cacheKey=(id:string)=>`jfm.resume.document-draft.${workspaceId}.${id}`;
@@ -46,17 +50,18 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
    try{const next=await window.jobfindsme!.saveResumeVersion({workspace_id:workspaceId,base_version_id:base.version_id,content,document});try{localStorage.removeItem(cacheKey(base.version_id));}catch{}initial.current=resumeDocumentFingerprint(document);setBase(next);setDirty(false);onDirty(false);setNotice('已保存新版本，原版本保留。');await onSaved();return next;}catch(e){setError(userError(e).message);}finally{setBusy(false);}
  }
  async function preview(){if(dirty){const next=await save();if(!next)return;}setMode('preview');}
- async function exportWord(){const next=dirty?await save():base;if(!next)return;setBusy(true);setError('');try{const result=await window.jobfindsme!.exportResume({workspace_id:workspaceId,version_id:next.version_id,format:'docx',template});if(result)setNotice('已导出可继续编辑的 Word 文档。');}catch(e){setError(userError(e).message);}finally{setBusy(false);}}
+ async function exportFile(format:'docx'|'pdf'){const next=dirty?await save():base;if(!next)return;setBusy(true);setError('');try{const result=await window.jobfindsme!.exportResume({workspace_id:workspaceId,version_id:next.version_id,format,template});if(result)setNotice(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。');}catch(e){setError(userError(e).message);}finally{setBusy(false);}}
  function reset(){if(!editor)return;editor.commands.setContent(resumeDocument(version.content,version.document,template),{emitUpdate:false});initial.current=resumeDocumentFingerprint(editor.getJSON());try{localStorage.removeItem(cacheKey(base.version_id));}catch{}setBase(version);setDirty(false);onDirty(false);setDiscard(false);setError('');setNotice('已恢复已保存版本。');}
+ useEffect(()=>{const toolbar=toolbarRef.current;if(!toolbar)return;const measure=()=>toolbar.parentElement?.style.setProperty('--document-toolbar-height',`${toolbar.offsetHeight}px`);const observer=new ResizeObserver(measure);observer.observe(toolbar);measure();return()=>observer.disconnect();},[editor]);
  if(!editor)return <p role="status">正在打开文档…</p>;
  function applyTemplate(next:ResumeTemplate){setTemplate(next);try{localStorage.setItem(preference,next);}catch{}editor!.commands.setContent(resumeDocument(resumeDocumentContent(editor!.getJSON()),editor!.getJSON(),next));}
  const action=(fn:()=>unknown)=>()=>{setAiOpen(false);fn();};
  return <div className="resume-word-workspace">
-   <div className="resume-word-toolbar" aria-label="文档工具栏">
+   <div ref={toolbarRef} className="resume-word-toolbar" aria-label="文档工具栏">
      <div className="resume-word-modes"><button aria-pressed={mode==='edit'} disabled={busy} onClick={()=>setMode('edit')}>编辑</button><button aria-pressed={mode==='preview'} disabled={busy||stale} onClick={()=>void preview()}>{dirty?'保存并预览':'分页预览'}</button></div>
      <span className="resume-word-status">{busy?'处理中…':dirty?'草稿 · 未保存版本':`v${base.version_number} · 已保存`}</span>
      <button disabled={busy} onClick={()=>setTemplatesOpen(true)}>模板与排版</button>{onImprove&&<button disabled={busy||dirty} title={dirty?"保存后再修改整份简历":undefined} onClick={()=>onImprove()}>✦ AI 修改</button>}
-     <button disabled={busy||stale} onClick={()=>void exportWord()}>{dirty?'保存并导出 Word':'导出 Word'}</button>
+     <PopoverButton title="导出简历" label={dirty?'保存并导出':'导出'} disabled={busy||stale} width={240}>{close=><><p className="note">{dirty?'先保存当前修改，再选择导出位置。':'导出当前版本和所选模板。'}</p><button className="status-option" onClick={()=>{close();void exportFile('pdf');}}>PDF · 用于投递</button><button className="status-option" onClick={()=>{close();void exportFile('docx');}}>Word · 继续编辑</button></>}</PopoverButton>
      <button className="primary-button" disabled={busy||stale||!dirty} onClick={()=>void save()}>保存</button>
    </div>
    {templatesOpen&&<ResumeModal title="选择简历模板" onClose={()=>setTemplatesOpen(false)}><div className="resume-template-body"><p className="note">只改变排版，不改动你的经历。导出沿用所选模板。</p><div className="resume-template-gallery">{resumeTemplates.map(t=><button className={`resume-template-card ${t.id}`} key={t.id} aria-pressed={template===t.id} onClick={()=>applyTemplate(t.id)}><span className="resume-template-thumb" aria-hidden="true"><b/><i/><i/><strong/><i/><i/><i/><strong/><i/><i/></span><b>{t.name}</b><small>{t.description}</small></button>)}</div><div className="resume-template-options"><button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onOrganize();}}>调整内容归属</button><span>空章节自动隐藏，可在编辑栏添加。</span></div></div><footer><p>AI 按真实经历提出修改，审阅后保存。</p>{onImprove&&<button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onImprove(`按“${resumeTemplates.find(t=>t.id===template)?.name}”模板组织内容；${template==='campus'?'教育、项目与实习优先':template==='compact'?'精简重复表达，保留关键事实':'突出真实工作成果'}。检查错分的章节，将项目与工作内容归回对应章节，不能遗漏原有经历`);}}>✦ AI 生成修改稿</button>}<button className="primary-button" onClick={()=>setTemplatesOpen(false)}>完成</button></footer></ResumeModal>}
@@ -75,6 +80,6 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
      <div className={`resume-word-surface ${template}${showEmpty?' show-empty-sections':''}`}><EditorContent editor={editor}/></div>
      <div className="resume-word-footer"><span>直接编辑 · 草稿仅存本机 · 导出分页请查看预览</span>{dirty&&<button disabled={busy} onClick={()=>setDiscard(true)}>放弃草稿</button>}</div>
      {discard&&<div className="notice" role="alert">放弃当前未保存的草稿？<button onClick={()=>setDiscard(false)}>继续编辑</button><button disabled={busy} onClick={reset}>放弃草稿并恢复</button></div>}
-   </>:<ResumeDocument key={`${base.version_id}:${template}`} workspaceId={workspaceId} version={base} template={template} onTemplateChange={applyTemplate}/>}
+   </>:<ResumeDocument managedToolbar key={`${base.version_id}:${template}`} workspaceId={workspaceId} version={base} template={template} onTemplateChange={applyTemplate}/>}
  </div>;
 }

@@ -12,7 +12,7 @@ import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "..
 import { Discovery } from "./search/Discovery";
 import { Workbench, useOriginalBrowser } from "./shared/Workbench";
 import {presentSourceStatus,sourceCheckFailureOutcome} from "../../shared/source-presentation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
 import type {
@@ -34,7 +34,12 @@ export function App() {
   function chooseSource(id:string, selected:boolean) {setChosenSources(current => {const previous=current;const next=selected ? [...new Set([...previous,id])] : previous.filter(s=>s!==id);localStorage.setItem("jfm.sources.selected",JSON.stringify(next));return next;});}
   function chooseAllSources(selected:boolean) {setChosenSources(selected?(data?.sources.map(source=>source.source_id)??[]):[]);}
   const [page, setPage] = useState<Page>("discover");
+  const contentRef=useRef<HTMLDivElement>(null);
+  const scrollPositions=useRef(new Map<string,number>());
   const [settingsTab,setSettingsTab]=useState<SettingsTab>("sources");
+  const [data, setData] = useState<BootstrapData>();
+  const routeKey=`${data?.workspaces[0]?.workspace_id ?? 'local'}:${page}:${page==='settings'?settingsTab:''}`;
+  useLayoutEffect(()=>{const node=contentRef.current;if(node)node.scrollTop=scrollPositions.current.get(routeKey)??0;},[routeKey]);
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
   const [availableUpdate,setAvailableUpdate]=useState<{tag:string;message:string}>();
   useEffect(()=>{
@@ -51,7 +56,6 @@ export function App() {
   },[]);
   function dismissUpdate(){if(availableUpdate)localStorage.setItem("jfm.update.dismissed-tag",availableUpdate.tag);setAvailableUpdate(undefined);}
   useEffect(()=>{const show=()=>openSettings("sources");window.addEventListener("jfm:show-sources",show);return()=>window.removeEventListener("jfm:show-sources",show);},[page]);
-  const [data, setData] = useState<BootstrapData>();
   useEffect(()=>{if(!data)return;const allowed=new Set(data.sources.map(source=>source.source_id));setChosenSources(current=>current.filter(id=>allowed.has(id)));},[data]);
   useEffect(()=>{if(!data||hadSourcePreference.current)return;hadSourcePreference.current=true;
     const first=data.sources.find(source=>source.source_id==="liepin"&&source.live_search_enabled)||data.sources.find(source=>source.live_search_enabled);
@@ -104,14 +108,14 @@ export function App() {
   return <Workbench onError={setError} sidebar={<>
     <div className="brand"><img className="brandmark" src="./brand.svg" alt="j" /><span className="brand-name">JobFindsMe</span></div>
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}
-    <button className="sidebar-new-chat" type="button" disabled={!serviceStatus.connected} title="求职助手" aria-label="求职助手" onClick={openNewChat}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">进行中</span>}</button></nav></div>
+    <button className={`sidebar-new-chat${page==="research"?" active":""}`} aria-current={page==="research"?"page":undefined} type="button" disabled={!serviceStatus.connected} title="求职助手" aria-label="求职助手" onClick={()=>setPage("research")}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">进行中</span>}</button></nav></div>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
     <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label={availableUpdate?"设置，有新版本":"设置"} aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(availableUpdate?"about":settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span>{availableUpdate&&<span className="update-indicator" aria-hidden="true"/>}</button></div>
   </>}>
-    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div id="research-topbar-actions" className="research-topbar-actions"/></header><div className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
+    <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"我的岗位",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
       {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
-      <div className="discovery-mount" hidden={page!=="discover"}><Discovery active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
+      <div className="discovery-mount" hidden={page!=="discover"}><Discovery onOpenResume={()=>setPage("resume")} active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onEditResume={openResume} preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={openPreparation} onDiscover={()=>setPage("discover")} onError={setError}/></div>
       <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={openPreparation} openRequest={resumeRequest}/></div>
