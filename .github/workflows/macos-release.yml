@@ -1,0 +1,52 @@
+name: macOS desktop package
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/desktop-refactor]
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+      - run: python -m pip install -e ".[dev]" pyinstaller
+      - run: python -m pytest
+      - run: npm ci
+        working-directory: apps/desktop
+      - run: node node_modules/electron/install.js
+        working-directory: apps/desktop
+      - run: npm run build
+        working-directory: apps/desktop
+      - run: npm test
+        working-directory: apps/desktop
+      - run: python -m PyInstaller --clean --noconfirm --distpath apps/desktop/runtime/python --workpath build/jobfindsme-api scripts/jobfindsme_api.spec
+      - run: node scripts/package-macos.mjs
+        working-directory: apps/desktop
+      - run: node scripts/audit-macos-package.mjs
+        working-directory: apps/desktop
+      - run: npm install --no-save --package-lock=false playwright
+        working-directory: apps/desktop
+      - run: node scripts/smoke-desktop.mjs
+        working-directory: apps/desktop
+      - name: Archive tested application
+        working-directory: apps/desktop/release/mac-unpacked
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent JobFindsMe.app mac-arm64.zip
+          shasum -a 256 mac-arm64.zip > SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JobFindsMe-mac-arm64
+          path: |
+            apps/desktop/release/mac-unpacked/*.zip
+            apps/desktop/release/mac-unpacked/*.txt
+            apps/desktop/release/mac-unpacked/*.png

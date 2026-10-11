@@ -36,7 +36,7 @@ jobs:
         working-directory: apps/desktop
       - run: npm install --no-save --package-lock=false playwright
         working-directory: apps/desktop
-      - run: node scripts/smoke-windows.mjs
+      - run: node scripts/smoke-desktop.mjs
         working-directory: apps/desktop
       - shell: pwsh
         run: |

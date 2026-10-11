@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import {mkdirSync} from 'node:fs';
 import {setTimeout as delay} from 'node:timers/promises';
-const executablePath=path.resolve('release/windows/JobFindsMe/JobFindsMe.exe');
-const profile=path.join(process.env.RUNNER_TEMP,'jfm-windows-smoke');
+const mac=process.platform==='darwin';
+const output=path.resolve(mac?'release/mac-unpacked':'release/windows');
+const executablePath=path.join(output,mac?'JobFindsMe.app/Contents/MacOS/JobFindsMe':'JobFindsMe/JobFindsMe.exe');
+const profile=path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-smoke`);
 mkdirSync(profile,{recursive:true});
 let workspaceId;
 for(let attempt=0;attempt<2;attempt++){
@@ -32,7 +34,7 @@ for(let attempt=0;attempt<2;attempt++){
    await window.getByRole('button',{name:page,exact:true}).waitFor({state:'visible'});
    assert.equal(await window.getByText('本地服务暂时异常',{exact:false}).count(),0);
   }
-  await window.screenshot({path:`release/windows/smoke-${attempt}.png`});
-  console.log(`Packaged Windows UI + IPC + Python + SQLite bootstrap passed (${attempt+1}/2)`);
+  await window.screenshot({path:path.join(output,`smoke-${attempt}.png`)});
+  console.log(`Packaged ${process.platform} UI + IPC + Python + SQLite bootstrap passed (${attempt+1}/2)`);
  }finally{await app.close();}
 }

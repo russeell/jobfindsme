@@ -111,3 +111,5 @@ D175：导入主流程由 `ResumeOriginal.tsx` 展示原件，`ResumePage` 不�
 `record_application` 同一事务更新岗位所选简历，面试沿用原有关联版本读取；`matching-preview` 支持工作区限定的指定版本，岗位准备传入同一关联ID。投递准备优先已关联版本，保留旧招呼语和未保存提示，不隐式发送或标记投递。新导入/基础编辑不会改动已有岗位材料。
 
 D176 岗位记录使用 RecordsPage 原生表格与现有 JobActions/PopoverButton，不新增列表框架；窄工作区合并进度列。搜索反馈局部呈现，App 全局反馈区区分页面归属和服务状态；user-errors 先移除 Electron 包装再分类，保留敏感内容过滤。岗位准备移除重复决策块与其额外匹配读取。简历主界面隐藏版本编号并移除历史入口，内部版本、恢复API和材料关联仍保留。
+
+macOS与Windows发行包由对应GitHub Actions从同一提交构建，包内package.json写入sourceCommit；包审计核对当前源码，共用smoke-desktop.mjs验证两次实际启动、四个导航入口和工作区保留。macOS使用Apple Silicon runner，不复用旧Electron外壳；Release只上传测试通过的产物。

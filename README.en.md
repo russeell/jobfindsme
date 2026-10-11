@@ -55,7 +55,7 @@ Import your resume once. Reuse the job description and linked resume for intervi
 2. **Search for jobs**: enter keywords, choose one city or no city restriction, select platforms and sign in or complete verification when prompted.
 3. **Prepare with AI**: configure your own model in Settings. Edit your resume in My Resume; start interview preparation or research from a job or the Assistant.
 
-Downloads point to the published **v0.14.0** release. The latest source includes later improvements; some screens and features are not yet in the downloadable packages. Packages are unsigned; see the [release page](https://github.com/russeell/jobfindsme/releases/latest) for first-launch instructions and checksums.
+Packages are unsigned. See the [release page](https://github.com/russeell/jobfindsme/releases/latest) for first-launch instructions, the exact source commit and SHA256 checksums.
 
 Data is stored locally. AI features send relevant materials to your chosen model service, which may charge for requests. Editable PDF copies are reflowed, without guaranteed preservation of the original layout. You confirm and send applications on the platform; opening a listing does not mark it as applied.
 
