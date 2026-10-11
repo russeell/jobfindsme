@@ -29,6 +29,28 @@ for(let attempt=0;attempt<2;attempt++){
   assert.ok(data.workspaces.length>0);assert.equal(data.sources.length,4);
   if(attempt===0)workspaceId=data.workspaces[0].workspace_id;
   else assert.equal(data.workspaces[0].workspace_id,workspaceId,'Workspace must survive restart');
+  // Exercise pin persistence in the actual packaged renderer and SQLite bridge.
+  if(attempt===0){
+   await window.evaluate(async workspace=>{
+    for(const [id,title,date] of [['pin-old','置顶测试旧对话','2026-01-01T00:00:00Z'],['pin-new','置顶测试新对话','2026-01-02T00:00:00Z']]){
+     await window.jobfindsme.saveResearchChat({workspace_id:workspace,id,chat_title:title,updated_at:date,turns:[{role:'user',text:title},{role:'assistant',text:'Synthetic packaging test.'}],report_ids:[]});
+    }
+   },workspaceId);
+   await window.reload();
+   const pin=window.getByRole('button',{name:'置顶聊天：置顶测试旧对话',exact:true});
+   await pin.waitFor({state:'visible'});
+   await window.getByRole('button',{name:'置顶测试旧对话',exact:true}).hover();
+   await pin.click();
+  }
+  const pinned=window.getByRole('button',{name:'取消置顶：置顶测试旧对话',exact:true});
+  await pinned.waitFor({state:'visible'});
+  assert.equal(await pinned.getAttribute('aria-pressed'),'true');
+  assert.equal(await window.locator('.research-history-item').first().textContent(),'置顶测试旧对话');
+  if(attempt===1){
+   await pinned.click();
+   await window.getByRole('button',{name:'置顶聊天：置顶测试旧对话',exact:true}).waitFor({state:'visible'});
+   assert.equal(await window.locator('.research-history-item').first().textContent(),'置顶测试新对话');
+  }
   for(const page of ['岗位管理','我的简历','求职助手','找工作']){
    await window.getByRole('button',{name:page,exact:true}).click();
    await window.getByRole('button',{name:page,exact:true}).waitFor({state:'visible'});

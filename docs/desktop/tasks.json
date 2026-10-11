@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-11",
+  "updated_at": "2026-10-12",
   "status_values": [
     "pending",
     "in_progress",
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D183",
   "tasks": [
     {
       "id": "D01",
@@ -3148,6 +3148,23 @@
       "scope": [
         "验证待处理与运行状态分离，失败按平台展示",
         "单源与批量检查共用结果、可用数量，切页保留"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D183",
+      "title": "v0.15.1双平台下载包更新",
+      "status": "in_progress",
+      "depends_on": [
+        "D182"
+      ],
+      "scope": [
+        "统一版本和源码溯源",
+        "两平台打包测试及置顶跨重启验证",
+        "发布附件与校验文件"
       ],
       "evidence": [
         "docs/desktop/HANDOFF.md"
