@@ -25,7 +25,7 @@ export function ResumeProposal({workspaceId,sessionId,onChanged,onBusyChange}:{w
  }
  async function save(){
   setBusy(true);setError('');setMessage('');
-  try{const version=await window.jobfindsme!.savePromptSession(sessionId);setSession(current=>current&&{...current,status:'saved',saved_version_id:version.version_id});setMessage(`已保存${session?.target_job_id?'岗位专属简历':'新的基础简历'} v${version.version_number}，原版本保留。`);window.dispatchEvent(new Event('jfm:job-updated'));}
+  try{const version=await window.jobfindsme!.savePromptSession(sessionId);setSession(current=>current&&{...current,status:'saved',saved_version_id:version.version_id});setMessage(`已保存${session?.target_job_id?'岗位专属简历':'新的基础简历'}，原稿保留。`);window.dispatchEvent(new Event('jfm:job-updated'));}
   catch(e){setError(userError(e).message);}finally{setBusy(false);}
  }
  const stale=session?.status==='active'&&session.base_version_id!==currentVersion;

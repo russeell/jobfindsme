@@ -11,8 +11,8 @@ import {Icon} from '../shared/Icon';
 import {useOriginalBrowser} from '../shared/Workbench';
 
 const tabs:Array<[RecordsFilter,string]>=[['saved','收藏'],['applied','已投递'],['all','全部']];
-type Props={active:boolean;data?:BootstrapData;onError(message?:string):void;onPrepare(job:SearchResultItem['job'],apply?:boolean):void;onDiscover():void};
-export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
+type Props={active:boolean;data?:BootstrapData;onPrepare(job:SearchResultItem['job'],apply?:boolean):void;onDiscover():void};
+export function RecordsPage({active,data,onPrepare,onDiscover}:Props){
   const [items,setItems]=useState<TrackedJob[]>([]);
   const [loaded,setLoaded]=useState(false);
   const [loadError,setLoadError]=useState('');
@@ -54,7 +54,7 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
     return()=>{cancelled=true;window.removeEventListener('jfm:job-updated',load);};
   },[workspaceId,active,reloadNonce]);
   async function update(item:TrackedJob,event_type:'read'|'saved'|'applied'|'apply_opened',enabled=true){
-    if(!workspaceId)return;onError(undefined);
+    if(!workspaceId)return;setActionError('');
     await window.jobfindsme!.setJobTracking({workspace_id:workspaceId,job_id:item.job.job_id,event_type,enabled});
     setItems(await window.jobfindsme!.listJobTracking(workspaceId));
     if(event_type==='apply_opened'){
@@ -75,13 +75,11 @@ export function RecordsPage({active,data,onError,onPrepare,onDiscover}:Props){
     </div>
     {loadError&&<p className="records-load-error" role="alert">{loadError} <button type="button" onClick={()=>setReloadNonce(value=>value+1)}>重新读取</button></p>}
     {!loaded?<p className="records-loading" role="status">{loadError?'已有记录保留在本机，可重试读取。':'正在读取本地岗位…'}</p>:selected.length?<>
-      <div className="records-job-list">{selected.slice(0,limit).map(item=>{const status=recordStage(item);return <article className="record-card" key={item.job.job_id}>
-        <div className="record-card-heading"><button type="button" className="record-title" onClick={()=>onPrepare(item.job)}>{item.job.title}</button>{(status||item.tracking.saved)&&<span className={`record-stage ${status||'saved'}`}>{status?preparationStages[status]:'已收藏'}</span>}</div>
-        <div className="record-meta"><span>{item.job.company}</span><span>{item.job.locations.join(' / ')||'地点未知'}</span>{item.job.source.source_name!==item.job.company&&<span className="record-source">{item.job.source.source_name}</span>}</div>
-        <p className="record-salary">{formatSalary(item.job)}</p>
+      <div className="records-table-wrap"><table className="records-table"><thead><tr><th scope="col">岗位 / 公司</th><th scope="col">薪资</th><th scope="col">地点 / 来源</th><th scope="col">进度</th><th scope="col">操作</th></tr></thead><tbody>{selected.slice(0,limit).map(item=>{const status=recordStage(item);return <tr key={item.job.job_id}>
+        <td className="record-main"><button type="button" className="record-title" onClick={()=>onPrepare(item.job)}>{item.job.title}</button><span className="record-company">{item.job.company}</span><span className="record-narrow-stage">{status?preparationStages[status]:item.tracking.read?'已查看':'未查看'}</span>
         {item.preparation?.next_action&&<p className="records-action"><span>下一步</span>{item.preparation.next_action}{item.preparation.due_date&&<time>{item.preparation.due_date}</time>}</p>}
-        <JobActions onApply={()=>onPrepare(item.job,true)} compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={onError}/>
-      </article>;})}</div>
+        </td><td className="record-pay">{formatSalary(item.job)}</td><td className="record-location">{item.job.locations.join(' / ')||'地点未知'}<small>{item.job.source.source_name}</small></td><td><span className={`record-stage ${status||'none'}`}>{status?preparationStages[status]:item.tracking.read?'已查看':'未查看'}</span></td><td className="record-actions-cell"><JobActions onApply={()=>onPrepare(item.job,true)} compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job)} onError={message=>setActionError(message?userError(message).message:'')}/></td>
+      </tr>;})}</tbody></table></div>
       <div className="records-pagination"><span>显示 {Math.min(limit,selected.length)} / {selected.length} 条岗位</span>{limit<selected.length&&<button type="button" onClick={()=>setLimit(value=>value+recordsPageSize)}>再显示 {Math.min(recordsPageSize,selected.length-limit)} 条</button>}</div>
     </>:<div className="records-empty"><Icon name="records"/><h2>{query?'没有匹配的岗位':filter==='saved'?'还没有收藏岗位':filter==='applied'?'还没有已投递岗位':'这里还没有岗位'}</h2><p>{query?'试试其他关键词，或清空筛选。':filter==='saved'?'点击岗位上的星标，喜欢的机会就会留在这里。':filter==='applied'?'投递后在岗位上标记，不会把打开原页当作已投递。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter!=='all'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}
   </section>;

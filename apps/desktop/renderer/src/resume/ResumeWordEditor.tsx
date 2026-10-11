@@ -59,7 +59,7 @@ export function ResumeWordEditor({workspaceId,version,active,onSaved,onDirty,onO
  return <div className="resume-word-workspace">
    <div ref={toolbarRef} className="resume-word-toolbar" aria-label="文档工具栏">
      <div className="resume-word-modes"><button aria-pressed={mode==='edit'} disabled={busy} onClick={()=>setMode('edit')}>编辑</button><button aria-pressed={mode==='preview'} disabled={busy||stale} onClick={()=>void preview()}>{dirty?'保存并预览':'分页预览'}</button></div>
-     <span className="resume-word-status">{busy?'处理中…':dirty?'草稿 · 未保存版本':`v${base.version_number} · 已保存`}</span>
+     <span className="resume-word-status">{busy?'处理中…':dirty?'有未保存的修改':'已保存'}</span>
      <button disabled={busy} onClick={()=>setTemplatesOpen(true)}>模板与排版</button>{onImprove&&<button disabled={busy||dirty} title={dirty?"保存后再修改整份简历":undefined} onClick={()=>onImprove()}>✦ AI 修改</button>}
      <PopoverButton title="导出简历" label={dirty?'保存并导出':'导出'} disabled={busy||stale} width={240}>{close=><><p className="note">{dirty?'先保存当前修改，再选择导出位置。':'导出当前版本和所选模板。'}</p><button className="status-option" onClick={()=>{close();void exportFile('pdf');}}>PDF · 用于投递</button><button className="status-option" onClick={()=>{close();void exportFile('docx');}}>Word · 继续编辑</button></>}</PopoverButton>
      <button className="primary-button" disabled={busy||stale||!dirty} onClick={()=>void save()}>保存</button>

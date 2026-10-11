@@ -3037,6 +3037,23 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D176",
+      "title": "紧凑岗位工作台与简历界面减负",
+      "status": "done",
+      "depends_on": [
+        "D175"
+      ],
+      "scope": [
+        "核对 FuckJob UI 源码，独立实现紧凑列表和清楚操作层级",
+        "移除岗位准备重复提示和简历主界面版本历史",
+        "错误归属与恢复交互，隔离原生验收"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

@@ -860,3 +860,44 @@ button {transition:background-color .12s,border-color .12s,color .12s}
 .import-document-entry textarea{padding-right:70px}
 .import-document-section+section{margin-top:20px}
 .import-review-footer::after{content:"";position:absolute;left:0;right:0;top:100%;height:28px;background:var(--surface)}
+
+/* Compact job library: aligned comparisons, one primary action per row. */
+.records-controls {display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px}
+.records-controls .records-tabs {border:0;padding:0;flex-shrink:0}
+.records-controls .records-tools {flex:1;min-width:280px;margin:0;gap:8px}
+.records-controls .records-search {min-width:140px;padding:8px 10px;border-radius:8px}
+.records-table-wrap {border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.records-table {width:100%;border-collapse:collapse;table-layout:fixed;text-align:left;font-size:12px}
+.records-table th {font-weight:500;font-size:11px;color:var(--text-muted);background:#f7f9fc;padding:12px 14px}
+.records-table th:first-child {width:34%}.records-table th:nth-child(2){width:15%}.records-table th:nth-child(3){width:17%}.records-table th:nth-child(4){width:10%}.records-table th:last-child{width:24%}
+.records-table td {padding:14px;vertical-align:middle;border-top:1px solid var(--line);line-height:1.6;overflow-wrap:anywhere}
+.records-table tbody tr:hover {background:#f8faff}
+.records-table .record-title {text-align:left;font-size:13px;line-height:1.6;font-weight:600;white-space:normal;padding:0;display:block;border:0;background:transparent;color:var(--text)}
+.records-table .record-title:hover {color:var(--accent)}
+.record-company,.record-location small {display:block;color:var(--text-muted);font-size:11px;margin-top:3px}
+.record-pay {font-weight:600;color:#345780;font-variant-numeric:tabular-nums}
+.records-table .record-stage {white-space:nowrap;font-size:10px;padding:3px 6px}
+.records-table .record-stage.none {background:transparent;color:var(--text-muted);padding:0}
+.records-table .job-actions.compact {display:flex;align-items:center;justify-content:flex-start;gap:4px;margin:0;padding:0;border:0;flex-wrap:nowrap}
+.records-table .job-action-buttons {display:flex;gap:2px;flex-wrap:nowrap}
+.records-table .job-actions button {font-size:11px;white-space:nowrap;padding:5px 7px;min-height:30px}
+.records-table .job-actions .primary-button {background:#edf3ff!important;color:#1d5cc0!important;border:1px solid transparent!important;box-shadow:none}
+.records-table .job-actions .primary-button:hover {background:#e0ebff!important}
+.records-table .save-job {border:0;background:transparent;min-width:28px;color:#7a8799}
+.records-table .save-job.is-saved {color:#a47116;background:transparent}
+.records-table .popover-trigger {border:0;background:transparent;color:var(--text-muted);gap:3px}
+.records-table .records-action {margin:6px 0 0;font-size:11px;line-height:1.5}
+.records-table .records-action time {white-space:nowrap}
+.operation-notice {display:flex;align-items:center;gap:12px;margin:12px 0;padding:10px 12px;border:1px solid #efdaca;border-radius:9px;background:#fffaf5;color:#835b39;font-size:12px;line-height:1.6}
+.operation-notice>span {flex:1;min-width:0;overflow-wrap:anywhere}
+.operation-notice>button {flex-shrink:0;padding:4px 8px;background:transparent;color:inherit;border:0;font-size:12px}
+.operation-notice>button:last-child {font-size:18px;min-width:28px}
+@container(max-width:760px) {.records-table th:nth-child(4),.records-table td:nth-child(4){display:none}.records-table th:first-child{width:36%}.records-table th:nth-child(2){width:16%}.records-table th:nth-child(3){width:18%}.records-table th:last-child{width:30%}.records-table td,.records-table th{padding:12px 10px}}
+@media(max-width:850px){.records-controls .records-tools{flex-wrap:nowrap}.records-controls .records-search{flex-basis:auto}.records-table{min-width:640px}}
+
+.preparation-navigation {display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.preparation-navigation .preparation-source {flex:1;margin:0}
+.preparation-navigation .preparation-apply {flex-shrink:0;margin:0}
+.preparation-navigation:has(.preparation-source[hidden]) {margin-bottom:12px}
+.record-narrow-stage {display:none}
+@container(max-width:760px){.record-narrow-stage{display:block;font-size:10px;color:var(--text-muted);margin-top:2px}.preparation-navigation{flex-wrap:wrap}}

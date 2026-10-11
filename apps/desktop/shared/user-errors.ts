@@ -1,6 +1,7 @@
 export type UserError={kind:'login'|'risk'|'source'|'service'|'partial'|'unknown';message:string;action:'source'|'retry'};
 export function userError(error:unknown):UserError {
- const text=error instanceof Error?error.message:String(error||'');
+ const raw=error instanceof Error?error.message:String(error||'');
+ const text=raw.replace(/^Error invoking remote method(?: '[^']+')?:\s*/,'').replace(/^Error:\s*/,'');
  if(text.includes('待办已在其他操作中更新'))return {kind:'unknown',message:'待办已更新，已重新读取。请核对最新内容后再操作。',action:'retry'};
  const greeting=text.match(/greeting_polish:(cancelled|timeout|incomplete|credentials)/)?.[1];
  if(greeting){const message={cancelled:'已停止润色，原文已保留。',timeout:'润色等待超时，原文已保留，可以重试。',incomplete:'模型回复不完整，原文已保留；可缩短文字后重试，或更换模型。',credentials:'模型密钥不可用，请到模型设置检查连接。'}[greeting];return {kind:'service',message:message!,action:'retry'};}
@@ -33,7 +34,7 @@ export function userError(error:unknown):UserError {
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};
  if(/source_contract|来源|continuation_expired/.test(text))return {kind:'source',message:'来源暂时无法读取，请打开对应网站确认状态。',action:'source'};
  if(/chat_concurrency_limit/.test(text))return {kind:'service',message:'同时最多运行四条聊天，请等待其中一条完成或停止后再发送。',action:'retry'};
- if(/500|502|503|fetch failed|API.*(ready|failed)|ECONN|IPC|invoking remote/.test(text))return {kind:'service',message:'本次操作未完成，本地服务暂时异常，请稍后重试。',action:'retry'};
- if(/[\u4e00-\u9fff]/.test(text)&&text.length<=160&&!/Error|Exception|\n\s+at |https?:|Bearer|token|api.key/i.test(text))return {kind:'unknown',message:text,action:'retry'};
+ if(/500|502|503|fetch failed|API.*(ready|failed)|ECONN|IPC/.test(text))return {kind:'service',message:'未能完成这次操作。请重试；若仍失败，请重新打开应用以恢复本地服务。',action:'retry'};
+ if(/[\u4e00-\u9fff]/.test(text)&&text.length<=160&&!/Error|Exception|\n\s+at |https?:|Bearer|token|api.key|\/(?:Users|home|private|tmp|var)\b|[A-Za-z]:[\\/]/i.test(text))return {kind:'unknown',message:text,action:'retry'};
  return {kind:'unknown',message:'操作未完成，请稍后重试。',action:'retry'};
 }

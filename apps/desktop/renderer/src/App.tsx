@@ -12,7 +12,7 @@ import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "..
 import { Discovery } from "./search/Discovery";
 import { Workbench, useOriginalBrowser } from "./shared/Workbench";
 import {presentSourceStatus,sourceCheckFailureOutcome} from "../../shared/source-presentation";
-import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
 
 import type {
@@ -61,8 +61,12 @@ export function App() {
     const first=data.sources.find(source=>source.source_id==="liepin"&&source.live_search_enabled)||data.sources.find(source=>source.live_search_enabled);
     if(first)setChosenSources([first.source_id]);
   },[data]);
-  const [error, setError] = useState<string>();
-  useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(e=>setError(messageOf(e)));return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id,page]);
+  const [failure,setFailure]=useState<{message:string;route:string}>();
+  const setError=useCallback((message?:string)=>setFailure(previous=>message?{message,route:routeKey}:previous?.route===routeKey||previous?.route==='*'?undefined:previous),[routeKey]);
+  const error=failure&&(failure.route===routeKey||failure.route==='*')?failure.message:undefined;
+  const [checkingService,setCheckingService]=useState(false);
+  async function checkService(){setCheckingService(true);try{const status=await window.jobfindsme!.getServiceStatus();setServiceStatus(status);if(status.connected){setData(await window.jobfindsme!.getBootstrap());setError('本地服务已连接，请重试刚才的操作。');}else setError('本地服务尚未连接，请重新打开应用后重试。');}catch{setError('无法连接本地服务，请重新打开应用后重试。');}finally{setCheckingService(false);}}
+  useEffect(()=>{const workspace=data?.workspaces[0]?.workspace_id;if(!workspace)return;let cancelled=false;void window.jobfindsme!.listResearchReports(workspace).then(value=>{if(!cancelled)setReports(value);}).catch(()=>{if(!cancelled)setFailure({message:"研究记录暂时无法读取，请稍后重试。",route:`${workspace}:research:`});});return()=>{cancelled=true;};},[data?.workspaces[0]?.workspace_id]);
   const [preparationJob,setPreparationJob]=useState<SearchResultItem["job"]>();
   const [preparationApply,setPreparationApply]=useState(false);
   function openPreparation(job:SearchResultItem["job"],apply=false){setPreparationApply(apply);setPreparationJob(job);}
@@ -75,10 +79,10 @@ export function App() {
   const [newChatNonce,setNewChatNonce]=useState(0);
   function openNewChat(){setResearchTarget(undefined);setNewChatNonce(value=>value+1);setPage("research");}
   const [suggestedSearch,setSuggestedSearch]=useState<{query:string;nonce:number}>();
-  useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }); }, [page]);
+  useEffect(() => { if (page === "discover") void window.jobfindsme?.getServiceStatus().then(status => { if (status.connected) void window.jobfindsme!.getBootstrap().then(setData).catch(e => setError(messageOf(e))); }).catch(e=>setError(messageOf(e))); }, [page]);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus>({ connected: false, message: "本地服务正在启动" });
   useEffect(() => {
-    if (!window.jobfindsme) { setError("仅可在 JobFindsMe 桌面容器中读取本地数据。"); return; }
+    if (!window.jobfindsme) { setFailure({message:"仅可在 JobFindsMe 桌面容器中读取本地数据。",route:"*"}); return; }
     let loadingBootstrap = false;
     let cancelled = false;
     const loadBootstrap = async () => {
@@ -86,10 +90,10 @@ export function App() {
       loadingBootstrap = true;
       try {
         const value = await window.jobfindsme!.getBootstrap();
-        if (!cancelled) { setData(value); setServiceStatus({ connected: true }); }
+        if (!cancelled) { setData(value); setServiceStatus({ connected: true }); setFailure(previous=>previous?.route==="*"?undefined:previous); }
       } catch (bootstrapError) {
         const message = messageOf(bootstrapError);
-        if (!cancelled && !message.includes("desktop API is not ready")) setError(message);
+        if (!cancelled && !message.includes("desktop API is not ready")) setFailure({message,route:"*"});
       } finally {
         loadingBootstrap = false;
       }
@@ -98,11 +102,11 @@ export function App() {
       if (cancelled) return;
       setServiceStatus(status);
       if (status.connected) void loadBootstrap();
-      else if (status.message && status.message !== "本地服务正在启动") setError(status.message);
+      else if (status.message && status.message !== "本地服务正在启动") setFailure({message:status.message,route:"*"});
     };
     const unsubscribe = window.jobfindsme.onServiceStatus(handleStatus);
     const unsubscribeSources = window.jobfindsme.onSourceStatusChanged(()=>void loadBootstrap());
-    void window.jobfindsme.getServiceStatus().then(handleStatus).catch((statusError: unknown) => setError(messageOf(statusError)));
+    void window.jobfindsme.getServiceStatus().then(handleStatus).catch((statusError: unknown) => setFailure({message:messageOf(statusError),route:"*"}));
     return () => { cancelled = true; unsubscribe(); unsubscribeSources(); };
   }, []);
   return <Workbench onError={setError} sidebar={<>
@@ -114,10 +118,10 @@ export function App() {
   </>}>
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"我的岗位",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
-      {error&&<div className="error-message banner" role="alert">{userError(error).message} <button onClick={()=>setError(undefined)}>关闭提示</button></div>}
-      <div className="discovery-mount" hidden={page!=="discover"}><Discovery onOpenResume={()=>setPage("resume")} active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports} onError={setError}/></div>
+      {error&&<div className="operation-notice" role="alert"><span>{userError(error).message}</span>{userError(error).action==='source'?<button onClick={()=>{setError(undefined);openSettings('sources');}}>查看来源</button>:userError(error).message.includes('本地服务')&&<button disabled={checkingService} onClick={()=>void checkService()}>{checkingService?'正在检查…':'检查服务'}</button>}<button aria-label="关闭操作提示" onClick={()=>setError(undefined)}>×</button></div>}
+      <div className="discovery-mount" hidden={page!=="discover"}><Discovery onOpenResume={()=>setPage("resume")} active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onEditResume={openResume} preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
-      <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={openPreparation} onDiscover={()=>setPage("discover")} onError={setError}/></div>
+      <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={openPreparation} onDiscover={()=>setPage("discover")}/></div>
       <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={openPreparation} openRequest={resumeRequest}/></div>
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
     </div></section>

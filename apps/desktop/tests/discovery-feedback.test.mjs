@@ -99,3 +99,12 @@ test('public page requests with different wait budgets coalesce and one cancella
   release();assert.equal((await b).length,1);assert.equal(calls,1);
  }finally{globalThis.fetch=original;}
 });
+
+test('IPC wrappers preserve safe actionable validation instead of blaming the service',()=>{
+ const result=userError("Error invoking remote method 'desktop:save': Error: 最低薪资不能高于最高薪资。");
+ assert.equal(result.message,'最低薪资不能高于最高薪资。');assert.equal(result.kind,'unknown');
+ for(const raw of ["Error invoking remote method 'desktop:save': Error: file /Users/private/resume.pdf token=secret", "Error invoking remote method 'desktop:save': Error: fetch failed", "Error invoking remote method 'desktop:save': Error: 无法读取 /Users/private/resume.pdf"]){
+  assert.doesNotMatch(userError(raw).message,/Users|secret|remote method|resume\.pdf/);
+ }
+ assert.equal(userError("Error invoking remote method 'desktop:read': Error: source_unavailable:private").kind,'source');
+});
