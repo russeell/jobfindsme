@@ -2,7 +2,7 @@
   <img src="docs/images/logo.svg" width="56" height="56" alt="JobFindsMe logo">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>Four platforms. One search. Job details and original pages, side by side.</strong><br>Open-source AI job-search desktop assistant · macOS / Windows</p>
+<p align="center"><strong>Find jobs. Tailor your resume. Practice interviews. One workspace.</strong><br>Open-source AI job-search desktop assistant · macOS / Windows</p>
 <p align="center">
   <a href="https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip">macOS (Apple Silicon)</a> ·
   <a href="https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip">Windows (x64)</a> ·
@@ -11,7 +11,7 @@
 
 ## Four platforms, one click
 
-Search **BOSS Zhipin, Liepin, Zhaopin and 51job** together as results arrive. Filter, continue searching and fetch full job descriptions when you select a role. **No model configuration needed for job search.**
+Search **BOSS Zhipin, Liepin, Zhaopin and 51job** in one click, with results arriving incrementally. Filter by city, salary and experience; fetch full job descriptions when you select a role. **No model setup or resume required to search.**
 
 ![Four platforms selected, with job results and a full job description](docs/images/jobfindsme-four-platforms.jpg)
 
@@ -21,9 +21,11 @@ Sign in, handle verification and check original sources inside the app. **Tabs, 
 
 ![Job details alongside their original listing in the built-in browser](docs/images/jobfindsme-browser.jpg)
 
-<sub>Actual v0.14.0 interface showing public listings. Counts reflect this search only; availability depends on sign-in, verification and website changes.</sub>
+<sub>Actual app screenshots. Availability depends on sign-in, verification and website changes. Results already retrieved remain available if another source fails.</sub>
 
-## Find a role. Get ready for it.
+## Keep your materials with the opportunity
+
+Import your resume once. Reuse the job description and linked resume for interview preparation, with less copying and repeating.
 
 <table>
   <tr>
@@ -35,25 +37,27 @@ Sign in, handle verification and check original sources inside the app. **Tabs, 
     <td><a href="docs/images/jobfindsme-deep-research.png"><img src="docs/images/jobfindsme-deep-research.png" alt="Research with original sources, citations and explicit evidence gaps"></a></td>
   </tr>
   <tr>
-    <td>Draft changes from the JD and your real experience. Review before saving.</td>
+    <td>Tailor to a JD in My Resume. Review each change before saving; keep your original.</td>
     <td>One question at a time, with feedback and follow-ups. No JD required.</td>
     <td>Investigate roles, companies and industries, with sources and evidence gaps.</td>
   </tr>
 </table>
 
-<sub>Click screenshots to enlarge. Resume and interview examples use fictional materials; research reads public official documentation. All show the actual app.</sub>
+<sub>Click to enlarge. The resume screenshot shows the current app with fictional data and a local mock response to demonstrate review. Interview and research screenshots are from earlier versions.</sub>
 
-Save jobs and track applications; search, archive and branch conversations.
+- **My Resume**: preserve original PDF / Word files and extract matching information in the background. Edit copies, review AI changes, choose professional / graduate / compact layouts, and export Word or PDF.
+- **Job Management**: view saved and applied jobs, reuse the linked resume, edit or polish an opening message, open the original listing, and record application materials and outcomes.
+- **Assistant**: search live jobs, practice interviews and research companies. Keep separate conversations, with search, archiving and branches.
 
 ## Get started in three steps
 
 1. **Download and extract**, then open `JobFindsMe.app` or `JobFindsMe.exe`. No separate runtime installation needed.
-2. **Search for jobs**: choose platforms in Settings → Job sources, sign in when needed, enter keywords and choose one city or no city restriction.
-3. **Prepare with AI**: configure your own model in Settings → Model settings, then select a skill from the assistant's ＋ menu.
+2. **Search for jobs**: enter keywords, choose one city or no city restriction, select platforms and sign in or complete verification when prompted.
+3. **Prepare with AI**: configure your own model in Settings. Edit your resume in My Resume; start interview preparation or research from a job or the Assistant.
 
-Packages are unsigned. First-launch instructions and checksums are on the [release page](https://github.com/russeell/jobfindsme/releases/latest).
+Downloads point to the published **v0.14.0** release. The latest source includes later improvements; some screens and features are not yet in the downloadable packages. Packages are unsigned; see the [release page](https://github.com/russeell/jobfindsme/releases/latest) for first-launch instructions and checksums.
 
-Data is stored locally. AI features send relevant materials to your chosen model service, which may charge for requests. Check research conclusions against the original sources. The app does not apply automatically.
+Data is stored locally. AI features send relevant materials to your chosen model service, which may charge for requests. Editable PDF copies are reflowed, without guaranteed preservation of the original layout. You confirm and send applications on the platform; opening a listing does not mark it as applied.
 
 **Disclaimer: This project is intended for learning and personal use only. Follow each platform's usage rules and independently verify job information and AI-generated output.**
 

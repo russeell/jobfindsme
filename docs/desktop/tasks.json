@@ -3087,6 +3087,22 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D179",
+      "title": "README展示更新与源码集成检查",
+      "status": "done",
+      "depends_on": [
+        "D178"
+      ],
+      "scope": [
+        "中英文README同步当前能力、截图及发布包差异",
+        "整体验证并修复旧迁移断言和格式问题"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
