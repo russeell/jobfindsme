@@ -1,5 +1,7 @@
 import type {SourceCapability,SourceCheckResult} from "../../shared/contracts";
 
+import {isSourceVerificationBlocked} from "../../shared/source-presentation";
+
 type CheckOptions={
   sources:SourceCapability[];
   probe(source:SourceCapability,signal:AbortSignal):Promise<SourceCapability>;
@@ -35,7 +37,7 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
     if(source.login_required&&source.session_status!=="verified"&&!options.probeUnverifiedLogin){
       append({...base,outcome:source.session_status==="blocked"?"risk_control":"login_required",evidence:"history",detail:source.session_status==="blocked"?"来源要求平台验证；本次未发起检索。":"应用独立会话尚未确认登录；本次未发起检索。"});continue;
     }
-    if(source.session_status==="blocked"||source.list_status==="blocked"){
+    if(isSourceVerificationBlocked(source)){
       append({...base,outcome:"skipped_cooldown",evidence:"history",detail:"来源处于暂停或风控状态，本次跳过。"});continue;
     }
     const verifiedAt=source.last_verified_at?Date.parse(source.last_verified_at):NaN;
@@ -75,7 +77,7 @@ export async function runSourceCheckQueue(options:CheckOptions):Promise<SourceCh
 
 /** Login identity and background search capability are verified separately. */
 export function shouldAutoCheckSource(source:SourceCapability,authenticated:boolean,now:number,lastAttempt:number,pending:boolean,busy:boolean):boolean{
-  if(!authenticated||pending||busy||source.session_status==="blocked"||source.list_status==="blocked")return false;
+  if(!authenticated||pending||busy||isSourceVerificationBlocked(source))return false;
   if(now-lastAttempt<600000)return false;
   const age=now-Date.parse(source.last_verified_at||"");
   return !(source.live_search_enabled&&source.session_status==="verified"&&source.list_status==="verified"&&age>=0&&age<600000);

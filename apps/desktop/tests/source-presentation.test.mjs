@@ -56,3 +56,10 @@ test('individual retry works without bulk audit, skips cannot erase failure, and
  assert.equal(sourceStatusRows([source],recovered)[0].presented.available,true);
  assert.equal(first[0].outcome,'failed');
 });
+
+
+test('persisted login failures do not become captcha prompts on reopening settings',()=>{
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'expired',list_status:'blocked'}).title,'会话待复查');
+ assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',list_status:'blocked'}).title,'登录状态待确认');
+ assert.equal(presentSourceStatus({...source,session_status:'blocked',list_status:'blocked'}).title,'需要验证');
+});

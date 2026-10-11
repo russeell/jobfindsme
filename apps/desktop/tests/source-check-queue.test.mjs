@@ -100,3 +100,17 @@ test('a confirmed Zhaopin login triggers one bounded check while busy, recent an
  assert.equal(shouldAutoCheckSource({...s,session_status:'blocked'},true,now,0,false,false),false);
  assert.equal(shouldAutoCheckSource({...s,list_status:'verified',live_search_enabled:true,last_verified_at:new Date(now-1000).toISOString()},true,now,0,false,false),false);
 });
+
+
+test('login failure can be rechecked after reauthentication without releasing a challenge pause',async()=>{
+ const {shouldAutoCheckSource}=await import('../dist-electron/main/sources/source-check-queue.js');
+ const states=['expired','unverified','blocked','verified'];
+ const items=states.map(session_status=>source('zhilian',{session_status,list_status:'blocked'}));
+ const calls=[];
+ const result=await runSourceCheckQueue({sources:items,signal:new AbortController().signal,probeUnverifiedLogin:true,
+  probe:async item=>{calls.push(item.session_status);return {...item,session_status:'verified',list_status:'verified',live_search_enabled:true};}});
+ assert.deepEqual(calls,['expired','unverified']);
+ assert.deepEqual(result.map(row=>row.outcome),['verified_now','verified_now','skipped_cooldown','skipped_cooldown']);
+ assert.deepEqual(items.map(item=>shouldAutoCheckSource(item,true,2000000,0,false,false)),[true,true,false,false]);
+ for(const item of items)assert.equal(shouldAutoCheckSource(item,false,2000000,0,false,false),false);
+});

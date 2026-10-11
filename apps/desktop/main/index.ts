@@ -1,3 +1,4 @@
+import {isSourceVerificationBlocked} from "../shared/source-presentation";
 import {createResumePreview} from "./resume-preview";
 import {createPublicRetrieval} from "./research/public-retrieval";
 import {collectChatAttachments} from "./research/chat-attachments";
@@ -193,7 +194,7 @@ async function createWindow(): Promise<void> {
       else await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:"当前页面显示登录表单；会话有效性与检索能力仍需分别确认。"});
     } else if(page.kind==="list"||page.kind==="account") {
       if(sourceSearchActive||sourceCheckController||sourceVerifyActive.size)return false;
-      if(current.session_status==="blocked"||current.list_status==="blocked"){
+      if(isSourceVerificationBlocked(current)){
         mainWindow?.webContents.send("desktop:source-status-changed");return;
       }
       if(sourceId==="zhilian")await apiClient.recordSourceVerification(sourceId,foregroundZhilianVerification(current,page));

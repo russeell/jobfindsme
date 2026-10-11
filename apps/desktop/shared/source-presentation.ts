@@ -3,6 +3,11 @@ import {userError} from "./user-errors.js";
 
 export type SourcePresentation={title:string;detail:string;action:"login"|"check"|"use";available:boolean};
 
+/** Older login failures also marked the list blocked; only a challenge pauses retries. */
+export function isSourceVerificationBlocked(source:SourceCapability):boolean{
+  return source.session_status==="blocked"||(source.list_status==="blocked"&&source.session_status!=="expired"&&source.session_status!=="unverified");
+}
+
 export function mergeSourceChecks(current:SourceCheckResult[],incoming:SourceCheckResult[]):SourceCheckResult[]{
   const rows=new Map(current.map(row=>[row.source.source_id,row]));
   for(const row of incoming){
@@ -40,7 +45,7 @@ export function presentSourceStatus(source:SourceCapability,check?:SourceCheckRe
     const title=/source_check_timeout|source_timeout:|超时/.test(detail)?"检查超时":/source_unavailable:|无法连接或未接受请求/.test(detail)?"连接失败":"检查未通过";
     return {title,detail:userError(detail).message,action:"check",available:false};
   }
-  if(source.session_status==="blocked"||source.list_status==="blocked")
+  if(isSourceVerificationBlocked(source))
     return {title:"需要验证",detail:"请在内置浏览器完成平台验证，再检查",action:"login",available:false};
   if(source.source_id==="zhilian"&&source.session_status==="verified"&&!source.live_search_enabled&&/后台有界检索未通过/.test(source.detail||""))return {title:"已登录，后台检索待修复",detail:"登录身份已确认，后台读取尚未成功；可重试或查看能力详情",action:"check",available:false};
   if(source.source_id==="zhilian"&&source.session_status==="verified"&&!source.live_search_enabled&&source.list_status==="partial")
