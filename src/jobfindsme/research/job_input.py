@@ -84,6 +84,12 @@ def canonical_job_url(value: str) -> str:
     drop_all = detail and any(
         host.endswith(h) for h in ("zhipin.com", "liepin.com", "zhaopin.com")
     )
+    # 51job detail identity lives in the numeric HTML path; navigation can
+    # replace the search request/tracking query without changing the job.
+    if host == "jobs.51job.com" and re.fullmatch(
+        r"/[a-zA-Z0-9-]+/[0-9]+\.html", parsed.path
+    ):
+        drop_all = True
     query = [
         (k, v)
         for k, v in parse_qsl(parsed.query, keep_blank_values=True)

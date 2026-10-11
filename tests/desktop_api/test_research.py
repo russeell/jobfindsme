@@ -491,12 +491,23 @@ def test_research_optional_resume_migration_preserves_reports_and_corrections(tm
     draft = profiles.import_resume(
         workspace_id=workspace.workspace_id, source_path=resume
     )
-    profiles.confirm_profile(
-        workspace_id=workspace.workspace_id,
-        profile_id=draft.profile_id,
-        accepted_fact_ids=[f.fact_id for f in draft.facts],
-    )
-    version = profiles.list_versions(workspace_id=workspace.workspace_id)[0]
+    # Seed the historical schema directly. Current profile writes require
+    # columns from later migrations and cannot construct a pre-0029 database.
+    version_id = "legacy_resume"
+    with database.connect() as connection:
+        connection.execute(
+            "INSERT INTO resume_versions "
+            "(version_id,workspace_id,profile_id,source_document_id,"
+            "version_number,content_json,is_current,created_at) "
+            "VALUES (?,?,?,?,1,?,1,'2026-09-01T00:00:00+00:00')",
+            (
+                version_id,
+                workspace.workspace_id,
+                draft.profile_id,
+                draft.document_id,
+                '{"skills":["Python"],"projects":["服务开发"]}',
+            ),
+        )
     jobs = JobRepository(database)
     job = normalize_job(
         RawJobRecord(
@@ -519,7 +530,7 @@ def test_research_optional_resume_migration_preserves_reports_and_corrections(tm
             "status,jd_facts_json,resume_observations_json,project_rewrites_json,"
             "interview_topics_json,limitations_json,created_at) "
             "VALUES ('old',?,?,?,'limited','[]','[]','[]','[]','[]','fixture')",
-            (workspace.workspace_id, job.job_id, version.version_id),
+            (workspace.workspace_id, job.job_id, version_id),
         )
         connection.execute(
             "INSERT INTO "
@@ -535,6 +546,10 @@ def test_research_optional_resume_migration_preserves_reports_and_corrections(tm
     database.migrate = migrate
     assert database.migrate_with_backup()
     database.migrate()
+    assert (
+        profiles.list_versions(workspace_id=workspace.workspace_id)[0].version_id
+        == version_id
+    )
     service = ResearchService(database, jobs, profiles, FakeEvidenceSearch())
     old = service.get_report(workspace_id=workspace.workspace_id, report_id="old")
     assert old["evidence"][0]["excerpt"] == "原始陈述"

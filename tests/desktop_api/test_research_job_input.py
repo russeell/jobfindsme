@@ -176,3 +176,72 @@ def test_generic_detail_does_not_overwrite_another_hash_job(tmp_path):
         enrich_source_job(
             jobs, workspace_id=workspace.workspace_id, job_id=old["job_id"], **detail
         )
+
+
+@pytest.mark.parametrize(
+    "query", ["", "?s=sou_sou_soulb&t=0&req=new", "?from=search&req=changed#detail"]
+)
+def test_wuyou_detail_tracking_redirect_enriches_same_job(tmp_path, query):
+    from jobfindsme.research.job_input import enrich_source_job
+
+    db = Database(tmp_path / "detail.db")
+    db.migrate()
+    workspace = WorkspaceService(db).create()
+    jobs = JobRepository(db)
+    base = "https://jobs.51job.com/shenzhen-nsq/165561066.html"
+    old = prepare_job(
+        jobs,
+        workspace_id=workspace.workspace_id,
+        url=base + "?s=sou_sou_soulb&t=0&req=old",
+        title="AI Agent 开发工程师",
+        company="虚构物流公司",
+        description="岗位列表简述。" * 10,
+    )
+    result = enrich_source_job(
+        jobs,
+        workspace_id=workspace.workspace_id,
+        job_id=old["job_id"],
+        url=base + query,
+        title=old["title"],
+        company=old["company"],
+        description="岗位职责：维护 Python 接口与检索服务，编写测试。" * 10,
+        fetched_at="2026-10-11T12:00:00+00:00",
+    )
+    assert result["job_id"] == old["job_id"]
+    assert result["apply_url"] == old["apply_url"]
+    assert result["source"]["description_source_url"] == base + query
+    assert result["source"]["detail_level"] == "detail_page"
+    for other in [
+        base.replace("165561066", "165561067"),
+        base.replace("jobs.51job.com", "other.51job.com"),
+        base.replace("/shenzhen-nsq/", "/other-city/"),
+    ]:
+        with pytest.raises(ValueError, match="不一致"):
+            enrich_source_job(
+                jobs,
+                workspace_id=workspace.workspace_id,
+                job_id=old["job_id"],
+                url=other,
+                title=old["title"],
+                company=old["company"],
+                description="其他岗位正文。" * 20,
+                fetched_at="2026-10-11T12:00:00+00:00",
+            )
+    assert (
+        jobs.get(workspace_id=workspace.workspace_id, job_id=old["job_id"]).description
+        == result["description"]
+    )
+
+
+def test_wuyou_non_detail_urls_keep_identity_query_parameters():
+    from jobfindsme.research.job_input import canonical_job_url
+
+    for base in [
+        "https://jobs.51job.com/job",
+        "https://we.51job.com/pc/search",
+        "https://other.51job.com/shenzhen/165561066.html",
+        "https://jobs.51job.com/shenzhen/company.html",
+    ]:
+        assert canonical_job_url(base + "?jobId=1") != canonical_job_url(
+            base + "?jobId=2"
+        )

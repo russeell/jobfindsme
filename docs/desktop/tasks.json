@@ -3071,6 +3071,22 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D178",
+      "title": "前程无忧JD链接身份与导航颜色修复",
+      "depends_on": [
+        "D177"
+      ],
+      "status": "done",
+      "scope": [
+        "按明确详情路径忽略51job跟踪参数，保持异岗拒绝",
+        "统一求职助手导航非选中颜色，真实详情读取验收"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
