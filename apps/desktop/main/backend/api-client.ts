@@ -1,3 +1,4 @@
+import {SharedFlight} from "../shared-flight";
 import type {NextActionInput,ApplicationRecord,ApplicationRecordInput,JobPreparationData,JobPreparationInput,MatchingRuleState,MatchingRuleInput,MatchingRule,MatchingInput,RerankResult} from "../../shared/contracts";
 import type {
   AnalysisPreview,
@@ -95,7 +96,12 @@ export class DesktopApiClient {
     });
   }
 
-  publicSourcePages(sourceId:string,input:{keyword:string;city:string;max_pages:number;seconds:number;cursor?:string;force_refresh?:boolean},signal?:AbortSignal):Promise<BrowserSourcePage[]>{return this.json(`/v1/sources/${sourceId}/public-pages`,{method:'POST',body:JSON.stringify(input),signal},65000);}
+  private publicFlights=new SharedFlight<BrowserSourcePage[]>();
+  publicSourcePages(sourceId:string,input:{workspace_id?:string;keyword:string;city:string;max_pages:number;seconds:number;cursor?:string;force_refresh?:boolean},signal?:AbortSignal):Promise<BrowserSourcePage[]>{
+    const {seconds,...scope}=input;
+    const key=JSON.stringify([sourceId,scope.workspace_id||'',scope.keyword,scope.city,scope.max_pages,scope.cursor??null,!!scope.force_refresh]);
+    return this.publicFlights.run(key,sharedSignal=>this.json(`/v1/sources/${sourceId}/public-pages`,{method:'POST',body:JSON.stringify({...scope,seconds}),signal:sharedSignal},Math.min(65000,seconds*1000+1000)),signal,seconds*1000+1000);
+  }
 
   searchPreflight(input: SourceSearchExecutionInput): Promise<SourceSearchPreflight> {
     const {boss_cursor:_boss,source_cursor:_source,source_cursors:_cursors,client_run_id:_client,...request}=input;

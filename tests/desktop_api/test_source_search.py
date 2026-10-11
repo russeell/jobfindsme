@@ -850,7 +850,8 @@ def test_public_page_bridge_caches_and_keeps_partial_on_failure(tmp_path):
     first = client.post("/v1/sources/liepin/public-pages", json=body, headers=headers)
     assert first.status_code == 200
     assert first.json()[0]["collection"]["complete"] is False
-    assert first.json()[0]["next_cursor"] is None
+    assert first.json()[0]["next_cursor"] == "2"
+    assert first.json()[0]["collection"]["stop_reason"] == "source_unavailable"
     assert (
         client.post(
             "/v1/sources/liepin/public-pages", json=body, headers=headers
@@ -1367,3 +1368,51 @@ def test_explicit_unlimited_city_never_inherits_old_single_or_multiple_preferenc
         assert parsed.filters.cities == ()
     with pytest.raises(ValueError, match="一个城市"):
         parse_intent("Python工程师", filters=DesktopJobFilters(cities=("上海", "杭州")))
+
+
+def test_public_pages_reuse_session_scope_ignore_wait_budget_and_retry_network(
+    tmp_path,
+):
+    from jobfindsme.connectors.pure_http import PureHttpError
+
+    created, closed, calls = [], [], []
+
+    class Adapter:
+        def __init__(self):
+            created.append(self)
+
+        def close(self):
+            closed.append(self)
+
+        def fetch_page(self, cursor):
+            calls.append(cursor)
+            if cursor == "bad":
+                raise PureHttpError("连接暂不可用")
+            return SourcePage(records=(), next_cursor="1")
+
+    with TestClient(
+        create_app(
+            token="fixture",
+            database_path=tmp_path / "db",
+            source_adapter_factory_override=lambda *_: Adapter(),
+        )
+    ) as client:
+        endpoint = "/v1/sources/liepin/public-pages"
+        headers = {"Authorization": "Bearer fixture"}
+        body = {"workspace_id": "a", "keyword": "Python", "max_pages": 1, "seconds": 10}
+
+        def call(**kw):
+            return client.post(endpoint, headers=headers, json={**body, **kw})
+
+        assert call().status_code == 200
+        assert call(seconds=12).status_code == 200
+        assert calls == [None]
+        assert call(cursor="1").status_code == 200
+        assert len(created) == 1
+        assert call(cursor="bad").status_code == 502
+        assert len(closed) == 1
+        assert call(cursor="2").status_code == 200
+        assert len(created) == 2
+        assert call(workspace_id="b").status_code == 200
+        assert len(created) == 3
+    assert len(closed) == 3

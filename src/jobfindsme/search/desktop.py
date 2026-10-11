@@ -69,6 +69,12 @@ class LiepinPagedAdapter:
     def __init__(self, connector) -> None:
         self.connector = connector
 
+    def close(self) -> None:
+        self.connector.close()
+
+    def set_deadline(self, deadline: float) -> None:
+        self.connector.deadline = deadline
+
     def fetch_page(self, cursor: str | None) -> SourcePage:
         page_number = int(cursor) if cursor is not None else 0
         records, next_page = self.connector.fetch_page(page_number)

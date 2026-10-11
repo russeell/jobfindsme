@@ -2967,6 +2967,23 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null
+    },
+    {
+      "id": "D172",
+      "title": "检索错误分类、请求合并与猎聘会话复用",
+      "status": "done",
+      "depends_on": [
+        "D171"
+      ],
+      "scope": [
+        "明确空列表与失败原因，保留部分结果",
+        "相同检索和JD读取合并，取消独立",
+        "猎聘短时会话复用与真实前后测量"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

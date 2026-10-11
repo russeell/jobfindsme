@@ -44,17 +44,18 @@ export async function collectBrowserSourcePages(
       try{
         const nativeCursor=cursor??undefined;let batch:BrowserSourcePage[];
         executed_queries.push({source_id:sourceId,keyword:preflight.keywords[0],city});
-        if(!requiresElectronSourceSearch(sourceId))batch=await client.publicSourcePages(sourceId,{keyword:preflight.keywords[0],city,max_pages:1,seconds:Math.max(1,Math.min(60,remaining())),cursor:nativeCursor},deps.signal);
+        if(!requiresElectronSourceSearch(sourceId))batch=await client.publicSourcePages(sourceId,{workspace_id:input.workspace_id,keyword:preflight.keywords[0],city,max_pages:1,seconds:Math.max(1,Math.min(60,remaining())),cursor:nativeCursor},deps.signal);
         else if(!manager)throw Error("browser_session_error:来源后台会话不可用");
         else if(sourceId==="boss")batch=[await (manager.bossForSearch?.(city)||manager.boss).collect({keyword:preflight.keywords[0],city,maxBatches:1,seconds:remaining(),cursor:nativeCursor},onProgress)];
         else{
           const page=nativeCursor?Number(nativeCursor):1;
           if(!Number.isInteger(page)||page<1)throw Error("unsupported_cursor:来源未提供可用页码");
-          batch=[await manager.searchPage(sourceId,{keyword:preflight.keywords[0],city,page,deadline})];
+          batch=[await manager.searchPage(sourceId,{workspace:input.workspace_id,keyword:preflight.keywords[0],city,page,deadline})];
         }
         for(const page of batch){
           pages.push(page);const nextCursor=sourceId==="boss"?page.collection?.cursor??page.next_cursor:page.next_cursor;
           if(page.collection?.failure){browserErrors[sourceId]=`${page.collection.failure}:请在平台原页处理后重试`;}
+          else if(page.collection&&["source_contract_error","source_unavailable","source_timeout"].includes(page.collection.stop_reason)){browserErrors[sourceId]=`${page.collection.stop_reason}:读取未完成，已保留有效结果`;}
           if(diagnostics.first_source_ms===null&&page.records.length)diagnostics.first_source_ms=Date.now()-started;
           await deps.onPage?.(sourceId,page);cursor=nextCursor;
         }

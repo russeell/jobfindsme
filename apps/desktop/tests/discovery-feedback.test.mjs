@@ -81,3 +81,21 @@ test('student and graduate choices replace years ranges, while work type remains
  assert(!hasDiscoveryFilters(defaultDiscoveryFilters()));
  assert(hasDiscoveryFilters(filters));
 });
+
+test('upstream failure is not attributed to local API and schema failure is not zero matches',()=>{
+ assert.equal(userError('source_unavailable:upstream HTTP 503').action,'retry');
+ assert.match(userError('source_unavailable:upstream HTTP 503').message,/招聘来源/);
+ assert.match(userError('source_contract_error:missing field').message,/不代表没有岗位/);
+});
+test('public page requests with different wait budgets coalesce and one cancellation detaches',async()=>{
+ const original=globalThis.fetch;let calls=0,release,upstream;
+ const gate=new Promise(resolve=>{release=resolve;});
+ globalThis.fetch=async(_url,init)=>{calls++;upstream=init.signal;await gate;return new Response(JSON.stringify([{records:[],next_cursor:null}]),{status:200,headers:{'Content-Type':'application/json'}});};
+ try{
+  const client=new DesktopApiClient('http://localhost:12345','fixture');const firstController=new AbortController();
+  const input={workspace_id:'fixture',keyword:'Python',city:'上海',max_pages:1,seconds:2};
+  const a=client.publicSourcePages('liepin',input,firstController.signal);const b=client.publicSourcePages('liepin',{...input,seconds:3});
+  await new Promise(resolve=>setImmediate(resolve));firstController.abort();await assert.rejects(a,/cancelled/);assert.equal(upstream.aborted,false);
+  release();assert.equal((await b).length,1);assert.equal(calls,1);
+ }finally{globalThis.fetch=original;}
+});

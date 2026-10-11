@@ -88,3 +88,13 @@ test('cancellation keeps a saved page and resumes at its next page',async()=>{
  await collectBrowserSourcePages({...input,source_cursors:{wuyou:first.continuations.wuyou}},{...preflight,max_pages:1},{client:{},manager,isCancelled:()=>false});
  assert.deepEqual(calls,[1,2]);
 });
+
+test('classified partial HTTP failure retains committed jobs and retry cursor',async()=>{
+ const record={external_id:'one',source_name:'猎聘',source_url:'https://www.liepin.com/',payload:{title:'Python'}};
+ const saved=[];
+ const result=await collectBrowserSourcePages({source_ids:['liepin'],workspace_id:'w1',intent:'Python'},
+  {allowed_source_ids:['liepin'],keywords:['Python'],max_pages:3,time_budget_seconds:10},
+  {client:{publicSourcePages:async()=>[{records:[record],next_cursor:'2',collection:{batches:1,elapsed_seconds:1,stop_reason:'source_unavailable',cursor:'2',complete:false,failure:null}}]},isCancelled:()=>false,onPage:async(_id,page)=>saved.push(page)});
+ assert.equal(saved.length,1);assert.equal(result.pages.liepin[0].records.length,1);assert.match(result.errors.liepin,/source_unavailable/);
+ const cursor=JSON.parse(Buffer.from(result.continuations.liepin.slice('source-v1:'.length),'base64url').toString());assert.equal(cursor.cursor,'2');
+});

@@ -393,3 +393,26 @@ test('teardown state events cannot read already-destroyed tab contents',async()=
  wc.close=()=>{wc.getURL=()=>{throw Error('contents destroyed');};wc.emit('did-stop-loading');};
  assert.doesNotThrow(()=>m.destroy());assert.equal(m.state().tabs.length,0);
 });
+
+test('JD callers share one browser view with independent cancellation',async()=>{
+ const {m}=setup();let release,created=0;const gate=new Promise(resolve=>{release=resolve;});
+ FakeView.onCreate=view=>{created++;view.webContents.executeJavaScript=async()=>{await gate;return {title:'Fixture role',company:'Fixture',description:'Verified full job description '.repeat(10)};};};
+ try{
+  const a=new AbortController(),b=new AbortController();
+  const first=m.readResearchJob('liepin','https://www.liepin.com/job/123.shtml',a.signal,1000,'w');
+  const second=m.readResearchJob('liepin','https://www.liepin.com/job/123.shtml',b.signal,2000,'w');
+  await new Promise(resolve=>setImmediate(resolve));a.abort();await assert.rejects(first,/cancelled/);
+  release();assert.equal((await second).title,'Fixture role');assert.equal(created,1);
+  await m.readResearchJob('liepin','https://www.liepin.com/job/123.shtml',undefined,1000,'w');assert.equal(created,1);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
+
+test('same platform query with different caller deadlines shares navigation',async()=>{
+ const {m}=setup();let created=0,release;const gate=new Promise(resolve=>{release=resolve;});
+ FakeView.onCreate=view=>{created++;view.webContents.executeJavaScript=async()=>{await gate;return {jobs:[{title:'Fixture',company:'Example',location:'上海',url:'https://jobs.51job.com/shanghai/123456.html'}]};};};
+ try{
+  const short=m.searchPage('wuyou',{keyword:'Fixture',city:'上海',page:1,deadline:Date.now()+20});
+  const long=m.searchPage('wuyou',{keyword:'Fixture',city:'上海',page:1,deadline:Date.now()+2000});
+  await assert.rejects(short,/source_timeout/);release();await long;assert.equal(created,1);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});

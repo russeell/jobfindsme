@@ -202,3 +202,119 @@ def test_liepin_exposes_real_page_number_and_continuation() -> None:
     assert next_page == 4
     form = session.post_calls[0]["json"]["data"]["mainSearchPcConditionForm"]
     assert form["currentPage"] == 3
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {},
+        {"flag": 1},
+        {"flag": 1, "data": {"data": {"jobCardList": None}}},
+        {"flag": 1, "data": {"data": {"jobCardList": [{}]}}},
+    ],
+)
+def test_changed_payload_is_not_a_successful_empty_list(payload):
+    from jobfindsme.connectors.pure_http import PureHttpError
+
+    session = FakeSession(
+        get_responses=[FakeResponse()],
+        post_responses=[FakeResponse(json_data=payload)],
+        set_cookies_on_get={"XSRF-TOKEN": "fixture"},
+    )
+    connector = LiepinPureHttpConnector(
+        "Python", policy=_policy(), session_factory=lambda: session
+    )
+    with pytest.raises(PureHttpError):
+        connector.fetch()
+
+
+@pytest.mark.parametrize(
+    "status,code",
+    [
+        (401, "login_required"),
+        (403, "risk_control"),
+        (429, "risk_control"),
+        (503, "source_unavailable"),
+    ],
+)
+def test_http_failure_is_classified_without_leaking_response(status, code):
+    from jobfindsme.connectors.pure_http import PureHttpError
+
+    response = FakeResponse(json_data=_liepin_cards(), text="private upstream payload")
+    response.status_code = status
+    session = FakeSession(
+        get_responses=[FakeResponse()],
+        post_responses=[response],
+        set_cookies_on_get={"XSRF-TOKEN": "fixture"},
+    )
+    with pytest.raises(PureHttpError) as caught:
+        LiepinPureHttpConnector(
+            "Python", policy=_policy(), session_factory=lambda: session
+        ).fetch()
+    assert caught.value.code == code
+    assert "private" not in str(caught.value)
+
+
+def test_session_reused_for_pages_then_discarded_after_failure():
+    from jobfindsme.connectors.pure_http import PureHttpError
+
+    empty = {"flag": 1, "data": {"data": {"jobCardList": []}}}
+    first = FakeSession(
+        get_responses=[FakeResponse()],
+        post_responses=[
+            FakeResponse(json_data=_liepin_cards()),
+            FakeResponse(json_data=empty),
+            FakeResponse(json_data={"flag": 1}),
+        ],
+        set_cookies_on_get={"XSRF-TOKEN": "fixture"},
+    )
+    closed = []
+    first.close = lambda: closed.append(True)
+    second = FakeSession(
+        get_responses=[FakeResponse()],
+        post_responses=[FakeResponse(json_data=empty)],
+        set_cookies_on_get={"XSRF-TOKEN": "fresh"},
+    )
+    sessions = iter([first, second])
+    connector = LiepinPureHttpConnector(
+        "Python", policy=_policy(), session_factory=lambda: next(sessions)
+    )
+    assert len(connector.fetch_page(0)[0]) == 2
+    assert connector.fetch_page(1) == ([], None)
+    assert len(first.get_urls) == 1
+    assert len(first.post_calls) == 2
+    with pytest.raises(PureHttpError):
+        connector.fetch_page(2)
+    assert closed == [True]
+    assert connector.fetch_page(2) == ([], None)
+    assert len(second.get_urls) == 1
+
+
+def test_expired_session_and_exhausted_deadline(monkeypatch):
+    import jobfindsme.connectors.pure_http as module
+
+    now = [0.0]
+    monkeypatch.setattr(module.time, "monotonic", lambda: now[0])
+    sessions = []
+
+    def make():
+        s = FakeSession(
+            get_responses=[FakeResponse()],
+            post_responses=[FakeResponse(json_data=_liepin_cards())],
+            set_cookies_on_get={"XSRF-TOKEN": "fixture"},
+        )
+        sessions.append(s)
+        return s
+
+    connector = LiepinPureHttpConnector(
+        "Python", policy=_policy(), session_factory=make
+    )
+    connector.fetch()
+    now[0] = 121
+    connector.fetch()
+    assert len(sessions) == 2
+    connector.deadline = 120
+    with pytest.raises(module.PureHttpError, match="source_timeout"):
+        connector.fetch()
+    assert len(sessions[-1].post_calls) == 1

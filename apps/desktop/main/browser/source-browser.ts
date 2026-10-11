@@ -1,3 +1,4 @@
+import {SharedFlight} from "../shared-flight";
 import {randomUUID} from "node:crypto";
 import {createPublicNetworkGuard} from "./public-network";
 import {retrievalSnapshotScript,type RetrievalSnapshot} from "../research/browser-snapshot";
@@ -405,16 +406,18 @@ export class SourceBrowserManager {
   }
   releaseTaskBrowser(owner:string){const tab=this.ownedTab(owner);if(!tab)return;if(tab.gate){tab.owner=undefined;return;}this.closeTab(tab.id);}
   private detailCache=new Map<string,{time:number;value:{title:string;company:string;description:string;url:string}}>();
-  private pendingDetails=new Map<string,Promise<{title:string;company:string;description:string;url:string}>>();
+  private pendingDetails=new SharedFlight<{title:string;company:string;description:string;url:string}>();
   readResearchJob(sourceId:SourceBrowserId,url:string,signal?:AbortSignal,ms=21000,workspace="app"):Promise<{title:string;company:string;description:string;url:string}>{
     if(!isAllowedSourceUrl(sourceId,url))return Promise.reject(Error("不安全或未支持的岗位链接"));
     if(signal?.aborted)return Promise.reject(Error("cancelled"));
     const key=JSON.stringify([workspace,sourceId,url]),cached=this.detailCache.get(key);
     if(cached&&Date.now()-cached.time<1800000)return Promise.resolve(structuredClone(cached.value));
-    const pending=this.pendingDetails.get(key);if(pending&&!signal)return pending;
-    const work=this.readResearchJobUncached(sourceId,url,signal,ms).then(value=>{
-      this.detailCache.set(key,{time:Date.now(),value});if(this.detailCache.size>100)this.detailCache.delete(this.detailCache.keys().next().value!);return value;
-    }).finally(()=>this.pendingDetails.delete(key));this.pendingDetails.set(key,work);return work;
+    return this.pendingDetails.run(key,async sharedSignal=>{
+      const value=await this.readResearchJobUncached(sourceId,url,sharedSignal,21000);
+      if(sharedSignal.aborted)throw Error('cancelled');
+      this.detailCache.set(key,{time:Date.now(),value});if(this.detailCache.size>100)this.detailCache.delete(this.detailCache.keys().next().value!);
+      return value;
+    },signal,ms);
   }
   private async readResearchJobUncached(sourceId: SourceBrowserId, url: string, signal?:AbortSignal,ms=21000): Promise<{title:string;company:string;description:string;url:string}> {
     if (!isAllowedSourceUrl(sourceId,url)) throw new Error("不安全或未支持的岗位链接");
@@ -448,29 +451,34 @@ export class SourceBrowserManager {
   private careerSourceEpoch=new Map<"zhilian"|"wuyou",number>();
   private careerControllers=new Map<"zhilian"|"wuyou",Set<AbortController>>();
   cancelCareerSearch(sourceId?:"zhilian"|"wuyou"){
+    if(sourceId)this.platformPending.get(sourceId)?.cancelAll();else for(const flights of this.platformPending.values())flights.cancelAll();
     if(sourceId)this.careerSourceEpoch.set(sourceId,(this.careerSourceEpoch.get(sourceId)||0)+1);
     else this.careerEpoch++;
     for(const id of sourceId?[sourceId]:["zhilian","wuyou"] as const){const idle=this.careerIdle.get(id);if(idle){const view=this.backgrounds.get(id);if(view)this.releaseBackground(id,view);}for(const controller of this.careerControllers.get(id)||[])controller.abort();const wc=this.backgrounds.get(id)?.webContents;if(wc&&!wc.isDestroyed()&&wc.isLoadingMainFrame())wc.stop();}
   }
 
+  private platformDiagnostics=new Map<string,()=>string>();
   private platformTail=new Map<"zhilian"|"wuyou",Promise<unknown>>();
-  private platformPending=new Map<string,Promise<SourceActionPage>>();
-  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number;forceRefresh?:boolean;deadline?:number}):Promise<SourceActionPage>{
+  private platformPending=new Map<string,SharedFlight<SourceActionPage>>();
+  searchPage(sourceId:"boss"|"zhilian"|"wuyou",input:{keyword:string;city:string;page:number;forceRefresh?:boolean;deadline?:number;workspace?:string}):Promise<SourceActionPage>{
     if(sourceId==="boss")return Promise.reject(Error("请使用 BOSS 有界采集入口"));
-    const key=JSON.stringify([sourceId,input]),existing=this.platformPending.get(key);if(existing)return existing;
-    const tail=this.platformTail.get(sourceId)||Promise.resolve();
-    const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0;
-    const work=tail.then(()=>{if(epoch!==this.careerEpoch||sourceEpoch!==(this.careerSourceEpoch.get(sourceId)||0))throw Error("cancelled:检索已停止");return this.searchPageRun(sourceId,input);});
-    const settled=work.catch(()=>{});this.platformTail.set(sourceId,settled);this.platformPending.set(key,work);
-    void work.finally(()=>{this.platformPending.delete(key);if(this.platformTail.get(sourceId)===settled)this.platformTail.delete(sourceId);}).catch(()=>{});
-    return work;
+    const key=JSON.stringify([input.workspace||"app",input.keyword,input.city,input.page,!!input.forceRefresh]);
+    let flights=this.platformPending.get(sourceId);if(!flights){flights=new SharedFlight();this.platformPending.set(sourceId,flights);}
+    return flights.run(key,signal=>{
+      const tail=this.platformTail.get(sourceId)||Promise.resolve();
+      const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0;
+      const work=tail.then(()=>{if(signal.aborted||epoch!==this.careerEpoch||sourceEpoch!==(this.careerSourceEpoch.get(sourceId)||0))throw Error("cancelled:检索已停止");return this.searchPageRun(sourceId,{...input,deadline:Date.now()+18000,signal});});
+      const settled=work.catch(()=>{});this.platformTail.set(sourceId,settled);
+      void work.finally(()=>{if(this.platformTail.get(sourceId)===settled)this.platformTail.delete(sourceId);}).catch(()=>{});
+      return work;
+    },undefined,input.deadline===undefined?18000:input.deadline-Date.now(),()=>Error(`source_timeout:读取等待超时${this.platformDiagnostics.get(sourceId)?.()||""}`));
   }
 
   private async searchPageRun(
     sourceId: "zhilian" | "wuyou",
-    input: { keyword: string; city: string; page: number; forceRefresh?:boolean;deadline?:number },
+    input: { keyword: string; city: string; page: number; forceRefresh?:boolean;deadline?:number;signal?:AbortSignal;workspace?:string },
   ): Promise<SourceActionPage> {
-    const key=JSON.stringify([sourceId,input.keyword,input.city,input.page]),cached=this.careerCache.get(key),now=Date.now();
+    const key=JSON.stringify([input.workspace||"app",sourceId,input.keyword,input.city,input.page]),cached=this.careerCache.get(key),now=Date.now();
     if(!input.forceRefresh&&cached&&now-cached.time<120000)return structuredClone(cached.page);
     if(input.deadline!==undefined&&now>=input.deadline)throw Error("source_timeout:本轮读取时间已用完");
     if(now<(this.careerBlocked.get(sourceId)||0))throw Error('source_backoff:来源已暂停，请稍后重试');
@@ -483,6 +491,7 @@ export class SourceBrowserManager {
     const view=reuseVisible?active!.view:this.backgroundView(sourceId);
     const epoch=this.careerEpoch,sourceEpoch=this.careerSourceEpoch.get(sourceId)||0,deadline=Math.min(now+18000,input.deadline??Infinity);
     const controller=new AbortController(),controllers=this.careerControllers.get(sourceId)||new Set<AbortController>();controllers.add(controller);this.careerControllers.set(sourceId,controllers);
+    const abortShared=()=>controller.abort();input.signal?.addEventListener("abort",abortShared,{once:true});if(input.signal?.aborted)controller.abort();
     const stopOwnedNavigation=()=>{if(!reuseVisible&&!view.webContents.isDestroyed()&&view.webContents.isLoadingMainFrame())view.webContents.stop();};
     controller.signal.addEventListener("abort",stopOwnedNavigation,{once:true});
     const current=()=>!controller.signal.aborted&&epoch===this.careerEpoch&&sourceEpoch===(this.careerSourceEpoch.get(sourceId)||0);
@@ -492,6 +501,9 @@ export class SourceBrowserManager {
     }finally{if(timer)clearTimeout(timer);controller.signal.removeEventListener('abort',onAbort);}};
     let evidence:ZhilianSearchEvidence|undefined;let enableEvidence:Promise<unknown>|undefined;let detachEvidence:(()=>void)|undefined;
     let stage="load",successful=false,jobCount=0,keywordMatch="unknown",diagnostics:{readyState?:string;visibility?:string;cards?:number;visibleCards?:number;props?:number;titleMatches?:number;companyMatches?:number;urls?:number}|undefined;
+    const diagnosticSuffix=()=>{const safeState=/^(loading|interactive|complete)$/.test(diagnostics?.readyState||"")?diagnostics!.readyState:"unknown";const safeVisibility=/^(hidden|visible)$/.test(diagnostics?.visibility||"")?diagnostics!.visibility:"unknown";const count=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(10000,Math.floor(value))):0;
+return ` [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility}; cards=${count(diagnostics?.cards)}; visible_cards=${count(diagnostics?.visibleCards)}; jobs=${jobCount}; keyword_match=${keywordMatch}; search_requests=${evidence?.searchRequests||0}; matched_requests=${evidence?.matchedRequests||0}; response_ready=${evidence?.ready?"yes":"no"}; initial=${evidence?.initialStatus||"absent"}]`;};
+    this.platformDiagnostics.set(sourceId,diagnosticSuffix);
     try {
       if(sourceId==='zhilian'){
         evidence=new ZhilianSearchEvidence(input);
@@ -581,14 +593,14 @@ export class SourceBrowserManager {
       successful=true;this.careerCache.set(key,{time:Date.now(),page:result});
       if(this.careerCache.size>40)this.careerCache.delete(this.careerCache.keys().next().value!);
       return result;
-    } catch(error){const safeState=/^(loading|interactive|complete)$/.test(diagnostics?.readyState||"")?diagnostics!.readyState:"unknown";const safeVisibility=/^(hidden|visible)$/.test(diagnostics?.visibility||"")?diagnostics!.visibility:"unknown";const count=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)?Math.max(0,Math.min(10000,Math.floor(value))):0;
-      throw Error(`${error instanceof Error?error.message:String(error)} [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility}; cards=${count(diagnostics?.cards)}; visible_cards=${count(diagnostics?.visibleCards)}; jobs=${jobCount}; keyword_match=${keywordMatch}; search_requests=${evidence?.searchRequests||0}; matched_requests=${evidence?.matchedRequests||0}; response_ready=${evidence?.ready?"yes":"no"}; initial=${evidence?.initialStatus||"absent"}]`);}
-    finally {detachEvidence?.();controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible){if(sourceId==="zhilian"&&successful&&current()){
+    } catch(error){throw Error(`${error instanceof Error?error.message:String(error)}${diagnosticSuffix()}`);}
+    finally {if(this.platformDiagnostics.get(sourceId)===diagnosticSuffix)this.platformDiagnostics.delete(sourceId);input.signal?.removeEventListener("abort",abortShared);detachEvidence?.();controller.signal.removeEventListener("abort",stopOwnedNavigation);controllers.delete(controller);if(!controllers.size)this.careerControllers.delete(sourceId);if(!reuseVisible){if(sourceId==="zhilian"&&successful&&current()){
       const timer=setTimeout(()=>{if(this.careerIdle.get(sourceId)===timer){this.careerIdle.delete(sourceId);this.releaseBackground(sourceId,view);}},120000);timer.unref?.();this.careerIdle.set(sourceId,timer);
     }else this.releaseBackground(sourceId,view);}}
   }
 
   destroy(): void {
+    this.pendingDetails.cancelAll();for(const flights of this.platformPending.values())flights.cancelAll();
     this.cancelBossSearch();for(const timer of this.careerIdle.values())clearTimeout(timer);this.careerIdle.clear();if(this.bossObservation)clearInterval(this.bossObservation);if(this.platformObservation)clearInterval(this.platformObservation);
     for(const timer of this.observationTimers.values())clearTimeout(timer);this.observationTimers.clear();
     if(this.bossDetailView&&!this.bossDetailView.webContents.isDestroyed())this.bossDetailView.webContents.close();

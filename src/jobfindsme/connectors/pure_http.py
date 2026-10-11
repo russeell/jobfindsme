@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 import uuid
 from collections.abc import Callable
 from typing import Any, Protocol
@@ -14,7 +16,13 @@ from jobfindsme.contracts import SourceKind
 
 
 class PureHttpError(RuntimeError):
-    """Pure-HTTP fetch failed at transport level (caller should fall back)."""
+    """Safe, classified failure; never include upstream bodies or credentials."""
+
+    code = "source_unavailable"
+
+    def __init__(self, message: str, *, code: str | None = None):
+        self.code = code or self.code
+        super().__init__(f"{self.code}:{message}")
 
 
 class PureHttpUnavailableError(PureHttpError):
@@ -23,6 +31,48 @@ class PureHttpUnavailableError(PureHttpError):
 
 class PureHttpBlockedError(PureHttpError):
     """The remote endpoint rejected or challenged the request."""
+
+
+class PureHttpContractError(PureHttpError):
+    code = "source_contract_error"
+
+
+def check_response(response: Any) -> None:
+    status = response.status_code
+    if status == 401:
+        raise PureHttpBlockedError("来源要求登录，请在原页确认", code="login_required")
+    if status in (403, 429):
+        raise PureHttpBlockedError(
+            "来源限制访问，请在原页处理后重试", code="risk_control"
+        )
+    if status >= 500:
+        raise PureHttpError("来源服务暂不可用，请稍后重试")
+    if status >= 400:
+        raise PureHttpError("来源拒绝本次请求，请检查来源")
+
+
+def liepin_cards(response: Any) -> list[dict]:
+    check_response(response)
+    try:
+        data = response.json()
+    except Exception as error:
+        if any(
+            word in response.text[:10000].lower()
+            for word in ("captcha", "验证码", "安全验证", "访问过于频繁")
+        ):
+            raise PureHttpBlockedError("来源要求验证", code="risk_control") from error
+        raise PureHttpContractError("未取得预期的岗位数据，请检查来源") from error
+    if not isinstance(data, dict):
+        raise PureHttpContractError("岗位响应结构已变化")
+    if data.get("flag") != 1:
+        # Unknown business codes are not proof that a session needs verification.
+        raise PureHttpBlockedError("来源未接受本次检索，请稍后检查来源")
+    outer = data.get("data")
+    inner = outer.get("data") if isinstance(outer, dict) else None
+    cards = inner.get("jobCardList") if isinstance(inner, dict) else None
+    if not isinstance(cards, list):
+        raise PureHttpContractError("岗位列表字段缺失或格式变化，不代表没有岗位")
+    return cards
 
 
 class _Response(Protocol):
@@ -90,6 +140,24 @@ class LiepinPureHttpConnector:
         self.city = city.strip()
         self.source_name = source_name
         self._session_factory = session_factory or _default_session_factory
+        self._session: _Session | None = None
+        self._session_at = 0.0
+        self._lock = threading.Lock()
+        self.deadline: float | None = None
+
+    def _timeout(self) -> float:
+        remaining = (
+            _TIMEOUT if self.deadline is None else self.deadline - time.monotonic()
+        )
+        if remaining <= 0:
+            raise PureHttpError("本轮读取预算已用完", code="source_timeout")
+        return min(_TIMEOUT, remaining)
+
+    def close(self) -> None:
+        session, self._session = self._session, None
+        close = getattr(session, "close", None)
+        if close:
+            close()
 
     def fetch(self) -> list[RawJobRecord]:
         records, _next_page = self.fetch_page(0)
@@ -98,6 +166,14 @@ class LiepinPureHttpConnector:
     def fetch_page(
         self, current_page: int = 0
     ) -> tuple[list[RawJobRecord], int | None]:
+        with self._lock:
+            try:
+                return self._fetch_page(current_page)
+            except Exception:
+                self.close()
+                raise
+
+    def _fetch_page(self, current_page: int) -> tuple[list[RawJobRecord], int | None]:
         if not 0 <= current_page <= 200:
             raise ValueError("liepin page must be between 0 and 200")
         dq = LIEPIN_CITY_CODES.get(self.city, "")
@@ -107,14 +183,21 @@ class LiepinPureHttpConnector:
         if dq:
             search_url += f"&dqs={dq}"
 
-        session = self._session_factory()
+        if self._session is not None and time.monotonic() - self._session_at >= 120:
+            self.close()
+        if self._session is None:
+            self._session = self._session_factory()
+            self._session_at = time.monotonic()
+        session = self._session
         try:
-            session.get(search_url, headers={"User-Agent": _UA}, timeout=_TIMEOUT)
+            if not session.cookies.get("XSRF-TOKEN", ""):
+                landing = session.get(
+                    search_url, headers={"User-Agent": _UA}, timeout=self._timeout()
+                )
+                check_response(landing)
             xsrf = session.cookies.get("XSRF-TOKEN", "")
             if not xsrf:
-                raise PureHttpBlockedError(
-                    "liepin landing page did not set XSRF-TOKEN cookie"
-                )
+                raise PureHttpBlockedError("来源初始化未完成，请检查原页后重试")
             response = session.post(
                 _LIEPIN_API,
                 headers={
@@ -163,27 +246,14 @@ class LiepinPureHttpConnector:
                         },
                     }
                 },
-                timeout=_TIMEOUT,
+                timeout=self._timeout(),
             )
         except PureHttpError:
             raise
         except Exception as error:  # network / TLS / JSON decode
-            raise PureHttpError(
-                f"liepin pure-http transport failed: {error}"
-            ) from error
+            raise PureHttpError("来源连接失败，请稍后重试") from error
 
-        try:
-            data = response.json()
-        except Exception as error:
-            raise PureHttpBlockedError(
-                f"liepin returned non-JSON (status {response.status_code})"
-            ) from error
-
-        if data.get("flag") != 1:
-            raise PureHttpBlockedError(
-                f"liepin api refused: flag={data.get('flag')} code={data.get('code')}"
-            )
-        cards = (data.get("data") or {}).get("data", {}).get("jobCardList") or []
+        cards = liepin_cards(response)
 
         records: list[RawJobRecord] = []
         for card in cards:
@@ -191,8 +261,10 @@ class LiepinPureHttpConnector:
                 continue
             job = card.get("job") or {}
             comp = card.get("comp") or {}
-            title = str(job.get("title", ""))
-            if not title:
+            if not isinstance(job, dict) or not isinstance(comp, dict):
+                continue
+            title = job.get("title")
+            if not isinstance(title, str) or not title.strip():
                 continue
             job_id = str(job.get("jobId", ""))
             link = str(job.get("link", ""))
@@ -234,4 +306,6 @@ class LiepinPureHttpConnector:
                     },
                 )
             )
+        if cards and not records:
+            raise PureHttpContractError("岗位卡片均未能解析，不代表没有岗位")
         return records, current_page + 1 if len(cards) >= 40 else None

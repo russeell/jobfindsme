@@ -12,6 +12,7 @@ import time
 import urllib.error
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -175,6 +176,7 @@ class SearchPreflightRequest(StrictResponse):
 
 
 class PublicSourcePagesRequest(StrictResponse):
+    workspace_id: str = Field(default="anonymous", max_length=120)
     keyword: str = Field(min_length=1, max_length=120)
     city: str = Field(default="", max_length=30)
     max_pages: int = Field(default=2, ge=1, le=3)
@@ -687,6 +689,32 @@ def create_app(
     public_pages_cache: dict = {}
     public_pages_failures: dict = {}
     public_pages_lock = threading.Lock()
+    public_adapters: dict = {}
+
+    def close_public_adapter(adapter):
+        close = getattr(adapter, "close", None)
+        if close:
+            close()
+
+    def close_public_adapters():
+        with public_pages_lock:
+            for _, adapter in public_adapters.values():
+                close_public_adapter(adapter)
+            public_adapters.clear()
+
+    app.add_event_handler("shutdown", close_public_adapters)
+
+    @contextmanager
+    def public_page_budget(seconds):
+        deadline = time.monotonic() + seconds
+        if not public_pages_lock.acquire(timeout=seconds):
+            raise HTTPException(504, "source_timeout:来源排队等待超时")
+        try:
+            if time.monotonic() >= deadline:
+                raise HTTPException(504, "source_timeout:读取预算已用完")
+            yield deadline
+        finally:
+            public_pages_lock.release()
 
     @app.post(
         "/v1/sources/{source_id}/public-pages", dependencies=[Depends(require_token)]
@@ -698,32 +726,53 @@ def create_app(
         import time
 
         key = (
+            request.workspace_id,
             source_id,
             request.keyword,
             request.city,
             request.max_pages,
-            request.seconds,
             request.cursor,
         )
-        with public_pages_lock:
+        with public_page_budget(request.seconds) as deadline:
             cached = public_pages_cache.get(key)
             if (
                 not request.force_refresh
                 and cached
-                and time.monotonic() - cached[0] < 120
+                and time.monotonic() - cached[0] < cached[2]
             ):
                 return cached[1]
             failure = public_pages_failures.get(source_id)
             if failure and time.monotonic() - failure[0] < 300:
                 raise HTTPException(status_code=failure[1], detail=failure[2])
-            adapter = source_adapter_factory(source_id, request.keyword, request.city)
+            session_key = (
+                request.workspace_id,
+                source_id,
+                request.keyword,
+                request.city,
+            )
+            now = time.monotonic()
+            for old_key, (created, old_adapter) in list(public_adapters.items()):
+                if now - created >= 120:
+                    close_public_adapter(old_adapter)
+                    del public_adapters[old_key]
+            if session_key not in public_adapters:
+                if len(public_adapters) >= 16:
+                    _, old_adapter = public_adapters.pop(next(iter(public_adapters)))
+                    close_public_adapter(old_adapter)
+                public_adapters[session_key] = (
+                    now,
+                    source_adapter_factory(source_id, request.keyword, request.city),
+                )
+            adapter = public_adapters[session_key][1]
             pages, cursor, started = [], request.cursor, time.monotonic()
-            failed_risk = False
+            failure_reason = ""
             failed = False
             try:
                 for _ in range(request.max_pages):
-                    if pages and time.monotonic() - started > request.seconds:
-                        break
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError("source_timeout:本轮读取预算已用完")
+                    if hasattr(adapter, "set_deadline"):
+                        adapter.set_deadline(deadline)
                     page = adapter.fetch_page(cursor)
                     pages.append(
                         {
@@ -743,42 +792,57 @@ def create_app(
                     if cursor is None:
                         break
             except Exception as error:
-                message = str(error)[:500]
-                risky = any(
-                    marker in message.lower()
-                    for marker in (
-                        "429",
-                        "403",
-                        "captcha",
-                        "risk_control",
-                        "验证码",
-                        "访问过于频繁",
+                from jobfindsme.connectors.pure_http import PureHttpError
+
+                failure_reason = (
+                    error.code
+                    if isinstance(error, PureHttpError)
+                    else (
+                        str(error).split(":", 1)[0]
+                        if str(error).split(":", 1)[0]
+                        in {
+                            "risk_control",
+                            "login_required",
+                            "source_timeout",
+                            "source_contract_error",
+                            "source_unavailable",
+                        }
+                        else "source_unavailable"
                     )
                 )
+                message = (
+                    str(error)
+                    if isinstance(error, PureHttpError)
+                    else (f"{failure_reason}:来源读取未完成，请检查后重试")
+                )
+                risky = failure_reason == "risk_control"
                 code = 429 if risky else 502
                 failed = True
-                failed_risk = risky
-                public_pages_failures[source_id] = (time.monotonic(), code, message)
+                close_public_adapter(adapter)
+                public_adapters.pop(session_key, None)
+                if risky or failure_reason == "login_required":
+                    public_pages_failures[source_id] = (time.monotonic(), code, message)
                 if not pages:
                     raise HTTPException(status_code=code, detail=message) from error
             if pages:
-                if failed:
+                blocked = failure_reason in {"risk_control", "login_required"}
+                if blocked:
                     pages[-1]["next_cursor"] = None
                 pages[-1]["collection"] = {
                     "batches": len(pages),
                     "elapsed_seconds": min(180, time.monotonic() - started),
-                    "stop_reason": "risk_control"
-                    if failed_risk
-                    else "source_contract_error"
+                    "stop_reason": failure_reason
                     if failed
                     else "complete"
                     if cursor is None
                     else "page_budget",
-                    "cursor": None if failed else cursor,
-                    "complete": cursor is None,
-                    "failure": "risk_control" if failed_risk else None,
+                    "cursor": None if blocked else cursor,
+                    "complete": not failed and cursor is None,
+                    "failure": failure_reason
+                    if failure_reason in {"risk_control", "login_required"}
+                    else None,
                 }
-            public_pages_cache[key] = (time.monotonic(), pages)
+            public_pages_cache[key] = (time.monotonic(), pages, 5 if failed else 120)
             if len(public_pages_cache) > 40:
                 public_pages_cache.pop(next(iter(public_pages_cache)))
             return pages

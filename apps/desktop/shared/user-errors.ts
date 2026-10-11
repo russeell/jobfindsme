@@ -28,7 +28,8 @@ export function userError(error:unknown):UserError {
  if(/source_scope_unconfirmed:/.test(text))return {kind:'source',message:'尚未确认列表属于本次搜索，未返回推荐或上一轮岗位。登录状态保留，可重试。',action:'retry'};
  if(/source_query_unconfirmed:/.test(text))return {kind:'source',message:'平台返回了无法确认关键词匹配的扩展岗位，已排除。上次成功结果和登录状态保留；请换一个明确的岗位关键词。',action:'retry'};
  if(/source_scope_mismatch:/.test(text))return {kind:'source',message:'站内页面未保留本次关键词、城市或页码，未将推荐岗位计作搜索结果。',action:'retry'};
- if(/source_contract_error:/.test(text))return {kind:'source',message:'本次未读到可验证的岗位列表，可能是页面结构变化；登录状态仍待确认。',action:'source'};
+ if(/source_unavailable:/.test(text))return {kind:'source',message:'招聘来源暂时无法连接或未接受请求，其他来源仍可使用。请稍后重试。',action:'retry'};
+ if(/source_contract_error:/.test(text))return {kind:'source',message:'岗位列表响应格式变化或未能解析，不代表没有岗位；请检查来源后重试。',action:'source'};
  if(/partial|部分失败/.test(text))return {kind:'partial',message:'部分来源未完成，已保留可用岗位。',action:'source'};
  if(/source_contract|来源|continuation_expired/.test(text))return {kind:'source',message:'来源暂时无法读取，请打开对应网站确认状态。',action:'source'};
  if(/chat_concurrency_limit/.test(text))return {kind:'service',message:'同时最多运行四条聊天，请等待其中一条完成或停止后再发送。',action:'retry'};
