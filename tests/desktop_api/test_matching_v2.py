@@ -156,3 +156,22 @@ def test_matching_preview_uses_stored_workspace_job_and_requires_auth(tmp_path):
         ).status_code
         == 404
     )
+
+
+@pytest.mark.parametrize(
+    ("description", "ratio"),
+    [
+        ("掌握 Java / Python / C++ 任一编程语言", 1),
+        ("掌握 Java、Python 中的任意一种编程语言", 1),
+        ("掌握 Java / Python 任一编程语言；必须熟悉 Docker", 0.5),
+        ("掌握 Java / Python 任一编程语言；必须熟悉 Java", 0.5),
+        ("掌握 Java / Python 两种编程语言", 0.5),
+    ],
+)
+def test_explicit_alternative_skills_are_not_all_mandatory(description, ratio):
+    resume = SimpleNamespace(
+        content={"skills": ["Python"], "projects": ["开发 Python 接口"]}
+    )
+    result = evaluate(_job(1, description=description), resume, DEFAULT_WEIGHTS)
+    assert result["details"]["skills"]["ratio"] == ratio
+    assert result["details"]["projects"]["ratio"] == ratio

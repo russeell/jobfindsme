@@ -6,6 +6,7 @@ from datetime import datetime
 
 from jobfindsme.contracts import (
     EmploymentType,
+    JobDetailLevel,
     JobLiveness,
     JobPosting,
     JobSourceRecord,
@@ -34,11 +35,30 @@ def _liveness_rank(liveness: JobLiveness) -> int:
 def _canonical_winner(left: JobPosting, right: JobPosting) -> JobPosting:
     """Deterministic canonical pick for the same fingerprint from two sources.
 
-    Same source: the newest observation wins (content refresh must propagate).
+    Same source: newest observation wins, except a fresh short listing cannot
+    discard recent detail with unchanged metadata.
     Different sources: richer detail wins, ties broken by a stable source
     priority, never by thread completion order.
     """
     if left.source.source_name == right.source.source_name:
+        # A fresh list card must not discard an unchanged, recently read JD.
+        # Keep its original provenance/time; changed metadata or expired detail
+        # deliberately falls through to the normal refresh path.
+        detail_at = left.source.description_fetched_at
+        if (
+            left.source.detail_level is JobDetailLevel.DETAIL_PAGE
+            and right.source.detail_level in (
+                JobDetailLevel.LIST_CARD, JobDetailLevel.STRUCTURED_SOURCE
+            )
+            and len(right.description) < len(left.description)
+            and detail_at is not None
+            and 0 <= (right.source.fetched_at - detail_at).total_seconds() <= 1800
+            and right.source.fetched_at >= left.source.fetched_at
+            and left.source.liveness == right.source.liveness
+            and left.model_dump(exclude={"description", "content_hash", "source"})
+            == right.model_dump(exclude={"description", "content_hash", "source"})
+        ):
+            return left
         if (
             left.source.fetched_at == right.source.fetched_at
             and left.content_hash == right.content_hash

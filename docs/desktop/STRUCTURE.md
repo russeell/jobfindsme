@@ -86,3 +86,7 @@ D168：投递工作台分为材料/记录，0043 为 application_records 新增 
 D169：简历修改统一在 `ResumePage.tsx` 内运行与审阅；`ResumeOpenRequest` 将岗位/旧提案 ID 从岗位卡或助手带入。生成复用 runResearchChat IPC 与 resume-tailor 技能，但使用独立运行 ID、不写聊天列表；主进程仅为该技能提供 proposeResume。离开简历页或显式停止取消当前运行，过期响应丢弃；提案仍在本地持久保存。`ResearchPage` 不再嵌入可编辑的 ResumeProposal，旧记录提供简历页链接。D168 的 generateWith 自动进入聊天方案已移除。单段 AI、富文本编辑与所有导出沿用原实现。
 
 D170：`shared/job-decision.ts` 汇总已有岗位/简历匹配证据，`search/JobDecision.tsx` 供搜索详情与岗位准备共用；没有新的网络或模型调用。`RecordsPage.tsx` 调用 `updateNextAction` IPC → `/v1/jobs/{job_id}/next-action` → `JobPreparationService.update_next_action`，事务内按工作区和更新时间校验，仅改下一步与日期；页面撤销持有精确回执，旧请求不能覆盖后续编辑。
+
+D171：搜索详情的补全结果用既有 previewMatching 自动核对当前确认简历，不回写历史检索快照。`search/rules.py` 将明确“任选其一”的技能列表视为一组，独立要求仍分别核对。`main/research/interview-materials.ts` 只为当前面试运行复用成功的材料读取；Pi 对明确选中岗位的面试首请求带入有界JD/脱敏简历，仍使用原工作区及岗位关联接口，不新建聊天或材料存储框架。
+
+D171 JD复用：`importing/repository.py` 保留元数据未变的30分钟内完整正文，避免新列表短摘要（含结构化列表）覆盖；不刷新正文读取时间，新的来源观察仍独立保存。

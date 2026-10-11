@@ -792,3 +792,19 @@ test('cursor-only job journals are not empty caches and source selection scopes 
   }finally{server.close();}
  }
 });
+
+test('selected job interview receives current JD and tailored resume in its first model request',async()=>{
+ let modelCalls=0,jobReads=0,resumeReads=0,payload;
+ const server=http.createServer(async(request,response)=>{
+  let body='';for await(const chunk of request)body+=chunk;const sent=JSON.parse(body);modelCalls++;
+  const content=sent.messages.findLast(message=>message.role==='user').content;payload=JSON.parse(typeof content==='string'?content:content.filter(part=>part.type==='text').map(part=>part.text).join(''));
+  response.writeHead(200,{'Content-Type':'text/event-stream'});
+  sse(response,{role:'assistant',content:'准备重点：先复习 Python API 的错误处理，再用虚构项目说明测试方法。\n第一题：请介绍你在虚构 API 项目中如何处理接口超时？'},'stop');
+ });
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ const tools={readJob:async id=>{jobReads++;assert.equal(id,'selected');return {job_id:id,description:'JD要求 Python API',source:{detail_level:'detail_page',liveness:'unknown'}};},readResume:async()=>{resumeReads++;return {source_version_id:'tailored-v8',text:'虚构 API 项目',limitations:'脱敏'};},findEvidence:async()=>{throw Error('no network expected');},searchWeb:async()=>{throw Error('no network expected');},readPage:async()=>null,readBrowserPage:async()=>null,saveExecution:async()=>{},saveReport:async()=>null};
+ try{
+  await runPiResearchAgent({workspaceId:'test',jobId:'selected',requestId:'prep',skillId:'interview-prep',question:'请帮我准备面试，先给重点再逐题练习',history:[],research:false},{protocol:'openai',provider:'openai',endpoint:`http://127.0.0.1:${server.address().port}/v1`,model_id:'mock',status:'verified',auth_mode:'none'},'',tools,()=>{},new AbortController().signal);
+  assert.equal(modelCalls,1);assert.equal(jobReads,1);assert.equal(resumeReads,1);assert.equal(payload.preparation_materials.job.job_id,'selected');assert.equal(payload.preparation_materials.resume.source_version_id,'tailored-v8');
+ }finally{server.close();}
+});

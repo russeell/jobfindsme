@@ -57,10 +57,31 @@ def work_years(lines: list[str] | tuple[str, ...]) -> float | None:
     return len(months) / 12 if months else None
 
 
+def skill_requirements(text: str) -> list[set[str]]:
+    """Group only explicit alternatives; independent mentions stay mandatory."""
+    groups = []
+    pattern = (
+        r"((?:[A-Za-z][A-Za-z0-9+#.]*\s*[/、或]\s*)+[A-Za-z][A-Za-z0-9+#.]*)"
+        r"\s*(?:中(?:的)?|等)?\s*(?:任一|任意一|至少一|其中一)"
+    )
+
+    def collect(match):
+        skills = set(extract_skills(match.group(1)))
+        if len(skills) < 2:
+            return match.group(0)
+        groups.append(skills)
+        return " "
+
+    remaining = re.sub(pattern, collect, text)
+    return groups + [{skill} for skill in sorted(set(extract_skills(remaining)))]
+
+
 def evaluate(job, resume_version, weights: dict[str, int]) -> dict:
     content = resume_version.content if resume_version else {}
     jd = job.description
     job_skills = set(extract_skills(jd))
+    requirements = skill_requirements(jd)
+    grouped = any(len(group) > 1 for group in requirements)
     resume_skills = {
         s
         for section in ("skills", "projects", "experience")
@@ -79,6 +100,7 @@ def evaluate(job, resume_version, weights: dict[str, int]) -> dict:
         }
 
     matched = sorted(job_skills & resume_skills)
+    matched_groups = sum(bool(group & resume_skills) for group in requirements)
     known = bool(
         job_skills
         and resume_version
@@ -86,11 +108,12 @@ def evaluate(job, resume_version, weights: dict[str, int]) -> dict:
     )
     put(
         "skills",
-        len(matched) / len(job_skills) if known else 0,
+        matched_groups / len(requirements) if known else 0,
         known,
         (
-            f"JD技能{len(job_skills)}项，简历证据匹配{len(matched)}项："
+            f"JD技能要求{len(requirements)}组，简历证据对应{matched_groups}组："
             f"{' / '.join(matched) or '无'}。"
+            + ("原文明确任选其一的技能按一组核对。" if grouped else "")
         )
         if known
         else "JD技能或已确认简历证据不足，暂不计分。",
@@ -108,13 +131,13 @@ def evaluate(job, resume_version, weights: dict[str, int]) -> dict:
         )
     ]
     project_skills = {s for line in evidence for s in extract_skills(line)}
-    project_matches = sorted(job_skills & project_skills)
+    project_matches = sum(bool(group & project_skills) for group in requirements)
     known = bool(job_skills and projects)
     put(
         "projects",
-        len(project_matches) / len(job_skills) if known else 0,
+        project_matches / len(requirements) if known else 0,
         known,
-        f"{len(evidence)}条有行动描述的项目证据，覆盖JD技能{len(project_matches)}/{len(job_skills)}项；仅列关键词不计作项目经历。"
+        f"{len(evidence)}条有行动描述的项目证据，覆盖JD技能要求{project_matches}/{len(requirements)}组；仅列关键词不计作项目经历。"
         if known
         else "缺少项目经历或可对应的JD技能，暂不计分。",
     )

@@ -969,3 +969,82 @@ def test_next_action_completion_undo_is_scoped_atomic_and_preserves_application(
         )
         == fresh
     )
+
+
+@pytest.mark.parametrize("list_level", ["list_card", "structured_source"])
+def test_recent_full_jd_survives_unchanged_list_refresh_but_not_expiry(
+    tmp_path, list_level
+):
+    from datetime import timedelta
+
+    from jobfindsme.contracts import JobDetailLevel
+
+    db, workspace, jobs, service = _services(tmp_path)
+    base = _job(980)
+    base = base.model_copy(update={"source": base.source.model_copy(
+        update={"detail_level": JobDetailLevel(list_level)}
+    )})
+    at = base.source.fetched_at
+    detail = base.model_copy(
+        update={
+            "description": "负责 Python 接口开发，需具备完整项目测试经验。",
+            "content_hash": "detail-content-hash-980",
+            "source": base.source.model_copy(
+                update={
+                    "detail_level": JobDetailLevel.DETAIL_PAGE,
+                    "description_source_url": base.apply_url,
+                    "description_fetched_at": at,
+                }
+            ),
+        }
+    )
+    jobs.upsert(workspace.workspace_id, detail)
+    fresh = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"fetched_at": at + timedelta(minutes=2)}
+            )
+        }
+    )
+    jobs.upsert(workspace.workspace_id, fresh)
+    saved = jobs.get(workspace_id=workspace.workspace_id, job_id=base.job_id)
+    assert saved.description == detail.description
+    assert saved.source.description_fetched_at == at
+    # The newer observation is still recorded separately.
+    assert (
+        jobs.source_records(
+            workspace_id=workspace.workspace_id, job_id=base.job_id
+        )[0].observed_at
+        == fresh.source.fetched_at
+    )
+    changed = fresh.model_copy(update={"title": "新的岗位职责"})
+    jobs.upsert(workspace.workspace_id, changed)
+    assert (
+        jobs.get(workspace_id=workspace.workspace_id, job_id=base.job_id).title
+        == changed.title
+    )
+    # Expired cached detail can no longer mask a new list observation.
+    jobs.upsert(
+        workspace.workspace_id,
+        detail.model_copy(
+            update={
+                "source": detail.source.model_copy(
+                    update={"fetched_at": at + timedelta(minutes=3)}
+                )
+            }
+        ),
+    )
+    expired = base.model_copy(
+        update={
+            "source": base.source.model_copy(
+                update={"fetched_at": at + timedelta(minutes=31)}
+            )
+        }
+    )
+    jobs.upsert(workspace.workspace_id, expired)
+    assert (
+        jobs.get(
+            workspace_id=workspace.workspace_id, job_id=base.job_id
+        ).source.detail_level
+        is JobDetailLevel(list_level)
+    )

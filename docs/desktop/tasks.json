@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D170",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -2943,6 +2943,25 @@
       "scope": [
         "前置真实线索和证据缺口",
         "待办完成撤销且不改变投递及简历状态"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D171",
+      "title": "真实检索测量与岗位面试材料复用",
+      "status": "done",
+      "depends_on": [
+        "D170"
+      ],
+      "scope": [
+        "测量真实检索速度相关性及失败隔离",
+        "补全JD后重新核对本地匹配",
+        "面试首轮带入已有岗位与对应脱敏简历",
+        "保留近期完整JD及原始来源时间，避免列表刷新覆盖",
+        "明确任选一种语言按技能组核对"
       ],
       "evidence": [
         "docs/desktop/HANDOFF.md"
