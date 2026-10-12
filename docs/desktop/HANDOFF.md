@@ -1,4 +1,8 @@
-D188 v0.15.2 发行进行中（2026-10-12）：用户授权同步 GitHub 和双平台安装包，纳入 D184 网络运行时、D185 项目符号、D186 岗位招呼语、D187 简历样式及中英文 README。版本统一至 0.15.2；打包烟测新增虚构 PDF/Word 导入、原件字节保护、彩色编辑保存、Word/PDF 导出独立检查和重启恢复，使用实际冻结 Python 服务，只有原生文件选择框结果由 CI 替代。真实四平台剩余验收仍保持 D184 原有边界，不计入发行通过。
+D188 v0.15.2 已发布（2026-10-12）：GitHub主分支、中英文README和双平台下载包已同步，纳入D184必需网络运行时、D185圆点、D186岗位招呼语和D187文字格式修复。两包、正式tag均由da9881bae55ac726ddae6204dc04074e753a4eb1构建，已设为latest；后续该条验收记录仅改文档，不改变包内产品代码。
+
+验证：主CI六项及匹配评估门槛通过。macOS、Windows分别569项Python、398项桌面测试，包审计与冻结HTTP/CA通过；实际打包应用以隔离虚构资料完成PDF/Word导入、原件字节一致、颜色/24pt/粗体显示、编辑保存、Word/PDF导出独立检查、两次启动恢复、聊天图钉持久化和四入口检查。CI仅替代文件选择框返回路径，UI/IPC/冻结Python实际执行。Word检验文件内容与样式，未用Microsoft Word人工打开。两份Release附件重新下载通过ZIP CRC、嵌入版本/提交、pdfminer/CMap/curl/CA及私有文件审计；SHA256与上传摘要一致，校验文件一并发布。无模型调用、真实投递或用户数据修改；D184剩余真实BOSS登录与四平台JD/续页仍保持原阻塞，不能由本次打包烟测计为通过。
+
+[Release](https://github.com/russeell/jobfindsme/releases/tag/v0.15.2) · [macOS](https://github.com/russeell/jobfindsme/actions/runs/38215881190) · [Windows](https://github.com/russeell/jobfindsme/actions/runs/38215881187) · [CI](https://github.com/russeell/jobfindsme/actions/runs/38215883838)。mac-arm64.zip SHA256：e3aec17ce9649677aa6c3bdbbebbd97924c81715b9f9db7d2241adfa16d9a28c；windows-x64.zip：6961cd58ea469abc46e2cfc2e052921c69aa4f4850ebc5a26fce46e3e22fe8e7。附件分别186460081/220621156字节，仅macOS Apple Silicon和Windows x64，仍未签名/公证。下载缓存位于/private/tmp/jfm-v0152-assets；未替换用户正在运行的旧应用。
 
 D187 简历样式与产品介绍（2026-10-12，本地）：此前原件保留，但编辑副本仅从纯文字重建，Word/PDF 导出随之丢失颜色与字号。新增 MIT pdfminer.six 读取 PDF 字符颜色、字号与字体粗细，Word 读取 run/继承样式及段落对齐；按原有文字精确匹配，仅附加可移植样式，不改原件或匹配事实。受目录、SHA256、体积和文字量限制，缓存本机解析结果；已保留的原件版本可在读取时恢复样式，不回写历史，明确保存的格式优先。安全文档模型、Tiptap、Word/PDF 导出贯通颜色/字号/对齐，新增轻量工具；AI 更新段落继承原格式，选段修改保留选区起始格式。复杂分栏、装饰线及嵌入字体继续由原件展示，编辑副本仍重新排版，不宣称无损 Word 转换。
 

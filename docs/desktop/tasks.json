@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D188",
+  "current_task": "D184",
   "tasks": [
     {
       "id": "D01",
@@ -3240,7 +3240,7 @@
     {
       "id": "D188",
       "title": "v0.15.2源码与双平台安装包同步发布",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D185",
         "D186",
@@ -3252,9 +3252,14 @@
         "macOS/Windows包审计与发布校验"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.15.2",
+        "https://github.com/russeell/jobfindsme/actions/runs/38215881190",
+        "https://github.com/russeell/jobfindsme/actions/runs/38215881187",
+        "https://github.com/russeell/jobfindsme/actions/runs/38215883838"
       ],
-      "blocker": null
+      "blocker": null,
+      "verification": "源码/main/tag统一da9881b，CI六项通过。macOS/Windows分别Python569、Node398、冻结HTTP/CA、包审计、实际两次启动及虚构PDF/Word导入/彩色编辑/保存/导出/重启均通过。Release附件重新下载验证CRC、源码版本、隐私文件及SHA256；v0.15.2已发布latest。"
     }
   ]
 }
