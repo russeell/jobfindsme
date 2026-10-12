@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D186",
+  "current_task": "D184",
   "tasks": [
     {
       "id": "D01",
@@ -3208,7 +3208,7 @@
     {
       "id": "D186",
       "title": "投递招呼语材料复用与简洁交互",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [],
       "scope": [
         "具体岗位不可被改成占位符，复用所选脱敏简历与JD",
@@ -3218,7 +3218,8 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "blocker": null,
+      "verification": "17 项 Node 回归、32 项 Python API 回归和构建通过；用户授权后实际 DeepSeek 两次生成，具体岗位/真实经历保留、同框替换与撤销通过。原生窗口展开模板滚动、固定操作栏、保存与最终包重启恢复通过。macOS 包审计、冻结 HTTP、ZIP CRC/源码一致通过。"
     }
   ]
 }
