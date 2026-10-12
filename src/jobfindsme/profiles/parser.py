@@ -235,7 +235,7 @@ class _Line:
 class DeterministicResumeParser:
     """Extract reviewable facts without treating every PDF line as a project."""
 
-    version = "deterministic-resume-v7"
+    version = "deterministic-resume-v8"
 
     def __init__(self) -> None:
         aliases = sorted(SKILLS, key=len, reverse=True)
@@ -395,7 +395,7 @@ def _split_entries(lines: list[_Line]) -> list[list[_Line]]:
 
 def _normalize_block(lines: list[_Line]) -> str:
     parts = [
-        re.sub(r"^(?:[-*•·+]\s*|\d+[.)、]\s+)", "", line.text).strip() for line in lines
+        re.sub(r"^(?:[-*·+]\s*|\d+[.)、]\s+)", "", line.text).strip() for line in lines
     ]
     return "\n".join(part for part in parts if part)
 

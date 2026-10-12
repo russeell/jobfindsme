@@ -216,3 +216,18 @@ def test_unindexed_sections_and_repeated_authored_lines_are_not_discarded():
         "基本信息\n同一行\n同一行\n", include_basic_information=True
     )
     assert len(repeated) == 2
+
+
+def test_imported_pdf_bullets_survive_section_parsing():
+    from jobfindsme.profiles.text import normalize_resume_text
+
+    text = normalize_resume_text(
+        "工作经历\n示例公司 2024.01 - 2025.01\n"
+        "\uf0b7 完成 Python 服务\n\uf0b7 优化检索性能"
+    )
+    facts = DeterministicResumeParser().parse(text)
+    experience = next(f for f in facts if f.fact_type is FactType.EXPERIENCE)
+    assert experience.value == (
+        "示例公司 2024.01 - 2025.01\n• 完成 Python 服务\n• 优化检索性能"
+    )
+    assert experience.evidence_snippet == experience.value
