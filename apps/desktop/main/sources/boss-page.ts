@@ -46,13 +46,17 @@ function readBossPage():BossPage {
   let detail:BossPage['detail'];
   const description=Array.from(document.querySelectorAll('.job-sec-text,.job-detail .text,.job-description')).filter(visible).map(text).find(t=>t.length>=80&&t.length<=30000);
   const title=pick(document.body,'.job-name h1,.name h1,.job-detail-header h1,h1');
-  const company=pick(document.body,'.sider-company .company-info a[href*="/gongsi/"],.company-info .company-name,.job-company-name,.sider-company a[href*="/gongsi/"]');
+  // Headhunter jobs identify the client in the job header. A recruiter's
+  // agency or a company mentioned inside the JD is not the hiring company.
+  const banner=document.querySelector('.job-banner');
+  const clientCompany=(banner&&visible(banner)?text(banner):'').split(/\r?\n/).map(line=>line.trim()).find(line=>/^客户公司\s*[：:]/.test(line))?.replace(/^客户公司\s*[：:]\s*/,'').trim();
+  const company=clientCompany||pick(document.body,'.sider-company .company-info a[href*="/gongsi/"],.company-info .company-name,.job-company-name,.sider-company a[href*="/gongsi/"]');
   const detailLocation=pick(document.body,'.job-banner .text-city,.job-banner a[href*="/city/"],.job-banner .job-area,.job-banner .text-desc a');
   const detailSalary=pick(document.body,'.job-banner .salary,.job-detail-header .salary');
   // A split-list panel must be linked to its selected job, never inferred from first card.
   const detailUrl=/^\/job_detail\/[\w-]+\.html$/.test(location.pathname)?location.origin+location.pathname:'';
   const folded=Array.from(document.querySelectorAll('.job-sec button,.job-description button,.job-sec a')).some(e=>visible(e)&&/展开全部|展开更多|查看完整/.test(text(e)));
-  if(description&&title&&detailUrl&&!folded&&!/展开全部|展开更多/.test(description))detail={title,company,location:detailLocation,salary:/[\uE000-\uF8FF]/.test(detailSalary)?'':detailSalary,description,url:detailUrl};
+  if(description&&title&&detailUrl&&!folded&&!/展开全部|展开更多/.test(description))detail={title,company:company.slice(0,300),location:detailLocation,salary:/[\uE000-\uF8FF]/.test(detailSalary)?'':detailSalary,description,url:detailUrl};
   return {authenticated,loginRequired,blocked,readable:jobs.length>0||empty,empty,ended,jobs,detail};
 }
 export function bossScrollScript(){return `(()=>{const card=document.querySelector('.job-card-wrapper,.job-card-box,.job-list-box li');let node=card?.parentElement;while(node){const s=getComputedStyle(node);if(/auto|scroll/.test(s.overflowY)&&node.scrollHeight>node.clientHeight+4){const before=node.scrollTop;node.scrollBy(0,Math.max(240,node.clientHeight*.8));return {moved:node.scrollTop!==before};}node=node.parentElement;}const before=window.scrollY;window.scrollBy(0,Math.max(240,innerHeight*.8));return {moved:window.scrollY!==before};})()`;}
