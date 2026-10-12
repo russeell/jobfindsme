@@ -585,13 +585,13 @@ nav button .nav-label {font-size:13px;}
 .discovery-resume-button {flex-shrink:0;align-self:flex-start;min-height:var(--control-height);padding:6px 10px;font-size:13px;}
 .resume-search-action {display:flex;align-items:center;gap:10px;margin-top:10px;color:var(--text-muted);font-size:12px;}
 .resume-search-action button {min-height:var(--control-height);}
-.search-status-line {display:flex;align-items:center;gap:7px;min-height:30px;margin-top:4px;color:var(--text-muted);font-size:11px;white-space:nowrap;}
+.search-status-line {position:relative;display:flex;align-items:center;gap:7px;min-height:30px;margin-top:4px;color:var(--text-muted);font-size:11px;white-space:nowrap;}
 .search-status-line>span {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
 .search-status-line>button,.search-status-menu>summary {min-height:26px;border:0;background:transparent;color:var(--text);padding:3px 5px;font-size:11px;cursor:pointer;white-space:nowrap;}
-.search-status-menu {position:relative;flex:none;}
+.search-status-menu {position:static;flex:none;}
 .search-status-menu>summary {list-style:none;text-decoration:underline;}
 .search-status-menu>summary::-webkit-details-marker {display:none;}
-.search-menu-content {position:absolute;top:100%;right:-65px;z-index:30;width:min(430px,calc(100vw - 42px));max-height:min(340px,60vh);overflow:auto;white-space:normal;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:0 10px 25px #0002;color:var(--text);}
+.search-menu-content {position:absolute;top:100%;right:0;z-index:30;width:min(430px,100%);max-height:min(340px,60vh);overflow:auto;white-space:normal;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);box-shadow:0 10px 25px #0002;color:var(--text);}
 .search-menu-content p {margin:3px 0 7px;font-size:11px;line-height:1.45;overflow-wrap:anywhere;}
 .search-menu-content .search-menu-warning {color:#94463e;}
 .search-menu-content button {display:block;width:100%;min-height:29px;margin-top:5px;text-align:left;padding:4px 7px;font-size:11px;white-space:normal;}
