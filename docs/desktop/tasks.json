@@ -3175,7 +3175,7 @@
     {
       "id": "D184",
       "title": "四平台真实检索登录与正式包网络运行时修复",
-      "status": "in_progress",
+      "status": "blocked",
       "depends_on": [
         "D183"
       ],
@@ -3187,7 +3187,7 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": "用户已报告智联登录；当前原生窗口截图/可访问性状态不同步，待窗口前台可操作后验收智联。BOSS本轮仍返回login_required。"
+      "blocker": "用户确认智联已登录且窗口已置前台；computer use服务启动失败，重置后getState仍超时。需工具连接恢复后核对前台登录证据并继续四平台/JD实测，不再要求用户重复解锁。"
     }
   ]
 }
