@@ -18,10 +18,17 @@ export function mergeSourceChecks(current:SourceCheckResult[],incoming:SourceChe
   return [...rows.values()];
 }
 
+// Runtime failures also update last_verified_at. That timestamp alone is not recovery.
+function newerSourceEvidence(source:SourceCapability,check?:SourceCheckResult):boolean{
+  return Boolean(check?.attempted_at&&source.last_verified_at&&
+    Date.parse(source.last_verified_at)>Date.parse(check.attempted_at)&&
+    source.session_status!=="expired"&&source.session_status!=="blocked"&&source.list_status!=="blocked");
+}
+
 export function sourceStatusRows(sources:SourceCapability[],checks:SourceCheckResult[]){
   return sources.map(source=>{
     const recorded=checks.find(row=>row.source.source_id===source.source_id);
-    const checked=recorded?.attempted_at&&source.last_verified_at&&Date.parse(source.last_verified_at)>Date.parse(recorded.attempted_at)?undefined:recorded;
+    const checked=newerSourceEvidence(source,recorded)?undefined:recorded;
     return {source,checked,presented:presentSourceStatus(source,checked)};
   });
 }
@@ -35,7 +42,7 @@ export function sourceCheckFailureOutcome(message:string):SourceCheckResult["out
 }
 
 export function presentSourceStatus(source:SourceCapability,check?:SourceCheckResult,now=Date.now()):SourcePresentation{
-  if(check?.attempted_at&&source.last_verified_at&&Date.parse(source.last_verified_at)>Date.parse(check.attempted_at))check=undefined;
+  if(newerSourceEvidence(source,check))check=undefined;
   const stale=Boolean(source.last_verified_at)&&now-Date.parse(source.last_verified_at!)>24*60*60*1000;
   if(check?.outcome==="risk_control")return {title:"需要验证",detail:"请在内置浏览器完成平台验证，再检查",action:"login",available:false};
   if(check?.outcome==="login_required")return {title:"需要登录",detail:"本次读取遇到登录页，请在内置浏览器登录后再检查",action:"login",available:false};

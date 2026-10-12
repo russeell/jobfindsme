@@ -63,3 +63,18 @@ test('persisted login failures do not become captcha prompts on reopening settin
  assert.equal(presentSourceStatus({...source,login_required:true,session_status:'unverified',list_status:'blocked'}).title,'登录状态待确认');
  assert.equal(presentSourceStatus({...source,session_status:'blocked',list_status:'blocked'}).title,'需要验证');
 });
+
+
+test('failure persistence time cannot hide the login or challenge result that produced it',()=>{
+ for(const [session_status,outcome,title] of [['expired','login_required','需要登录'],['blocked','risk_control','需要验证']]){
+  const before={...source,source_id:'boss',login_required:true,session_status:'verified',last_verified_at:'2026-10-12T01:00:00Z'};
+  const check={source:before,outcome,evidence:'live',attempted_at:'2026-10-12T01:01:00Z'};
+  const after={...before,session_status,list_status:'blocked',live_search_enabled:false,last_verified_at:'2026-10-12T01:01:02Z'};
+  assert.equal(presentSourceStatus(after,check).title,title);
+  const [row]=sourceStatusRows([after],[check]);
+  assert.equal(row.checked,check);assert.equal(row.presented.title,title);assert.equal(row.presented.action,'login');
+  const recovered={...after,session_status:'verified',list_status:'verified',live_search_enabled:true,last_verified_at:'2026-10-12T01:02:00Z'};
+  assert.equal(sourceStatusRows([recovered],[check])[0].checked,undefined);
+  assert.equal(presentSourceStatus(recovered,check).available,true);
+ }
+});
