@@ -29,10 +29,10 @@ class Database:
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         connection = sqlite3.connect(self.path)
         connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        connection.execute("PRAGMA journal_mode = WAL")
-        self._secure_sqlite_files()
         try:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA journal_mode = WAL")
+            self._secure_sqlite_files()
             yield connection
             connection.commit()
         except Exception:

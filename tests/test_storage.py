@@ -8,6 +8,32 @@ import pytest
 from jobfindsme.storage import Database, MigrationConflict
 
 
+def test_connection_setup_failure_closes_the_sqlite_handle(tmp_path, monkeypatch):
+    database = Database(tmp_path / "jobfindsme.db")
+    opened = []
+    real_connect = sqlite3.connect
+
+    def capture_connection(*args, **kwargs):
+        connection = real_connect(*args, **kwargs)
+        opened.append(connection)
+        return connection
+
+    attempts = 0
+
+    def failing_permissions():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise PermissionError("synthetic file permission failure")
+
+    monkeypatch.setattr(sqlite3, "connect", capture_connection)
+    monkeypatch.setattr(database, "_secure_sqlite_files", failing_permissions)
+    with pytest.raises(PermissionError, match="synthetic"), database.connect():
+        pytest.fail("uninitialized connection must not be returned")
+    with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+        opened[0].execute("SELECT 1")
+
+
 def test_secure_sqlite_files_tolerates_disappearing_sidecar(
     tmp_path, monkeypatch
 ) -> None:
