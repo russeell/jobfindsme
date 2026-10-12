@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D190",
+  "current_task": "D184",
   "tasks": [
     {
       "id": "D01",
@@ -3282,7 +3282,7 @@
     {
       "id": "D190",
       "title": "Windows简历恢复后服务500的打包回归诊断与修复",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D189"
       ],
@@ -3291,9 +3291,13 @@
         "修复真实恢复流程故障并完成Windows实际包验收"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/actions/runs/38239028324",
+        "https://github.com/russeell/jobfindsme/actions/runs/38239028151",
+        "https://github.com/russeell/jobfindsme/actions/runs/38239028320"
       ],
-      "blocker": null
+      "blocker": null,
+      "verification": "14728e9 Windows真实包重现storage._secure_sqlite_files关闭连接后对jobfindsme.db-shm chmod触发PermissionError/WinError5。b95ac47释放初始化失败句柄、6ce5aa9仅容忍Windows临时侧文件WinError5/32，主数据库及其他权限错误保留。最终c31f182主CI和macOS/Windows打包全部通过，两端各575项Python、402项Node，冻结HTTP/CA、包审计及实际虚构PDF/Word导入编辑保存导出恢复/两次启动通过。未再访问招聘平台、未发布Release或替换用户应用。"
     }
   ]
 }

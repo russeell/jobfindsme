@@ -1,6 +1,8 @@
 当前状态（2026-10-12）
 
-当前任务 D190：9a01b37主CI及macOS打包通过，但Windows隔离恢复流程出现500。14728e9的[真实Windows诊断](https://github.com/russeell/jobfindsme/actions/runs/38238110799)再次重现：storage._secure_sqlite_files在SQLite连接关闭后chmod临时jobfindsme.db-shm，抛出PermissionError / WinError 5，导致成功的本地请求500。b95ac47补连接初始化异常的句柄释放；6ce5aa9仅容忍Windows临时WAL/SHM文件WinError 5/32属性冲突，主数据库、非Windows与其他权限错误继续抛出，不修改Windows ACL。27项数据库/简历相关回归与Ruff通过，待最终双平台冻结包复验。诊断仅在显式隔离测试开启，正常用户窗口和招聘会话未重新启动。
+D190已完成：14728e9的[真实Windows诊断](https://github.com/russeell/jobfindsme/actions/runs/38238110799)重现storage._secure_sqlite_files关闭SQLite连接后chmod临时jobfindsme.db-shm触发PermissionError / WinError 5，成功的本地请求因此500。b95ac47补初始化失败的句柄释放；6ce5aa9仅容忍Windows临时WAL/SHM文件WinError 5/32属性冲突，主数据库、非Windows与其他权限错误继续抛出，不修改Windows ACL。27项相关回归及Ruff通过。后台诊断仅在显式隔离测试开启。
+
+最终同源码c31f1823a87f8f10f8c3b1a9555ce3bc4f00ecfd的[主CI](https://github.com/russeell/jobfindsme/actions/runs/38239028324)、[macOS包](https://github.com/russeell/jobfindsme/actions/runs/38239028151)、[Windows包](https://github.com/russeell/jobfindsme/actions/runs/38239028320)全部通过：两端各575项Python、402项桌面测试，冻结HTTP/CA、包审计、实际虚构PDF/Word导入、彩色编辑保存、Word/PDF导出、版本恢复及两次启动通过；文件框仅替换返回路径，产品UI/IPC/冻结Python真实运行。正常用户窗口与招聘会话未重启，没有新增招聘请求或发布新Release。主分支与开发分支已同步，后续提交仅补本条文档。
 
 D184：四个平台已取得本轮检索与完整 JD 小样本证据；剩余字段完整性、三源续页与登录跨重启需要低频后续验收。用户要求避免频繁检索；本轮已停止招聘平台访问，不循环刷新或重试。任务状态以 tasks.json 为准。
 
@@ -24,7 +26,7 @@ D184：四个平台已取得本轮检索与完整 JD 小样本证据；剩余字
 
 原生隔离验收与本地包
 
-macOS测试包：apps/desktop/release/local-D189-qa/JobFindsMe.app，v0.15.2+local.D189，产品源码c06d5ac；只使用 jobfindsme-preview-D189-qa 隔离资料。通过实际文件框导入虚构彩色PDF、原件展示、编辑追加文字、保存、原生保存框导出Word/PDF、PDF分页预览、退出重启恢复；导出含新增文字、24pt/蓝绿颜色，原件逐字节一致。Word检查文件内容和样式，未使用Microsoft Word人工打开。包审计、冻结HTTP与CA通过；未发布或替换正式下载包。测试文件在/private/tmp/jfm-D189-fixtures，不进入Git。
+macOS验收包（已清理）：apps/desktop/release/local-D189-qa/JobFindsMe.app，v0.15.2+local.D189，产品源码c06d5ac；只使用 jobfindsme-preview-D189-qa 隔离资料。通过实际文件框导入虚构彩色PDF、原件展示、编辑追加文字、保存、原生保存框导出Word/PDF、PDF分页预览、退出重启恢复；导出含新增文字、24pt/蓝绿颜色，原件逐字节一致。Word检查文件内容和样式，未使用Microsoft Word人工打开。包审计、冻结HTTP与CA通过；未发布或替换正式下载包。测试文件在/private/tmp/jfm-D189-fixtures，不进入Git。验收后已清理临时D189测试包、本地旧副本和Electron壳；正在使用的正式v0.15.2及测试导出保留。
 
 当前正式版本
 
