@@ -112,6 +112,18 @@ test('login failure can be rechecked after reauthentication without releasing a 
  assert.deepEqual(calls,['expired','unverified']);
  assert.deepEqual(result.map(row=>row.outcome),['verified_now','verified_now','skipped_cooldown','skipped_cooldown']);
  assert.deepEqual(items.map(item=>shouldAutoCheckSource(item,true,2000000,0,false,false)),[true,true,false,false]);
- assert.deepEqual(items.map(item=>shouldAutoCheckSource(item,true,2000000,1999000,false,false)),[true,true,false,false]);
+ assert.deepEqual(items.map(item=>shouldAutoCheckSource(item,true,2000000,1999000,false,false)),[false,false,false,false]);
+ assert.deepEqual(items.map(item=>shouldAutoCheckSource(item,true,2000000,1999000,false,false,true)),[true,true,false,false]);
  for(const item of items)assert.equal(shouldAutoCheckSource(item,false,2000000,0,false,false),false);
+});
+
+test('failed automatic login checks respect cooldown across later account and list observations',async()=>{
+ const {shouldAutoCheckSource}=await import('../dist-electron/main/sources/source-check-queue.js');
+ const now=2000000;
+ for(const session_status of ['expired','unverified']){
+  const item=source('zhilian',{session_status,list_status:'partial'});
+  assert.equal(shouldAutoCheckSource(item,true,now,now-1000,false,false),false);
+  assert.equal(shouldAutoCheckSource(item,true,now,now-600000,false,false),true);
+  assert.equal(shouldAutoCheckSource(item,true,now,now-1000,true,false,true),false);
+ }
 });

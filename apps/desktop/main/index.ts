@@ -83,6 +83,7 @@ let sourceCheckController:AbortController|undefined;
 const sourceVerifyActive=new Set<string>();
 const sourceAutoCheckAt=new Map<string,number>();
 const sourceAutoCheckPending=new Set<string>();
+const sourceLoginPageSeen=new Set<string>();
 let researchController: AbortController | undefined;
 let researchRequestId: string | undefined;
 let researchWorkspaceId: string | undefined;
@@ -191,11 +192,13 @@ async function createWindow(): Promise<void> {
     if(page.kind==="challenge") {
       await apiClient.recordSourceRuntimeFailure(sourceId,"risk_control","原页要求安全验证；自动检索已停止，需用户在原页处理。");
     } else if(page.kind==="login") {
+      sourceLoginPageSeen.add(sourceId);
       if(current.session_status==="blocked")return;
       if(current.session_status==="verified")await apiClient.recordSourceRuntimeFailure(sourceId,"login_required","当前平台页显示登录表单；会话可能已失效，请重新登录。");
       else await apiClient.recordSourceVerification(sourceId,{session_status:"unverified",list_status:current.list_status,detail_status:current.detail_status,fields_status:current.fields_status,pagination_status:current.pagination_status,enabled:false,notes:"当前页面显示登录表单；会话有效性与检索能力仍需分别确认。"});
     } else if(page.kind==="list"||page.kind==="account") {
       if(sourceSearchActive||sourceCheckController||sourceVerifyActive.size)return false;
+      const reauthenticated=page.authenticated&&sourceLoginPageSeen.delete(sourceId);
       if(isSourceVerificationBlocked(current)){
         mainWindow?.webContents.send("desktop:source-status-changed");return;
       }
@@ -207,7 +210,7 @@ async function createWindow(): Promise<void> {
       const verified=current.session_status==="verified"&&current.list_status==="verified";
       if(!verified&&sourceId!=="zhilian")await apiClient.recordSourceVerification(sourceId,{session_status:"verified",list_status:"partial",detail_status:current.detail_status,fields_status:"partial",pagination_status:"unverified",enabled:false,notes:page.kind==="list"?`原页可见 ${page.cardCount} 个岗位卡片；自动检索尚待有界验证。`:"当前平台页显示已登录；自动检索尚待有界验证。"});
       const last=sourceAutoCheckAt.get(sourceId)||0;
-      if(shouldAutoCheckSource(current,page.authenticated,Date.now(),last,sourceAutoCheckPending.has(sourceId),isQuitting)){
+      if(shouldAutoCheckSource(current,page.authenticated,Date.now(),last,sourceAutoCheckPending.has(sourceId),isQuitting,reauthenticated)){
         sourceAutoCheckAt.set(sourceId,Date.now());sourceAutoCheckPending.add(sourceId);
         void (async()=>{try{
           const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
