@@ -320,7 +320,12 @@ class ResumeProfileService:
                 """,
                 (workspace_id,),
             ).fetchone()
-        return _version_from_row(row) if row is not None else None
+            if row is None:
+                return None
+            from jobfindsme.resume_editor.source_format import retained_document
+
+            rich = retained_document(connection, row, data_root=self.data_root)
+        return _version_from_row(row, rich)
 
     def clear_current(self, *, workspace_id: str) -> None:
         """Stop using the current resume without deleting historical snapshots."""
@@ -393,7 +398,14 @@ class ResumeProfileService:
                 """,
                 (workspace_id,),
             ).fetchall()
-        return [_version_from_row(row) for row in rows]
+            from jobfindsme.resume_editor.source_format import retained_document
+
+            return [
+                _version_from_row(
+                    row, retained_document(connection, row, data_root=self.data_root)
+                )
+                for row in rows
+            ]
 
     def _create_version(
         self,
@@ -733,7 +745,7 @@ def _normalize_correction(value: str) -> str:
     return normalized
 
 
-def _version_from_row(row) -> ResumeVersion:
+def _version_from_row(row, source_document: dict | None = None) -> ResumeVersion:
     content = json.loads(row["content_json"])
     return ResumeVersion(
         version_id=row["version_id"],
@@ -749,7 +761,9 @@ def _version_from_row(row) -> ResumeVersion:
         is_current=bool(row["is_current"]),
         original_file=bool(row["original_file"]),
         document=normalize_resume_document(
-            json.loads(row["document_json"]) if row["document_json"] else None
+            json.loads(row["document_json"])
+            if row["document_json"]
+            else source_document
         ),
         created_at=datetime.fromisoformat(row["created_at"]),
     )

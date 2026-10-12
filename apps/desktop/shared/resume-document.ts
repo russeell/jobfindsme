@@ -1,12 +1,12 @@
 import type {ResumeContent,ResumeDocumentNode as Node} from './contracts';
 import {resumeSections,resumeTemplateSections,type ResumeTemplate} from './resume-library';
 
-export function resumeParagraph(text:string):Node {
-  return {type:'paragraph',content:text.split('\n').flatMap((line,i)=>[...(i?[{type:'hardBreak'}]:[]),...(line?[{type:'text',text:line}]:[])])};
+export function resumeParagraph(text:string,marks?:Node['marks']):Node {
+  return {type:'paragraph',content:text.split('\n').flatMap((line,i)=>[...(i?[{type:'hardBreak'}]:[]),...(line?[{type:'text',text:line,...(marks?.length?{marks}:{} )}]:[])])};
 }
 export function resumeDocument(content:ResumeContent,saved?:Node|null,template:ResumeTemplate='professional'):Node {
   const sections=new Map(saved?.content?.map(s=>[s.attrs?.section,s]));
-  return {type:'doc',content:resumeTemplateSections(template).map(key=>sections.get(key)||{type:'resumeSection',attrs:{section:key},content:content[key]?.length?content[key].map(resumeParagraph):[resumeParagraph('')]})};
+  return {type:'doc',content:resumeTemplateSections(template).map(key=>sections.get(key)||{type:'resumeSection',attrs:{section:key},content:content[key]?.length?content[key].map(value=>resumeParagraph(value)):[resumeParagraph('')]})};
 }
 export function resumeNodeText(node:Node):string {
   if(node.type==='text')return node.text||'';

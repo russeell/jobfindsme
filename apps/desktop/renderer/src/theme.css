@@ -943,3 +943,12 @@ button {transition:background-color .12s,border-color .12s,color .12s}
 .application-feedback{padding:0 26px;margin:0 0 12px!important;font-size:12px}
 .application-result-line{justify-content:flex-start;padding-top:14px;margin-top:18px;border-top:1px solid #edf0f4}
 @media(max-width:700px){.application-dialog{width:calc(100vw - 24px)}.application-material-tools{flex-wrap:wrap}.application-material-tools label{flex-basis:100%}.application-clean .application-actions{padding:12px 18px}.application-actions>.note{display:none}.application-content{padding:16px 18px}.application-tabs{padding:0 18px}.greeting-inline-actions>.note{flex-basis:100%;margin:4px 0}}
+
+.resume-word-format .resume-font-size {display:flex;margin:0 2px;font-size:12px;align-items:center}
+.resume-word-format .resume-font-size select,.resume-word-format .resume-text-align {margin-left:0;padding:4px 6px;font-size:11px;min-height:28px}
+.resume-word-format .resume-text-align {max-width:100px}
+.resume-word-format .popover-trigger {border:0;font-weight:600;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px}
+.resume-color-palette {display:flex;gap:9px;flex-wrap:wrap;padding:8px}
+.resume-color-palette button:not(.resume-color-reset) {width:26px;height:26px;min-width:26px;border:2px solid white;border-radius:50%;box-shadow:0 0 0 1px #d5dce5}
+.resume-color-palette button[aria-pressed=true] {outline:2px solid #3478db;outline-offset:2px}
+.resume-color-palette .resume-color-reset {width:100%;font-size:12px;margin-top:5px}

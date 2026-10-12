@@ -359,7 +359,7 @@ export type ResumeContent = Record<
   string[]
 >;
 
-export type ResumeDocumentNode = {type:string; text?:string; attrs?:Record<string,unknown>; marks?:Array<{type:string}>; content?:ResumeDocumentNode[]};
+export type ResumeDocumentNode = {type:string; text?:string; attrs?:Record<string,unknown>; marks?:Array<{type:string;attrs?:Record<string,unknown>}>; content?:ResumeDocumentNode[]};
 
 export type ResumeSourceInput = {workspace_id:string;document_id:string};
 export type GreetingTarget = {workspaceId:string;jobId:string;resumeVersionId:string|null};

@@ -17,6 +17,7 @@ from jobfindsme.resume_editor.document import (
     reconcile_document,
     validate_document,
 )
+from jobfindsme.resume_editor.source_format import retained_document
 from jobfindsme.storage import Database
 
 ResumeTemplate = Literal["classic", "compact", "campus", "professional"]
@@ -62,7 +63,15 @@ class ResumeEditorService:
                 ORDER BY version_number DESC""",
                 (workspace_id,),
             ).fetchall()
-        return [_version_from_row(row) for row in rows]
+            return [
+                _version_from_row(
+                    row,
+                    retained_document(
+                        connection, row, data_root=self.database.path.parent
+                    ),
+                )
+                for row in rows
+            ]
 
     def hide_version(self, *, workspace_id: str, version_id: str) -> None:
         """Remove a historical list entry while retaining immutable references."""
@@ -94,9 +103,12 @@ class ResumeEditorService:
                 WHERE workspace_id = ? AND version_id = ?""",
                 (workspace_id, version_id),
             ).fetchone()
-        if row is None:
-            raise ResumeEditorError("resume version not found")
-        return _version_from_row(row)
+            if row is None:
+                raise ResumeEditorError("resume version not found")
+            rich = retained_document(
+                connection, row, data_root=self.database.path.parent
+            )
+        return _version_from_row(row, rich)
 
     def save_edit(
         self,
@@ -218,7 +230,11 @@ class ResumeEditorService:
         if document is None:
             document = reconcile_document(
                 content,
-                json.loads(base["document_json"]) if base["document_json"] else None,
+                json.loads(base["document_json"])
+                if base["document_json"]
+                else retained_document(
+                    connection, base, data_root=self.database.path.parent
+                ),
             )
         next_number = connection.execute(
             """SELECT COALESCE(MAX(version_number), 0) + 1
@@ -332,7 +348,7 @@ def _write_docx(
 ) -> None:
     try:
         from docx import Document
-        from docx.enum.text import WD_LINE_SPACING
+        from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
         from docx.oxml.ns import qn
         from docx.shared import Cm, Pt, RGBColor
     except ImportError as error:
@@ -341,6 +357,7 @@ def _write_docx(
         ) from error
     rich = reconcile_document(content, rich_document)
     blocks = {s["attrs"]["section"]: s["content"] for s in rich["content"]}
+    section_styles = {s["attrs"]["section"]: s["attrs"] for s in rich["content"]}
     document = Document()
     section = document.sections[0]
     section.page_width = Cm(21)
@@ -357,10 +374,16 @@ def _write_docx(
         values = content.get(name, ())
         if not any(value.strip() for value in values):
             continue
-        heading = document.add_heading(SECTION_TITLES[name], level=1)
-        heading.runs[0].font.color.rgb = (
-            RGBColor(37, 99, 150) if template == "campus" else RGBColor(48, 48, 46)
-        )
+        style = section_styles[name]
+        if not style.get("headingHidden"):
+            heading = document.add_heading(SECTION_TITLES[name], level=1)
+            heading.runs[0].font.color.rgb = RGBColor.from_string(
+                style.get(
+                    "headingColor", "#256396" if template == "campus" else "#30302e"
+                )[1:]
+            )
+            if style.get("headingSize"):
+                heading.runs[0].font.size = Pt(style["headingSize"])
         for block in blocks[name]:
             for prefix, node in paragraphs(block):
                 p = document.add_paragraph()
@@ -368,6 +391,14 @@ def _write_docx(
                     p.style = document.styles["List Bullet"]
                 p.paragraph_format.space_after = Pt(2 if template == "compact" else 5)
                 p.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+                align = node.get("attrs", {}).get("textAlign")
+                if align:
+                    p.alignment = {
+                        "left": WD_ALIGN_PARAGRAPH.LEFT,
+                        "center": WD_ALIGN_PARAGRAPH.CENTER,
+                        "right": WD_ALIGN_PARAGRAPH.RIGHT,
+                        "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
+                    }[align]
                 if prefix:
                     p.add_run(prefix)
                 for child in node.get("content", []):
@@ -379,6 +410,15 @@ def _write_docx(
                     run.italic = "italic" in marks
                     run.underline = "underline" in marks
                     run.font.strike = "strike" in marks
+                    for mark in child.get("marks", []):
+                        if mark["type"] == "textStyle":
+                            attrs = mark.get("attrs", {})
+                            if attrs.get("color"):
+                                run.font.color.rgb = RGBColor.from_string(
+                                    attrs["color"][1:]
+                                )
+                            if attrs.get("fontSize"):
+                                run.font.size = Pt(attrs["fontSize"])
     document.save(path)
 
 
@@ -402,6 +442,7 @@ def _write_pdf(
         ) from error
     rich = reconcile_document(content, rich_document)
     blocks = {s["attrs"]["section"]: s["content"] for s in rich["content"]}
+    section_styles = {s["attrs"]["section"]: s["attrs"] for s in rich["content"]}
     font_name = _register_cjk_font(pdfmetrics, TTFont)
     bold_font = font_name
     for candidate in (
@@ -464,7 +505,21 @@ def _write_pdf(
         values = content.get(name, ())
         if not any(value.strip() for value in values):
             continue
-        story.extend([Paragraph(SECTION_TITLES[name], heading), Spacer(1, 0.5 * mm)])
+        style = section_styles[name]
+        if not style.get("headingHidden"):
+            section_heading = ParagraphStyle(
+                f"Heading-{name}",
+                parent=heading,
+                textColor=colors.HexColor(
+                    style.get("headingColor", heading.textColor.hexval())
+                ),
+                fontSize=style.get("headingSize", heading.fontSize),
+                leading=max(heading.leading, style.get("headingSize", 0) * 1.4),
+                fontName=bold_font,
+            )
+            story.extend(
+                [Paragraph(SECTION_TITLES[name], section_heading), Spacer(1, 0.5 * mm)]
+            )
         for block in blocks[name]:
             for prefix, node in paragraphs(block):
                 if template == "classic" and not prefix:
@@ -472,7 +527,24 @@ def _write_pdf(
                 markup = _xml_escape(prefix) + "".join(
                     pdf_markup(c) for c in node.get("content", [])
                 )
-                story.append(Paragraph(markup or "<br/>", body))
+                largest = max(
+                    (
+                        m.get("attrs", {}).get("fontSize", body.fontSize)
+                        for child in node.get("content", [])
+                        for m in child.get("marks", [])
+                        if m["type"] == "textStyle"
+                    ),
+                    default=body.fontSize,
+                )
+                paragraph_style = ParagraphStyle(
+                    "StyledBody",
+                    parent=body,
+                    leading=max(body.leading, largest * 1.4),
+                    alignment={"left": 0, "center": 1, "right": 2, "justify": 4}.get(
+                        node.get("attrs", {}).get("textAlign"), 0
+                    ),
+                )
+                story.append(Paragraph(markup or "<br/>", paragraph_style))
     document.build(story)
 
 
@@ -507,7 +579,7 @@ def _xml_escape(value: str) -> str:
     return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-def _version_from_row(row) -> ResumeVersion:
+def _version_from_row(row, source_document: dict | None = None) -> ResumeVersion:
     content = json.loads(row["content_json"])
     return ResumeVersion(
         version_id=row["version_id"],
@@ -521,7 +593,9 @@ def _version_from_row(row) -> ResumeVersion:
             for key, values in content.items()
         },
         document=normalize_resume_document(
-            json.loads(row["document_json"]) if row["document_json"] else None
+            json.loads(row["document_json"])
+            if row["document_json"]
+            else source_document
         ),
         is_current=bool(row["is_current"]),
         original_file=bool(row["original_file"]),
