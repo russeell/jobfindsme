@@ -908,3 +908,38 @@ button {transition:background-color .12s,border-color .12s,color .12s}
 .preparation-navigation:has(.preparation-source[hidden]) {margin-bottom:12px}
 .record-narrow-stage {display:none}
 @container(max-width:760px){.record-narrow-stage{display:block;font-size:10px;color:var(--text-muted);margin-top:2px}.preparation-navigation{flex-wrap:wrap}}
+
+/* Application materials share one message field and keep the next action visible. */
+.application-dialog{width:min(800px,calc(100vw - 48px))}
+.application-dialog .preparation-header{padding:22px 26px 18px}
+.application-dialog .preparation-body{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.application-dialog .preparation-navigation{padding:0 26px}
+.application-clean{display:flex;flex-direction:column;min-height:0}
+.application-tabs{padding:0 26px;margin:0;flex-shrink:0}
+.application-content{padding:18px 26px;overflow:auto;min-height:0}
+.application-content[hidden]{display:none}
+.application-material-tools{display:flex;align-items:flex-end;gap:10px;margin-bottom:18px}
+.application-material-tools label{flex:1;min-width:0;margin:0!important}
+.application-material-tools button{flex-shrink:0}
+.application-material-tools select{margin-top:6px}
+.application-message-label{margin:0!important;font-weight:500}
+.application-message-label>span{float:right;font-size:11px;color:#8a94a3;font-weight:400}
+.application-clean .application-message-label textarea{min-height:110px;margin-top:8px;font-weight:400;resize:vertical;max-height:280px}
+.greeting-inline{margin:10px 0 0}
+.greeting-inline-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.greeting-inline-actions>button{font-size:12px}
+.greeting-inline-actions>.note{font-size:11px;margin:0 0 0 6px;flex:1;min-width:130px;color:#8792a1}
+.greeting-options-toggle{padding:6px 9px!important}
+.greeting-inline-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.greeting-inline-options select{width:auto;max-width:100%;font-size:12px;margin:0}
+.greeting-inline>.note{font-size:11px;margin:8px 0 0}
+.greeting-error{font-size:12px;color:#a34c30;margin:10px 0 0}
+.application-template{padding:14px 16px;background:#f7f9fc;border-radius:10px;margin:0 0 18px}
+.application-template label{margin:0!important}.application-template textarea{min-height:78px}
+.application-template .button-row{margin-top:12px}
+.application-template>.note{font-size:11px;margin:8px 0}
+.application-clean .application-actions{flex-shrink:0;border-top:1px solid #e6ebf0;background:#fff;padding:14px 26px;margin:0;gap:12px}
+.application-actions>.note{font-size:11px;margin:0}
+.application-feedback{padding:0 26px;margin:0 0 12px!important;font-size:12px}
+.application-result-line{justify-content:flex-start;padding-top:14px;margin-top:18px;border-top:1px solid #edf0f4}
+@media(max-width:700px){.application-dialog{width:calc(100vw - 24px)}.application-material-tools{flex-wrap:wrap}.application-material-tools label{flex-basis:100%}.application-clean .application-actions{padding:12px 18px}.application-actions>.note{display:none}.application-content{padding:16px 18px}.application-tabs{padding:0 18px}.greeting-inline-actions>.note{flex-basis:100%;margin:4px 0}}

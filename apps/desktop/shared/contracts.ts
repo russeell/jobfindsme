@@ -105,7 +105,7 @@ export type DesktopBridge = {
   cancelPromptTurn(): Promise<PromptSession | undefined>;
   decidePromptPatch(sessionId: string, patchId: string, decision: PromptPatchDecision): Promise<PromptSession>;
   savePromptSession(sessionId: string): Promise<ResumeVersion>;
-  polishGreeting(input:{style?:"natural"|"concise"|"direct";requestId:string;connectionId:string;message:string;purpose?:"greeting"|"resume_rewrite"|"resume_shorten"|"resume_proofread"}):Promise<string>;
+  polishGreeting(input:GreetingPolishInput):Promise<string>;
   cancelGreeting(requestId:string):Promise<void>;
   listModelConnections(): Promise<ModelConnection[]>;
   saveModelConnection(input: ModelConnectionInput): Promise<ModelConnection>;
@@ -362,6 +362,8 @@ export type ResumeContent = Record<
 export type ResumeDocumentNode = {type:string; text?:string; attrs?:Record<string,unknown>; marks?:Array<{type:string}>; content?:ResumeDocumentNode[]};
 
 export type ResumeSourceInput = {workspace_id:string;document_id:string};
+export type GreetingTarget = {workspaceId:string;jobId:string;resumeVersionId:string|null};
+export type GreetingPolishInput = {style?:"natural"|"concise"|"direct";requestId:string;connectionId:string;message:string;purpose?:"greeting"|"resume_rewrite"|"resume_shorten"|"resume_proofread";target?:GreetingTarget};
 export type ResumeSource = {file_name:string;media_type:string;content_base64:string;text:string};
 
 export type ResumeVersion = {

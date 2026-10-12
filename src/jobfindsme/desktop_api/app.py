@@ -2198,12 +2198,25 @@ def create_app(
         return provider_status()
 
     @app.get("/v1/research-agent/resume", dependencies=[Depends(require_token)])
-    def agent_resume(workspace_id: str, job_id: str | None = None) -> dict:
+    def agent_resume(
+        workspace_id: str,
+        job_id: str | None = None,
+        resume_version_id: str | None = None,
+    ) -> dict:
         from jobfindsme.privacy import create_analysis_copy
         from jobfindsme.resume_editor.prompt import _evidence_map
 
         current = core.profiles.current_version(workspace_id=workspace_id)
-        if job_id:
+        if resume_version_id:
+            try:
+                current = core.resume_editor.get_version(
+                    workspace_id=workspace_id, version_id=resume_version_id
+                )
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=404, detail="resume not found"
+                ) from error
+        elif job_id:
             try:
                 preparation = JobPreparationService(core.database).get(
                     workspace_id, job_id

@@ -33,7 +33,7 @@ test('DeepSeek short edits explicitly disable its default thinking mode without 
  const other=editingModel({...base,endpoint:'https://example.com'});assert.equal(other.reasoning,false);
  await fixture(async(connection,received)=>{
   const result=await polishGreeting(connection,'','你好',new AbortController().signal);assert.ok(result);assert.equal(received().thinking,undefined);
- });
+ },'stop','您好，方便介绍团队最近在做的项目吗？');
 });
 test('DeepSeek adapter actually emits disabled thinking for a short editing request',async()=>{
  const {editingModel}=await import('../dist-electron/main/research/greeting-polish.mjs');
@@ -60,3 +60,21 @@ test('style guides the same bounded request and no-op errors explain recovery',a
  const {userError}=await import('../dist-electron/shared/user-errors.js');
  assert.match(userError(new Error('greeting_polish:unchanged')).message,/原文|实际改动/);
 }));
+
+test('concrete greetings cannot be replaced by invented template placeholders',async()=>fixture(async connection=>{
+ await assert.rejects(polishGreeting(connection,'','您好，我对「Agent/云平台/端侧研发」岗位感兴趣。',new AbortController().signal),/greeting_polish:placeholders/);
+},'stop','您好，我对{公司}的{岗位}感兴趣，方便沟通吗？'));
+test('a targeted greeting reuses selected redacted materials and preserves the exact role',async()=>fixture(async(connection,received)=>{
+ const context={company:'示例公司',title:'Agent/云平台/端侧研发',description:'负责Python和RAG服务。',resume:'项目：开发Python RAG服务，负责检索与评测。'};
+ const result=await polishGreeting(connection,'','您好，我对「Agent/云平台/端侧研发」岗位感兴趣。',new AbortController().signal,'greeting','natural',context);
+ assert.ok(result.includes(context.title));
+ const body=received(),materials=JSON.parse(body.messages.at(-1).content);
+ assert.equal(materials.所选简历脱敏经历,context.resume);
+ assert.equal(materials.岗位材料.JD,context.description);
+ assert.ok(!body.tools?.length);
+ assert.match(body.messages[0].content,/不得把岗位要求当成/);
+ assert.ok(!body.messages[0].content.includes(context.company));
+},'stop','您好，我有Python RAG服务开发和检索评测的项目经历，对「Agent/云平台/端侧研发」岗位感兴趣，方便了解团队当前的技术方向吗？'));
+test('a targeted rewrite cannot erase an explicit company or rename the role',async()=>fixture(async connection=>{
+ await assert.rejects(polishGreeting(connection,'','您好，想了解示例公司的「Agent/云平台/端侧研发」。',new AbortController().signal,'greeting','direct',{company:'示例公司',title:'Agent/云平台/端侧研发',description:'',resume:''}),/greeting_polish:identity/);
+},'stop','您好，对贵公司的AI工程师岗位感兴趣，方便沟通吗？'));

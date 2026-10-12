@@ -812,6 +812,29 @@ def test_application_materials_survive_resume_changes_and_require_explicit_send(
         params={"workspace_id": workspace.workspace_id},
     )
     assert response.json()["source_version_id"] != version.version_id
+    selected = client.get(
+        "/v1/research-agent/resume",
+        headers=headers,
+        params={
+            "workspace_id": workspace.workspace_id,
+            "resume_version_id": version.version_id,
+        },
+    )
+    assert selected.status_code == 200
+    assert selected.json()["source_version_id"] == version.version_id
+    assert "basic_information" not in selected.json()["content"]
+    for workspace_id, version_id in [
+        ("other", version.version_id),
+        (workspace.workspace_id, "missing"),
+    ]:
+        assert (
+            client.get(
+                "/v1/research-agent/resume",
+                headers=headers,
+                params={"workspace_id": workspace_id, "resume_version_id": version_id},
+            ).status_code
+            == 404
+        )
     assert (
         client.get(
             "/v1/research-agent/resume",

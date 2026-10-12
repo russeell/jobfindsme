@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D184",
+  "current_task": "D186",
   "tasks": [
     {
       "id": "D01",
@@ -3204,6 +3204,21 @@
       ],
       "blocker": null,
       "verification": "64 项 profiles/resume_editor 回归及构建/包审计通过；实际 macOS 隔离包同一 PDF 导入、原件显示、编辑保存、Word/PDF 导出、两页预览、重启内容保留通过。两导出各 16 个标准圆点，原件字节未变。最终包 08ed3e7，ZIP CRC 与溯源通过。"
+    },
+    {
+      "id": "D186",
+      "title": "投递招呼语材料复用与简洁交互",
+      "status": "in_progress",
+      "depends_on": [],
+      "scope": [
+        "具体岗位不可被改成占位符，复用所选脱敏简历与JD",
+        "单输入框润色撤销、可见常用话术和导出、底部固定动作",
+        "针对截图回归与实际窗口验收，更新本地应用"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
