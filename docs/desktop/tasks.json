@@ -3175,7 +3175,7 @@
     {
       "id": "D184",
       "title": "四平台真实检索登录与正式包网络运行时修复",
-      "status": "blocked",
+      "status": "in_progress",
       "depends_on": [
         "D183"
       ],
@@ -3187,7 +3187,8 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": "智联已通过真实登录与20条检索验收；BOSS原页仍跳转登录页，待用户登录。电脑操作间歇恢复后又不同步，三源同词搜索及JD/续页完整验收仍待继续。"
+      "blocker": null,
+      "verification": "2026-10-12 正式 v0.15.2 原生窗口：三源 Python/深圳一次检索72条，BOSS重新登录后自动有界检查15条、目标一次检索14条/首批2.8s。四源各1份完整JD与准确原页核对，读取1.3/2.7/1.2/2.7s。猎聘冻结API两页42+42条、84唯一、0重复。登录与列表能力分开；BOSS部分字段仍缺失，匿名猎聘不计登录成功。新增客户公司解析离线回归通过；按用户要求停止继续联网，BOSS/智联/前程续页及字段修复的正式窗口复验留待低频后续。"
     },
     {
       "id": "D185",
@@ -3260,6 +3261,23 @@
       ],
       "blocker": null,
       "verification": "源码/main/tag统一da9881b，CI六项通过。macOS/Windows分别Python569、Node398、冻结HTTP/CA、包审计、实际两次启动及虚构PDF/Word导入/彩色编辑/保存/导出/重启均通过。Release附件重新下载验证CRC、源码版本、隐私文件及SHA256；v0.15.2已发布latest。"
+    },
+    {
+      "id": "D189",
+      "title": "限制自动登录检查频率、修复来源弹层并更新贡献指南",
+      "status": "done",
+      "depends_on": [],
+      "scope": [
+        "自动检查冷却只允许已观察到的新登录提前复验，异常/验证码停止与已有缓存复用",
+        "分栏来源弹层约束到工作区并完成窄宽键盘验收",
+        "CONTRIBUTING开发、验收、低频实测、隐私与打包要求"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md",
+        "CONTRIBUTING.md"
+      ],
+      "blocker": null,
+      "verification": "构建及29项来源/节流、17项材料/文档、2项BOSS客户公司、71项Python简历/研究回归通过。原生隔离macOS包360px工作区弹层及键盘调整、PDF导入/彩色编辑/保存/Word及PDF导出/分页预览/重启恢复通过，原件字节一致。包审计及冻结HTTP/CA、本地贡献指南链接检查通过。无真实投递、模型调用或用户简历修改。"
     }
   ]
 }
