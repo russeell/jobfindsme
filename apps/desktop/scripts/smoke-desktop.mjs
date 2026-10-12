@@ -1,14 +1,32 @@
 import {_electron as electron} from 'playwright';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 const mac=process.platform==='darwin';
 const output=path.resolve(mac?'release/mac-unpacked':'release/windows');
 const executablePath=path.join(output,mac?'JobFindsMe.app/Contents/MacOS/JobFindsMe':'JobFindsMe/JobFindsMe.exe');
 const profile=path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-smoke`);
 mkdirSync(profile,{recursive:true});
-let workspaceId;
+const resumeFolder=path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-resume`);
+const fixtureScript=path.resolve('../../scripts/desktop_resume_smoke.py');
+function fixture(command){
+ const result=spawnSync('python',[fixtureScript,command,resumeFolder],{encoding:'utf8'});
+ assert.equal(result.status,0,`${result.stdout}\n${result.stderr}`);
+ console.log(result.stdout);
+}
+fixture('create');
+let workspaceId,savedResumeId,originalSource;
+async function checkEditor(window){
+ const editor=window.getByRole('textbox',{name:'简历文档编辑器',exact:true});
+ await editor.waitFor({state:'visible'});
+ const name=editor.locator('span').filter({hasText:'Example Candidate'}).first();
+ assert.equal(await name.evaluate(node=>getComputedStyle(node).color),'rgb(26, 51, 76)');
+ assert.equal(await name.evaluate(node=>getComputedStyle(node).fontSize),'32px');
+ assert.ok(await editor.textContent());
+ return editor;
+}
 for(let attempt=0;attempt<2;attempt++){
  const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],timeout:90000});
  app.process().stderr.on('data',chunk=>process.stderr.write(chunk));
@@ -56,7 +74,59 @@ for(let attempt=0;attempt<2;attempt++){
    await window.getByRole('button',{name:page,exact:true}).waitFor({state:'visible'});
    assert.equal(await window.getByText('本地服务暂时异常',{exact:false}).count(),0);
   }
+  await window.getByRole('button',{name:'我的简历',exact:true}).click();
+  if(attempt===0){
+   // Substitute only native file picker results; all product IPC and the frozen
+   // Python service run unchanged, with fictional input in an isolated profile.
+   await app.evaluate(({dialog},filePath)=>{
+    dialog.showOpenDialog=async()=>({canceled:false,filePaths:[filePath]});
+   },path.join(resumeFolder,'fictional.pdf'));
+   await window.getByRole('button',{name:'选择简历文件',exact:true}).click();
+   await window.getByRole('button',{name:'编辑副本',exact:true}).waitFor({state:'visible'});
+   await window.waitForFunction(()=>document.querySelector('.resume-pdf-page canvas')?.width>400);
+   originalSource=await window.evaluate(async workspace=>{
+    const versions=await window.jobfindsme.listResumeVersions(workspace);
+    const current=versions.find(row=>row.is_current);
+    const source=await window.jobfindsme.resumeSource({workspace_id:workspace,document_id:current.source_document_id});
+    return {...source,document_id:current.source_document_id};
+   },workspaceId);
+   assert.deepEqual(Buffer.from(originalSource.content_base64,'base64'),readFileSync(path.join(resumeFolder,'fictional.pdf')));
+   await window.getByRole('button',{name:'编辑副本',exact:true}).click();
+   const editor=await checkEditor(window);
+   await editor.click();
+   await editor.press(mac?'Meta+End':'Control+End');
+   await editor.press('End');
+   await window.keyboard.type(' Packaged edit');
+   await window.getByRole('button',{name:'保存',exact:true}).click();
+   await window.getByText('已保存新版本，原版本保留。',{exact:true}).waitFor({state:'visible'});
+   savedResumeId=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current).version_id,workspaceId);
+   for(const [format,label] of [['docx','Word · 继续编辑'],['pdf','PDF · 用于投递']]){
+    await app.evaluate(({dialog},filePath)=>{
+     dialog.showSaveDialog=async()=>({canceled:false,filePath});
+    },path.join(resumeFolder,`export.${format}`));
+    await window.getByRole('button',{name:'导出简历',exact:true}).click();
+    await window.getByRole('button',{name:label,exact:true}).click();
+    await window.getByText(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。',{exact:true}).waitFor({state:'visible'});
+   }
+   fixture('verify');
+   // Also exercise Word parsing in the frozen runtime, then restore the edited
+   // PDF copy so that restart checks cover the saved document and its styles.
+   await app.evaluate(({dialog},filePath)=>{
+    dialog.showOpenDialog=async()=>({canceled:false,filePaths:[filePath]});
+   },path.join(resumeFolder,'fictional.docx'));
+   await window.evaluate(()=>window.jobfindsme.chooseAndImportResume());
+   const wordVersion=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
+   assert.ok(JSON.stringify(wordVersion.document).includes('#17324d'));
+   assert.ok(JSON.stringify(wordVersion.document).includes('#0f766e'));
+   await window.evaluate(async({workspace,id})=>window.jobfindsme.restoreResumeVersion(workspace,id),{workspace:workspaceId,id:savedResumeId});
+   await window.reload();
+   await window.getByRole('button',{name:'我的简历',exact:true}).click();
+  }
+  const editor=await checkEditor(window);
+  assert.ok((await editor.textContent()).includes('Packaged edit'),'Saved edit must survive restart');
+  const source=await window.evaluate(input=>window.jobfindsme.resumeSource(input),{workspace_id:workspaceId,document_id:originalSource.document_id});
+  assert.equal(source.content_base64,originalSource.content_base64,'Original must remain unchanged');
   await window.screenshot({path:path.join(output,`smoke-${attempt}.png`)});
-  console.log(`Packaged ${process.platform} UI + IPC + Python + SQLite bootstrap passed (${attempt+1}/2)`);
+  console.log(`Packaged ${process.platform} UI + IPC + frozen Python + SQLite + styled resume passed (${attempt+1}/2)`);
  }finally{await app.close();}
 }

@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D184",
+  "current_task": "D188",
   "tasks": [
     {
       "id": "D01",
@@ -3236,6 +3236,25 @@
       ],
       "blocker": null,
       "verification": "PDF/DOCX样式读取、验证、编辑、AI修改及Word/PDF导出贯通。74项相关Python及新增原件保护回归、4项Node及构建通过。原生隔离macOS导入/颜色撤销/字号对齐/保存/导出/重启实测，原件不变。中英文README与虚构编辑器截图完成；本地D187包审计/CRC通过。正常窗口切换时computer use超时未复验，未发布GitHub/Windows包。"
+    },
+    {
+      "id": "D188",
+      "title": "v0.15.2源码与双平台安装包同步发布",
+      "status": "in_progress",
+      "depends_on": [
+        "D185",
+        "D186",
+        "D187"
+      ],
+      "scope": [
+        "GitHub同步与正式版本溯源",
+        "冻结程序简历导入编辑导出和重启验证",
+        "macOS/Windows包审计与发布校验"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }

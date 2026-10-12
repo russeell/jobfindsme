@@ -57,7 +57,7 @@ My Resume is the central place to maintain and improve your resume. Import **PDF
 
 ![My Resume: text colors, font sizes, paragraph alignment and direct editing](docs/images/jobfindsme-resume-editor.png)
 
-<sub>Actual editor in the current development build, using a fictional resume. Shows imported styles, editing and saving; no user data is included.</sub>
+<sub>Actual editor (v0.15.2), using a fictional resume. Shows imported styles, editing and saving; no user data is included.</sub>
 
 ## Continue into interviews and research
 
