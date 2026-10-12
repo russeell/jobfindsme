@@ -79,6 +79,8 @@ D167 简历文档编辑：`ResumeWordEditor.tsx` 在主页面用 Tiptap 开源�
 
 参考 Reactive Resume 的[富文本工具栏](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/rich-text-editor.tsx)与[局部 AI 修改](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/improve.tsx)（MIT）；独立实现，没有复制源文件。Tiptap 3.31.4、ProseMirror 等编辑依赖的许可证由 `scripts/editor-licenses.mjs` 随 macOS/Windows 包收集，未引入其商业分页/协作服务。
 
+简历原件样式：`resume_editor/source_format.py` 只从受管理目录中通过哈希核对的 PDF/DOCX 读取样式，将颜色、字号、粗体等附到精确文字匹配；匹配/AI 的纯文字契约不变。旧原件版本按读取恢复，不改历史；已有 document_json 优先。`textStyle` 和段落对齐由后端白名单校验，编辑器与 Word/PDF 共用，修改段落保留原有格式。pdfminer.six 的 CMap 与 MIT 许可证随冻结运行时打包；原始页面几何和装饰保留在原件，编辑副本重新排版。
+
 D168：投递工作台分为材料/记录，0043 为 application_records 新增 deleted_at；删除/恢复按工作区和岗位限定，保留简历及独立投递状态，记录写入改为显式字段列表。简历空章节用 ProseMirror decoration 隐藏，仍保留原结构与添加入口；模板画廊沿用三种模板 ID，调整配色/间距/章节顺序，PDF/Word 不再增加泛称“简历”的额外标题。
 
 简历 AI 对话框显式选择已验证模型并说明发送范围，生成按钮将单次请求带入既有 resume-tailor 会话/提案链路；nonce、页面/序列、输入/模型/技能检查防止重复或过期启动，生成不自动保存。DeepSeek 官方端点的短文本润色复用 Pi thinkingFormat=deepseek 显式关闭默认思考，不扩大请求预算或自动重试。参考 [Reactive Resume 富文本编辑](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/rich-text-editor.tsx)（MIT）、[Novel 的 AI 选区菜单](https://github.com/steven-tey/novel/blob/main/apps/web/components/tailwind/generative/ai-selector.tsx)（Apache-2.0），借鉴少量工具和先审阅后采用的交互，没有复制代码或新增编辑框架。DeepSeek 参数依据其[思考模式文档](https://api-docs.deepseek.com/guides/thinking_mode)。

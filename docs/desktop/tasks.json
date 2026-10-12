@@ -3220,6 +3220,22 @@
       ],
       "blocker": null,
       "verification": "17 项 Node 回归、32 项 Python API 回归和构建通过；用户授权后实际 DeepSeek 两次生成，具体岗位/真实经历保留、同框替换与撤销通过。原生窗口展开模板滚动、固定操作栏、保存与最终包重启恢复通过。macOS 包审计、冻结 HTTP、ZIP CRC/源码一致通过。"
+    },
+    {
+      "id": "D187",
+      "title": "保留简历编辑副本样式并完善中英文产品介绍",
+      "status": "done",
+      "depends_on": [],
+      "scope": [
+        "PDF/Word文字颜色字号粗体与段落样式传递，原件及已保存格式不改写",
+        "编辑、Word/PDF导出、真实样例与原生界面验收",
+        "README从求职完整流程介绍价值、能力及上手，保留中英文和免责声明"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null,
+      "verification": "PDF/DOCX样式读取、验证、编辑、AI修改及Word/PDF导出贯通。74项相关Python及新增原件保护回归、4项Node及构建通过。原生隔离macOS导入/颜色撤销/字号对齐/保存/导出/重启实测，原件不变。中英文README与虚构编辑器截图完成；本地D187包审计/CRC通过。正常窗口切换时computer use超时未复验，未发布GitHub/Windows包。"
     }
   ]
 }

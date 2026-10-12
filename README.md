@@ -1,62 +1,114 @@
 <p align="center">
-  <img src="docs/images/logo.svg" width="56" height="56" alt="JobFindsMe 标志">
+  <img src="docs/images/logo.svg" width="64" height="64" alt="JobFindsMe 标志">
 </p>
 <h1 align="center">JobFindsMe</h1>
-<p align="center"><strong>找岗位、改简历、练面试，一个工作台。</strong><br>开源 AI 求职桌面助手 · macOS / Windows</p>
+<p align="center"><strong>跨平台找岗位，把简历、面试和投递串起来。</strong><br>开源 AI 求职桌面助手 · macOS / Windows · 数据保存在本机</p>
 <p align="center">
-  <strong>中文</strong> · <a href="README.en.md">English</a>
+  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip"><strong>下载 macOS（M 系列）</strong></a> ·
+  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip"><strong>下载 Windows（x64）</strong></a> ·
+  <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a>
 </p>
+<p align="center"><strong>中文</strong> · <a href="README.en.md">English</a></p>
+
+求职的时间应该花在判断机会和准备面试。JobFindsMe 把招聘网站、简历和求职材料放在一个工作台：**找到一个岗位，带着它的 JD 和你的简历继续准备，少重复搜索、粘贴和解释。**
+
+**不用上传简历、配置模型，也能先找工作。** 需要 AI 修改、面试或背调时，再连接你自己的模型服务。
+
+## 能帮你完成什么
+
+| 你想做的事 | JobFindsMe 怎么帮你 |
+| --- | --- |
+| **找到合适的岗位** | 一次选择四个平台，统一查看结果；按城市、薪资、经验和工作类型筛选。已有简历可参与本地匹配，查看符合项、缺口和未知信息。 |
+| **看清岗位原文** | 选中后按需读取 JD，在内嵌浏览器核对原页；登录、验证与准备材料都在同一个窗口。 |
+| **准备更合适的简历** | 保留原文件，编辑副本；对照 JD 让 AI 提出修改，逐项审阅后保存独立版本。 |
+| **练习这场面试** | 复用岗位与简历，逐题练习、点评和追问；薄弱点留作复习，没有 JD 也能开始。 |
+| **了解这家公司** | 研究岗位、公司和行业，追查原文，保留引用与证据缺口。 |
+| **准备投递并跟进** | 复用简历，编辑或 AI 润色招呼语，复制并打开岗位；记录实际使用的材料、投递结果和下一步。 |
 
 ## 四个平台，一次搜索
 
-一键检索 **BOSS直聘、猎聘、智联招聘、前程无忧**，结果陆续出现，不必逐个平台搜索。按城市、薪资、经验筛选，选中岗位后按需补全 JD。**搜索无需配置模型，也无需上传简历。**
+支持 **BOSS直聘、猎聘、智联招聘、前程无忧**。选择平台后一次发起检索，结果陆续出现，直接在列表与详情之间浏览。
 
-![一次选择四个平台，在同一工作台查看岗位结果和 JD](docs/images/jobfindsme-four-platforms.jpg)
+- **按你的条件找**：城市、薪资、工作经验，以及不限 / 全职 / 兼职；经验包含在校生与应届生。
+- **有简历就复用**：后台提取匹配信息，参与岗位推荐与排序；原文件保留，个人联系方式不进入检索关键词。
+- **选中了再读 JD**：按需补全详情，已读材料继续复用；可继续查找后续结果。
+- **看得见来源状态**：登录、验证、连接失败与部分覆盖分别说明；单个来源失败，已取得的其他结果仍可查看。
 
-## 内嵌浏览器，原页就在旁边
+![四个平台集中检索，在同一工作台查看岗位列表和 JD](docs/images/jobfindsme-four-platforms.jpg)
 
-在应用内完成登录、验证和原文核对。支持 **多标签、网页搜索、书签与分栏浏览**，少在窗口之间来回切换。
+<sub>实际应用截图，来自早期版本。平台状态随账户、验证和网站变化而变化，不代表四个平台始终可用。</sub>
 
-![左侧岗位详情，右侧内嵌浏览器打开对应招聘原页](docs/images/jobfindsme-browser.jpg)
+## 原页就在旁边，少切几个窗口
 
-<sub>实际应用截图。各平台可用性受登录、验证和网站变化影响；某一来源失败，已取得的结果仍可使用。</sub>
+内嵌浏览器支持 **多标签、网页搜索、书签和分栏浏览**。左边看岗位和准备材料，右边打开对应招聘原页；登录、验证码与原文核对在应用内完成。
 
-## 材料带上，接着准备
+![岗位详情与招聘原页并排展示](docs/images/jobfindsme-browser.jpg)
 
-导入一次简历，岗位 JD、关联简历与面试准备持续复用，少重复粘贴。
+<sub>实际应用截图。能打开网页与能自动读取列表、续页或完整 JD 是不同能力，应用按实际读取结果展示状态。</sub>
+
+## 一份简历，准备不同机会
+
+「我的简历」是统一的维护和修改入口。导入 **PDF / DOCX** 后先看原件，匹配信息在后台提取；需要修改时，再打开可编辑副本。也支持 MD / TXT 文字导入。
+
+- **直接编辑**：加粗、字号、文字颜色、段落对齐和列表；可读取的 PDF / Word 文字样式随编辑副本保存，草稿留在本机。
+- **AI 按岗位修改**：带入已有 JD 和经历，给出原文与建议对照；选择值得采用的修改再保存，基础简历与岗位专属稿分开保留。
+- **适合不同阶段**：社招、校招、紧凑三种排版，调整展示顺序和密度；连续分页预览，导出 Word 或 PDF。
+- **随岗位复用**：关联简历继续用于面试和投递材料，不必每次重新介绍自己。
+
+![我的简历：彩色文字、字号、段落对齐与直接编辑](docs/images/jobfindsme-resume-editor.png)
+
+<sub>当前开发版的实际编辑界面，使用虚构简历；展示导入样式、编辑与保存，不含用户资料。</sub>
+
+## 面试和背调，接着这个岗位开始
+
+从岗位进入准备，已有 JD、关联简历与保存的材料随任务带入。需要独立练习或研究时，也可以直接打开「求职助手」。
 
 <table>
+  <tr><th width="33%">修改简历</th><th width="33%">模拟面试</th><th width="33%">深度研究</th></tr>
   <tr>
-    <th width="33%">修改简历</th><th width="33%">模拟面试</th><th width="33%">深度研究</th>
+    <td><a href="docs/images/jobfindsme-resume.png"><img src="docs/images/jobfindsme-resume.png" alt="我的简历：对照原文逐项审阅 AI 修改"></a></td>
+    <td><a href="docs/images/jobfindsme-interview.png"><img src="docs/images/jobfindsme-interview.png" alt="模拟面试：逐题提问、点评与追问"></a></td>
+    <td><a href="docs/images/jobfindsme-deep-research.png"><img src="docs/images/jobfindsme-deep-research.png" alt="深度研究：原文来源、引用与证据缺口"></a></td>
   </tr>
   <tr>
-    <td><a href="docs/images/jobfindsme-resume.png"><img src="docs/images/jobfindsme-resume.png" alt="我的简历：AI 修改前后对照，逐项审阅后保存"></a></td>
-    <td><a href="docs/images/jobfindsme-interview.png"><img src="docs/images/jobfindsme-interview.png" alt="无 JD 的模拟面试：逐题提问、点评和追问"></a></td>
-    <td><a href="docs/images/jobfindsme-deep-research.png"><img src="docs/images/jobfindsme-deep-research.png" alt="深度研究：核实原文、引用来源并说明证据缺口"></a></td>
-  </tr>
-  <tr>
-    <td>在「我的简历」对照 JD 修改，逐项审阅后保存，原稿保留。</td>
-    <td>逐题练习、点评追问；没有 JD 也能开始。</td>
-    <td>岗位、公司与行业背调，附来源和证据缺口。</td>
+    <td>保留真实经历，审阅后保存岗位专属稿。</td>
+    <td>围绕岗位练习，保存薄弱点，下次继续复习。</td>
+    <td>追查原文，分清有依据的发现与尚待核实的信息。</td>
   </tr>
 </table>
 
-<sub>点击查看大图。简历图为新版实际界面与虚构资料，本机模拟输出仅演示审阅交互；面试与研究图来自早期版本。</sub>
+<sub>点击查看大图。简历图使用虚构资料与本机模拟输出，演示审阅交互；面试与研究图来自早期版本。截图不代表模型质量保证。</sub>
 
-- **我的简历**：保留 PDF / Word 原文件，后台提取匹配信息；编辑副本、AI 修改、社招 / 校招 / 紧凑模板，导出 Word 或 PDF。
-- **岗位管理**：收藏、已投递集中查看；带入岗位简历，编辑或 AI 润色招呼语，复制并打开原页，记录使用的材料与投递结果。
-- **求职助手**：实时查岗位、模拟面试、深度研究；支持多对话、搜索、归档与分支。
+求职助手还支持 **多对话、图钉置顶、历史搜索、归档和分支**，不同公司与主题可以分别继续；相关材料可作为附件带入对话。
+
+## 从收藏，到投递，再到下一步
+
+「岗位管理」集中查看 **全部、收藏、已投递**，支持搜索、进度、备注与下一步日期。
+
+准备投递时，选好简历和招呼语。常用话术可提前保存，自动带入公司与岗位；AI 润色可使用当前 JD 和明确选中的脱敏经历，结果直接编辑，也能撤销。**复制招呼语并打开岗位**后，由你在平台确认发送。
+
+保存投递结果后，可以回看“给哪家公司用了哪份简历、什么话术、什么时候操作”，已投递岗位进入记录流程。打开原页只记为打开，**不会冒充投递成功**。目前提供辅助投递，尚未提供自动填写、自动发送或批量海投。
 
 ## 三步开始
 
-1. **下载安装**：[macOS（M 系列）](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip) · [Windows（x64）](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip)。解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装运行环境。
-2. **搜索岗位**：输入关键词，选择一个城市或不限城市；勾选平台，按提示登录或验证。
-3. **用 AI 准备**：在设置中配置自己的模型；简历修改去「我的简历」，面试和背调从岗位或「求职助手」开始。
+1. **下载安装**：[macOS（M 系列）](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip) · [Windows（x64）](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip)。完整解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装 Python / Node.js。
+2. **先找一个岗位**：输入方向，选择城市和平台，按提示登录或验证。简历可以之后再导入。
+3. **再用 AI 准备**：在设置中连接自己的模型；简历修改在「我的简历」，面试和背调从岗位或「求职助手」开始。
 
-安装包未签名，首次打开说明、版本对应的源码提交与 SHA256 校验信息见[发布页](https://github.com/russeell/jobfindsme/releases/latest)。
+本文介绍当前源码功能，下载版以[发布页](https://github.com/russeell/jobfindsme/releases/latest)的版本说明为准。安装包尚未签名 / 公证，首次打开方法、对应源码提交和 SHA256 校验信息均在发布页。
 
-数据保存在本机；使用 AI 时，相关材料会发送给所选模型服务，可能产生费用。PDF 编辑副本会重新排版，不保证还原原版式。投递由你在平台确认发送，打开原页不算已投递。
+<details>
+<summary><strong>使用前了解这些</strong></summary>
+
+- **本地数据与模型**：简历、会话和记录保存在本机；使用 AI 时，所需材料会发送给你选择的模型服务，可能产生费用。简历分析与匹配使用脱敏副本，不替换原文件。
+- **简历格式**：原件预览与下载保留原文件；可编辑副本保留支持的文字样式并重新排版，复杂分栏、装饰图形和原始字体不保证还原。扫描 PDF 暂无 OCR。
+- **平台与结果**：登录、验证、网络和网站变化可能影响读取。岗位是否仍在招、最终薪资和 AI 输出请核对原文。
+- **发送由你确认**：不会因打开岗位自动标记已投递，不提供默认无人值守海投。
+
+</details>
 
 **免责声明：本项目仅供学习和个人使用。请遵守相关平台的使用规则，岗位信息与 AI 输出请自行核实。**
 
-[开发说明](docs/desktop/README.md) · [贡献与反馈](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [MIT 许可证](LICENSE)
+遇到问题，请在 [Issues](https://github.com/russeell/jobfindsme/issues) 附上应用版本、平台、操作步骤和脱敏截图，帮助我们复现。
+
+[开发说明](docs/desktop/README.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md) · [MIT 许可证](LICENSE)
