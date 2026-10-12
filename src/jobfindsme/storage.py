@@ -12,6 +12,7 @@ _CREATE_TABLE_RE = re.compile(
     r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)",
     re.IGNORECASE,
 )
+_IS_WINDOWS = os.name == "nt"
 
 
 class MigrationConflict(Exception):
@@ -55,6 +56,17 @@ class Database:
                     # SQLite may remove a WAL/SHM sidecar between exists() and
                     # chmod() while parallel connector threads close a handle.
                     if path == self.path:
+                        raise
+                except PermissionError as error:
+                    # Windows uses inherited ACLs, not POSIX mode bits. An
+                    # ephemeral sidecar can be delete-pending or shared by
+                    # another SQLite connection while chmod sets attributes.
+                    # This must not turn a successful commit into an API 500.
+                    if (
+                        path == self.path
+                        or not _IS_WINDOWS
+                        or getattr(error, "winerror", None) not in (5, 32)
+                    ):
                         raise
 
     @staticmethod

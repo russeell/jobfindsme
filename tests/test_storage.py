@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+import jobfindsme.storage as storage
 from jobfindsme.storage import Database, MigrationConflict
 
 
@@ -55,6 +56,58 @@ def test_secure_sqlite_files_tolerates_disappearing_sidecar(
 
     if os.name != "nt":  # Windows permissions use ACLs, not POSIX mode bits.
         assert stat.S_IMODE(database.path.stat().st_mode) == 0o600
+
+
+@pytest.mark.parametrize("winerror", [5, 32])
+def test_windows_shared_sidecar_does_not_fail_a_successful_commit(
+    tmp_path, monkeypatch, winerror
+):
+    database = Database(tmp_path / "jobfindsme.db")
+    real_chmod = os.chmod
+    conflicts = []
+
+    def shared_sidecar(path, mode):
+        if str(path).endswith("-shm"):
+            conflicts.append(path)
+            error = PermissionError("shared SQLite sidecar")
+            error.winerror = winerror
+            raise error
+        real_chmod(path, mode)
+
+    monkeypatch.setattr(storage, "_IS_WINDOWS", True)
+    monkeypatch.setattr(os, "chmod", shared_sidecar)
+    with database.connect() as connection:
+        connection.execute("CREATE TABLE sample (value TEXT)")
+        connection.execute("INSERT INTO sample VALUES ('saved')")
+    with database.connect() as connection:
+        assert connection.execute("SELECT value FROM sample").fetchone()[0] == "saved"
+    assert conflicts
+
+
+@pytest.mark.parametrize(
+    ("windows", "sidecar", "winerror"),
+    [(True, False, 5), (False, True, 5), (True, True, 13)],
+)
+def test_database_and_other_permission_failures_remain_errors(
+    tmp_path, monkeypatch, windows, sidecar, winerror
+):
+    database = Database(tmp_path / "jobfindsme.db")
+    database.path.touch()
+    target = Path(f"{database.path}-shm") if sidecar else database.path
+    target.touch()
+    real_chmod = os.chmod
+
+    def denied(path, mode):
+        if Path(path) == target:
+            error = PermissionError("permission denied")
+            error.winerror = winerror
+            raise error
+        real_chmod(path, mode)
+
+    monkeypatch.setattr(storage, "_IS_WINDOWS", windows)
+    monkeypatch.setattr(os, "chmod", denied)
+    with pytest.raises(PermissionError):
+        database._secure_sqlite_files()
 
 
 def test_migrations_are_repeatable_and_foreign_keys_are_enabled(tmp_path) -> None:
