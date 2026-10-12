@@ -3188,6 +3188,21 @@
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": "智联已通过真实登录与20条检索验收；BOSS原页仍跳转登录页，待用户登录。电脑操作间歇恢复后又不同步，三源同词搜索及JD/续页完整验收仍待继续。"
+    },
+    {
+      "id": "D185",
+      "title": "修复简历文字副本的私有字体项目符号",
+      "status": "done",
+      "depends_on": [],
+      "scope": [
+        "新导入文字与历史简历读取兼容，保留原文件和格式",
+        "PDF及Word导出回归和真实样例核对"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null,
+      "verification": "29 项提取/原件/编辑/导出回归通过；真实本机 PDF 16 个 U+F0B7 项目符号确认，原件字节未变，工作经历导出前后已渲染核对。未更新运行中的安装包。"
     }
   ]
 }

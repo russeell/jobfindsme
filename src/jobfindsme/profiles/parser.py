@@ -16,6 +16,7 @@ from xml.etree import ElementTree
 from pypdf import PdfReader
 
 from jobfindsme.profiles.models import FactType
+from jobfindsme.profiles.text import normalize_resume_text
 from jobfindsme.taxonomy import SKILL_ALIASES
 
 MAX_RESUME_BYTES = 5 * 1024 * 1024
@@ -79,7 +80,9 @@ class ResumeTextExtractor:
         else:
             raise ResumeExtractionError("supported formats: PDF, DOCX, MD, TXT")
 
-        normalized = "\n".join(line.rstrip() for line in text.splitlines()).strip()
+        normalized = "\n".join(
+            line.rstrip() for line in normalize_resume_text(text).splitlines()
+        ).strip()
         if not normalized and not allow_empty:
             raise ResumeExtractionError("resume contains no readable text")
         return ExtractedResume(safe_name, media_type, content, normalized)

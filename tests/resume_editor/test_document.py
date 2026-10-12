@@ -226,3 +226,70 @@ def test_nested_lists_preserve_order_and_multiline():
     assert document_content(validate_document(deepcopy(document)))["skills"] == (
         "3. one\n• two\nthree",
     )
+
+
+def test_legacy_private_bullets_load_and_export_without_rewriting_history(tmp_path):
+    import json
+
+    db, workspace, profiles = _confirmed_resume(tmp_path)
+    service = ResumeEditorService(db)
+    base = profiles.current_version(workspace_id=workspace.workspace_id)
+    content = {key: [] for key in base.content}
+    content["experience"] = ["  \uf0b7 完成检索服务\n\uf0b7 完成性能测试"]
+    document = reconcile_document(content)
+    block = next(
+        s for s in document["content"] if s["attrs"]["section"] == "experience"
+    )["content"][0]
+    # Whitespace and bullet can belong to different formatted text runs.
+    block["content"] = [
+        {"type": "text", "text": "  "},
+        {"type": "text", "text": "\uf0b7 完成检索服务", "marks": [{"type": "bold"}]},
+        {"type": "hardBreak"},
+        {"type": "text", "text": "\uf0b7 完成性能测试"},
+    ]
+    stored_content = json.dumps(content)
+    stored_document = json.dumps(document)
+    with db.connect() as conn:
+        conn.execute(
+            "UPDATE resume_versions SET content_json=?,document_json=? "
+            "WHERE version_id=?",
+            (stored_content, stored_document, base.version_id),
+        )
+    loaded = service.get_version(
+        workspace_id=workspace.workspace_id, version_id=base.version_id
+    )
+    assert loaded.content["experience"] == ("  • 完成检索服务\n• 完成性能测试",)
+    assert (
+        profiles.current_version(workspace_id=workspace.workspace_id).content
+        == loaded.content
+    )
+    rich = next(
+        s for s in loaded.document["content"] if s["attrs"]["section"] == "experience"
+    )["content"][0]
+    assert rich["content"][1]["marks"] == [{"type": "bold"}]
+    assert rich["content"][1]["text"] == "• 完成检索服务"
+    assert rich["content"][3]["text"] == "• 完成性能测试"
+    assert "\uf0b7" in document_content(document)["experience"][0]
+    for format in ("docx", "pdf"):
+        output = tmp_path / f"portable.{format}"
+        service.export(
+            workspace_id=workspace.workspace_id,
+            version_id=base.version_id,
+            destination=output,
+            format=format,
+            template="professional",
+        )
+        text = (
+            "\n".join(p.text for p in Document(output).paragraphs)
+            if format == "docx"
+            else "\n".join(p.extract_text() for p in PdfReader(output).pages)
+        )
+        assert "• 完成检索服务" in text
+        assert "• 完成性能测试" in text
+        assert "\uf0b7" not in text
+    with db.connect() as conn:
+        row = conn.execute(
+            "SELECT content_json,document_json FROM resume_versions WHERE version_id=?",
+            (base.version_id,),
+        ).fetchone()
+    assert tuple(row) == (stored_content, stored_document)

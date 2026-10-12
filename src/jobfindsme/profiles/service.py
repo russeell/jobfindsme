@@ -21,6 +21,7 @@ from jobfindsme.profiles.models import (
     SourceDocument,
 )
 from jobfindsme.profiles.parser import DeterministicResumeParser, ResumeTextExtractor
+from jobfindsme.profiles.text import normalize_resume_document, normalize_resume_text
 from jobfindsme.storage import Database
 
 
@@ -741,10 +742,15 @@ def _version_from_row(row) -> ResumeVersion:
         source_document_id=row["source_document_id"],
         parent_version_id=row["parent_version_id"],
         version_number=row["version_number"],
-        content={key: tuple(values) for key, values in content.items()},
+        content={
+            key: tuple(normalize_resume_text(value) for value in values)
+            for key, values in content.items()
+        },
         is_current=bool(row["is_current"]),
         original_file=bool(row["original_file"]),
-        document=json.loads(row["document_json"]) if row["document_json"] else None,
+        document=normalize_resume_document(
+            json.loads(row["document_json"]) if row["document_json"] else None
+        ),
         created_at=datetime.fromisoformat(row["created_at"]),
     )
 

@@ -136,3 +136,45 @@ def test_rejects_oversized_resume() -> None:
             file_name="resume.txt",
             content=b"x" * (MAX_RESUME_BYTES + 1),
         )
+
+
+def test_pdf_private_font_bullet_becomes_portable_without_changing_source():
+    from pypdf import PdfReader
+    from pypdf.generic import NameObject, StreamObject
+
+    # A real PDF ToUnicode map as emitted by WPS: the visible bullet is F0B7.
+    reader = PdfReader(
+        io.BytesIO(
+            make_pdf_with_text(
+                "B Experience building Python services and search tools."
+            )
+        )
+    )
+    writer = PdfWriter()
+    writer.append(reader)
+    cmap = StreamObject()
+    cmap.set_data(b"""/CIDInit /ProcSet findresource begin
+12 dict begin begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /WPSBullet def /CMapType 2 def
+1 begincodespacerange <00> <FF> endcodespacerange
+1 beginbfchar <42> <F0B7> endbfchar
+endcmap CMapName currentdict /CMap defineresource pop end end""")
+    font = writer.pages[0]["/Resources"]["/Font"]["/F1"]
+    font[NameObject("/ToUnicode")] = writer._add_object(cmap)
+    output = io.BytesIO()
+    writer.write(output)
+    source = output.getvalue()
+    assert PdfReader(io.BytesIO(source)).pages[0].extract_text().startswith("\uf0b7")
+    extracted = ResumeTextExtractor().extract(file_name="resume.pdf", content=source)
+    assert extracted.text.startswith("• Experience")
+    assert extracted.content == source
+
+
+def test_only_known_line_leading_private_bullet_is_normalized():
+    from jobfindsme.profiles.text import normalize_resume_text
+
+    text = "\t\uf0b7 项目\n• 正常\n中间\uf0b7保留\n\ue123 未知符号\n  \uf0b7 second"
+    assert normalize_resume_text(text) == (
+        "\t• 项目\n• 正常\n中间\uf0b7保留\n\ue123 未知符号\n  • second"
+    )
