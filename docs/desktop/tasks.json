@@ -3196,13 +3196,14 @@
       "depends_on": [],
       "scope": [
         "新导入文字与历史简历读取兼容，保留原文件和格式",
-        "PDF及Word导出回归和真实样例核对"
+        "PDF及Word导出回归和真实样例核对",
+        "原生验收发现圆点被分段删除后修复，重新打包交付 macOS D185"
       ],
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
       "blocker": null,
-      "verification": "29 项提取/原件/编辑/导出回归通过；真实本机 PDF 16 个 U+F0B7 项目符号确认，原件字节未变，工作经历导出前后已渲染核对。未更新运行中的安装包。"
+      "verification": "64 项 profiles/resume_editor 回归及构建/包审计通过；实际 macOS 隔离包同一 PDF 导入、原件显示、编辑保存、Word/PDF 导出、两页预览、重启内容保留通过。两导出各 16 个标准圆点，原件字节未变。最终包 08ed3e7，ZIP CRC 与溯源通过。"
     }
   ]
 }

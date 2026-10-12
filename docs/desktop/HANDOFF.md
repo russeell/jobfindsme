@@ -1,3 +1,7 @@
+D185 安装包实际验收补充（2026-10-12）：原生 macOS 隔离 App 导入同一真实 PDF 后发现标准圆点被后续分段规则删除，08ed3e7 已保留圆点并更新 parser v8，64 项 profiles/resume_editor 回归通过。重新冻结 Python、打包并审计，最终同代码隔离 App 已完成文件选择导入→原件预览→编辑副本→实际粘贴文字→保存→PDF 分页预览→原生保存框导出 Word/PDF→退出重启恢复。两份导出均包含保存标记、16 个标准圆点、零 U+F0B7；PDF 两页渲染已核对，原件副本与用户原件逐字节相同。Word 检查内容与结构，未在 Microsoft Word 中打开。无真实模型调用、投递或用户基础简历修改，隔离窗口已退出。
+
+交付 macOS Apple Silicon：apps/desktop/release/local-D185/mac-arm64/JobFindsMe.app；压缩包 JobFindsMe-mac-arm64-D185.zip（174.7 MiB）及 SHA256 同目录，ZIP CRC、sourceCommit=08ed3e7d5ecd12429367e850b6c74ebac2dd2ace 和冻结网络运行时检查通过。版本标识 v0.15.1+local.D185，使用正常用户工作区；未替换正在运行的旧 App，未上传 GitHub Release，Windows 本轮未构建。
+
 D185 简历项目符号字体兼容（2026-10-12，本地）：截图条纹来自 WPS KingsoftSign 圆点的 U+F0B7 私有字符，原 PDF 嵌入字体显示正常，文字副本失去专用字体后无法正确显示。新增行首已知符号规范化，提取及两条历史版本读取入口共用；正文中间和未知私有字符保留，富文本跨 run/换行保留加粗等格式。只改变读取后的文字副本，不修改原件或历史数据库内容，无需重新导入。
 
 验证：29 项 PDF 提取、原件保留、历史读取、Word/PDF 导出回归及 Ruff 通过；真实本机原 PDF 的 16 个私有圆点已确认，读取前后原件字节一致；工作经历修复后 PDF 已渲染确认圆点可见。未做原生编辑器窗口复验，未更新正在运行的 App 或线上安装包。四平台 D184 仍待 BOSS 登录和余下真实验收。
