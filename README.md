@@ -4,9 +4,7 @@
 <h1 align="center">JobFindsMe</h1>
 <p align="center"><strong>找岗位、改简历、练面试，一个工作台。</strong><br>开源 AI 求职桌面助手 · macOS / Windows</p>
 <p align="center">
-  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip">下载 macOS（M 系列）</a> ·
-  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip">下载 Windows（x64）</a> ·
-  <a href="https://github.com/russeell/jobfindsme/issues">反馈问题</a> · <a href="README.en.md">English</a>
+  <strong>中文</strong> · <a href="README.en.md">English</a>
 </p>
 
 ## 四个平台，一次搜索
@@ -51,7 +49,7 @@
 
 ## 三步开始
 
-1. **下载安装**：解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装运行环境。
+1. **下载安装**：[macOS（M 系列）](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip) · [Windows（x64）](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip)。解压后打开 `JobFindsMe.app` 或 `JobFindsMe.exe`，无需另装运行环境。
 2. **搜索岗位**：输入关键词，选择一个城市或不限城市；勾选平台，按提示登录或验证。
 3. **用 AI 准备**：在设置中配置自己的模型；简历修改去「我的简历」，面试和背调从岗位或「求职助手」开始。
 

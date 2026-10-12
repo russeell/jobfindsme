@@ -4,9 +4,7 @@
 <h1 align="center">JobFindsMe</h1>
 <p align="center"><strong>Find jobs. Tailor your resume. Practice interviews. One workspace.</strong><br>Open-source AI job-search desktop assistant · macOS / Windows</p>
 <p align="center">
-  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip">macOS (Apple Silicon)</a> ·
-  <a href="https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip">Windows (x64)</a> ·
-  <a href="https://github.com/russeell/jobfindsme/issues">Report an issue</a> · <a href="README.md">简体中文</a>
+  <a href="README.md">中文</a> · <strong>English</strong>
 </p>
 
 ## Four platforms, one click
@@ -51,7 +49,7 @@ Import your resume once. Reuse the job description and linked resume for intervi
 
 ## Get started in three steps
 
-1. **Download and extract**, then open `JobFindsMe.app` or `JobFindsMe.exe`. No separate runtime installation needed.
+1. **Download**: [macOS (Apple Silicon)](https://github.com/russeell/jobfindsme/releases/latest/download/mac-arm64.zip) · [Windows (x64)](https://github.com/russeell/jobfindsme/releases/latest/download/windows-x64.zip). Extract and open `JobFindsMe.app` or `JobFindsMe.exe`. No separate runtime installation needed.
 2. **Search for jobs**: enter keywords, choose one city or no city restriction, select platforms and sign in or complete verification when prompted.
 3. **Prepare with AI**: configure your own model in Settings. Edit your resume in My Resume; start interview preparation or research from a job or the Assistant.
 
