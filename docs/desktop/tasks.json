@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D184",
+  "current_task": "D190",
   "tasks": [
     {
       "id": "D01",
@@ -3278,6 +3278,22 @@
       ],
       "blocker": null,
       "verification": "构建及29项来源/节流、17项材料/文档、2项BOSS客户公司、71项Python简历/研究回归通过。原生隔离macOS包360px工作区弹层及键盘调整、PDF导入/彩色编辑/保存/Word及PDF导出/分页预览/重启恢复通过，原件字节一致。包审计及冻结HTTP/CA、本地贡献指南链接检查通过。无真实投递、模型调用或用户简历修改。"
+    },
+    {
+      "id": "D190",
+      "title": "Windows简历恢复后服务500的打包回归诊断与修复",
+      "status": "in_progress",
+      "depends_on": [
+        "D189"
+      ],
+      "scope": [
+        "隔离包后台异常诊断，保留原件及资料",
+        "修复真实恢复流程故障并完成Windows实际包验收"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
