@@ -173,3 +173,14 @@ test("unexpected exit after readiness reports a disconnected status", async () =
   assert.equal(statuses.at(-1).connected, false);
   assert.match(statuses.at(-1).message, /code 1/);
 });
+
+test("explicit diagnostic consumer receives bounded backend errors after startup",async()=>{
+ const child=new FakeChild(),messages=[];
+ const service=new PythonService(serviceOptions({spawnProcess:spawnFake(child),onDiagnostic:message=>messages.push(message)}));
+ await service.start();
+ child.stderr.write('Synthetic backend failure');
+ child.stderr.write('x'.repeat(9000));
+ assert.equal(messages[0],'Synthetic backend failure');
+ assert.equal(messages[1].length,8192);
+ await service.stop();
+});

@@ -63,6 +63,8 @@ const pythonService = new PythonService({
   userDataPath: app.getPath("userData"),
   packaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
+  onDiagnostic: isolatedProfile&&process.env.JFM_QA_DIAGNOSTICS==="1"
+    ? message=>console.error("[isolated Python diagnostic]",message) : undefined,
   onStatus: (status) => {
     if (status.connected) return; // Publish ready only after apiClient is assigned.
     serviceStatus = status;

@@ -28,7 +28,7 @@ async function checkEditor(window){
  return editor;
 }
 for(let attempt=0;attempt<2;attempt++){
- const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],timeout:90000});
+ const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],env:{...process.env,JFM_QA_DIAGNOSTICS:'1'},timeout:90000});
  app.process().stderr.on('data',chunk=>process.stderr.write(chunk));
  try{
   const window=await app.firstWindow({timeout:90000});

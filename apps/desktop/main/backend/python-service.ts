@@ -23,6 +23,7 @@ type PythonServiceOptions = {
   reservePort?: () => Promise<number>;
   createClient?: (baseUrl: string, token: string) => DesktopApiClient;
   onStatus?: (status: ServiceStatus) => void;
+  onDiagnostic?: (message: string) => void;
   readyTimeoutMs?: number;
   pollIntervalMs?: number;
   terminateGraceMs?: number;
@@ -149,6 +150,7 @@ export class PythonService {
     child.stderr?.setEncoding("utf8");
     child.stderr?.on("data", (chunk: string) => {
       this.stderrTail = `${this.stderrTail}${chunk}`.slice(-8_192);
+      this.options.onDiagnostic?.(chunk.slice(-8_192));
     });
 
     const spawned = new Promise<void>((resolve) => child.once("spawn", resolve));
