@@ -83,9 +83,9 @@ The Assistant also supports **separate conversations, pin icons, history search,
 
 ## Save, prepare, apply and follow up
 
-Job Management brings **all, saved and applied jobs** together, with search, progress, notes and next-action dates.
+Job Management brings **all, saved and applied jobs** together. Arrange your next step directly in the list, with quick dates for today, tomorrow or three days later. Due tasks appear together and can be rescheduled, completed or restored with undo.
 
-Choose a resume and an opening message before applying. Save reusable message templates with company and role placeholders. AI polishing can use the current JD and the explicitly selected, redacted experience; edit the result directly or undo it. **Copy the message and open the job**, then confirm and send on the recruitment platform yourself.
+Choose a resume and an opening message before applying; reopen the job to restore your saved materials. Save reusable message templates with company and role placeholders. AI polishing can use the current JD and the explicitly selected, redacted experience; edit the result directly or undo it. **Copy the message and open the job**, then confirm and send on the recruitment platform yourself.
 
 Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. Assisted preparation is available; automatic filling, automatic sending and bulk applications are not implemented.
 
