@@ -3314,9 +3314,12 @@
         "没有准备记录的岗位也能直接安排下一步，冲突更新不覆盖新材料",
         "今日待办、改期、完成、撤销和重启恢复有效，原页打开不等于投递"
       ],
-      "verification": "577项Python、406项桌面回归、构建及Ruff通过。原生隔离macOS实际新增事项、快捷日期、今日待办改期、完成撤销、未保存保护、重启恢复与900×640窗口验收通过；实测修复输入焦点。既有未附简历和旧版本/招呼语精确恢复，实际保存后面试API使用同一明确所选版本，已确认记录不变。本地包审计及冻结HTTP/CA通过；未新增招聘平台请求、模型调用或真实投递，未发布Release。",
+      "verification": "577项Python、406项桌面回归、构建及Ruff通过。原生隔离macOS实际新增事项、快捷日期、今日待办改期、完成撤销、未保存保护、重启恢复与900×640窗口验收通过；实测修复输入焦点。既有未附简历和旧版本/招呼语精确恢复，实际保存后面试API使用同一明确所选版本，已确认记录不变。本地包审计及冻结HTTP/CA通过；未新增招聘平台请求、模型调用或真实投递，未发布Release。 同产品源码3225829的GitHub主CI与macOS/Windows包验收全部通过：两端各577项Python、406项桌面测试，包审计、冻结HTTP/CA、虚构PDF/Word导入彩色编辑保存导出恢复及两次实际启动通过。新增待办原生交互本轮仅在macOS实测。",
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/actions/runs/38388707871",
+        "https://github.com/russeell/jobfindsme/actions/runs/38388707464",
+        "https://github.com/russeell/jobfindsme/actions/runs/38388707493"
       ],
       "blocker": null
     }
