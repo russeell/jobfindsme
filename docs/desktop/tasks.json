@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-12",
+  "updated_at": "2026-10-13",
   "status_values": [
     "pending",
     "in_progress",
     "blocked",
     "done"
   ],
-  "current_task": "D184",
+  "current_task": "D191",
   "tasks": [
     {
       "id": "D01",
@@ -3298,6 +3298,27 @@
       ],
       "blocker": null,
       "verification": "14728e9 Windows真实包重现storage._secure_sqlite_files关闭连接后对jobfindsme.db-shm chmod触发PermissionError/WinError5。b95ac47释放初始化失败句柄、6ce5aa9仅容忍Windows临时侧文件WinError5/32，主数据库及其他权限错误保留。最终c31f182主CI和macOS/Windows打包全部通过，两端各575项Python、402项Node，冻结HTTP/CA、包审计及实际虚构PDF/Word导入编辑保存导出恢复/两次启动通过。未再访问招聘平台、未发布Release或替换用户应用。"
+    },
+    {
+      "id": "D191",
+      "title": "减少投递材料重复选择与岗位下一步维护成本",
+      "status": "in_progress",
+      "depends_on": [],
+      "scope": [
+        "重新打开投递材料保留明确所选简历、未附简历意图及最新招呼语，不被基础简历或后台关联覆盖",
+        "岗位列表直接新增、编辑和改期下一步，复用原有待办与完成撤销，不改变投递或简历状态",
+        "隔离虚构岗位与简历验收，避免新增真实平台请求"
+      ],
+      "acceptance": [
+        "已有投递材料精确恢复，未附简历不自动变为附简历",
+        "没有准备记录的岗位也能直接安排下一步，冲突更新不覆盖新材料",
+        "今日待办、改期、完成、撤销和重启恢复有效，原页打开不等于投递"
+      ],
+      "verification": "相关离线回归、构建及隔离原生窗口实际验收，保存与材料复用通过本地API核对。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
     }
   ]
 }
