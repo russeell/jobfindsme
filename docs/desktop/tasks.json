@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "project": "jobfindsme-desktop",
-  "updated_at": "2026-10-13",
+  "updated_at": "2026-10-14",
   "status_values": [
     "pending",
     "in_progress",
     "blocked",
     "done"
   ],
-  "current_task": "D184",
+  "current_task": "D192",
   "tasks": [
     {
       "id": "D01",
@@ -3322,6 +3322,29 @@
         "https://github.com/russeell/jobfindsme/actions/runs/38388707493"
       ],
       "blocker": null
+    },
+    {
+      "id": "D192",
+      "title": "BOSS单岗位确认投递与可验证结果",
+      "status": "in_progress",
+      "depends_on": [
+        "D191"
+      ],
+      "scope": [
+        "复用准确简历与招呼语，单岗位材料预览和一次明确确认",
+        "独立受限浏览器执行，持久去重、低频、取消与风控暂停",
+        "分别核验消息与所选简历送达，结果不明不重发；隔离端到端及必要原生实测"
+      ],
+      "acceptance": [
+        "无确认不触发外部写操作，不开放Agent通用写权限",
+        "重复点击和重启不会重复发送；选定简历不可由平台旧附件替代",
+        "实际发送内容及附件可核对，失败/取消/验证码保留真实结果和材料"
+      ],
+      "verification": "实现独立BOSS确认预览、材料文件、受限DOM执行与持久执行快照；不扩大Agent写权限。591项Python、419项桌面回归、构建及相关Ruff通过，最后生命周期修复后13项投递回归通过。真实冻结API+DesktopApiClient+控制器使用四个虚构岗位、两份简历验证准确旧版本/不附简历、PDF实际导出及文件指纹、独立消息/附件结果、投递标记、失败记录、重复与中断重启不重发。浏览器传输为受限替身，不代表真实BOSS兼容或送达。现有正常窗口只读核对了登录、附件入口与空聊天页；资料提示由用户处理。Mac随后锁屏，两次窗口连接均失败，原生UI与真实发送尚未验收。没有实际企业消息、模型调用或Release发布。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": "Mac锁屏；已请求解锁，原生窗口与真实BOSS适配/送达验收待继续。具体企业、招呼语和简历须在真实确认页核对后才执行。"
     }
   ]
 }

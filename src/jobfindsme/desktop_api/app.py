@@ -48,6 +48,7 @@ from jobfindsme.resume_editor import (
     ResumeEditorError,
 )
 from jobfindsme.scheduler import LocalScheduler
+from jobfindsme.search.application_attempts import ApplicationAttemptService
 from jobfindsme.search.desktop import (
     BudgetedSourceExecutor,
     DesktopSearchService,
@@ -297,6 +298,29 @@ class ApplicationRecordRequest(StrictResponse):
     resume_version_id: str | None = None
     message: str = Field(default="", max_length=3000)
     status: Literal["prepared", "opened", "contacted", "resume_sent", "uncertain"]
+
+
+class ApplicationAttemptRequest(StrictResponse):
+    workspace_id: str
+    job_id: str
+    record_id: str
+    expected_updated_at: str
+    target_url: str = Field(max_length=2000)
+    title: str = Field(min_length=1, max_length=300)
+    company: str = Field(min_length=1, max_length=300)
+    file_name: str | None = Field(default=None, max_length=200)
+    file_sha256: str | None = Field(default=None, max_length=64)
+
+
+class ApplicationAttemptUpdate(StrictResponse):
+    state: Literal[
+        "running", "completed", "blocked", "failed", "cancelled", "uncertain"
+    ] = "running"
+    phase: str = Field(min_length=1, max_length=80)
+    write_started: bool = False
+    message_confirmed: bool = False
+    resume_confirmed: bool = False
+    detail: str = Field(default="", max_length=500)
 
 
 class JobTrackingResponse(StrictResponse):
@@ -619,6 +643,7 @@ def create_app(
         raise ValueError("desktop API token must not be empty")
 
     core = jobfindsmecore(database_path)
+    ApplicationAttemptService(core.database).recover()
     model_connections = ModelConnectionRepository(core.database)
     model_gateway = model_gateway_override or ModelGateway()
     prompt_editor = PromptResumeEditor(core.database, core.resume_editor, model_gateway)
@@ -1434,6 +1459,32 @@ def create_app(
         except ValueError as error:
             raise HTTPException(status_code=409, detail=str(error)) from error
 
+    @app.get("/v1/application-attempts", dependencies=[Depends(require_token)])
+    def application_attempts(workspace_id: str, job_id: str) -> list[dict]:
+        return ApplicationAttemptService(core.database).list(workspace_id, job_id)
+
+    @app.post("/v1/application-attempts", dependencies=[Depends(require_token)])
+    def begin_application_attempt(request: ApplicationAttemptRequest) -> dict:
+        try:
+            return ApplicationAttemptService(core.database).begin(
+                **request.model_dump()
+            )
+        except (ValueError, LookupError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
+    @app.patch(
+        "/v1/application-attempts/{attempt_id}", dependencies=[Depends(require_token)]
+    )
+    def update_application_attempt(
+        attempt_id: str, request: ApplicationAttemptUpdate
+    ) -> dict:
+        try:
+            return ApplicationAttemptService(core.database).update(
+                attempt_id, **request.model_dump()
+            )
+        except (ValueError, LookupError) as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+
     @app.get("/v1/application-records", dependencies=[Depends(require_token)])
     def list_application_records(
         workspace_id: str, job_id: str | None = None, deleted: bool = False
@@ -1795,6 +1846,21 @@ def create_app(
             _resume_version_payload(version)
             for version in core.resume_editor.list_versions(workspace_id=workspace_id)
         ]
+
+    @app.get(
+        "/v1/resume-versions/{version_id}",
+        response_model=ResumeVersionResponse,
+        dependencies=[Depends(require_token)],
+    )
+    def get_resume_version(version_id: str, workspace_id: str) -> ResumeVersionResponse:
+        try:
+            return _resume_version_payload(
+                core.resume_editor.get_version(
+                    workspace_id=workspace_id, version_id=version_id
+                )
+            )
+        except ResumeEditorError as error:
+            raise HTTPException(status_code=404, detail=str(error)) from error
 
     @app.delete(
         "/v1/resume-versions/{version_id}",

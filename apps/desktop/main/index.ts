@@ -1,4 +1,5 @@
 import {isSourceVerificationBlocked} from "../shared/source-presentation";
+import {BossApplicationController} from './applications/boss-application';
 import {loadGreetingContext,validGreetingTarget} from "./research/greeting-context";
 import type {GreetingPolishInput} from "../shared/contracts";
 import {createResumePreview} from "./resume-preview";
@@ -50,6 +51,7 @@ const isolatedProfile=previewBuild || app.commandLine.hasSwitch("user-data-dir")
 const ownsInstance=app.requestSingleInstanceLock();
 if(!ownsInstance)app.exit(0);
 let apiClient: DesktopApiClient | undefined;
+let bossApplications:BossApplicationController|undefined;
 let mainWindow: BrowserWindow | undefined;
 app.on("second-instance",()=>{if(mainWindow){if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();}});
 let serviceStatus: ServiceStatus = {
@@ -99,7 +101,7 @@ function shutdownAndExit(): Promise<void> {
   serviceStatus = { connected: false, message: "本地服务正在退出" };
   isQuitting = true;
   shutdownPromise = Promise.allSettled([
-    pythonService.stop(),
+    (async()=>{await bossApplications?.shutdown();await pythonService.stop();})(),
     sourceBrowserManager?.flushSessions() ?? Promise.resolve(),
   ]).then(results => {
     for (const result of results) if (result.status === "rejected") console.error("JobFindsMe shutdown failed", result.reason);
@@ -322,6 +324,20 @@ ipcMain.handle("desktop:save-application-record", (event,input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.saveApplicationRecord(input);
 });
+function applicationController(){
+  if(!apiClient||!sourceBrowserManager)throw Error('本地服务或浏览器尚未就绪');
+  return bossApplications??=new BossApplicationController(apiClient,(owner,url)=>sourceBrowserManager!.applicationPage(owner,url),value=>mainWindow?.webContents.send('desktop:application-progress',value),reason=>{sourceBrowserManager?.boss.pause(reason);mainWindow?.webContents.send('desktop:source-status-changed');});
+}
+ipcMain.handle('desktop:preview-boss-application',(event,input)=>{
+  if(event.sender!==mainWindow?.webContents||!input||!['workspace_id','job_id','record_id'].every(key=>typeof input[key]==='string'&&input[key].length>0&&input[key].length<=200))throw Error('unauthorized application request');
+  return applicationController().prepare(input);
+});
+ipcMain.handle('desktop:execute-boss-application',(event,input)=>{
+  if(event.sender!==mainWindow?.webContents||!input||input.confirmed!==true||typeof input.preview_id!=='string')throw Error('请明确确认本次投递');
+  return applicationController().execute(input);
+});
+ipcMain.handle('desktop:cancel-boss-application',(event,id)=>{if(event.sender!==mainWindow?.webContents||typeof id!=='string')throw Error('unauthorized caller');return bossApplications?.cancel(id);});
+ipcMain.handle('desktop:list-application-attempts',(event,workspaceId:string,jobId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error('unauthorized caller');return apiClient.listApplicationAttempts(workspaceId,jobId);});
 ipcMain.handle("desktop:update-next-action", (event,input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.updateNextAction(input);

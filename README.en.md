@@ -87,7 +87,9 @@ Job Management brings **all, saved and applied jobs** together. Arrange your nex
 
 Choose a resume and an opening message before applying; reopen the job to restore your saved materials. Save reusable message templates with company and role placeholders. AI polishing can use the current JD and the explicitly selected, redacted experience; edit the result directly or undo it. **Copy the message and open the job**, then confirm and send on the recruitment platform yourself.
 
-Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. Assisted preparation is available; automatic filling, automatic sending and bulk applications are not implemented.
+Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. The download currently supports assisted preparation, without bulk applications.
+
+The development build is validating **single-job BOSS applications**: restore your chosen resume and message, review the specific job, account and actual attachment, then confirm execution once. Message and attachment results are checked separately; duplicate clicks are coalesced and reservations survive restarts. Verification, rate limits or uncertain results stop execution without automatic retries. Isolated tests are connected; native-window and live-platform delivery validation remain unfinished. This capability is not available in the published download yet.
 
 ## Get started in three steps
 

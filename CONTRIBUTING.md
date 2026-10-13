@@ -1,5 +1,16 @@
 # Contributing
 
+Confirmed BOSS applications use a dedicated executor, separate from the read-only
+research browser. Preserve immutable material snapshots, exact chosen resume
+bytes/versions, persistent reservations, per-source pauses and independent message
+and attachment receipts. A click or an optimistic message bubble is not success.
+Test duplicate confirmations, changed recipients/files, missing upload controls,
+cancel/challenge/timeout, failed server rereads and restart recovery with fictional
+fixtures. A simulated browser transport can validate UI/IPC/database integration,
+but cannot establish live platform compatibility or delivery. Obtain explicit
+approval for the specific employer, message and resume before a real submission;
+keep live checks bounded and stop on platform verification or rate limits.
+
 Help people find relevant jobs, prepare truthful materials, and understand what
 actually happened. Prefer improvements to this complete workflow over adding
 another disconnected feature.

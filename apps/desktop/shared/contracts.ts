@@ -62,6 +62,11 @@ export type DesktopBridge = {
   listApplicationRecords(workspaceId:string,jobId?:string,deleted?:boolean):Promise<ApplicationRecord[]>;
   setApplicationDeleted(workspaceId:string,jobId:string,recordId:string,deleted:boolean):Promise<{record_id:string;deleted:boolean}>;
   saveApplicationRecord(input:ApplicationRecordInput):Promise<ApplicationRecord>;
+  previewBossApplication(input:{workspace_id:string;job_id:string;record_id:string}):Promise<BossApplicationPreview>;
+  executeBossApplication(input:{preview_id:string;confirmed:true}):Promise<ApplicationAttempt>;
+  cancelBossApplication(previewId:string):Promise<void>;
+  listApplicationAttempts(workspaceId:string,jobId:string):Promise<ApplicationAttempt[]>;
+  onApplicationProgress(listener:(value:{preview_id:string;phase:string})=>void):()=>void;
   updateNextAction(input:NextActionInput):Promise<JobPreparationData>;
   getJobPreparation(workspaceId:string,jobId:string):Promise<JobPreparationData>;
   saveJobPreparation(input:JobPreparationInput):Promise<JobPreparationData>;
@@ -587,3 +592,5 @@ export type TaskNotification = {
 
 export type ApplicationRecordInput={workspace_id:string;job_id:string;record_id:string;resume_version_id:string|null;message:string;status:'prepared'|'opened'|'contacted'|'resume_sent'|'uncertain'};
 export type ApplicationRecord=ApplicationRecordInput&{created_at:string;updated_at:string};
+export type ApplicationAttempt={attempt_id:string;record_id:string;workspace_id:string;job_id:string;platform_job_id:string;target_url:string;title:string;company:string;resume_version_id:string|null;message:string;file_name:string|null;file_sha256:string|null;state:'running'|'completed'|'blocked'|'failed'|'cancelled'|'uncertain';phase:string;write_started:boolean|number;message_confirmed:boolean|number;resume_confirmed:boolean|number;detail:string;created_at:string;updated_at:string};
+export type BossApplicationPreview={preview_id:string;expires_at:string;title:string;company:string;account:string;message:string;resume_version_id:string|null;resume_label:string;file_name:string|null;original_file_name:string|null};

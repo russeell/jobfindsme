@@ -1,4 +1,6 @@
 import {SharedFlight} from "../shared-flight";
+import {bossApplicationScript,type BossTarget,type BossOperation,type BossSnapshot} from '../applications/boss-dom';
+import type {BossApplicationPage} from '../applications/boss-application';
 import {randomUUID} from "node:crypto";
 import {createPublicNetworkGuard} from "./public-network";
 import {retrievalSnapshotScript,type RetrievalSnapshot} from "../research/browser-snapshot";
@@ -351,6 +353,45 @@ export class SourceBrowserManager {
 
   private publicRequest=createPublicNetworkGuard();
   private ownedTab(owner:string):BrowserTab|undefined{return this.tabs.find(tab=>tab.owner===owner);}
+  /** Dedicated confirmed application port. Not exposed to the research Agent. */
+  async applicationPage(owner:string,url:string):Promise<BossApplicationPage>{
+    if(!owner.startsWith('application:')||!isAllowedSourceUrl('boss',url)||new URL(url).hostname!=='www.zhipin.com'||!/^\/job_detail\/[\w-]+\.html$/.test(new URL(url).pathname))throw Error('不支持的 BOSS 投递链接');
+    if(this.tabs.length>=MAX_BROWSER_TABS)throw Error('浏览器标签已满，请关闭不需要的标签');
+    const tab=this.createForegroundTab('boss',url,undefined,false);tab.owner=owner;
+    const wc=tab.view.webContents;
+    let pinned:BossTarget|undefined;
+    const valid=()=>!wc.isDestroyed()&&this.tabs.includes(tab)&&isAllowedSourceUrl('boss',wc.getURL())&&new URL(wc.getURL()).hostname==='www.zhipin.com';
+    // Only the chat destination observed on this job's own button can replace this tab.
+    wc.setWindowOpenHandler(({url:popup})=>{if(pinned?.chatUrl&&popup===pinned.chatUrl&&valid())void this.loadTab(tab,popup).catch(()=>{});return {action:'deny'};});
+    try{await this.applicationLoad(tab,url);}catch(error){this.closeTab(tab.id);throw error;}
+    return {
+      read:async(operation:BossOperation,target:BossTarget)=>{
+        if(!valid())throw Error('BOSS 页面已离开当前会话');
+        if(operation!=='snapshot')pinned=target;
+        return await wc.executeJavaScript(bossApplicationScript(operation,target),true) as BossSnapshot;
+      },
+      upload:async(selector,filePath)=>{
+        if(!valid()||!pinned||!/^input\[data-jfm-resume-input="[\w-]+"\]$/.test(selector))throw Error('附件入口已变化，已停止');
+        const snapshot=await wc.executeJavaScript(bossApplicationScript('snapshot',pinned)) as BossSnapshot;
+        if(snapshot.gate||!snapshot.targetMatched||snapshot.uploadSelector!==selector)throw Error('简历上传目标已变化，已停止');
+        const debug=wc.debugger;if(debug.isAttached())throw Error('浏览器正在执行其他操作，请稍后核对');
+        debug.attach('1.3');
+        try{const {root}=await debug.sendCommand('DOM.getDocument');const {nodeId}=await debug.sendCommand('DOM.querySelector',{nodeId:root.nodeId,selector});if(!nodeId)throw Error('简历上传入口已消失');await debug.sendCommand('DOM.setFileInputFiles',{nodeId,files:[filePath]});}
+        finally{if(debug.isAttached())debug.detach();}
+      },
+      navigate:async(target)=>{if(!valid()||!pinned?.chatUrl||target!==pinned.chatUrl)throw Error('未核对的聊天链接');await this.applicationLoad(tab,target);},
+      reload:async()=>{if(!valid()||!pinned?.chatUrl||new URL(wc.getURL()).pathname!=='/web/geek/chat')throw Error('无法核对当前聊天页面');await this.applicationLoad(tab,wc.getURL());},
+      dispose:keep=>{if(keep){tab.owner=undefined;tab.notice='本次投递操作已结束，请在会话中核对结果。';this.publishState();}else this.closeTab(tab.id);},
+    };
+  }
+  private async applicationLoad(tab:BrowserTab,url:string):Promise<void>{
+    const wc=tab.view.webContents;let timer:ReturnType<typeof setTimeout>|undefined;let onReady=()=>{};
+    try{
+      const ready=new Promise<void>(resolve=>{onReady=()=>resolve();wc.once('dom-ready',onReady);});
+      const load=this.loadTab(tab,url);void load.catch(()=>{});
+      await Promise.race([ready,load,new Promise<never>((_,reject)=>{timer=setTimeout(()=>{if(!wc.isDestroyed())wc.stop();reject(Error('BOSS 页面加载超时'));},12000);})]);
+    }finally{clearTimeout(timer);wc.removeListener('dom-ready',onReady);}
+  }
   async taskBrowser(owner:string,operation:"open"|"snapshot"|"search"|"click"|"next",input:{url?:string;ref?:string;query?:string},signal:AbortSignal,ms:number):Promise<RetrievalSnapshot>{
     const deadline=Date.now()+Math.min(ms,10000);let tab=this.ownedTab(owner);
     const remaining=()=>Math.max(1,deadline-Date.now());
