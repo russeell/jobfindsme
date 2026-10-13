@@ -1006,9 +1006,12 @@ def test_next_action_can_be_created_without_preparation_and_rejects_stale_create
     assert after["preparation"]["due_date"] == "2026-10-14"
     assert after["job"] == before["job"]
     assert tracking.tracking_states(workspace.workspace_id, [job.job_id]) == flags
-    assert JobPreparationService(Database(database.path)).get(
-        workspace.workspace_id, job.job_id
-    ) == after
+    assert (
+        JobPreparationService(Database(database.path)).get(
+            workspace.workspace_id, job.job_id
+        )
+        == after
+    )
 
 
 def test_next_action_completion_undo_is_scoped_atomic_and_preserves_application(
