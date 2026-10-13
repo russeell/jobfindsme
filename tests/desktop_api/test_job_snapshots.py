@@ -955,6 +955,62 @@ def test_application_record_trash_is_scoped_reversible_and_preserves_tracking(tm
     )
 
 
+@pytest.mark.parametrize("applied", [False, True])
+def test_next_action_can_be_created_without_preparation_and_rejects_stale_creates(
+    tmp_path, applied
+):
+    from fastapi.testclient import TestClient
+
+    from jobfindsme.desktop_api.app import create_app
+    from jobfindsme.search.preparation import JobPreparationService
+
+    database, workspace, jobs, tracking = _services(tmp_path)
+    job = _job(998)
+    jobs.upsert(workspace.workspace_id, job)
+    tracking.set_tracking(
+        workspace_id=workspace.workspace_id,
+        job_id=job.job_id,
+        event_type="applied" if applied else "saved",
+    )
+    flags = tracking.tracking_states(workspace.workspace_id, [job.job_id])
+    client = TestClient(create_app(token="fixture-token", database_path=database.path))
+    headers = {"Authorization": "Bearer fixture-token"}
+    url = f"/v1/jobs/{job.job_id}/next-action"
+    payload = dict(
+        workspace_id=workspace.workspace_id,
+        expected_updated_at=None,
+        next_action=" 跟进投递 " if applied else " 准备面试 ",
+        due_date="2026-10-13",
+    )
+    assert client.patch(url, json=payload).status_code == 401
+    assert client.patch(url, headers=headers, json=payload).status_code == 200
+    assert client.patch(url, headers=headers, json=payload).status_code == 409
+    service = JobPreparationService(database)
+    before = service.get(workspace.workspace_id, job.job_id)
+    preparation = before["preparation"]
+    assert preparation["stage"] == ("applied" if applied else "considering")
+    assert preparation["next_action"] == payload["next_action"].strip()
+    assert preparation["resume_version_id"] is None and preparation["note"] == ""
+    # Rescheduling only the reminder keeps the rest of the opportunity unchanged.
+    response = client.patch(
+        url,
+        headers=headers,
+        json={
+            **payload,
+            "expected_updated_at": preparation["updated_at"],
+            "due_date": "2026-10-14",
+        },
+    )
+    assert response.status_code == 200
+    after = response.json()
+    assert after["preparation"]["due_date"] == "2026-10-14"
+    assert after["job"] == before["job"]
+    assert tracking.tracking_states(workspace.workspace_id, [job.job_id]) == flags
+    assert JobPreparationService(Database(database.path)).get(
+        workspace.workspace_id, job.job_id
+    ) == after
+
+
 def test_next_action_completion_undo_is_scoped_atomic_and_preserves_application(
     tmp_path,
 ):

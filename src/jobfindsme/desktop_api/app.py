@@ -285,7 +285,7 @@ class JobPreparationRequest(StrictResponse):
 
 class NextActionRequest(StrictResponse):
     workspace_id: str
-    expected_updated_at: str = Field(min_length=1, max_length=80)
+    expected_updated_at: str | None = Field(min_length=1, max_length=80)
     next_action: str = Field(max_length=200)
     due_date: str | None = None
 

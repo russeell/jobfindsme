@@ -109,11 +109,11 @@ class JobPreparationService:
         workspace_id: str,
         job_id: str,
         *,
-        expected_updated_at: str,
+        expected_updated_at: str | None,
         next_action: str,
         due_date: str | None = None,
     ) -> dict:
-        """Complete/undo a reminder without changing application or resume state."""
+        """Arrange/complete a reminder without changing application or resume state."""
         job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
         if len(next_action) > 200:
             raise ValueError("next action is too long")
@@ -125,10 +125,25 @@ class JobPreparationService:
                 "SELECT * FROM job_preparations WHERE workspace_id=? AND job_id=?",
                 (workspace_id, job_id),
             ).fetchone()
-            if not row:
-                raise LookupError("preparation not found")
-            if row["updated_at"] != expected_updated_at:
+            if (row["updated_at"] if row else None) != expected_updated_at:
                 raise ValueError("待办已在其他操作中更新，请重新读取后再操作。")
+            if not row:
+                applied = db.execute(
+                    "SELECT applied FROM job_tracking_flags "
+                    "WHERE workspace_id=? AND job_id=?",
+                    (workspace_id, job_id),
+                ).fetchone()
+                db.execute(
+                    "INSERT INTO job_preparations"
+                    "(workspace_id,job_id,stage,updated_at) "
+                    "VALUES(?,?,?,?)",
+                    (
+                        workspace_id,
+                        job_id,
+                        "applied" if applied and applied["applied"] else "considering",
+                        datetime.now(UTC).isoformat(),
+                    ),
+                )
             db.execute(
                 "UPDATE job_preparations SET next_action=?,due_date=?,updated_at=? "
                 "WHERE workspace_id=? AND job_id=?",

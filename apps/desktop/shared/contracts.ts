@@ -221,7 +221,7 @@ export type JobTrackingInput = {
   enabled?: boolean;
 };
 export type PreparationStage="considering"|"applied"|"interview"|"offer"|"closed";
-export type NextActionInput={workspace_id:string;job_id:string;expected_updated_at:string;next_action:string;due_date:string|null};
+export type NextActionInput={workspace_id:string;job_id:string;expected_updated_at:string|null;next_action:string;due_date:string|null};
 export type JobPreparationInput={workspace_id:string;job_id:string;stage:PreparationStage;next_action:string;due_date:string|null;note:string};
 export type JobPreparation=JobPreparationInput&{resume_version_id:string|null;updated_at:string|null};
 export type JobPreparationData={job:SearchResultItem["job"];preparation:JobPreparation};
