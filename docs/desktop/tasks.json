@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D196",
   "tasks": [
     {
       "id": "D01",
@@ -3419,6 +3419,29 @@
         "docs/desktop/HANDOFF.md"
       ],
       "verification": "cb07813贯通每个版本的模板、草稿和导出；cb59ee7保护选段AI无实质修改与明确数字/日期/部分新增事实；54d2b7e修复归档原件错误转换与取消导出误报。66项Python、52项桌面针对性回归、构建/typecheck及相关Ruff通过；最终清洁macOS载荷54d2b7e包审计/冻结HTTP/CA通过。1000×740原生隔离窗口验证模板变化一次撤销、重启草稿与正式保存、旧校招材料不被当前紧凑稿覆盖、AI无变化/改数字拦截及有效建议显式采用、真实保存框Word/PDF及归档原件两个入口导出/取消反馈；导出文本/顺序/颜色/字号/粗体与原件逐字节核对。冻结API+真实DesktopApiClient+附件生成验证旧版本模板、归档原件和工作区隔离；不上传。模型传输使用仅接收虚构选段的本地替身，真实函数以本地HTTP样本测试，不代表DeepSeek生成质量。没有真实招聘访问、付费模型、真实投递或发布；正式下载包仍v0.15.3。",
+      "blocker": null
+    },
+    {
+      "id": "D196",
+      "title": "发布包含D195修复的v0.15.4两端安装包",
+      "status": "in_progress",
+      "depends_on": [
+        "D195"
+      ],
+      "scope": [
+        "GitHub代码同步与版本标识更新",
+        "macOS/Windows同提交打包、审计与实际包内流程验收",
+        "发布后重新下载核对来源提交/版本/校验与功能"
+      ],
+      "acceptance": [
+        "两包包含模板随版本保存、选段保护、归档原件与导出反馈修复",
+        "两端实际包验证编辑、草稿重启、Word/PDF、旧材料与归档原件",
+        "公开下载链接与校验可用"
+      ],
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "verification": "进行中",
       "blocker": null
     }
   ]

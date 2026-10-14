@@ -17,7 +17,53 @@ function fixture(command){
  console.log(result.stdout);
 }
 fixture('create');
-let workspaceId,savedResumeId,originalSource;
+let workspaceId,savedResumeId,campusResumeId,originalVersionId,originalSource;
+async function chooseTemplate(window,name){
+ await window.getByRole('button',{name:'模板与排版',exact:true}).click();
+ await window.getByRole('button',{name:new RegExp(`^${name}`)}).click();
+ await window.getByRole('button',{name:'完成',exact:true}).click();
+}
+async function assertTemplate(window,name){
+ await window.getByRole('button',{name:'模板与排版',exact:true}).click();
+ assert.equal(await window.getByRole('button',{name:new RegExp(`^${name}`)}).getAttribute('aria-pressed'),'true');
+ await window.getByRole('button',{name:'完成',exact:true}).click();
+}
+async function checkJobExports(app,window){
+ await window.evaluate(async({workspace,original})=>window.jobfindsme.hideResumeVersion(workspace,original),{workspace:workspaceId,original:originalVersionId});
+ assert.equal(await window.evaluate(async({workspace,original})=>(await window.jobfindsme.listResumeVersions(workspace)).some(row=>row.version_id===original),{workspace:workspaceId,original:originalVersionId}),false);
+ for(const [slug,id] of [['old-campus',campusResumeId],['archived-original',originalVersionId]]){
+  const title=`Fictional ${slug} role`;
+  await window.evaluate(async({workspace,id,title,slug})=>{
+   // This validates/stores explicit JD input only. The manual source has no
+   // browser mapping; never navigate to or fetch these fictional URLs.
+   const job=await window.jobfindsme.prepareResearchJob({workspace_id:workspace,url:`https://careers.tencent.com/job/d195-fixture-${slug}`,title,company:'Example Company (fictional)',description:'Fictional local packaging fixture. Develop and evaluate Python APIs. '.repeat(8)});
+   await window.jobfindsme.saveApplicationRecord({workspace_id:workspace,job_id:job.job_id,record_id:`fixture-${slug}`,resume_version_id:id,message:'Fictional packaging test only.',status:'prepared'});
+  },{workspace:workspaceId,id,title,slug});
+  await window.getByRole('button',{name:'岗位管理',exact:true}).click();
+  await window.getByRole('button',{name:title,exact:true}).click();
+  const name=slug==='old-campus'?'old-campus.pdf':'archived-job-original.pdf';
+  await app.evaluate(({dialog},filePath)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath});},path.join(resumeFolder,name));
+  await window.getByRole('button',{name:'导出简历',exact:true}).click();
+  await window.getByText('已导出此岗位选用的简历。',{exact:true}).waitFor({state:'visible'});
+  if(slug==='archived-original'){
+   await app.evaluate(({dialog})=>{dialog.showSaveDialog=async()=>({canceled:true});});
+   await window.getByRole('button',{name:'导出简历',exact:true}).click();
+   await window.getByText('已导出此岗位选用的简历。',{exact:true}).waitFor({state:'hidden'});
+   await window.getByRole('button',{name:'准备投递 →',exact:true}).click();
+   assert.equal(await window.getByRole('combobox',{name:'投递使用的简历',exact:true}).inputValue(),id);
+   await app.evaluate(({dialog},filePath)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath});},path.join(resumeFolder,'archived-material-original.pdf'));
+   await window.getByRole('button',{name:'导出简历',exact:true}).click();
+   await window.getByText('已导出所选简历。',{exact:true}).waitFor({state:'visible'});
+   await app.evaluate(({dialog})=>{dialog.showSaveDialog=async()=>({canceled:true});});
+   await window.getByRole('button',{name:'导出简历',exact:true}).click();
+   await window.getByText('已导出所选简历。',{exact:true}).waitFor({state:'hidden'});
+  }
+  await window.getByRole('button',{name:'关闭岗位准备',exact:true}).click();
+ }
+ fixture('verify-layouts');
+ await window.getByRole('button',{name:'我的简历',exact:true}).click();
+ await checkEditor(window);await assertTemplate(window,'极简紧凑');
+}
 async function checkEditor(window){
  const editor=window.getByRole('textbox',{name:'简历文档编辑器',exact:true});
  await editor.waitFor({state:'visible'});
@@ -55,6 +101,11 @@ for(let attempt=0;attempt<2;attempt++){
   }
   assert.ok(data?.workspaces,`Backend never became ready: ${lastError}`);
   assert.ok(data.workspaces.length>0);assert.equal(data.sources.length,4);
+  const quality=await app.evaluate(()=>{
+   const {resumeSelectionQuality}=require(require('node:path').join(process.resourcesPath,'app/dist-electron/shared/resume-selection-quality.js'));
+   return ['Python API evaluation: 200 cases, accuracy 91%.','Python API evaluation: 200 cases, accuracy 99%.','Python API assessment: 200 cases, accuracy 91%.'].map(text=>resumeSelectionQuality('Python API evaluation: 200 cases, accuracy 91%.',text,'resume_rewrite'));
+  });
+  assert.deepEqual(quality,['unchanged','facts_changed','ok'],'Shipped quality guard must include D195');
   if(attempt===0)workspaceId=data.workspaces[0].workspace_id;
   else assert.equal(data.workspaces[0].workspace_id,workspaceId,'Workspace must survive restart');
   // Exercise pin persistence in the actual packaged renderer and SQLite bridge.
@@ -98,8 +149,9 @@ for(let attempt=0;attempt<2;attempt++){
     const versions=await window.jobfindsme.listResumeVersions(workspace);
     const current=versions.find(row=>row.is_current);
     const source=await window.jobfindsme.resumeSource({workspace_id:workspace,document_id:current.source_document_id});
-    return {...source,document_id:current.source_document_id};
+    return {...source,document_id:current.source_document_id,version_id:current.version_id};
    },workspaceId);
+   originalVersionId=originalSource.version_id;
    assert.deepEqual(Buffer.from(originalSource.content_base64,'base64'),readFileSync(path.join(resumeFolder,'fictional.pdf')));
    await window.getByRole('button',{name:'编辑副本',exact:true}).click();
    const editor=await checkEditor(window);
@@ -107,9 +159,12 @@ for(let attempt=0;attempt<2;attempt++){
    await editor.press(mac?'Meta+End':'Control+End');
    await editor.press('End');
    await window.keyboard.type(' Packaged edit');
+   await chooseTemplate(window,'校园清新');
    await window.getByRole('button',{name:'保存',exact:true}).click();
    await window.getByText('修改已保存。',{exact:true}).waitFor({state:'visible'});
    savedResumeId=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current).version_id,workspaceId);
+   campusResumeId=savedResumeId;
+   assert.equal(await window.evaluate(async({workspace,id})=>(await window.jobfindsme.getResumeVersion(workspace,id)).document.attrs.template,{workspace:workspaceId,id:campusResumeId}),'campus');
    await exportFiles(app,window,'export');
    fixture('verify');
    // Also exercise Word parsing in the frozen runtime, then restore the edited
@@ -124,6 +179,7 @@ for(let attempt=0;attempt<2;attempt++){
    const restored=await window.evaluate(async({workspace,id})=>window.jobfindsme.restoreResumeVersion(workspace,id),{workspace:workspaceId,id:savedResumeId});
    assert.notEqual(restored.version_id,savedResumeId,'Restoring history creates a new version without rewriting the old one');
    assert.ok(JSON.stringify(restored.document).includes('Packaged edit'));
+   assert.equal(restored.document.attrs.template,'campus');
    savedResumeId=restored.version_id;
    await window.reload();
    await window.getByRole('button',{name:'我的简历',exact:true}).click();
@@ -156,6 +212,10 @@ for(let attempt=0;attempt<2;attempt++){
    await window.screenshot({path:path.join(output,'smoke-focus.png')});
    await editor.press('Escape');
    await window.getByRole('dialog',{name:'专注简历编辑',exact:true}).waitFor({state:'detached'});
+   await chooseTemplate(window,'极简紧凑');
+   await window.getByRole('button',{name:'撤销',exact:true}).click();
+   await assertTemplate(window,'校园清新');
+   await chooseTemplate(window,'极简紧凑');
    await editor.click();
    await editor.press(mac?'Meta+End':'Control+End');
    await editor.press('End');
@@ -165,9 +225,11 @@ for(let attempt=0;attempt<2;attempt++){
    const saved=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
    assert.equal(saved.version_id,savedResumeId);
    assert.ok(!JSON.stringify(saved.document).includes('Recovered draft'),'Unsaved draft must not overwrite saved version');
+   assert.equal(saved.document.attrs.template,'campus');
   }else{
    await window.getByText('已恢复本机未保存的草稿。',{exact:true}).waitFor({state:'visible'});
    assert.ok((await editor.textContent()).includes('Recovered draft'),'Unsaved draft must survive actual app restart');
+   await assertTemplate(window,'极简紧凑');
    const saved=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
    assert.equal(saved.version_id,savedResumeId,'Draft recovery must not silently save a version');
    await editor.click();
@@ -177,6 +239,7 @@ for(let attempt=0;attempt<2;attempt++){
    const recovered=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
    assert.notEqual(recovered.version_id,savedResumeId);
    assert.ok(JSON.stringify(recovered.document).includes('Recovered draft'));
+   assert.equal(recovered.document.attrs.template,'compact');
    assert.equal(await window.evaluate(({workspace,id})=>localStorage.getItem(`jfm.resume.document-draft.${workspace}.${id}`),{workspace:workspaceId,id:savedResumeId}),null,'Saved draft cache must be removed');
    await exportFiles(app,window,'recovered');
    fixture('verify-draft');
@@ -184,6 +247,7 @@ for(let attempt=0;attempt<2;attempt++){
    await window.waitForFunction(()=>document.querySelector('.resume-pdf-page canvas')?.width>400);
    await window.getByRole('button',{name:'编辑',exact:true}).click();
    await checkEditor(window);
+   await checkJobExports(app,window);
   }
   const source=await window.evaluate(input=>window.jobfindsme.resumeSource(input),{workspace_id:workspaceId,document_id:originalSource.document_id});
   assert.equal(source.content_base64,originalSource.content_base64,'Original must remain unchanged');

@@ -52,9 +52,9 @@ My Resume is the central place to maintain and improve your resume. Import **PDF
 
 - **Focus on writing**: grouped controls for undo, bold, font size, color, alignment and lists. Clear selected formatting and restore it with one undo. Focus mode gives the document more space; `Esc` returns.
 - **Resume interrupted work**: unsaved drafts stay on your computer and recover after restarting. Save with `⌘S / Ctrl+S` and keep typing; page preview and Word / PDF exports use your saved edits.
-- **AI beside your document**: a collapsible resume assistant helps with selected text or the whole resume, reusing the JD and your experience. Review before accepting; an outdated suggestion cannot overwrite text you have since edited. Keep your base resume and job-specific drafts separately.
-- **Layouts for different stages**: professional, graduate and compact layouts change section order and density. Preview continuous pages and export Word or PDF.
-- **Reuse with each job**: the linked resume continues into interview preparation and application materials.
+- **AI beside your document**: a collapsible resume assistant helps with selected text or the whole resume, reusing the JD and your experience. Unchanged selected-text suggestions leave the original in place; changes to numbers, dates and some explicit facts are blocked, but your review is still needed. An outdated suggestion cannot overwrite text you have since edited. Keep your base resume and job-specific drafts separately.
+- **Layouts for different stages**: professional, graduate and compact layouts change section order and density. Each version saves its layout, which carries into page previews and Word / PDF exports.
+- **Reuse with each job**: the linked resume continues into interview preparation and application materials. Older materials retain their chosen version and layout; archived originals can still be exported unchanged.
 
 ![My Resume: text colors, font sizes, paragraph alignment and direct editing](docs/images/jobfindsme-resume-editor.png)
 

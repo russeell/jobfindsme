@@ -25,6 +25,16 @@ def create(folder: Path) -> None:
     pdf.setFont("Helvetica", 10)
     pdf.setFillColorRGB(0.1, 0.3, 0.8)
     pdf.drawString(50, 690, "Python FastAPI")
+    pdf.setFillColorRGB(0.15, 0.2, 0.25)
+    for heading, text, y in (
+        ("Education", "Example University", 650),
+        ("Projects", "Example Project", 590),
+        ("Experience", "Example Engineering", 530),
+    ):
+        pdf.setFont("Helvetica-Bold", 14)
+        pdf.drawString(50, y, heading)
+        pdf.setFont("Helvetica", 10)
+        pdf.drawString(50, y - 20, text)
     pdf.save()
     word = Document()
     run = word.add_paragraph().add_run("Word Candidate")
@@ -53,6 +63,7 @@ def verify(folder: Path, recovered: bool = False) -> None:
     )
     assert name.bold and name.font.size.pt == 24
     assert str(name.font.color.rgb) == "1A334C"
+    assert abs(word.sections[0].left_margin.mm - (16.5 if recovered else 20)) < 0.1
     reader = PdfReader(folder / f"{prefix}.pdf")
     assert len(reader.pages) == 1
     assert "Packaged edit" in reader.pages[0].extract_text()
@@ -84,8 +95,31 @@ def verify(folder: Path, recovered: bool = False) -> None:
     print("Packaged Word/PDF exports retain edited text, colors and font sizes")
 
 
+def verify_layouts(folder: Path) -> None:
+    for name, campus in (("export", True), ("recovered", False), ("old-campus", True)):
+        text = "\n".join(
+            page.extract_text() for page in PdfReader(folder / f"{name}.pdf").pages
+        )
+        expected = (
+            ["Example University", "Example Project", "Example Engineering"]
+            if campus
+            else ["Example Engineering", "Example Project", "Example University"]
+        )
+        positions = [text.index(marker) for marker in expected]
+        assert positions == sorted(positions), f"Wrong layout in {name}"
+        assert ("Recovered draft" in text) == (name == "recovered")
+    original = (folder / "fictional.pdf").read_bytes()
+    for name in ("archived-job-original.pdf", "archived-material-original.pdf"):
+        assert (folder / name).read_bytes() == original
+    print(
+        "Versioned layout, old job materials and byte-exact archived originals passed"
+    )
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "verify-draft":
         verify(Path(sys.argv[2]), recovered=True)
     else:
-        {"create": create, "verify": verify}[sys.argv[1]](Path(sys.argv[2]))
+        {"create": create, "verify": verify, "verify-layouts": verify_layouts}[
+            sys.argv[1]
+        ](Path(sys.argv[2]))
