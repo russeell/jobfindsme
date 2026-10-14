@@ -5,6 +5,8 @@ export function userError(error:unknown):UserError {
  if(text.includes('待办已在其他操作中更新'))return {kind:'unknown',message:'待办已更新，已重新读取。请核对最新内容后再操作。',action:'retry'};
  if(text.includes('greeting_polish:identity'))return {kind:'service',message:'模型遗漏或改动了当前岗位名称，原文已保留，请重试。',action:'retry'};
  if(text.includes('greeting_polish:unchanged'))return {kind:'service',message:'模型没有给出实际修改，原文已保留。可以换一个润色方向，或直接编辑。',action:'retry'};
+ if(text.includes('resume_polish:unchanged'))return {kind:'service',message:'这段内容没有实质修改，已保留原文。',action:'retry'};
+ if(text.includes('resume_polish:facts_changed'))return {kind:'service',message:'建议改动了数字、日期或新增明确经历事实，原文已保留。请核对事实后直接编辑正文。',action:'retry'};
  if(text.includes('greeting_polish:placeholders'))return {kind:'service',message:'模型错误改动了公司或岗位占位符，原文已保留，请重试。',action:'retry'};
  const greeting=text.match(/greeting_polish:(cancelled|timeout|incomplete|credentials)/)?.[1];
  if(greeting){const message={cancelled:'已停止润色，原文已保留。',timeout:'润色等待超时，原文已保留，可以重试。',incomplete:'模型回复不完整，原文已保留；可缩短文字后重试，或更换模型。',credentials:'模型密钥不可用，请到模型设置检查连接。'}[greeting];return {kind:'service',message:message!,action:'retry'};}

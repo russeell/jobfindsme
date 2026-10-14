@@ -24,7 +24,7 @@ test('IPC-wrapped cancellation and timeout retain precise recovery messages',asy
 test('resume selection mode sends only selected text with a separate fact-preserving instruction',async()=>fixture(async(connection,received)=>{
  await polishGreeting(connection,'','负责虚构项目的接口实现',new AbortController().signal,'resume_shorten');
  const body=received();assert.equal(body.messages.at(-1).content,'负责虚构项目的接口实现');assert.match(body.messages[0].content,/简历选段编辑/);assert.match(body.messages[0].content,/不新增/);assert.ok(!body.tools?.length);assert.ok(body.max_tokens<=1400||body.max_completion_tokens<=1400);
-}));
+},'stop','实现虚构项目接口'));
 
 test('DeepSeek short edits explicitly disable its default thinking mode without changing other providers',async()=>{
  const {editingModel}=await import('../dist-electron/main/research/greeting-polish.mjs');
@@ -78,3 +78,11 @@ test('a targeted greeting reuses selected redacted materials and preserves the e
 test('a targeted rewrite cannot erase an explicit company or rename the role',async()=>fixture(async connection=>{
  await assert.rejects(polishGreeting(connection,'','您好，想了解示例公司的「Agent/云平台/端侧研发」。',new AbortController().signal,'greeting','direct',{company:'示例公司',title:'Agent/云平台/端侧研发',description:'',resume:''}),/greeting_polish:identity/);
 },'stop','您好，对贵公司的AI工程师岗位感兴趣，方便沟通吗？'));
+
+for(const [output,code] of [['参与 Python 接口开发，准确率91%。','unchanged'],['主导 Python 接口开发，准确率97%。','facts_changed']])test(`resume provider result is guarded before returning: ${code}`,async()=>fixture(async connection=>{
+ await assert.rejects(polishGreeting(connection,'','参与 Python 接口开发，准确率91%。',new AbortController().signal,'resume_rewrite'),new RegExp(`resume_polish:${code}`));
+},'stop',output));
+test('a meaningful selected resume edit preserves explicit facts and returns once',async()=>fixture(async(connection,received)=>{
+ const result=await polishGreeting(connection,'','使用 Python 完成200条评测，准确率91%。',new AbortController().signal,'resume_shorten');
+ assert.equal(result,'Python评测共200条，准确率91%。');assert.ok(!received().tools?.length);
+},'stop','Python评测共200条，准确率91%。'));

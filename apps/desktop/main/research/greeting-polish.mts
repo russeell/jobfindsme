@@ -3,6 +3,7 @@ import type {ModelConnection} from '../../shared/contracts.js';
 import {modelFor} from './model-config.mjs';
 import type {StreamFunction} from '@earendil-works/pi-ai';
 import {normalizeContext} from '@earendil-works/pi-ai';
+import {resumeSelectionQuality} from '../../shared/resume-selection-quality.js';
 // DeepSeek defaults to thinking; short editing requests explicitly turn it off.
 export function editingModel(connection:ModelConnection){
  const model=modelFor(connection);
@@ -33,6 +34,9 @@ export async function polishGreeting(connection:ModelConnection,apiKey:string,me
   if(normalize(text)===normalize(message))throw Error('greeting_polish:unchanged');
   if(['{公司}','{岗位}'].some(token=>message.includes(token)!==text.includes(token)))throw Error('greeting_polish:placeholders');
   if(context&&(!text.includes(context.title)||(message.includes(context.company)&&!text.includes(context.company))))throw Error('greeting_polish:identity');
+ }else{
+  const quality=resumeSelectionQuality(message,text,purpose);
+  if(quality!=='ok')throw Error(`resume_polish:${quality}`);
  }
  return text;
 }
