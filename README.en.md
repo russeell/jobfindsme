@@ -89,7 +89,7 @@ Choose a resume and an opening message before applying; reopen the job to restor
 
 Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. The download currently supports assisted preparation, without bulk applications.
 
-The development build is validating **single-job BOSS applications**: restore your chosen resume and message, review the specific job, account and actual attachment, then confirm execution once. Message and attachment results are checked separately; duplicate clicks are coalesced and reservations survive restarts. Verification, rate limits or uncertain results stop execution without automatic retries. Isolated tests are connected; native-window and live-platform delivery validation remain unfinished. This capability is not available in the published download yet.
+The development build is validating **single-job BOSS applications**: restore your chosen resume and message, review the specific job, account and actual attachment, then confirm execution once. Message and attachment results are checked separately; duplicate clicks are coalesced and reservations survive restarts. Verification, rate limits or uncertain results stop execution without automatic retries. Confirmation, stopping and restart recovery passed in an isolated macOS window, and the read-only preview passed on a real BOSS page. Live uploads and delivery remain unverified. This capability is not available in the published download yet.
 
 ## Get started in three steps
 
