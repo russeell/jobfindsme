@@ -119,7 +119,7 @@ export class DesktopApiClient {
   }
 
   finalizeSearch(workspaceId:string,runId:string):Promise<SearchResultPage>{return this.json(`/v1/search-runs/${runId}/finalize`,{method:"POST",body:JSON.stringify({workspace_id:workspaceId})});}
-  agentResume(workspaceId:string,jobId?:string,resumeVersionId?:string):Promise<{source_version_id:string;text:string;limitations:string}>{return this.json(`/v1/research-agent/resume?${new URLSearchParams({workspace_id:workspaceId,...(jobId?{job_id:jobId}:{}),...(resumeVersionId?{resume_version_id:resumeVersionId}:{})})}`);}
+  agentResume(workspaceId:string,jobId?:string,resumeVersionId?:string):Promise<ResumeAnalysisMaterial>{return this.json(`/v1/research-agent/resume?${new URLSearchParams({workspace_id:workspaceId,...(jobId?{job_id:jobId}:{}),...(resumeVersionId?{resume_version_id:resumeVersionId}:{})})}`);}
   findAgentLocalJobs(workspaceId:string,title:string):Promise<Array<{job_id:string;title:string;company:string;has_description:boolean}>>{return this.json(`/v1/research-agent/local-jobs?${new URLSearchParams({workspace_id:workspaceId,title})}`);}
   proposeAgentResume(input:unknown):Promise<{session_id:string}>{return this.json("/v1/research-agent/resume-proposal",{method:"POST",body:JSON.stringify(input)});}
   refilterSearch(workspaceId:string,runId:string,filters:unknown,pageSize:number):Promise<SearchResultPage>{return this.json(`/v1/search-runs/${runId}/refilter`,{method:"POST",body:JSON.stringify({workspace_id:workspaceId,filters,page_size:pageSize})});}
@@ -489,3 +489,4 @@ function apiErrorMessage(detail: unknown, status: number): string {
   }
   return `desktop API request failed (${status})`;
 }
+import type {ResumeAnalysisMaterial} from '../../shared/resume-contracts';

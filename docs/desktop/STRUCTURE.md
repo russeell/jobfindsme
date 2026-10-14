@@ -40,7 +40,7 @@ jobfindsme/
 | BOSS 确认投递 | `main/applications/` | `search/application_attempts.py`；独立受限执行、快照、低频、去重及分别核验消息/附件 |
 | 密钥与服务 | `main/security/secure-secret-store.ts`、`main/backend/python-service.ts`、`api-client.ts` | `desktop_api/app.py`；只监听本机并认证，密钥不进入日志/包/仓库 |
 
-`main/index.ts`、`renderer/src/App.tsx` 和 `desktop_api/app.py` 负责组装。新增逻辑优先放在对应业务模块，保持已有 IPC 名称、HTTP 路径与返回形状兼容。
+`main/index.ts`、`renderer/src/App.tsx` 和 `desktop_api/app.py` 负责组装。`main/ipc/register.ts`统一所有主窗口顶层frame调用来源检查，`ipc/resumes.ts`与`ipc/preparation.ts`注册简历和岗位材料；原preload名称保留。Python`desktop_api/resumes.py`与`schemas/resumes.py`独立维护16条简历路由和请求/响应，认证和原路径不变。TS简历契约在`shared/resume-contracts.ts`，由原`contracts.ts`兼容导出。新增逻辑优先放在对应业务模块，保持已有 IPC 名称、HTTP 路径与返回形状兼容。
 
 ## 简历、材料与版本
 

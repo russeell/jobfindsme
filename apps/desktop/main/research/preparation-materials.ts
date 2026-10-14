@@ -1,5 +1,6 @@
 /** Model-facing excerpts only. Never read raw files or mutate stored materials. */
-export type AnalysisResume = {source_version_id:string;text:string;limitations:string};
+import type {ResumeAnalysisMaterial} from '../../shared/resume-contracts';
+export type AnalysisResume = ResumeAnalysisMaterial;
 export type PreparationJob = {title?:unknown;description?:unknown};
 const sectionNames:Record<string,string>={experience:'工作经历',projects:'项目经历',skills:'技能描述',education:'教育经历'};
 const generic = new Set(['the','and','with','for','you','your','this','that','have','will','from','work','job','experience','required','requirements','工程','程师','工作','经验','岗位','要求','负责','能力','相关','项目','技术','参与','开发']);

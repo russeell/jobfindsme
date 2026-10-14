@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -9,6 +10,7 @@ import threading
 import time
 import urllib.request
 
+from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
 from jobfindsme.connectors import RawJobRecord
@@ -34,6 +36,11 @@ def test_desktop_api_rejects_missing_and_wrong_tokens(tmp_path) -> None:
         ).status_code
         == 401
     )
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            path = re.sub(r"\{[^}]+\}", "fixture", route.path)
+            for method in route.methods:
+                assert client.request(method, path).status_code == 401, (method, path)
 
 
 def test_bootstrap_reads_real_core_and_enforces_source_gates(tmp_path) -> None:

@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D200",
+  "current_task": "D201",
   "tasks": [
     {
       "id": "D01",
@@ -2480,7 +2480,7 @@
     {
       "id": "D200",
       "title": "按业务整理简历材料IPC/API边界",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D199"
       ],
@@ -2493,7 +2493,7 @@
         "既有API与IPC兼容，工作区与来源校验不弱化",
         "当前/旧库、原件、材料、取消与导出保持正确"
       ],
-      "verification": "待实现",
+      "verification": "22个简历/材料IPC移至业务模块，93个原IPC名称保留，统一主窗口顶层frame来源检查。16条简历API与13个请求/响应契约拆出；离线OpenAPI完整比较完全相同。92项Python、15项桌面定向回归、全API未认证请求检查及构建/typecheck/Ruff通过；原件/归档/工作区/取消兼容。双端实际冻结包验收接D201。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
@@ -2502,7 +2502,7 @@
     {
       "id": "D201",
       "title": "整理可重复的发行依赖与验证流程",
-      "status": "pending",
+      "status": "in_progress",
       "depends_on": [
         "D200"
       ],

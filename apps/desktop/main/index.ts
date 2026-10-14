@@ -1,8 +1,10 @@
+import {createDesktopHandlerRegistrar} from './ipc/register';
+import {registerResumeHandlers} from './ipc/resumes';
+import {registerPreparationHandlers} from './ipc/preparation';
 import {isSourceVerificationBlocked} from "../shared/source-presentation";
 import {BossApplicationController} from './applications/boss-application';
 import {loadGreetingContext,validGreetingTarget} from "./research/greeting-context";
 import type {GreetingPolishInput} from "../shared/contracts";
-import {createResumePreview} from "./resume-preview";
 import {createPublicRetrieval} from "./research/public-retrieval";
 import {collectChatAttachments} from "./research/chat-attachments";
 import {foregroundZhilianVerification} from "./sources/source-actions";
@@ -30,7 +32,7 @@ import {ResearchRunController} from "./research/run-controller";
 import {explicitReportRequest,validResearchChatInput} from "../shared/research-chat-ipc";
 import { isAllowedSourceUrl, sourceBrowserSpecs, isSourceBrowserId, requiresElectronSourceSearch, summarizeSourceVerification, sourceSearchVerification, type SourceBrowserBounds } from "../shared/source-browser-policy";
 import type {
-  ModelConnectionInput, ResumeConfirmation, ResumeEditInput, ResumeExportInput,
+  ModelConnectionInput,
   PromptPatchDecision, PromptSessionInput, PromptTurnInput, SourceSearchInput,
   BrowserSourcePage, ResearchRunInput, ScheduledTaskInput, SourceCapability,
   ResearchChatInput,
@@ -53,6 +55,11 @@ if(!ownsInstance)app.exit(0);
 let apiClient: DesktopApiClient | undefined;
 let bossApplications:BossApplicationController|undefined;
 let mainWindow: BrowserWindow | undefined;
+const handle=createDesktopHandlerRegistrar(ipcMain,()=>mainWindow?.webContents);
+function requireApiClient():DesktopApiClient{if(!apiClient)throw Error('desktop API is not ready');return apiClient;}
+function requireMainWindow():BrowserWindow{if(!mainWindow||mainWindow.isDestroyed())throw Error('desktop window is not ready');return mainWindow;}
+registerResumeHandlers(handle,{client:requireApiClient,window:requireMainWindow,dialog});
+registerPreparationHandlers(handle,requireApiClient);
 app.on("second-instance",()=>{if(mainWindow){if(mainWindow.isMinimized())mainWindow.restore();mainWindow.show();mainWindow.focus();}});
 let serviceStatus: ServiceStatus = {
   connected: false,
@@ -244,12 +251,12 @@ function matchingClient(event: Electron.IpcMainInvokeEvent) {
   if(event.sender !== mainWindow?.webContents || !apiClient) throw new Error("matching unavailable");
   return apiClient;
 }
-ipcMain.handle("desktop:matching-rules",(event,workspaceId:string)=>matchingClient(event).matchingRules(workspaceId));
-ipcMain.handle("desktop:save-matching-rule",(event,input)=>matchingClient(event).saveMatchingRule(input));
-ipcMain.handle("desktop:delete-matching-rule",(event,workspaceId:string,ruleVersionId:string)=>matchingClient(event).deleteMatchingRule(workspaceId,ruleVersionId));
-ipcMain.handle("desktop:matching-trial",(event,input)=>matchingClient(event).matchingTrial(input));
-ipcMain.handle("desktop:matching-input",(event,workspaceId:string,runId:string)=>matchingClient(event).matchingInput(workspaceId,runId));
-ipcMain.handle("desktop:rerank-matching",async(event,workspaceId:string,runId:string)=>{
+handle("desktop:matching-rules",(event,workspaceId:string)=>matchingClient(event).matchingRules(workspaceId));
+handle("desktop:save-matching-rule",(event,input)=>matchingClient(event).saveMatchingRule(input));
+handle("desktop:delete-matching-rule",(event,workspaceId:string,ruleVersionId:string)=>matchingClient(event).deleteMatchingRule(workspaceId,ruleVersionId));
+handle("desktop:matching-trial",(event,input)=>matchingClient(event).matchingTrial(input));
+handle("desktop:matching-input",(event,workspaceId:string,runId:string)=>matchingClient(event).matchingInput(workspaceId,runId));
+handle("desktop:rerank-matching",async(event,workspaceId:string,runId:string)=>{
   const client=matchingClient(event);
   if(matchingRequest) throw new Error("已有匹配请求正在执行");
   const request={workspaceId,requestId:`matching-${randomUUID()}`,cancelled:false,started:false};matchingRequest=request;
@@ -263,17 +270,17 @@ ipcMain.handle("desktop:rerank-matching",async(event,workspaceId:string,runId:st
     return await client.rerankMatching({workspace_id:workspaceId,run_id:runId,request_id:request.requestId,api_key:apiKey || ""});
   } finally {if(matchingRequest===request)matchingRequest=undefined;}
 });
-ipcMain.handle("desktop:cancel-matching",async(event)=>{
+handle("desktop:cancel-matching",async(event)=>{
   const client=matchingClient(event),request=matchingRequest;if(!request)return;
   request.cancelled=true;
   if(request.started){await client.cancelMatching(request.workspaceId,request.requestId);}
 });
 
-ipcMain.handle("desktop:preview-matching", async (_event, input) => {
+handle("desktop:preview-matching", async (_event, input) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.previewMatching(input);
 });
-ipcMain.handle("desktop:get-bootstrap", async () => {
+handle("desktop:get-bootstrap", async () => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.bootstrap();
 });
@@ -297,65 +304,40 @@ async function runDesktopSearch(input:SourceSearchInput,signal?:AbortSignal){
     onSourceStatusChanged:()=>mainWindow?.webContents.send("desktop:source-status-changed")});
   }finally{signal?.removeEventListener("abort",abort);sourceSearchActive--;if(sourceSearchController===controller)sourceSearchController=undefined;}
 }
-ipcMain.handle("desktop:run-source-search",(event,input:SourceSearchInput)=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");return runDesktopSearch(input);});
+handle("desktop:run-source-search",(event,input:SourceSearchInput)=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");return runDesktopSearch(input);});
 
 let sourceSearchEpoch=0;
-ipcMain.handle("desktop:search-preflight",(event,input)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.searchPreflight(input);});
-ipcMain.handle("desktop:finalize-search",(event,workspaceId:string,runId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.finalizeSearch(workspaceId,runId);});
-ipcMain.handle("desktop:refilter-search",(event,workspaceId:string,runId:string,filters,pageSize:number)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.refilterSearch(workspaceId,runId,normalizeDiscoveryFilters(filters),pageSize);});
-ipcMain.handle("desktop:get-search-page", (event, workspaceId: string, runId: string, page: number, pageSize: number) => {
+handle("desktop:search-preflight",(event,input)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.searchPreflight(input);});
+handle("desktop:finalize-search",(event,workspaceId:string,runId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.finalizeSearch(workspaceId,runId);});
+handle("desktop:refilter-search",(event,workspaceId:string,runId:string,filters,pageSize:number)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("desktop API is not ready");return apiClient.refilterSearch(workspaceId,runId,normalizeDiscoveryFilters(filters),pageSize);});
+handle("desktop:get-search-page", (event, workspaceId: string, runId: string, page: number, pageSize: number) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.getSearchPage(workspaceId, runId, page, pageSize);
 });
-ipcMain.handle("desktop:set-job-tracking", (event, input) => {
+handle("desktop:set-job-tracking", (event, input) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.setJobTracking(input);
-});
-ipcMain.handle("desktop:list-application-records", (event, workspaceId:string, jobId?:string, deleted=false) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.listApplicationRecords(workspaceId,jobId,deleted);
-});
-ipcMain.handle("desktop:set-application-deleted", (event,workspaceId:string,jobId:string,recordId:string,deleted:boolean) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  if(typeof deleted!=="boolean")throw new Error("invalid record action");
-  return apiClient.setApplicationDeleted(workspaceId,jobId,recordId,deleted);
-});
-ipcMain.handle("desktop:save-application-record", (event,input) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.saveApplicationRecord(input);
 });
 function applicationController(){
   if(!apiClient||!sourceBrowserManager)throw Error('本地服务或浏览器尚未就绪');
   return bossApplications??=new BossApplicationController(apiClient,(owner,url)=>sourceBrowserManager!.applicationPage(owner,url),value=>mainWindow?.webContents.send('desktop:application-progress',value),reason=>{sourceBrowserManager?.boss.pause(reason);mainWindow?.webContents.send('desktop:source-status-changed');});
 }
-ipcMain.handle('desktop:preview-boss-application',(event,input)=>{
+handle('desktop:preview-boss-application',(event,input)=>{
   if(event.sender!==mainWindow?.webContents||!input||!['workspace_id','job_id','record_id'].every(key=>typeof input[key]==='string'&&input[key].length>0&&input[key].length<=200))throw Error('unauthorized application request');
   return applicationController().prepare(input);
 });
-ipcMain.handle('desktop:execute-boss-application',(event,input)=>{
+handle('desktop:execute-boss-application',(event,input)=>{
   if(event.sender!==mainWindow?.webContents||!input||input.confirmed!==true||typeof input.preview_id!=='string')throw Error('请明确确认本次投递');
   return applicationController().execute(input);
 });
-ipcMain.handle('desktop:cancel-boss-application',(event,id)=>{if(event.sender!==mainWindow?.webContents||typeof id!=='string')throw Error('unauthorized caller');return bossApplications?.cancel(id);});
-ipcMain.handle('desktop:list-application-attempts',(event,workspaceId:string,jobId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error('unauthorized caller');return apiClient.listApplicationAttempts(workspaceId,jobId);});
-ipcMain.handle("desktop:update-next-action", (event,input) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.updateNextAction(input);
-});
-ipcMain.handle("desktop:get-job-preparation", (event, workspaceId:string, jobId:string) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.getJobPreparation(workspaceId,jobId);
-});
-ipcMain.handle("desktop:save-job-preparation", (event,input) => {
-  if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
-  return apiClient.saveJobPreparation(input);
-});
-ipcMain.handle("desktop:list-job-tracking", (event, workspaceId: string) => {
+handle('desktop:cancel-boss-application',(event,id)=>{if(event.sender!==mainWindow?.webContents||typeof id!=='string')throw Error('unauthorized caller');return bossApplications?.cancel(id);});
+handle('desktop:list-application-attempts',(event,workspaceId:string,jobId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error('unauthorized caller');return apiClient.listApplicationAttempts(workspaceId,jobId);});
+handle("desktop:list-job-tracking", (event, workspaceId: string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !apiClient) throw new Error("desktop API is not ready");
   return apiClient.listJobTracking(workspaceId);
 });
-ipcMain.handle("desktop:get-service-status", () => serviceStatus);
-ipcMain.handle("desktop:open-source-browser", async (event, sourceId: string, bounds: SourceBrowserBounds) => {
+handle("desktop:get-service-status", () => serviceStatus);
+handle("desktop:open-source-browser", async (event, sourceId: string, bounds: SourceBrowserBounds) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager) {
     throw new Error("source browser is not available");
   }
@@ -472,7 +454,7 @@ async function recheckPersistedSessions():Promise<void>{
     }finally{clearTimeout(timer);sourceAutoCheckPending.delete(source.source_id);mainWindow?.webContents.send("desktop:source-status-changed");}
   }
 }
-ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
+handle("desktop:check-all-sources",async(event,runId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||!sourceBrowserManager||!/^[-a-zA-Z0-9]{8,80}$/.test(runId))throw Error("source verification is not available");
   if(sourceCheckController)throw Error("全部来源检查已在运行");
   if(sourceVerifyActive.size)throw Error("单个平台检查进行中，请结束后检查全部来源");
@@ -488,8 +470,8 @@ ipcMain.handle("desktop:check-all-sources",async(event,runId:string)=>{
     return results;
   }finally{if(sourceCheckController===controller)sourceCheckController=undefined;}
 });
-ipcMain.handle("desktop:cancel-all-source-checks",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceCheckController?.abort();});
-ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
+handle("desktop:cancel-all-source-checks",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceCheckController?.abort();});
+handle("desktop:verify-source", async (event, sourceId: string) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager || !apiClient) {
     throw new Error("source verification is not available");
   }
@@ -507,145 +489,57 @@ ipcMain.handle("desktop:verify-source", async (event, sourceId: string) => {
   finally{clearTimeout(timer);mainWindow?.webContents.send("desktop:source-status-changed");}
   }finally{sourceVerifyActive.delete(sourceId);}
 });
-ipcMain.handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceSearchController?.abort();sourceBrowserManager?.cancelBossSearch();sourceBrowserManager?.cancelCareerSearch();});
-ipcMain.handle("desktop:read-source-detail",async(event,sourceId:string,url:string,workspaceId?:string,jobId?:string)=>{
+handle("desktop:cancel-source-search",event=>{if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");sourceSearchEpoch++;sourceSearchController?.abort();sourceBrowserManager?.cancelBossSearch();sourceBrowserManager?.cancelCareerSearch();});
+handle("desktop:read-source-detail",async(event,sourceId:string,url:string,workspaceId?:string,jobId?:string)=>{
   if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||!isSourceBrowserId(sourceId)||typeof url!=="string")throw Error("unauthorized caller");
   const started=Date.now();
   const detail={...await sourceBrowserManager.readResearchJob(sourceId,url,undefined,21000,workspaceId),fetched_at:new Date().toISOString()};
   const job=workspaceId&&jobId?await apiClient.enrichSourceJob(workspaceId,jobId,detail):undefined;
   return {...detail,job,elapsed_ms:Date.now()-started};
 });
-ipcMain.handle("desktop:read-boss-detail",async(event,url:string,workspaceId?:string,jobId?:string)=>{
+handle("desktop:read-boss-detail",async(event,url:string,workspaceId?:string,jobId?:string)=>{
   if(event.sender!==mainWindow?.webContents||!sourceBrowserManager||!apiClient||typeof url!=="string")throw Error("unauthorized caller");
   try{const started=Date.now();const detail={...await sourceBrowserManager.readResearchJob("boss",url,undefined,21000,workspaceId),fetched_at:new Date().toISOString()};const job=workspaceId&&jobId?await apiClient.enrichBossJob(workspaceId,jobId,detail):undefined;return {...detail,job,elapsed_ms:Date.now()-started};}catch(error){const failure=sourceBrowserManager.boss.paused;if(failure){await apiClient.recordSourceRuntimeFailure("boss",failure,"BOSS 已暂停，请在平台原页处理");mainWindow?.webContents.send("desktop:source-status-changed");}throw error;}
 });
-ipcMain.handle("desktop:layout-source-browser", (event, bounds: SourceBrowserBounds | null) => {
+handle("desktop:layout-source-browser", (event, bounds: SourceBrowserBounds | null) => {
   if (event.sender !== mainWindow?.webContents) throw new Error("unauthorized caller");
   sourceBrowserManager?.layout(bounds);
 });
-ipcMain.handle("desktop:source-browser-command", (event, command: string) => {
+handle("desktop:source-browser-command", (event, command: string) => {
   if (event.sender !== mainWindow?.webContents || !["back", "forward", "reload", "stop", "state", "zoom-in", "zoom-out", "zoom-reset", "fit-width"].includes(command)) throw new Error("unauthorized browser command");
   return sourceBrowserManager?.command(command);
 });
-ipcMain.handle("desktop:select-browser-tab", (event,id:string) => {
+handle("desktop:select-browser-tab", (event,id:string) => {
   if(event.sender!==mainWindow?.webContents || !sourceBrowserManager)throw new Error("unauthorized caller");
   return sourceBrowserManager.selectTab(id);
 });
-ipcMain.handle("desktop:navigate-browser-tab", (event,id:string,url:string) => {
+handle("desktop:navigate-browser-tab", (event,id:string,url:string) => {
   if(event.sender!==mainWindow?.webContents || !sourceBrowserManager || typeof id!=="string" || typeof url!=="string")throw new Error("unauthorized browser navigation");
   return sourceBrowserManager.navigateTab(id,url);
 });
-ipcMain.handle("desktop:close-browser-tab", (event,id:string) => {
+handle("desktop:close-browser-tab", (event,id:string) => {
   if(event.sender!==mainWindow?.webContents || !sourceBrowserManager)throw new Error("unauthorized caller");
   return sourceBrowserManager.closeTab(id);
 });
-ipcMain.handle("desktop:close-source-browser", (event) => {
+handle("desktop:close-source-browser", (event) => {
   if (!mainWindow || event.sender !== mainWindow.webContents) return;
   sourceBrowserManager?.hide();
 });
-ipcMain.handle("desktop:open-job-original", async (event, sourceId: string, url: string, bounds: SourceBrowserBounds) => {
+handle("desktop:open-job-original", async (event, sourceId: string, url: string, bounds: SourceBrowserBounds) => {
   if (!mainWindow || event.sender !== mainWindow.webContents || !sourceBrowserManager) throw new Error("source browser is not available");
   if (sourceId !== "web" && !isSourceBrowserId(sourceId)) throw new Error("unknown source browser");
   await sourceBrowserManager.show(sourceId, bounds, url || undefined);
 });
-ipcMain.handle("desktop:get-resume-state", () => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.resumeState();
-});
-ipcMain.handle("desktop:import-resume", async () => {
-  if (!apiClient || !mainWindow) throw new Error("desktop API is not ready");
-  const selection = await dialog.showOpenDialog(mainWindow, {
-    title: "选择简历",
-    properties: ["openFile"],
-    filters: [{ name: "简历", extensions: ["pdf", "docx", "md", "txt"] }],
-  });
-  if (selection.canceled || !selection.filePaths[0]) return undefined;
-  return apiClient.importResume(selection.filePaths[0]);
-});
-ipcMain.handle("desktop:confirm-resume", (_event, input: ResumeConfirmation) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.confirmResume(input);
-});
-ipcMain.handle("desktop:abandon-resume", (_event, workspaceId: string, profileId: string) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.abandonResume(workspaceId, profileId);
-});
-ipcMain.handle("desktop:analysis-preview", (_event, input) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.previewAnalysisCopy(input);
-});
-ipcMain.handle("desktop:clear-current-resume", (_event, workspaceId:string) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.clearCurrentResume(workspaceId);
-});
-ipcMain.handle("desktop:get-search-preferences", (_event, workspaceId:string) => {
+handle("desktop:get-search-preferences", (_event, workspaceId:string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.getSearchPreferences(workspaceId);
 });
-ipcMain.handle("desktop:save-search-preferences", (_event, input:import("../shared/contracts").SearchPreferences) => {
+handle("desktop:save-search-preferences", (_event, input:import("../shared/contracts").SearchPreferences) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.saveSearchPreferences(input);
 });
-ipcMain.handle("desktop:list-resume-versions", (_event, workspaceId: string) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.listResumeVersions(workspaceId);
-});
-ipcMain.handle("desktop:get-resume-version", (event, workspaceId: string, versionId: string) => {
-  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
-  if(typeof workspaceId!=='string'||!workspaceId||typeof versionId!=='string'||!versionId)throw Error("invalid resume version");
-  return apiClient.getResumeVersion(workspaceId,versionId);
-});
-ipcMain.handle("desktop:hide-resume-version", (event, workspaceId:string, versionId:string) => {
-  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
-  return apiClient.hideResumeVersion(workspaceId,versionId);
-});
-ipcMain.handle("desktop:save-resume-version", (_event, input: ResumeEditInput) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.saveResumeVersion(input);
-});
-ipcMain.handle("desktop:restore-resume-version", (_event, workspaceId: string, versionId: string) => {
-  if (!apiClient) throw new Error("desktop API is not ready");
-  return apiClient.restoreResumeVersion(workspaceId, versionId);
-});
-ipcMain.handle("desktop:resume-source", (event,input:import("../shared/contracts").ResumeSourceInput)=>{
-  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
-  return apiClient.resumeSource(input);
-});
-ipcMain.handle("desktop:use-original-resume", (event,workspaceId:string,profileId:string)=>{
-  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
-  return apiClient.useOriginalResume(workspaceId,profileId);
-});
-ipcMain.handle("desktop:export-resume-source", async (event,input:import("../shared/contracts").ResumeSourceInput)=>{
-  if(event.sender!==mainWindow?.webContents||!apiClient||!mainWindow)throw Error("unauthorized caller");
-  const source=await apiClient.resumeSource(input);
-  const extension=source.file_name.split('.').pop()?.toLowerCase();
-  if(!extension||!['pdf','docx','md','txt'].includes(extension))throw Error('原文件格式不支持');
-  const selection=await dialog.showSaveDialog(mainWindow,{title:'保存原文件',defaultPath:source.file_name,filters:[{name:'原始简历',extensions:[extension]}]});
-  if(selection.canceled||!selection.filePath)return false;
-  const destination=selection.filePath.toLowerCase().endsWith(`.${extension}`)?selection.filePath:`${selection.filePath}.${extension}`;
-  writeFileSync(destination,Buffer.from(source.content_base64,'base64'),{mode:0o600});
-  return true;
-});
-ipcMain.handle("desktop:preview-resume", async (event, input: Omit<ResumeExportInput,'format'>) => {
-  if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
-  const client=apiClient;
-  return createResumePreview(input,(value,destination)=>client.exportResume(value,destination));
-});
-ipcMain.handle("desktop:export-resume", async (_event, input: ResumeExportInput) => {
-  if (!apiClient || !mainWindow) throw new Error("desktop API is not ready");
-  const extensions = { pdf: ["pdf"], docx: ["docx"], md: ["md"] } as const;
-  const selection = await dialog.showSaveDialog(mainWindow, {
-    title: "导出简历",
-    defaultPath: `简历-v${input.version_id.slice(-6)}.${input.format}`,
-    filters: [{ name: input.format.toUpperCase(), extensions: [...extensions[input.format]] }],
-  });
-  if (selection.canceled || !selection.filePath) return undefined;
-  const destination = selection.filePath.endsWith(`.${input.format}`)
-    ? selection.filePath : `${selection.filePath}.${input.format}`;
-  return apiClient.exportResume(input, destination);
-});
-ipcMain.handle("desktop:list-prompt-sessions",(event,workspaceId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");return apiClient.listPromptSessions(workspaceId);});
-ipcMain.handle("desktop:create-prompt-session", async (_event, input: PromptSessionInput) => {
+handle("desktop:list-prompt-sessions",(event,workspaceId:string)=>{if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");return apiClient.listPromptSessions(workspaceId);});
+handle("desktop:create-prompt-session", async (_event, input: PromptSessionInput) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   const connection = await apiClient.modelConnection(input.connection_id);
   if (connection.status !== "verified") {
@@ -656,7 +550,7 @@ ipcMain.handle("desktop:create-prompt-session", async (_event, input: PromptSess
   }
   return apiClient.createPromptSession(input);
 });
-ipcMain.handle("desktop:generate-prompt-turn", async (_event, input: PromptTurnInput) => {
+handle("desktop:generate-prompt-turn", async (_event, input: PromptTurnInput) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   const connections = await apiClient.listModelConnections();
   const session = await apiClient.getPromptSession(input.session_id);
@@ -688,22 +582,22 @@ ipcMain.handle("desktop:generate-prompt-turn", async (_event, input: PromptTurnI
     }
   }
 });
-ipcMain.handle("desktop:cancel-prompt-turn", async () => {
+handle("desktop:cancel-prompt-turn", async () => {
   if (!apiClient || !promptSessionId || !promptRequestId) return undefined;
   const cancelled = await apiClient.cancelPromptTurn(promptSessionId, promptRequestId);
   promptController?.abort();
   return cancelled;
 });
-ipcMain.handle("desktop:decide-prompt-patch", (_event, sessionId: string, patchId: string, decision: PromptPatchDecision) => {
+handle("desktop:decide-prompt-patch", (_event, sessionId: string, patchId: string, decision: PromptPatchDecision) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.decidePromptPatch(sessionId, patchId, decision);
 });
-ipcMain.handle("desktop:save-prompt-session", (_event, sessionId: string) => {
+handle("desktop:save-prompt-session", (_event, sessionId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.savePromptSession(sessionId);
 });
 const publicRetrieval=createPublicRetrieval();
-ipcMain.handle("desktop:list-model-connections", async () => {
+handle("desktop:list-model-connections", async () => {
   if (!apiClient) throw new Error("desktop API is not ready");
   const connections = await apiClient.listModelConnections();
   return connections.map((connection) => ({
@@ -715,7 +609,7 @@ ipcMain.handle("desktop:list-model-connections", async () => {
   }));
 });
 let greetingRun:{id:string;controller:AbortController}|undefined;
-ipcMain.handle("desktop:polish-greeting",async(event,input:GreetingPolishInput)=>{
+handle("desktop:polish-greeting",async(event,input:GreetingPolishInput)=>{
  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
  if(!input||typeof input.requestId!=="string"||!input.requestId||input.requestId.length>100||typeof input.connectionId!=="string"||!input.connectionId||input.connectionId.length>200||typeof input.message!=="string"||!input.message.trim()||input.message.length>3000)throw Error("招呼语内容无效。");
  if(input.purpose&&!["greeting","resume_rewrite","resume_shorten","resume_proofread"].includes(input.purpose))throw Error("修改方式无效。");
@@ -734,11 +628,11 @@ ipcMain.handle("desktop:polish-greeting",async(event,input:GreetingPolishInput)=
   return await polishGreeting(connection,key,input.message,controller.signal,input.purpose,input.style,context);
  }catch(error){if(controller.signal.aborted)throw Error(controller.signal.reason==="timeout"?"greeting_polish:timeout":"greeting_polish:cancelled");throw error;}finally{clearTimeout(timer);if(greetingRun?.id===input.requestId)greetingRun=undefined;}
 });
-ipcMain.handle("desktop:cancel-greeting",(event,id:string)=>{
+handle("desktop:cancel-greeting",(event,id:string)=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
  if(greetingRun?.id===id)greetingRun.controller.abort();
 });
-ipcMain.handle("desktop:save-model-connection", async (event, input: ModelConnectionInput) => {
+handle("desktop:save-model-connection", async (event, input: ModelConnectionInput) => {
   if (event.sender !== mainWindow?.webContents || !apiClient) throw Error("unauthorized caller");
   if (modelConfigurationBusy || greetingRun) throw Error("model_configuration_busy");
   modelConfigurationBusy = true;
@@ -746,14 +640,14 @@ ipcMain.handle("desktop:save-model-connection", async (event, input: ModelConnec
     return await saveModelConnectionWithSecret(apiClient, secretStore, input, () => `model-secret-${randomUUID()}`);
   } finally { modelConfigurationBusy = false; }
 });
-ipcMain.handle("desktop:delete-model-connection", async (event, connectionId:string) => {
+handle("desktop:delete-model-connection", async (event, connectionId:string) => {
   if (event.sender !== mainWindow?.webContents || !apiClient || typeof connectionId !== "string" || !connectionId || connectionId.length > 200) throw Error("unauthorized caller");
   if (modelConfigurationBusy || greetingRun || modelTestController || promptController || researchController || chatRuns.current || matchingRequest) throw Error("model_configuration_busy");
   modelConfigurationBusy = true;
   try { await deleteModelConnectionWithSecret(apiClient, secretStore, connectionId); }
   finally { modelConfigurationBusy = false; }
 });
-ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: string) => {
+handle("desktop:test-model-connection", async (_event, connectionId: string) => {
   if (modelConfigurationBusy || greetingRun) throw Error("model_configuration_busy");
   if (!apiClient) throw new Error("desktop API is not ready");
   const connection = await apiClient.modelConnection(connectionId);
@@ -789,7 +683,7 @@ ipcMain.handle("desktop:test-model-connection", async (_event, connectionId: str
     }
   }
 });
-ipcMain.handle("desktop:cancel-model-test", async () => {
+handle("desktop:cancel-model-test", async () => {
   const connectionId = modelTestConnectionId;
   const testId = modelTestRunId;
   if (!apiClient || !connectionId || !testId) return undefined;
@@ -797,30 +691,30 @@ ipcMain.handle("desktop:cancel-model-test", async () => {
   modelTestController?.abort();
   return cancelled;
 });
-ipcMain.handle("desktop:secure-storage-available", (_event, retry?: boolean) => secretStore.isAvailable(retry === true));
-ipcMain.handle("desktop:resolve-research-link", async (event, url: string) => {
+handle("desktop:secure-storage-available", (_event, retry?: boolean) => secretStore.isAvailable(retry === true));
+handle("desktop:resolve-research-link", async (event, url: string) => {
   if (event.sender !== mainWindow?.webContents || typeof url !== "string" || url.length > 2000) throw new Error("invalid research link");
   const sourceId = Object.keys(sourceBrowserSpecs).find(id => isSourceBrowserId(id) && isAllowedSourceUrl(id, url));
   if (!sourceId || !isSourceBrowserId(sourceId)) throw new Error("仅支持已接入招聘来源的 HTTPS 链接，不接受内网、账号信息或非标准端口。");
   return {...await sourceBrowserManager!.readResearchJob(sourceId,url),message:"已自动读取岗位信息，请确认后开始研究。"};
 });
-ipcMain.handle("desktop:prepare-research-job", (event, input) => {
+handle("desktop:prepare-research-job", (event, input) => {
   if (event.sender !== mainWindow?.webContents || !apiClient) throw new Error("research unavailable");
   return apiClient.prepareResearchJob(input);
 });
-ipcMain.handle("desktop:correct-research",(event,reportId:string,input:import("../shared/contracts").ResearchCorrectionInput)=>{
+handle("desktop:correct-research",(event,reportId:string,input:import("../shared/contracts").ResearchCorrectionInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
   return apiClient.correctResearch(reportId,input);
 });
-ipcMain.handle("desktop:list-research-reports", (_event, workspaceId: string) => {
+handle("desktop:list-research-reports", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listResearchReports(workspaceId);
 });
-ipcMain.handle("desktop:hide-research-report", (event, workspaceId:string, reportId:string) => {
+handle("desktop:hide-research-report", (event, workspaceId:string, reportId:string) => {
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
   return apiClient.hideResearchReport(workspaceId,reportId);
 });
-ipcMain.handle("desktop:create-research-report", async (_event, input: ResearchRunInput) => {
+handle("desktop:create-research-report", async (_event, input: ResearchRunInput) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   let apiKey: string | undefined;
   let requestId: string | undefined;
@@ -858,7 +752,7 @@ ipcMain.handle("desktop:create-research-report", async (_event, input: ResearchR
     }
   }
 });
-ipcMain.handle("desktop:cancel-research", async () => {
+handle("desktop:cancel-research", async () => {
   if (!apiClient || !researchRequestId || !researchWorkspaceId) return undefined;
   const cancelled = await apiClient.cancelResearch(
     researchRequestId,
@@ -867,7 +761,7 @@ ipcMain.handle("desktop:cancel-research", async () => {
   researchController?.abort();
   return cancelled;
 });
-ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder"|"mixed")=>{
+handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder"|"mixed")=>{
  if(event.sender!==mainWindow?.webContents||!mainWindow||!apiClient)throw Error("附件读取不可用");
  if(kind!=="files"&&kind!=="folder"&&kind!=="mixed")throw Error("invalid selection");
  if(kind==="mixed"&&process.platform!=="darwin"){
@@ -882,7 +776,7 @@ ipcMain.handle("desktop:pick-chat-attachments",async(event,kind:"files"|"folder"
   return apiClient!.extractChatAttachment(name,content);
  });
 });
-ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
+handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("assistant_failure:backend");
   if(!validResearchChatInput(input))throw Error("assistant_failure:input");
   const run=chatRuns.begin({runId:input.request_id,sessionId:input.session_id,workspaceId:input.workspace_id},90_000);
@@ -941,46 +835,46 @@ ipcMain.handle("desktop:run-research-chat",async(event,input:ResearchChatInput)=
     throw error;
   }finally{sourceBrowserManager?.releaseTaskBrowser(input.workspace_id+"/"+input.request_id);chatRuns.finish(run);}
 });
-ipcMain.handle("desktop:list-research-chats",async(event,workspaceId:string)=>{
+handle("desktop:list-research-chats",async(event,workspaceId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
   return apiClient.listAgentConversations(workspaceId);
 });
-ipcMain.handle("desktop:list-archived-research-chats",async(event,workspaceId:string)=>{
+handle("desktop:list-archived-research-chats",async(event,workspaceId:string)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string")throw Error("research unavailable");
   return apiClient.listAgentConversations(workspaceId,true);
 });
-ipcMain.handle("desktop:save-research-chat",async(event,input:Record<string,unknown>)=>{
+handle("desktop:save-research-chat",async(event,input:Record<string,unknown>)=>{
   if(event.sender!==mainWindow?.webContents||!apiClient||!input||typeof input.workspace_id!=="string")throw Error("research unavailable");
   await apiClient.saveAgentConversation(input);
 });
 for(const [channel,action] of [["archive",(workspaceId:string,id:string)=>apiClient!.archiveAgentConversation(workspaceId,id)],["restore",(workspaceId:string,id:string)=>apiClient!.restoreAgentConversation(workspaceId,id)],["delete-archived",(workspaceId:string,id:string)=>apiClient!.deleteArchivedAgentConversation(workspaceId,id)]] as const){
-  ipcMain.handle(`desktop:${channel}-research-chat`,async(event,workspaceId:string,id:string)=>{
+  handle(`desktop:${channel}-research-chat`,async(event,workspaceId:string,id:string)=>{
     if(event.sender!==mainWindow?.webContents||!apiClient||typeof workspaceId!=="string"||typeof id!=="string")throw Error("research unavailable");
     if(chatRuns.forSession(workspaceId,id))throw Error("当前对话运行中，请先停止再整理历史");
     await action(workspaceId,id);
   });
 }
-ipcMain.handle("desktop:copy-chat-text",(event,text:string)=>{
+handle("desktop:copy-chat-text",(event,text:string)=>{
   if(event.sender!==mainWindow?.webContents||typeof text!=="string"||text.length>100000)throw Error("invalid clipboard request");
   clipboard.writeText(text);
 });
-ipcMain.handle("desktop:cancel-research-chat",async(event,requestId:string)=>{
+handle("desktop:cancel-research-chat",async(event,requestId:string)=>{
   if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
   if(requestId)chatRuns.cancel(requestId);
 });
-ipcMain.handle("desktop:list-scheduled-tasks", (_event, workspaceId: string) => {
+handle("desktop:list-scheduled-tasks", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listScheduledTasks(workspaceId);
 });
-ipcMain.handle("desktop:create-scheduled-task", (_event, input: ScheduledTaskInput) => {
+handle("desktop:create-scheduled-task", (_event, input: ScheduledTaskInput) => {
   throw new Error("定时检索已停用；请使用手动岗位检索。");
 });
-ipcMain.handle("desktop:set-scheduled-task-paused", (_event, taskId: string, paused: boolean) => {
+handle("desktop:set-scheduled-task-paused", (_event, taskId: string, paused: boolean) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   if (!paused) throw new Error("定时检索已停用；历史计划不能恢复。");
   return apiClient.setScheduledTaskPaused(taskId, paused);
 });
-ipcMain.handle("desktop:legacy-task-status", (_event, workspaceId: string) => {
+handle("desktop:legacy-task-status", (_event, workspaceId: string) => {
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.legacyTaskStatus(workspaceId);
 });
@@ -1022,11 +916,11 @@ app.on("activate", () => {
 process.once("SIGINT", () => app.quit());
 process.once("SIGTERM", () => app.quit());
 
-ipcMain.handle("desktop:check-updates",event=>{
+handle("desktop:check-updates",event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
  return checkForUpdates(String(packageInfo.releaseTag??`v${packageInfo.version}`),process.platform);
 });
-ipcMain.handle("desktop:open-releases",async event=>{
+handle("desktop:open-releases",async event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
  await shell.openExternal(releasesUrl);
 });
