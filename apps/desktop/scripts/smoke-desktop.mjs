@@ -42,6 +42,7 @@ async function checkJobExports(app,window){
    // browser mapping; never navigate to or fetch these fictional URLs.
    const job=await window.jobfindsme.prepareResearchJob({workspace_id:workspace,url:`https://careers.tencent.com/job/d195-fixture-${slug}`,title,company:'Example Company (fictional)',description:'Fictional local packaging fixture. Develop and evaluate Python APIs. '.repeat(8)});
    await window.jobfindsme.saveApplicationRecord({workspace_id:workspace,job_id:job.job_id,record_id:`fixture-${slug}`,resume_version_id:id,message:'Fictional packaging test only.',status:'prepared'});
+   window.dispatchEvent(new Event('jfm:job-updated'));
   },{workspace:workspaceId,id,title,slug});
   await window.getByRole('button',{name:'岗位管理',exact:true}).click();
   await window.getByRole('button',{name:title,exact:true}).click();
@@ -90,8 +91,9 @@ async function exportFiles(app,window,prefix){
 for(let attempt=0;attempt<2;attempt++){
  const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],env:{...process.env,JFM_QA_DIAGNOSTICS:'1'},timeout:90000});
  app.process().stderr.on('data',chunk=>process.stderr.write(chunk));
+ let window;
  try{
-  const window=await app.firstWindow({timeout:90000});
+  window=await app.firstWindow({timeout:90000});
   await window.waitForFunction(()=>!!window.jobfindsme,{timeout:30000});
   let data,lastError;
   const deadline=Date.now()+75000;
@@ -154,9 +156,8 @@ for(let attempt=0;attempt<2;attempt++){
    assert.deepEqual(Buffer.from(originalSource.content_base64,'base64'),readFileSync(path.join(resumeFolder,'fictional.pdf')));
    await window.getByRole('button',{name:'编辑副本',exact:true}).click();
    const editor=await checkEditor(window);
-   await editor.click();
-   await editor.press(mac?'Meta+End':'Control+End');
-   await editor.press('End');
+   await editor.locator('p').last().click();
+   await window.keyboard.press('End');
    await window.keyboard.type(' Packaged edit');
    await chooseTemplate(window,'校园清新');
    await window.getByRole('button',{name:'保存',exact:true}).click();
@@ -215,10 +216,10 @@ for(let attempt=0;attempt<2;attempt++){
    await window.getByRole('button',{name:'撤销',exact:true}).click();
    await assertTemplate(window,'校园清新');
    await chooseTemplate(window,'极简紧凑');
-   await editor.click();
-   await editor.press(mac?'Meta+End':'Control+End');
-   await editor.press('End');
+   await editor.locator('p').last().click();
+   await window.keyboard.press('End');
    await window.keyboard.type(' Recovered draft');
+   await window.waitForFunction(()=>document.querySelector('[aria-label="简历文档编辑器"]')?.textContent.includes('Recovered draft'));
    await window.getByText('草稿已存本机',{exact:true}).waitFor({state:'visible'});
    await window.waitForFunction(({workspace,id})=>localStorage.getItem(`jfm.resume.document-draft.${workspace}.${id}`)?.includes('Recovered draft'),{workspace:workspaceId,id:savedResumeId});
    const saved=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
@@ -252,5 +253,11 @@ for(let attempt=0;attempt<2;attempt++){
   assert.equal(source.content_base64,originalSource.content_base64,'Original must remain unchanged');
   await window.screenshot({path:path.join(output,`smoke-${attempt}.png`)});
   console.log(`Packaged ${process.platform} UI + IPC + frozen Python + SQLite + styled resume + draft recovery passed (${attempt+1}/2)`);
+ }catch(error){
+  if(window){
+   console.error('Fictional fixture diagnostics:',await window.evaluate(()=>({active:document.activeElement?.outerHTML,editor:document.querySelector('[aria-label="简历文档编辑器"]')?.textContent,drafts:Object.fromEntries(Object.entries(localStorage).filter(([key])=>key.startsWith('jfm.resume.document-draft.')))})).catch(()=>({})));
+   await window.screenshot({path:path.join(output,`smoke-failed-${attempt}.png`)}).catch(()=>{});
+  }
+  throw error;
  }finally{await app.close();}
 }

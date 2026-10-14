@@ -43,6 +43,7 @@ jobs:
           Compress-Archive -Path apps/desktop/release/windows/JobFindsMe -DestinationPath apps/desktop/release/windows/JobFindsMe-windows-x64.zip
           Get-FileHash apps/desktop/release/windows/JobFindsMe-windows-x64.zip -Algorithm SHA256 | Format-List | Out-File apps/desktop/release/windows/SHA256.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: JobFindsMe-windows-x64
           path: |

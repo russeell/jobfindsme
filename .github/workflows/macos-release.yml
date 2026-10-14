@@ -44,6 +44,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent JobFindsMe.app mac-arm64.zip
           shasum -a 256 mac-arm64.zip > SHA256.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: JobFindsMe-mac-arm64
           path: |
