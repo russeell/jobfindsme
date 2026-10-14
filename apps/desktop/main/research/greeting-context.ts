@@ -1,7 +1,8 @@
 import type {GreetingTarget} from '../../shared/contracts';
 import type {DesktopApiClient} from '../backend/api-client';
+import {preparationMaterials} from './preparation-materials';
 
-export type GreetingContext = {company:string;title:string;description:string;resume:string};
+export type GreetingContext = {company:string;title:string;description:string;resume:string;limitations?:string[]};
 
 export function validGreetingTarget(value:unknown):value is GreetingTarget {
   if(!value||typeof value!=='object')return false;
@@ -15,6 +16,7 @@ export async function loadGreetingContext(api:Pick<DesktopApiClient,'getJobPrepa
     api.getJobPreparation(target.workspaceId,target.jobId),
     target.resumeVersionId?api.agentResume(target.workspaceId,undefined,target.resumeVersionId):undefined,
   ]);
+  if(resume&&resume.source_version_id!==target.resumeVersionId)throw Error('所选简历材料不一致，请重新读取。');
   return {company:preparation.job.company,title:preparation.job.title,
-    description:preparation.job.description.slice(0,4000),resume:resume?.text.slice(0,6000)||''};
+    ...preparationMaterials(preparation.job,resume,{jd:4000,resume:6000,resumeOmitted:target.resumeVersionId===null})};
 }

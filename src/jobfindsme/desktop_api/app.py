@@ -2272,7 +2272,7 @@ def create_app(
         from jobfindsme.privacy import create_analysis_copy
         from jobfindsme.resume_editor.prompt import _evidence_map
 
-        current = core.profiles.current_version(workspace_id=workspace_id)
+        current = None
         if resume_version_id:
             try:
                 current = core.resume_editor.get_version(
@@ -2284,16 +2284,25 @@ def create_app(
                 ) from error
         elif job_id:
             try:
-                preparation = JobPreparationService(core.database).get(
-                    workspace_id, job_id
-                )
-                version_id = preparation["preparation"]["resume_version_id"]
+                chosen, version_id = JobPreparationService(
+                    core.database
+                ).resume_selection(workspace_id, job_id)
                 if version_id:
                     current = core.resume_editor.get_version(
                         workspace_id=workspace_id, version_id=version_id
                     )
+                elif chosen:
+                    raise HTTPException(
+                        status_code=409, detail="no resume selected for job"
+                    )
             except LookupError as error:
                 raise HTTPException(status_code=404, detail="job not found") from error
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=404, detail="resume not found"
+                ) from error
+        if current is None:
+            current = core.profiles.current_version(workspace_id=workspace_id)
         if current is None:
             raise HTTPException(status_code=409, detail="no confirmed resume")
         content = {

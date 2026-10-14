@@ -14,6 +14,31 @@ class JobPreparationService:
         self.database = database
         self.jobs = JobRepository(database)
 
+    def resume_selection(
+        self, workspace_id: str, job_id: str
+    ) -> tuple[bool, str | None]:
+        """Resolve the saved choice, including no attachment, without reading a resume.
+
+        Deleted display records still document an explicit selection. A reminder
+        alone does not count as a material choice and can use the base resume.
+        """
+        self.jobs.get(workspace_id=workspace_id, job_id=job_id)
+        with self.database.connect() as db:
+            preparation = db.execute(
+                "SELECT resume_version_id FROM job_preparations "
+                "WHERE workspace_id=? AND job_id=?",
+                (workspace_id, job_id),
+            ).fetchone()
+            record = db.execute(
+                "SELECT resume_version_id FROM application_records "
+                "WHERE workspace_id=? AND job_id=? "
+                "ORDER BY updated_at DESC, created_at DESC, record_id DESC LIMIT 1",
+                (workspace_id, job_id),
+            ).fetchone()
+        if preparation and preparation["resume_version_id"]:
+            return True, preparation["resume_version_id"]
+        return (True, record["resume_version_id"]) if record else (False, None)
+
     def get(self, workspace_id: str, job_id: str) -> dict:
         job = self.jobs.get(workspace_id=workspace_id, job_id=job_id)
         with self.database.connect() as db:

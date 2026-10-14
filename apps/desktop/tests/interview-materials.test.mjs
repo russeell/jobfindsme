@@ -12,4 +12,6 @@ test('missing JD or resume does not block preparation and oversized materials ar
  assert.equal(absent.job,null);assert.equal(absent.resume,null);assert.equal(absent.limitations.length,2);
  const long=await loadInterviewMaterials(async()=>({description:'a'.repeat(17000)}),async()=>({source_version_id:'v1',text:'b'.repeat(13000),limitations:''}));
  assert.equal(long.job.description.length,16000);assert.equal(long.resume.text.length,12000);assert.match(long.limitations.join(''),/材料过长/);
+ const omitted=await loadInterviewMaterials(async()=>({title:'示例岗位'}),async()=>{throw Error('Desktop API 409: no resume selected for job');});
+ assert.equal(omitted.resume,null);assert.match(omitted.limitations.join(''),/暂不附简历/);
 });

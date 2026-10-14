@@ -843,6 +843,64 @@ def test_application_materials_survive_resume_changes_and_require_explicit_send(
         ).status_code
         == 404
     )
+    # Explicit no-attachment materials must not silently expose a newer base
+    # resume to interview preparation. Hiding the record preserves the choice.
+    no_resume = client.post(
+        "/v1/application-records",
+        headers=headers,
+        json={
+            **payload,
+            "record_id": "no-attachment",
+            "status": "prepared",
+            "resume_version_id": None,
+        },
+    )
+    assert no_resume.status_code == 200
+    for hidden in (False, True):
+        if hidden:
+            service.set_application_deleted(
+                workspace.workspace_id, job.job_id, "no-attachment", True
+            )
+        response = client.get(
+            "/v1/research-agent/resume",
+            headers=headers,
+            params={"workspace_id": workspace.workspace_id, "job_id": job.job_id},
+        )
+        assert response.status_code == 409
+        assert response.json()["detail"] == "no resume selected for job"
+    # A caller's explicit version is still available; it cannot change the choice.
+    assert (
+        client.get(
+            "/v1/research-agent/resume",
+            headers=headers,
+            params={
+                "workspace_id": workspace.workspace_id,
+                "resume_version_id": version.version_id,
+            },
+        ).json()["source_version_id"]
+        == version.version_id
+    )
+    assert service.resume_selection(workspace.workspace_id, job.job_id) == (True, None)
+    other_job = _job(999)
+    jobs.upsert(workspace.workspace_id, other_job)
+    service.save(
+        workspace.workspace_id,
+        other_job.job_id,
+        stage="considering",
+        next_action="准备面试",
+    )
+    assert service.resume_selection(workspace.workspace_id, other_job.job_id) == (
+        False,
+        None,
+    )
+    assert (
+        client.get(
+            "/v1/research-agent/resume",
+            headers=headers,
+            params={"workspace_id": workspace.workspace_id, "job_id": other_job.job_id},
+        ).status_code
+        == 200
+    )
 
 
 def test_preparing_new_materials_keeps_legacy_applied_state(tmp_path) -> None:

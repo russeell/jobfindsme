@@ -48,7 +48,7 @@ jobfindsme/
 
 编辑器使用 Tiptap。`shared/resume-editor-schema.ts` 与 Python `resume_editor/document.py` 限定文档节点和格式；`source_format.py` 从哈希一致的托管原件恢复可精确匹配的颜色、字号和粗体。PDF.js 展示原始 PDF 或实际导出的连续页面；编辑副本会重新排版，不保证任意 PDF/Word 原版式无损转换。Word 原件的文字预览不等于还原原始布局。
 
-模板保存在每份版本的 `document.attrs.template` 中。`shared/resume-editor-actions.ts` 在同一事务设置正文与根属性，使模板也能撤销、写草稿和恢复。旧稿没有模板元数据时，界面要求保存排版后再预览/导出。`shared/resume-export.ts` 按准确版本读取，归档原件也可原字节导出；岗位材料和附件不得用新基础简历替换已选旧稿。“暂不附简历”是明确选择，不得静默回退。
+模板保存在每份版本的 `document.attrs.template` 中。`shared/resume-editor-actions.ts` 在同一事务设置正文与根属性，使模板也能撤销、写草稿和恢复。旧稿没有模板元数据时，界面要求保存排版后再预览/导出。`shared/resume-export.ts` 按准确版本读取，归档原件也可原字节导出；岗位材料和附件不得用新基础简历替换已选旧稿。“暂不附简历”是明确选择，不得静默回退；JobPreparationService.resume_selection保留隐藏记录中的选择，单独待办不计为材料选择。main/research/preparation-materials.ts共用有限原文段落选择，按岗位相关性纳入长材料末尾并保留原顺序；不是新的事实生成或匹配评分。
 
 所有简历修改留在简历页。整份 AI 定制使用原提案与显式审阅；单段修改使用 `ResumeSelectionAI.tsx` 和 `shared/resume-selection-quality.ts`，有选区快照、过期保护与有限事实检查。确定性检查不能保证完整语义或所有事实正确；不自动覆盖原稿。草稿留在隔离的工作区/基础版本键下，正式保存创建新版本。
 
