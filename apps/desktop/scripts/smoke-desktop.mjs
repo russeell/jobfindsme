@@ -1,6 +1,7 @@
 import {_electron as electron} from 'playwright';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {mkdirSync,readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -17,6 +18,9 @@ function fixture(command){
  console.log(result.stdout);
 }
 fixture('create');
+const shippedShared=path.join(output,mac?'JobFindsMe.app/Contents/Resources/app/dist-electron/shared':'JobFindsMe/resources/app/dist-electron/shared');
+const {resumeSelectionQuality}=await import(pathToFileURL(path.join(shippedShared,'resume-selection-quality.js')).href);
+assert.deepEqual(['Python API evaluation: 200 cases, accuracy 91%.','Python API evaluation: 200 cases, accuracy 99%.','Python API assessment: 200 cases, accuracy 91%.'].map(text=>resumeSelectionQuality('Python API evaluation: 200 cases, accuracy 91%.',text,'resume_rewrite')),['unchanged','facts_changed','ok'],'Shipped quality guard must include D195');
 let workspaceId,savedResumeId,campusResumeId,originalVersionId,originalSource;
 async function chooseTemplate(window,name){
  await window.getByRole('button',{name:'模板与排版',exact:true}).click();
@@ -101,11 +105,6 @@ for(let attempt=0;attempt<2;attempt++){
   }
   assert.ok(data?.workspaces,`Backend never became ready: ${lastError}`);
   assert.ok(data.workspaces.length>0);assert.equal(data.sources.length,4);
-  const quality=await app.evaluate(()=>{
-   const {resumeSelectionQuality}=require(require('node:path').join(process.resourcesPath,'app/dist-electron/shared/resume-selection-quality.js'));
-   return ['Python API evaluation: 200 cases, accuracy 91%.','Python API evaluation: 200 cases, accuracy 99%.','Python API assessment: 200 cases, accuracy 91%.'].map(text=>resumeSelectionQuality('Python API evaluation: 200 cases, accuracy 91%.',text,'resume_rewrite'));
-  });
-  assert.deepEqual(quality,['unchanged','facts_changed','ok'],'Shipped quality guard must include D195');
   if(attempt===0)workspaceId=data.workspaces[0].workspace_id;
   else assert.equal(data.workspaces[0].workspace_id,workspaceId,'Workspace must survive restart');
   // Exercise pin persistence in the actual packaged renderer and SQLite bridge.
