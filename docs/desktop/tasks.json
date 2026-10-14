@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D201",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -2436,7 +2436,7 @@
     {
       "id": "D198",
       "title": "统一简历样式与编辑导出反馈",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D197"
       ],
@@ -2449,7 +2449,7 @@
         "简历外观、模板与正文格式保持一致，页面样式互不覆盖",
         "取消不误报，实际编辑/恢复/导出通过"
       ],
-      "verification": "代码完成：简历样式归入resume/resume.css，移除32组停用界面样式，保留模板、响应式及专注级联；编辑器新导出清空旧成功提示。构建/typecheck和8项文档/预览回归通过。Mac窗口连接超时；新增双端实际包正常/窄窗与取消断言，最终验收随D201执行，尚未标完成。",
+      "verification": "独立resume/resume.css移除32组停用样式；编辑器取消新导出清空旧成功提示。8项本地文档/预览回归、构建/typecheck通过。最终同产品提交7059332的macOS/Windows实际包通过1240/900px窗口、助手/专注/键盘、彩色导入编辑、保存/草稿真实退出重启、Word/PDF内容样式与取消反馈；只替换文件框返回虚构路径。窗口工具本机超时，不声称人工打开Microsoft Word。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
@@ -2471,7 +2471,7 @@
         "不更换已选择版本，不附简历不读取基础简历",
         "文本有界、事实保持、相关尾部段落被复用"
       ],
-      "verification": "共用有界段落选择器供招呼语和面试使用，相关尾部、完整技术词、公司/日期上下文、原数字和顺序保留；不改原件或增加网络请求。显式版本不一致失败，岗位暂不附简历不再回退基础简历，隐藏记录保留选择；单独待办仍允许基础简历。35项Python、26项桌面针对性回归、构建/typecheck与Ruff通过；模型传输为本地测试，不宣称真实模型质量。",
+      "verification": "共用有界段落选择器供招呼语和面试使用，相关尾部、完整技术词、公司/日期上下文、原数字和顺序保留；不改原件或增加网络请求。显式版本不一致失败，岗位暂不附简历不再回退基础简历，隐藏记录保留选择；单独待办仍允许基础简历。35项Python、26项桌面针对性回归、构建/typecheck与Ruff通过；模型传输为本地测试，不宣称真实模型质量。 后续7059332修复英文句尾标点、分块技术词与Unicode边界；9项相关回归及最终双端全套通过。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
@@ -2502,7 +2502,7 @@
     {
       "id": "D201",
       "title": "整理可重复的发行依赖与验证流程",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D200"
       ],
@@ -2515,9 +2515,12 @@
         "同一产品提交在两端完整构建审计与实际包测试通过",
         "缓存不带入用户数据，现有公开包不被替换"
       ],
-      "verification": "发行依赖锁与Playwright固定、按需打包及安全缓存已实现；包装器/桌面构建记录并检查来源提交、代码与锁指纹，拒绝过期载荷。2项构建针对性回归、跨Python/Node指纹一致、构建/typecheck、全树Ruff及文档检查通过。准备执行同提交双平台冻结包/UI实际验收，尚未完成。",
+      "verification": "产品提交70593320d883b18931c03684e838010370a9087d已同步main与开发分支。主CI38555100428、macOS包38555401135、Windows包38555405120全成功；每端599项Python、445项桌面、来源提交/代码/锁指纹审计、冻结HTTP/CA及实际UI/IPC/Python/SQLite两次启动通过。覆正常/窄窗口、草稿恢复、Word/PDF颜色/字体/章节与旧材料/归档原件原字节/取消。41项Python发行依赖全SHA锁、Node/Playwright固定，缓存仅下载依赖，冻结包与应用均重建；按需dispatch/tag、不自动发布。公开v0.15.4保持不变；本机额外截图下载45秒超时并停止，不声称本机GUI复验或新附件已本机重下载。",
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/actions/runs/38555100428",
+        "https://github.com/russeell/jobfindsme/actions/runs/38555401135",
+        "https://github.com/russeell/jobfindsme/actions/runs/38555405120"
       ],
       "blocker": null
     }
