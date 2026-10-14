@@ -984,6 +984,7 @@ button {transition:background-color .12s,border-color .12s,color .12s}
 .resume-word-status.has-draft{color:#886b3c}
 .resume-word-format{gap:8px;row-gap:6px}
 .resume-format-group{display:flex;gap:2px;align-items:center;padding-right:8px;border-right:1px solid #e6eaf0}
+.resume-word-format .resume-format-group button{padding:5px 6px}
 .resume-word-format button{display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .resume-word-format button[aria-label]{position:relative}
 .resume-word-format .popover-trigger{text-decoration:none}

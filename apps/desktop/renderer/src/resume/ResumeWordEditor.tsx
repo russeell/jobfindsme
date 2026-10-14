@@ -103,7 +103,7 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
        <div className="resume-format-group" role="group" aria-label="段落排版">
        <select className="resume-text-align" aria-label="段落对齐" disabled={busy} value={state?.align||'left'} onChange={e=>editor.chain().focus().updateAttributes('paragraph',{textAlign:e.target.value}).run()}><option value="left">左对齐</option><option value="center">居中</option><option value="right">右对齐</option><option value="justify">两端对齐</option></select>
        <button aria-label="项目符号列表" title="项目符号列表" aria-pressed={state?.bullet} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleBulletList().run()}><Icon name="bulletList"/></button><button aria-label="编号列表" title="编号列表" aria-pressed={state?.ordered} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleOrderedList().run()}><Icon name="orderedList"/></button></div>
-       <button className="resume-selection-trigger" aria-label="修改选中文字" title="修改选中文字" disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={modifySelection}><Icon name="sparkles"/>AI 改写</button>
+       <button className="resume-selection-trigger" aria-label="修改选中文字" title="修改选中文字" disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={modifySelection}><Icon name="sparkles"/></button>
        <button className="resume-sections-toggle" aria-label={showEmpty?'隐藏空章节':'添加章节'} title={showEmpty?'隐藏空章节':'显示空章节以添加内容'} aria-pressed={showEmpty} onClick={()=>setShowEmpty(value=>!value)}><Icon name="add"/></button>
 
      </div>
