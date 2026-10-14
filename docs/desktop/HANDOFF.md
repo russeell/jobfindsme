@@ -1,14 +1,20 @@
 当前状态（2026-10-14）
 
+D196已完成：[v0.15.4](https://github.com/russeell/jobfindsme/releases/tag/v0.15.4)正式发布latest，主分支与开发分支已同步。两端同来源提交546e80f64c12cbcb08347052ccf8fcc4fc13b37c，包含D195的版本排版、选段保护、归档原件与材料导出反馈修复；后续本条提交仅文档，不改变产品代码。
+
+[主CI](https://github.com/russeell/jobfindsme/actions/runs/38527780801)、[macOS包](https://github.com/russeell/jobfindsme/actions/runs/38527780644)、[Windows包](https://github.com/russeell/jobfindsme/actions/runs/38527780805)全通过。两端各598项Python、437项桌面回归，冻结HTTP/CA与包审计通过；真实安装包使用隔离虚构资料，UI→IPC→冻结Python→SQLite两次启动验证彩色PDF/Word导入编辑、校招模板保存/历史恢复、模板一次撤销、紧凑模板及正文草稿退出重启恢复、快捷保存与焦点、Word/PDF样式和章节顺序、旧岗位材料沿用旧校招版本、归档原件两个入口原字节导出及取消反馈。模型保护函数也从实际包加载检查；只替换原生文件框返回路径，产品传输不替换。首轮模块加载、直接创建样本未发刷新事件与输入焦点的脚本错误已更正，最终完整复验通过，不把失败轮次计为通过。
+
+发布附件经云端重新下载CRC/版本/来源提交/无用户资料/SHA256验证；公开两个ZIP在本机再次下载，CRC、v0.15.4、来源提交与编译修复模块均核对一致，SHA256与发布校验文件相同。macOS首次下载超时后断点续传完成；公开包内冻结API与实际客户端再次核对旧校招稿导出、归档原件原字节与工作区隔离通过。本机窗口工具连续超时，因此额外本机原生界面复验未完成；界面证据来自两端云端实际包，不声称手动打开Microsoft Word。临时解压应用已清理，ZIP/虚构资料/导出/日志在/private/tmp/jfm-D196-*及复用的/private/tmp/jobfindsme-preview-D195-qa，不进入Git。正常用户应用、简历和会话未修改；没有招聘访问、付费模型或真实投递，D192仍遵循仅预览、暂不发送。
+
 D195已完成，产品源码54d2b7e：模板保存在每份简历的文档元数据中，模板修改也进入草稿、版本和撤销记录。编辑、默认分页预览、Word/PDF导出、岗位材料与BOSS附件读取所选版本，旧稿不受当前模板影响；旧版无模板元数据的稿件会明确提示保存排版后再预览/导出。原件继续按原字节使用；归档原件按准确版本读取，避免因版本列表不包含它而重新转换。岗位准备和材料页只在原生保存成功后提示导出完成，取消不会误报。没有新增迁移或依赖。
 
 选段AI在main返回与界面采用前检查无实质修改、数字/日期、部分明确技能/学历和新增强表述；无变化不显示建议，拦截时保留原文，有效建议仍须显式采用。用户编辑建议后也重新检查。检查不是完整语义或全部事实核验，不能宣传为保证AI不编造；整份修改仍使用原有提案流程。
 
 验证：66项Python、52项桌面针对性回归、构建/typecheck和相关Ruff通过。macOS 1000×740隔离窗口实际验证模板变化一次撤销、未保存退出重启恢复、正式保存后排版恢复、选段AI无变化/改数字拦截/手动改建议重新检查/有效建议采用。真实保存框导出紧凑Word/PDF和旧校招PDF，核对正文、原数字、章节顺序、蓝绿颜色及Word字号/粗体；岗位准备和投递材料两个入口导出已归档原件与取消反馈通过，导出原件逐字节一致。冻结API+真实DesktopApiClient+附件生成验证旧校招稿与当前紧凑稿独立、归档原件原字节、工作区隔离，未上传。最终清洁载荷54d2b7e包审计/冻结HTTP/CA通过。AI原生交互仅在私有QA包替换模型传输，拒绝非虚构内容；真实polish函数另以本地HTTP测试，不能算模型生成质量验收。
 
-测试资料与日志在/private/tmp/jobfindsme-preview-D195-qa、/private/tmp/jfm-D195-*，临时应用与Electron壳已退出并清理，不进入Git。没有修改正常用户资料、访问招聘平台、调用付费模型或发送申请；没有Windows原生本轮验收或发布，正式下载包仍v0.15.3，不含D195。源码已在开发分支本地提交；fetch origin main本轮TLS连接失败，未推送或声称已同步GitHub。下一步接D184尚缺的字段/续页/登录跨重启证据，每次只补一个必要低频样本；D151不感兴趣反馈和材料选段复用仍待后续，D192仍遵循仅预览、暂不发送。
+测试资料与日志在/private/tmp/jobfindsme-preview-D195-qa、/private/tmp/jfm-D195-*，临时应用与Electron壳已退出并清理，不进入Git。没有修改正常用户资料、访问招聘平台、调用付费模型或发送申请；D195阶段没有Windows原生验收或发布，当时下载包为v0.15.3。该阶段fetch遇到TLS失败，先本地提交；随后D196恢复连接并完成同步、两端实际包验收及v0.15.4发布。下一步接D184尚缺的字段/续页/登录跨重启证据，每次只补一个必要低频样本；D151不感兴趣反馈和材料选段复用仍待后续，D192仍遵循仅预览、暂不发送。
 
-D194已完成：v0.15.3已发布latest，GitHub主分支与开发分支同步。两端同源码b647666efc7e622ecb6761fb1adf9c39b05de259，含D193新编辑器、草稿保护与D191材料/下一步优化；发布的BOSS确认投递明确为实验功能，真实上传/发送尚未验收，D192继续in_progress，用户“仅预览、暂不发送”的边界保持。
+D194已完成：v0.15.3当时已发布latest，GitHub主分支与开发分支同步。两端同源码b647666efc7e622ecb6761fb1adf9c39b05de259，含D193新编辑器、草稿保护与D191材料/下一步优化；发布的BOSS确认投递明确为实验功能，真实上传/发送尚未验收，D192继续in_progress，用户“仅预览、暂不发送”的边界保持。
 
 [主CI](https://github.com/russeell/jobfindsme/actions/runs/38512345041)、[macOS包](https://github.com/russeell/jobfindsme/actions/runs/38512344489)、[Windows包](https://github.com/russeell/jobfindsme/actions/runs/38512344471)全通过。两端各591项Python、424项桌面回归、冻结HTTP/CA、包审计；真实打包UI/IPC/冻结后端/SQLite使用隔离虚构资料验证彩色PDF/Word导入、原件逐字节不变、编辑保存、分组工具栏/清除格式一次撤销/助手入口/专注背景隔离、未保存草稿实际退出重启恢复、快捷保存保留焦点、恢复后Word/PDF导出与分页预览。首轮验收脚本错误沿用历史恢复前的版本ID，改为检查恢复实际创建的新版本；最终两端完整复验通过，不把首轮失败写为通过。CI只替代原生文件框返回路径，没有模型或浏览器传输替身。
 
@@ -68,10 +74,10 @@ macOS验收包（已清理）：apps/desktop/release/local-D189-qa/JobFindsMe.ap
 
 当前正式版本
 
-[v0.15.3 Release](https://github.com/russeell/jobfindsme/releases/tag/v0.15.3) 已发布latest，macOS Apple Silicon及Windows x64，两包同源码b647666efc7e622ecb6761fb1adf9c39b05de259。两端实际包与发布附件验收见D194。校验文件随版本发布，仍未签名/公证。
+[v0.15.4 Release](https://github.com/russeell/jobfindsme/releases/tag/v0.15.4) 已发布latest，macOS Apple Silicon及Windows x64，两包同源码546e80f64c12cbcb08347052ccf8fcc4fc13b37c。实际包与公开附件验收见D196。校验文件随版本发布，仍未签名/公证。
 
-- mac-arm64.zip SHA256：e0ef636b44ca8f2a6027ef8273812e75a1a1110485df8a72a1965282a13f6f2b
-- windows-x64.zip SHA256：60469ae9c5ff26abcf18a91c96927621b86cd0afa48572a539c1ce4f1cdbad27
+- mac-arm64.zip SHA256：a468544d484c7198eaabf9271afafe8327d5942c0356ddf954d7d75a3e29bc43
+- windows-x64.zip SHA256：d031211a0111fb9b136b604156675570205a96fef1b12ae9cffb86e9280978d1
 
 简历原件直接保留，文字提取在本机后台进行；编辑为副本。颜色、字号、粗体、对齐已贯通编辑及导出，复杂分栏/装饰/嵌入字体仍由原件展示，不宣称无损PDF转Word。岗位准备、招呼语与面试工具复用保存JD及明确所选简历，不带基本信息、不静默替换投递材料版本。
 

@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D196",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -3424,7 +3424,7 @@
     {
       "id": "D196",
       "title": "发布包含D195修复的v0.15.4两端安装包",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D195"
       ],
@@ -3439,9 +3439,13 @@
         "公开下载链接与校验可用"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.15.4",
+        "https://github.com/russeell/jobfindsme/actions/runs/38527780801",
+        "https://github.com/russeell/jobfindsme/actions/runs/38527780644",
+        "https://github.com/russeell/jobfindsme/actions/runs/38527780805"
       ],
-      "verification": "进行中",
+      "verification": "GitHub连接恢复，主分支/开发分支同步并正式发布v0.15.4 latest；两包同546e80f，包含D195全部修复。主CI及两端各598项Python/437项桌面回归、冻结HTTP/CA、包审计通过；实际打包UI/IPC/冻结Python/SQLite两次启动验证彩色PDF/Word导入编辑、校招模板保存与恢复、一次撤销、紧凑模板未保存草稿退出重启恢复、快捷保存及焦点、Word/PDF样式与章节顺序、旧岗位材料仍用旧校招版本、归档原件两入口原字节导出/取消反馈。首轮模块加载/样本刷新/输入焦点脚本问题修正后整轮通过。发布附件验证再次下载CRC/版本/源码/无用户数据/SHA256；公开两包本机重新下载、CRC/来源提交/版本/修复模块与SHA256一致，macOS再用公开包内冻结API与客户端核对旧校招稿/归档原件/工作区隔离。Mac大文件断点续传完成；本机窗口连接连续超时，额外本机原生界面复验未完成，不冒充已通过。没有招聘访问、付费模型或真实投递；D192未完成真实发送。",
       "blocker": null
     }
   ]
