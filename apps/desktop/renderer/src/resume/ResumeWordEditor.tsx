@@ -46,19 +46,30 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
  useEffect(()=>{if(editor&&!editor.isDestroyed)editor.setEditable(!busy,false);},[busy,editor]);
 
  useEffect(()=>()=>onDirty(false),[]);
- async function save():Promise<ResumeVersion|undefined>{
+ async function save(restoreFocus=false):Promise<ResumeVersion|undefined>{
    if(!editor||busy||stale)return;if(!dirty)return base;
    const document=editor.getJSON() as ResumeDocumentNode,content=resumeDocumentContent(document);
    if(!Object.values(content).some(values=>values.length)){setError('请保留至少一项简历内容。');return;}
    setBusy(true);setError('');
-   try{const next=await window.jobfindsme!.saveResumeVersion({workspace_id:workspaceId,base_version_id:base.version_id,content,document});try{localStorage.removeItem(cacheKey(base.version_id));}catch{}initial.current=resumeDocumentFingerprint(document);setBase(next);setDirty(false);setDraftStored(true);onDirty(false);setNotice('修改已保存。');await onSaved();return next;}catch(e){setError(userError(e).message);}finally{setBusy(false);}
+   try{const next=await window.jobfindsme!.saveResumeVersion({workspace_id:workspaceId,base_version_id:base.version_id,content,document});try{localStorage.removeItem(cacheKey(base.version_id));}catch{}initial.current=resumeDocumentFingerprint(document);setBase(next);setDirty(false);setDraftStored(true);onDirty(false);setNotice('修改已保存。');await onSaved();return next;}catch(e){setError(userError(e).message);}finally{setBusy(false);if(restoreFocus)requestAnimationFrame(()=>{if(!editor.isDestroyed&&workspaceRef.current?.getBoundingClientRect().width)editor.commands.focus(undefined,{scrollIntoView:false});});}
  }
  async function preview(){if(dirty){const next=await save();if(!next)return;}setMode('preview');}
  async function exportFile(format:'docx'|'pdf'){const next=dirty?await save():base;if(!next)return;setBusy(true);setError('');try{const result=await window.jobfindsme!.exportResume({workspace_id:workspaceId,version_id:next.version_id,format,template});if(result)setNotice(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。');}catch(e){setError(userError(e).message);}finally{setBusy(false);}}
  function reset(){if(!editor)return;editor.commands.setContent(resumeDocument(version.content,version.document,template),{emitUpdate:false});initial.current=resumeDocumentFingerprint(editor.getJSON());try{localStorage.removeItem(cacheKey(base.version_id));}catch{}setBase(version);setDirty(false);setDraftStored(true);onDirty(false);setDiscard(false);setError('');setNotice('已恢复已保存版本。');}
  useEffect(()=>{const toolbar=toolbarRef.current,format=formatRef.current,root=workspaceRef.current;if(!toolbar||!root)return;const measure=()=>{root.style.setProperty('--document-toolbar-height',`${toolbar.offsetHeight}px`);root.style.setProperty('--document-format-height',`${format?.offsetHeight||0}px`);};const observer=new ResizeObserver(measure);observer.observe(toolbar);if(format)observer.observe(format);measure();return()=>observer.disconnect();},[editor,mode]);
- useEffect(()=>{const shortcut=(event:KeyboardEvent)=>{if(!(event.metaKey||event.ctrlKey)||event.altKey||event.key.toLowerCase()!=='s'||!(event.target instanceof Node)||!workspaceRef.current?.contains(event.target))return;event.preventDefault();if(mode==='edit')void save();};window.addEventListener('keydown',shortcut);return()=>window.removeEventListener('keydown',shortcut);},[editor,dirty,busy,stale,base,mode]);
+ useEffect(()=>{const shortcut=(event:KeyboardEvent)=>{if(!(event.metaKey||event.ctrlKey)||event.altKey||event.key.toLowerCase()!=='s'||!(event.target instanceof Node)||!workspaceRef.current?.contains(event.target))return;event.preventDefault();if(mode==='edit')void save(true);};window.addEventListener('keydown',shortcut);return()=>window.removeEventListener('keydown',shortcut);},[editor,dirty,busy,stale,base,mode]);
  useLayoutEffect(()=>{if(focused)editor?.commands.focus();},[focused]);
+ useEffect(()=>{
+   const root=workspaceRef.current;if(!focused||!root)return;
+   const siblings:Array<[HTMLElement,boolean]>=[];
+   let branch:HTMLElement=root;
+   while(branch.parentElement){
+     const parent=branch.parentElement;
+     for(const sibling of Array.from(parent.children)){if(sibling!==branch&&sibling instanceof HTMLElement){siblings.push([sibling,sibling.inert]);sibling.inert=true;}}
+     if(parent===document.body)break;branch=parent;
+   }
+   return()=>{for(const [node,previous] of siblings)node.inert=previous;};
+ },[focused]);
  function leaveFocus(){setFocused(false);requestAnimationFrame(()=>focusButton.current?.focus());}
  function focusKeys(event:ReactKeyboardEvent<HTMLDivElement>){
    if(!focused||!(event.target instanceof HTMLElement)||event.target.closest('dialog[open],[data-popover-panel]'))return;
@@ -76,7 +87,7 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
      <span className={`resume-word-status${dirty?' has-draft':''}`}>{busy?'处理中…':dirty?draftStored?'草稿已存本机':'草稿保存失败':'已保存'}</span>
      <button disabled={busy} onClick={()=>setTemplatesOpen(true)}>模板与排版</button><button className="resume-assistant-toggle" aria-pressed={aiOpen} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>setAiOpen(value=>!value)}><Icon name="sparkles"/>简历助手</button>
      <PopoverButton title="导出简历" label={dirty?'保存并导出':'导出'} disabled={busy||stale} width={240}>{close=><><p className="note">{dirty?'先保存当前修改，再选择导出位置。':'导出当前版本和所选模板。'}</p><button className="status-option" onClick={()=>{close();void exportFile('pdf');}}>PDF · 用于投递</button><button className="status-option" onClick={()=>{close();void exportFile('docx');}}>Word · 继续编辑</button></>}</PopoverButton>
-     <button className="primary-button" title="保存修改 · ⌘S / Ctrl+S" disabled={busy||stale||!dirty} onClick={()=>void save()}>保存</button><button ref={focusButton} className="resume-focus-toggle" title={focused?'退出专注编辑 · Esc':'专注编辑'} aria-label={focused?'退出专注编辑':'专注编辑'} aria-pressed={focused} onClick={()=>focused?leaveFocus():setFocused(true)}><Icon name="expand"/></button>
+     <button className="primary-button" title="保存修改 · ⌘S / Ctrl+S" disabled={busy||stale||!dirty} onClick={()=>void save(true)}>保存</button><button ref={focusButton} className="resume-focus-toggle" title={focused?'退出专注编辑 · Esc':'专注编辑'} aria-label={focused?'退出专注编辑':'专注编辑'} aria-pressed={focused} onClick={()=>focused?leaveFocus():setFocused(true)}><Icon name="expand"/></button>
    </div>
    {templatesOpen&&<ResumeModal title="选择简历模板" onClose={()=>setTemplatesOpen(false)}><div className="resume-template-body"><p className="note">只改变排版，不改动你的经历。导出沿用所选模板。</p><div className="resume-template-gallery">{resumeTemplates.map(t=><button className={`resume-template-card ${t.id}`} key={t.id} aria-pressed={template===t.id} onClick={()=>applyTemplate(t.id)}><span className="resume-template-thumb" aria-hidden="true"><b/><i/><i/><strong/><i/><i/><i/><strong/><i/><i/></span><b>{t.name}</b><small>{t.description}</small></button>)}</div><div className="resume-template-options"><button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onOrganize();}}>调整内容归属</button><span>空章节自动隐藏，可在编辑栏添加。</span></div></div><footer><p>AI 按真实经历提出修改，审阅后保存。</p>{onImprove&&<button disabled={dirty} onClick={()=>{setTemplatesOpen(false);onImprove(`按“${resumeTemplates.find(t=>t.id===template)?.name}”模板组织内容；${template==='campus'?'教育、项目与实习优先':template==='compact'?'精简重复表达，保留关键事实':'突出真实工作成果'}。检查错分的章节，将项目与工作内容归回对应章节，不能遗漏原有经历`);}}>✦ AI 生成修改稿</button>}<button className="primary-button" onClick={()=>setTemplatesOpen(false)}>完成</button></footer></ResumeModal>}
    {error&&<p className="notice" role="alert">{error}</p>}{notice&&<p className="resume-feedback" role="status">{notice}</p>}{!draftStored&&<p className="notice" role="alert">本机草稿保存失败，请点击保存，避免丢失修改。</p>}
@@ -92,8 +103,8 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
        <div className="resume-format-group" role="group" aria-label="段落排版">
        <select className="resume-text-align" aria-label="段落对齐" disabled={busy} value={state?.align||'left'} onChange={e=>editor.chain().focus().updateAttributes('paragraph',{textAlign:e.target.value}).run()}><option value="left">左对齐</option><option value="center">居中</option><option value="right">右对齐</option><option value="justify">两端对齐</option></select>
        <button aria-label="项目符号列表" title="项目符号列表" aria-pressed={state?.bullet} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleBulletList().run()}><Icon name="bulletList"/></button><button aria-label="编号列表" title="编号列表" aria-pressed={state?.ordered} disabled={busy} onMouseDown={e=>e.preventDefault()} onClick={()=>editor.chain().focus().toggleOrderedList().run()}><Icon name="orderedList"/></button></div>
-       <button className="resume-selection-trigger" disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={modifySelection}><Icon name="sparkles"/>修改选中文字</button>
-       <button className="resume-sections-toggle" aria-pressed={showEmpty} onClick={()=>setShowEmpty(value=>!value)}>{showEmpty?'隐藏空章节':'＋ 添加章节'}</button>
+       <button className="resume-selection-trigger" aria-label="修改选中文字" title="修改选中文字" disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={modifySelection}><Icon name="sparkles"/>AI 改写</button>
+       <button className="resume-sections-toggle" aria-label={showEmpty?'隐藏空章节':'添加章节'} title={showEmpty?'隐藏空章节':'显示空章节以添加内容'} aria-pressed={showEmpty} onClick={()=>setShowEmpty(value=>!value)}><Icon name="add"/></button>
 
      </div>
      <div className="resume-editor-body"><div className={`resume-word-surface ${template}${showEmpty?' show-empty-sections':''}`}><EditorContent editor={editor}/></div>
@@ -101,7 +112,7 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
          {selectionOpen?<ResumeSelectionAI key={selectionRun} editor={editor} workspaceId={workspaceId} disabled={busy} onClose={()=>setSelectionOpen(false)}/>:<div className="resume-assistant-home"><p>选中一段文字，先看修改建议，再决定是否替换。</p><button disabled={busy||!state||state.selection.empty} onMouseDown={e=>e.preventDefault()} onClick={modifySelection}><strong>修改选中文字</strong><span>清晰表达、精简内容、纠正措辞</span></button>{state?.selection.empty&&<small>在正文中选中文字后即可使用。</small>}{onImprove&&<button disabled={busy||dirty} onClick={()=>{if(focused)leaveFocus();onImprove();}}><strong>优化整份简历</strong><span>根据真实经历或目标岗位生成修改稿</span></button>}{dirty&&onImprove&&<small>先保存当前修改，再优化整份简历。</small>}<p className="resume-assistant-privacy">点击生成时才发送内容给所选模型，修改由你审阅。</p></div>}
        </aside>}
      </div>
-     <div className="resume-word-footer"><span>{state?.characters||0} 字 · {dirty?draftStored?'本机草稿，点击保存后用于匹配与投递':'请保存当前修改':'修改已保存'} · 导出排版请查看预览</span>{dirty&&<button disabled={busy} onClick={()=>setDiscard(true)}>放弃草稿</button>}</div>
+     <div className="resume-word-footer"><span>{state?.characters??editor.state.doc.textContent.replace(/\s/g,'').length} 字 · {dirty?draftStored?'本机草稿，点击保存后用于匹配与投递':'请保存当前修改':'修改已保存'} · 导出排版请查看预览</span>{dirty&&<button disabled={busy} onClick={()=>setDiscard(true)}>放弃草稿</button>}</div>
      {discard&&<div className="notice" role="alert">放弃当前未保存的草稿？<button onClick={()=>setDiscard(false)}>继续编辑</button><button disabled={busy} onClick={reset}>放弃草稿并恢复</button></div>}
    </>:<ResumeDocument managedToolbar key={`${base.version_id}:${template}`} workspaceId={workspaceId} version={base} template={template} onTemplateChange={applyTemplate}/>}
  </div>;
