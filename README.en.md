@@ -48,10 +48,11 @@ The built-in browser supports **tabs, web search, bookmarks and split view**. Ke
 
 ## One resume, different opportunities
 
-My Resume is the central place to maintain and improve your resume. Import **PDF / DOCX**, view the original, and let matching information be extracted in the background. Open an editable copy when you want to make changes. MD / TXT text imports are also supported.
+My Resume is the central place to maintain and improve your resume. Import **PDF / DOCX**, view the original, and let matching information be extracted in the background. Open an editable copy when you want to make changes. MD / TXT text imports are also supported. Readable text colors, sizes and styles carry into the copy; the original file stays unchanged.
 
-- **Direct editing**: bold, font size, text color, paragraph alignment and lists. Supported text styles from readable PDF / Word files are retained in editable copies; drafts stay locally.
-- **AI tailoring to a role**: reuse the JD and your experience, compare original text with suggestions, and accept useful changes before saving. Keep your base resume and job-specific drafts separately.
+- **Focus on writing**: grouped controls for undo, bold, font size, color, alignment and lists. Clear selected formatting and restore it with one undo. Focus mode gives the document more space; `Esc` returns.
+- **Resume interrupted work**: unsaved drafts stay on your computer and recover after restarting. Save with `⌘S / Ctrl+S` and keep typing; page preview and Word / PDF exports use your saved edits.
+- **AI beside your document**: a collapsible resume assistant helps with selected text or the whole resume, reusing the JD and your experience. Review before accepting; an outdated suggestion cannot overwrite text you have since edited. Keep your base resume and job-specific drafts separately.
 - **Layouts for different stages**: professional, graduate and compact layouts change section order and density. Preview continuous pages and export Word or PDF.
 - **Reuse with each job**: the linked resume continues into interview preparation and application materials.
 
@@ -87,9 +88,9 @@ Job Management brings **all, saved and applied jobs** together. Arrange your nex
 
 Choose a resume and an opening message before applying; reopen the job to restore your saved materials. Save reusable message templates with company and role placeholders. AI polishing can use the current JD and the explicitly selected, redacted experience; edit the result directly or undo it. **Copy the message and open the job**, then confirm and send on the recruitment platform yourself.
 
-Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. The download currently supports assisted preparation, without bulk applications.
+Record the outcome to see which resume and message you used, for which company and when. Applied jobs lead to their application records. Opening a page is recorded as opening it, **never as a successful application**. The app supports assisted preparation, without bulk applications.
 
-The development build is validating **single-job BOSS applications**: restore your chosen resume and message, review the specific job, account and actual attachment, then confirm execution once. Message and attachment results are checked separately; duplicate clicks are coalesced and reservations survive restarts. Verification, rate limits or uncertain results stop execution without automatic retries. Confirmation, stopping and restart recovery passed in an isolated macOS window, and the read-only preview passed on a real BOSS page. Live uploads and delivery remain unverified. This capability is not available in the published download yet.
+**Single-job BOSS applications are experimental**: restore your chosen resume and message, review the specific job, account and actual attachment, then confirm execution once. Message and attachment results are checked separately; duplicate clicks are coalesced and reservations survive restarts. Verification, rate limits or uncertain results stop execution without automatic retries. Confirmation, stopping and restart recovery passed in an isolated macOS window, and the read-only preview passed on a real BOSS page. Actual uploads, delivery and platform receipts have not completed live acceptance. Prefer assisted applications; a successful preview does not prove that a message or resume was sent.
 
 ## Get started in three steps
 

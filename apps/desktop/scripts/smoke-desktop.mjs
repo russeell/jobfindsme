@@ -27,6 +27,16 @@ async function checkEditor(window){
  assert.ok(await editor.textContent());
  return editor;
 }
+async function exportFiles(app,window,prefix){
+ for(const [format,label] of [['docx','Word · 继续编辑'],['pdf','PDF · 用于投递']]){
+  await app.evaluate(({dialog},filePath)=>{
+   dialog.showSaveDialog=async()=>({canceled:false,filePath});
+  },path.join(resumeFolder,`${prefix}.${format}`));
+  await window.getByRole('button',{name:'导出简历',exact:true}).click();
+  await window.getByRole('button',{name:label,exact:true}).click();
+  await window.getByText(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。',{exact:true}).waitFor({state:'visible'});
+ }
+}
 for(let attempt=0;attempt<2;attempt++){
  const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],env:{...process.env,JFM_QA_DIAGNOSTICS:'1'},timeout:90000});
  app.process().stderr.on('data',chunk=>process.stderr.write(chunk));
@@ -98,16 +108,9 @@ for(let attempt=0;attempt<2;attempt++){
    await editor.press('End');
    await window.keyboard.type(' Packaged edit');
    await window.getByRole('button',{name:'保存',exact:true}).click();
-   await window.getByText('已保存新版本，原版本保留。',{exact:true}).waitFor({state:'visible'});
+   await window.getByText('修改已保存。',{exact:true}).waitFor({state:'visible'});
    savedResumeId=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current).version_id,workspaceId);
-   for(const [format,label] of [['docx','Word · 继续编辑'],['pdf','PDF · 用于投递']]){
-    await app.evaluate(({dialog},filePath)=>{
-     dialog.showSaveDialog=async()=>({canceled:false,filePath});
-    },path.join(resumeFolder,`export.${format}`));
-    await window.getByRole('button',{name:'导出简历',exact:true}).click();
-    await window.getByRole('button',{name:label,exact:true}).click();
-    await window.getByText(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。',{exact:true}).waitFor({state:'visible'});
-   }
+   await exportFiles(app,window,'export');
    fixture('verify');
    // Also exercise Word parsing in the frozen runtime, then restore the edited
    // PDF copy so that restart checks cover the saved document and its styles.
@@ -124,9 +127,64 @@ for(let attempt=0;attempt<2;attempt++){
   }
   const editor=await checkEditor(window);
   assert.ok((await editor.textContent()).includes('Packaged edit'),'Saved edit must survive restart');
+  for(const name of ['编辑历史','文字样式','段落排版']){
+   assert.ok(await window.getByRole('group',{name,exact:true}).isVisible(),`Missing new toolbar group: ${name}`);
+  }
+  if(attempt===0){
+   // Select actual styled text, clear only its formatting, then undo once.
+   const before=await editor.innerHTML();
+   await editor.locator('span').filter({hasText:'Example Candidate'}).first().evaluate(node=>{
+    const range=document.createRange();range.selectNodeContents(node);
+    const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+    node.closest('[contenteditable]').focus();
+   });
+   await window.getByRole('button',{name:'清除格式',exact:true}).click();
+   assert.notEqual(await editor.innerHTML(),before,'Clear formatting must change selected styles');
+   assert.ok((await editor.textContent()).includes('Example Candidate'),'Clear formatting must retain text');
+   await window.getByRole('button',{name:'撤销',exact:true}).click();
+   assert.equal(await editor.innerHTML(),before,'One undo must restore formatting');
+   await checkEditor(window);
+   await window.getByRole('button',{name:'简历助手',exact:true}).click();
+   await window.locator('aside.resume-editor-assistant').waitFor({state:'visible'});
+   await window.getByRole('button',{name:'关闭简历助手',exact:true}).click();
+   await window.getByRole('button',{name:'专注编辑',exact:true}).click();
+   await window.getByRole('dialog',{name:'专注简历编辑',exact:true}).waitFor({state:'visible'});
+   assert.equal(await window.getByRole('button',{name:'找工作',exact:true,includeHidden:true}).evaluate(node=>!!node.closest('[inert]')),true,'Focus mode must isolate background navigation');
+   await window.screenshot({path:path.join(output,'smoke-focus.png')});
+   await editor.press('Escape');
+   await window.getByRole('dialog',{name:'专注简历编辑',exact:true}).waitFor({state:'detached'});
+   await editor.click();
+   await editor.press(mac?'Meta+End':'Control+End');
+   await editor.press('End');
+   await window.keyboard.type(' Recovered draft');
+   await window.getByText('草稿已存本机',{exact:true}).waitFor({state:'visible'});
+   await window.waitForFunction(({workspace,id})=>localStorage.getItem(`jfm.resume.document-draft.${workspace}.${id}`)?.includes('Recovered draft'),{workspace:workspaceId,id:savedResumeId});
+   const saved=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
+   assert.equal(saved.version_id,savedResumeId);
+   assert.ok(!JSON.stringify(saved.document).includes('Recovered draft'),'Unsaved draft must not overwrite saved version');
+  }else{
+   await window.getByText('已恢复本机未保存的草稿。',{exact:true}).waitFor({state:'visible'});
+   assert.ok((await editor.textContent()).includes('Recovered draft'),'Unsaved draft must survive actual app restart');
+   const saved=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
+   assert.equal(saved.version_id,savedResumeId,'Draft recovery must not silently save a version');
+   await editor.click();
+   await editor.press(mac?'Meta+s':'Control+s');
+   await window.getByText('修改已保存。',{exact:true}).waitFor({state:'visible'});
+   await window.waitForFunction(()=>document.querySelector('[aria-label="简历文档编辑器"]').contains(document.activeElement));
+   const recovered=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
+   assert.notEqual(recovered.version_id,savedResumeId);
+   assert.ok(JSON.stringify(recovered.document).includes('Recovered draft'));
+   assert.equal(await window.evaluate(({workspace,id})=>localStorage.getItem(`jfm.resume.document-draft.${workspace}.${id}`),{workspace:workspaceId,id:savedResumeId}),null,'Saved draft cache must be removed');
+   await exportFiles(app,window,'recovered');
+   fixture('verify-draft');
+   await window.getByRole('button',{name:'分页预览',exact:true}).click();
+   await window.waitForFunction(()=>document.querySelector('.resume-pdf-page canvas')?.width>400);
+   await window.getByRole('button',{name:'编辑',exact:true}).click();
+   await checkEditor(window);
+  }
   const source=await window.evaluate(input=>window.jobfindsme.resumeSource(input),{workspace_id:workspaceId,document_id:originalSource.document_id});
   assert.equal(source.content_base64,originalSource.content_base64,'Original must remain unchanged');
   await window.screenshot({path:path.join(output,`smoke-${attempt}.png`)});
-  console.log(`Packaged ${process.platform} UI + IPC + frozen Python + SQLite + styled resume passed (${attempt+1}/2)`);
+  console.log(`Packaged ${process.platform} UI + IPC + frozen Python + SQLite + styled resume + draft recovery passed (${attempt+1}/2)`);
  }finally{await app.close();}
 }

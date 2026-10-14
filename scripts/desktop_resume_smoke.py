@@ -38,10 +38,13 @@ def create(folder: Path) -> None:
     word.save(folder / "fictional.docx")
 
 
-def verify(folder: Path) -> None:
-    word = Document(folder / "export.docx")
+def verify(folder: Path, recovered: bool = False) -> None:
+    prefix = "recovered" if recovered else "export"
+    word = Document(folder / f"{prefix}.docx")
     text = "\n".join(p.text for p in word.paragraphs)
     assert "Packaged edit" in text, "Editor change missing from Word export"
+    if recovered:
+        assert "Recovered draft" in text, "Recovered draft missing from Word export"
     name = next(
         run
         for paragraph in word.paragraphs
@@ -50,9 +53,11 @@ def verify(folder: Path) -> None:
     )
     assert name.bold and name.font.size.pt == 24
     assert str(name.font.color.rgb) == "1A334C"
-    reader = PdfReader(folder / "export.pdf")
+    reader = PdfReader(folder / f"{prefix}.pdf")
     assert len(reader.pages) == 1
     assert "Packaged edit" in reader.pages[0].extract_text()
+    if recovered:
+        assert "Recovered draft" in reader.pages[0].extract_text()
     chars = []
 
     def walk(node):
@@ -62,7 +67,7 @@ def verify(folder: Path) -> None:
             for child in node:
                 walk(child)
 
-    for page in extract_pages(folder / "export.pdf"):
+    for page in extract_pages(folder / f"{prefix}.pdf"):
         walk(page)
     assert any(round(char.size, 1) == 24 for char in chars)
     assert any(
@@ -80,4 +85,7 @@ def verify(folder: Path) -> None:
 
 
 if __name__ == "__main__":
-    {"create": create, "verify": verify}[sys.argv[1]](Path(sys.argv[2]))
+    if sys.argv[1] == "verify-draft":
+        verify(Path(sys.argv[2]), recovered=True)
+    else:
+        {"create": create, "verify": verify}[sys.argv[1]](Path(sys.argv[2]))

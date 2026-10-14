@@ -240,9 +240,12 @@ class JobPreparationService:
                 raise ValueError("application record scope mismatch")
             if old and old["deleted_at"]:
                 raise ValueError("记录已删除，请新建材料或先恢复记录")
-            if old and db.execute(
-                "SELECT 1 FROM application_attempts WHERE record_id=?", (record_id,)
-            ).fetchone():
+            if (
+                old
+                and db.execute(
+                    "SELECT 1 FROM application_attempts WHERE record_id=?", (record_id,)
+                ).fetchone()
+            ):
                 raise ValueError("执行材料已锁定，请新建材料；不会重复发送")
             if old and old["status"] in {"contacted", "resume_sent", "uncertain"}:
                 # Preserve confirmed materials; corrections create a new record.
