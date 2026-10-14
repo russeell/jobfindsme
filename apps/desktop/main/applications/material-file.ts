@@ -18,7 +18,7 @@ export async function applicationFile(api:Pick<DesktopApiClient,'getResumeVersio
       bytes=Buffer.from(source.content_base64,'base64');
     }else{
       const destination=path.join(folder,'export.pdf');
-      await api.exportResume({workspace_id:workspaceId,version_id:versionId,format:'pdf',template:'professional'},destination);
+      await api.exportResume({workspace_id:workspaceId,version_id:versionId,format:'pdf'},destination);
       bytes=await readFile(destination);await rm(destination);
     }
     if(!bytes.length||bytes.length>20*1024*1024||extension==='pdf'&&bytes.subarray(0,5).toString()!=='%PDF-'||extension==='docx'&&bytes.subarray(0,2).toString()!=='PK')throw Error('简历文件无效或超过 BOSS 的 20 MB 限制。');

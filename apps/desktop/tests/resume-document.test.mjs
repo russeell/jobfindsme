@@ -1,11 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {resumeDocument,resumeDocumentContent,resumeNodeText,resumeDocumentFingerprint} from '../dist-electron/shared/resume-document.js';
+import {resumeDocument,resumeDocumentContent,resumeNodeText,resumeDocumentFingerprint,resumeDocumentTemplate} from '../dist-electron/shared/resume-document.js';
 const content={basic_information:['虚构样例'],education:[],experience:['第一行\n第二行'],projects:[],skills:['Python']};
 test('legacy resume becomes editable without altering facts and keeps rich marks across templates',()=>{
  const doc=resumeDocument(content);assert.deepEqual(resumeDocumentContent(doc),content);
  const skills=doc.content.find(s=>s.attrs.section==='skills');skills.content[0].content[0].marks=[{type:'bold'}];
- const campus=resumeDocument(content,doc,'campus');assert.equal(campus.content[1].attrs.section,'education');assert.deepEqual(campus.content.find(s=>s.attrs.section==='skills'),skills);assert.deepEqual(resumeDocumentContent(campus),content);assert.equal(resumeDocumentFingerprint(campus),resumeDocumentFingerprint(doc));
+ const campus=resumeDocument(content,doc,'campus');assert.equal(campus.content[1].attrs.section,'education');assert.deepEqual(campus.content.find(s=>s.attrs.section==='skills'),skills);assert.deepEqual(resumeDocumentContent(campus),content);assert.notEqual(resumeDocumentFingerprint(campus),resumeDocumentFingerprint(doc));
+ assert.equal(resumeDocumentTemplate(campus),'campus');
+ assert.equal(resumeDocumentFingerprint({...campus,content:[...campus.content].reverse()}),resumeDocumentFingerprint(campus));
 });
 test('lists, blank paragraphs and hard breaks produce the same plain facts as exports',()=>{
  assert.equal(resumeNodeText({type:'orderedList',attrs:{start:3},content:[{type:'listItem',content:[{type:'paragraph',content:[{type:'text',text:'one'},{type:'hardBreak'},{type:'text',text:'two'}]}]}]}),'3. one\ntwo');
@@ -13,7 +15,7 @@ test('lists, blank paragraphs and hard breaks produce the same plain facts as ex
 });
 import {Editor,getSchema} from '@tiptap/core';
 import {resumeEditorExtensions} from '../dist-electron/shared/resume-editor-schema.js';
-import {clearResumeTextFormatting} from '../dist-electron/shared/resume-editor-actions.js';
+import {clearResumeTextFormatting,setResumeEditorDocument} from '../dist-electron/shared/resume-editor-actions.js';
 import {history} from '@tiptap/pm/history';
 test('clear formatting only affects selected text and paragraph alignment, with one undo preserving facts and structure',()=>{
  const doc=resumeDocument(content),skills=doc.content.find(s=>s.attrs.section==='skills');
@@ -44,6 +46,20 @@ test('document schema restores serialized drafts, applies local replacements and
  restored.commands.setContent(draft,{errorOnInvalidContent:true});assert.deepEqual(JSON.parse(JSON.stringify(restored.getJSON())),draft);
  assert.equal(restored.getJSON().content.length,5);assert.equal(resumeDocumentContent(restored.getJSON()).education.length,0);
  editor.destroy();restored.destroy();
+});
+test('layout-only changes survive draft serialization and one undo without changing facts',()=>{
+ const original=resumeDocument(content,undefined,'campus');
+ const editor=new Editor({element:null,extensions:resumeEditorExtensions,content:original});
+ editor.view.updateState(editor.state.reconfigure({plugins:[history()]}));
+ const baseline=editor.getJSON();
+ setResumeEditorDocument(editor,resumeDocument(content,baseline,'compact'));
+ const draft=JSON.parse(JSON.stringify(editor.getJSON()));
+ assert.equal(resumeDocumentTemplate(draft),'compact');
+ assert.notEqual(resumeDocumentFingerprint(draft),resumeDocumentFingerprint(baseline));
+ assert.deepEqual(resumeDocumentContent(draft),content);
+ assert.equal(getSchema(resumeEditorExtensions).nodeFromJSON(draft).attrs.template,'compact');
+ assert.equal(editor.commands.undo(),true);assert.equal(resumeDocumentTemplate(editor.getJSON()),'campus');
+ assert.equal(resumeDocumentFingerprint(editor.getJSON()),resumeDocumentFingerprint(baseline));editor.destroy();
 });
 test('imported typography survives editor serialization, template changes and local edits',()=>{
  const doc=resumeDocument(content);

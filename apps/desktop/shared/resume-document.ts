@@ -6,7 +6,11 @@ export function resumeParagraph(text:string,marks?:Node['marks']):Node {
 }
 export function resumeDocument(content:ResumeContent,saved?:Node|null,template:ResumeTemplate='professional'):Node {
   const sections=new Map(saved?.content?.map(s=>[s.attrs?.section,s]));
-  return {type:'doc',content:resumeTemplateSections(template).map(key=>sections.get(key)||{type:'resumeSection',attrs:{section:key},content:content[key]?.length?content[key].map(value=>resumeParagraph(value)):[resumeParagraph('')]})};
+  return {type:'doc',attrs:{template},content:resumeTemplateSections(template).map(key=>sections.get(key)||{type:'resumeSection',attrs:{section:key},content:content[key]?.length?content[key].map(value=>resumeParagraph(value)):[resumeParagraph('')]})};
+}
+export function resumeDocumentTemplate(document?:Node|null):ResumeTemplate|undefined {
+ const value=document?.attrs?.template;
+ return value==='classic'||value==='professional'||value==='campus'||value==='compact'?value:undefined;
 }
 export function resumeNodeText(node:Node):string {
   if(node.type==='text')return node.text||'';
@@ -21,7 +25,8 @@ export function resumeDocumentContent(document:Node):ResumeContent {
   return content;
 }
 
-// Template order is a presentation preference, not a change to resume facts.
+// Section serialization order alone is not an edit. The chosen template is
+// versioned document metadata and must participate in draft/save detection.
 export function resumeDocumentFingerprint(document:Node):string {
  return JSON.stringify({...document,content:[...(document.content||[])].sort((a,b)=>String(a.attrs?.section).localeCompare(String(b.attrs?.section)))});
 }

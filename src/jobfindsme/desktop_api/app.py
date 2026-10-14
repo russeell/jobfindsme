@@ -421,7 +421,7 @@ class ResumeExportRequest(StrictResponse):
     workspace_id: str
     destination: str
     format: str
-    template: str
+    template: str | None = None
 
 
 class ResumeExportResponse(StrictResponse):

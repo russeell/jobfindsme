@@ -610,6 +610,16 @@ def test_job_resume_is_independent_preserves_base_and_progress(tmp_path):
     database, workspace, current, connection, editor, service, _ = _context(
         tmp_path, []
     )
+    from jobfindsme.resume_editor.document import reconcile_document
+
+    document = reconcile_document(current.content)
+    document["attrs"] = {"template": "campus"}
+    current = editor.save_edit(
+        workspace_id=workspace.workspace_id,
+        base_version_id=current.version_id,
+        content=current.content,
+        document=document,
+    )
     job = normalize_job(
         RawJobRecord(
             source_kind=SourceKind.CAREER_SITE,
@@ -661,6 +671,7 @@ def test_job_resume_is_independent_preserves_base_and_progress(tmp_path):
     )
     saved = service.save_as_version(session_id=session.session_id)
     assert not saved.is_current
+    assert saved.document["attrs"]["template"] == "campus"
     assert editor.get_version(
         workspace_id=workspace.workspace_id, version_id=current.version_id
     ).is_current

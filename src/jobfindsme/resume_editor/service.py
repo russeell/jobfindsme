@@ -12,6 +12,7 @@ from jobfindsme.profiles.models import ResumeVersion
 from jobfindsme.profiles.text import normalize_resume_document, normalize_resume_text
 from jobfindsme.resume_editor.document import (
     document_content,
+    document_template,
     paragraphs,
     pdf_markup,
     reconcile_document,
@@ -279,13 +280,19 @@ class ResumeEditorService:
         version_id: str,
         destination: str | Path,
         format: ResumeFormat,
-        template: ResumeTemplate,
+        template: ResumeTemplate | None = None,
     ) -> ResumeExport:
         if format not in {"pdf", "docx", "md"}:
             raise ResumeEditorError("unsupported export format")
-        if template not in {"classic", "compact", "campus", "professional"}:
+        if template is not None and template not in {
+            "classic",
+            "compact",
+            "campus",
+            "professional",
+        }:
             raise ResumeEditorError("unsupported resume template")
         version = self.get_version(workspace_id=workspace_id, version_id=version_id)
+        template = template or document_template(version.document) or "professional"
         path = Path(destination).expanduser()
         if path.suffix.casefold() != f".{format}":
             raise ResumeEditorError(f"export path must end with .{format}")

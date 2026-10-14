@@ -81,3 +81,9 @@ test('optimistic message bubble is not confirmed when server reread fails',async
  const f=fixture({attachment:true,reloadFails:true}),p=await f.preview();const result=await f.controller.execute({preview_id:p.preview_id,confirmed:true});
  assert.equal(result.state,'uncertain');assert.equal(result.message_confirmed,false);assert.equal(result.resume_confirmed,false);assert.ok(!f.calls.includes('send_resume'));
 });
+
+test('edited attachment uses the exact version layout through backend default rather than a fixed template',async()=>{
+ let exported;
+ const file=await applicationFile({async getResumeVersion(){return {version_id:'campus-old',document:{attrs:{template:'campus'}},created_at:'2026-10-14'};},async exportResume(input,destination){exported=input;await writeFile(destination,'%PDF-1.7 campus version');}},'ws','campus-old');
+ try{assert.deepEqual(exported,{workspace_id:'ws',version_id:'campus-old',format:'pdf'});assert.equal((await readFile(file.path)).toString(),'%PDF-1.7 campus version');}finally{await file.dispose();}
+});

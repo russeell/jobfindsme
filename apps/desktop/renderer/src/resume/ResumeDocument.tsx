@@ -3,6 +3,7 @@ import type {PDFDocumentProxy,PDFDocumentLoadingTask,RenderTask} from 'pdfjs-dis
 import workerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import type {ResumeVersion} from '../../../shared/contracts';
 import {resumeSections,resumeTemplates,type ResumeTemplate} from '../../../shared/resume-library';
+import {resumeDocumentTemplate} from '../../../shared/resume-document';
 import {userError} from '../../../shared/user-errors';
 
 
@@ -35,8 +36,8 @@ function Paper({pdf,number,width,onRetry}:{pdf:PDFDocumentProxy;number:number;wi
 }
 
 export function ResumeDocument({original,managedToolbar=false,workspaceId,version,template:controlledTemplate,onTemplateChange}:{original?:import("../../../shared/contracts").ResumeSource;managedToolbar?:boolean;workspaceId:string;version:ResumeVersion;template?:ResumeTemplate;onTemplateChange?:(value:ResumeTemplate)=>void}){
-  const preference=`jfm.resume.template.${workspaceId}`;
-  const [localTemplate,setLocalTemplate]=useState<ResumeTemplate>(()=>{try{const saved=localStorage.getItem(preference);return resumeTemplates.some(t=>t.id===saved)?saved as ResumeTemplate:'professional';}catch{return 'professional';}});
+  const [localTemplate,setLocalTemplate]=useState<ResumeTemplate>(()=>resumeDocumentTemplate(version.document)||'professional');
+  useEffect(()=>setLocalTemplate(resumeDocumentTemplate(version.document)||'professional'),[version.version_id]);
   const template=controlledTemplate??localTemplate;
   function setTemplate(value:ResumeTemplate){setLocalTemplate(value);onTemplateChange?.(value);}
   const [pdf,setPdf]=useState<PDFDocumentProxy>(),[error,setError]=useState(''),[retry,setRetry]=useState(0);
@@ -47,7 +48,6 @@ export function ResumeDocument({original,managedToolbar=false,workspaceId,versio
   useEffect(()=>{
     let cancelled=false,loading:PDFDocumentLoadingTask|undefined;
     setPdf(undefined);setError('');setNotice('');
-    try{localStorage.setItem(preference,template);}catch{/* Preferences are optional. */}
     void (original?Promise.resolve(Uint8Array.from(atob(original.content_base64),char=>char.charCodeAt(0))):window.jobfindsme!.previewResume({workspace_id:workspaceId,version_id:version.version_id,template})).then(async bytes=>{
       if(cancelled)return;
       const {getDocument,GlobalWorkerOptions}=await import('pdfjs-dist/legacy/build/pdf.mjs');

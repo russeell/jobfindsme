@@ -14,6 +14,13 @@ from html import escape
 
 SECTIONS = ("basic_information", "education", "experience", "projects", "skills")
 MARKS = {"bold", "italic", "underline", "strike", "textStyle"}
+TEMPLATES = {"classic", "professional", "campus", "compact"}
+
+
+def document_template(document: dict | None) -> str | None:
+    attrs = (document or {}).get("attrs") or {}
+    value = attrs.get("template") if isinstance(attrs, dict) else None
+    return value if isinstance(value, str) and value in TEMPLATES else None
 
 
 def text_style(attrs: dict) -> dict:
@@ -111,7 +118,15 @@ def reconcile_document(content: dict, previous: dict | None = None) -> dict:
                 "content": blocks or [paragraph("")],
             }
         )
-    return {"type": "doc", "content": sections}
+    return {
+        "type": "doc",
+        **(
+            {"attrs": {"template": template}}
+            if (template := document_template(previous))
+            else {}
+        ),
+        "content": sections,
+    }
 
 
 def restyle_paragraph(value: str, previous: dict) -> dict:
@@ -179,7 +194,13 @@ def validate_document(value: dict) -> dict:
         if kind not in allowed.get(parent, set()):
             raise ValueError("unsupported resume document node")
         result = {"type": kind}
-        if kind == "text":
+        if kind == "doc":
+            template = node.get("attrs", {}).get("template")
+            if template is not None:
+                if not isinstance(template, str) or template not in TEMPLATES:
+                    raise ValueError("invalid resume template")
+                result["attrs"] = {"template": template}
+        elif kind == "text":
             text = node.get("text")
             if not isinstance(text, str) or not text or len(text) > 100_000:
                 raise ValueError("invalid resume text")

@@ -394,10 +394,10 @@ export type ResumeExportInput = {
   workspace_id: string;
   version_id: string;
   format: "pdf" | "docx" | "md";
-  template: "classic" | "compact" | "campus" | "professional";
+  template?: "classic" | "compact" | "campus" | "professional";
 };
 
-export type ResumeExport = ResumeExportInput & { path: string };
+export type ResumeExport = ResumeExportInput & { path: string; template: "classic" | "compact" | "campus" | "professional" };
 
 export type PromptSessionInput = {
   target_job_id?:string|null;
