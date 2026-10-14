@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": null,
+  "current_task": "D198",
   "tasks": [
     {
       "id": "D01",
@@ -34,104 +34,59 @@
     {
       "id": "D02",
       "title": "桌面端与本地服务底座",
-      "depends_on": [],
       "status": "done",
-      "scope": [
-        "apps/desktop",
-        "src/jobfindsme/desktop_api",
-        "依赖与开发脚本"
-      ],
-      "acceptance": [
-        "桌面启动/退出正确管理 Python 进程",
-        "本地 API 回环鉴权，preload 只暴露受限接口",
-        "界面能读取现有核心提供的数据"
-      ],
-      "verification": "一次启动/退出冒烟；一个未授权调用集成检查；前端类型和构建检查。",
+      "depends_on": [],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-review.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-review-resolution.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D02-fix-review-request.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D03",
       "title": "简历导入、核对、版本与隐私",
+      "status": "done",
       "depends_on": [
         "D02"
       ],
-      "status": "done",
-      "scope": [
-        "profiles",
-        "privacy.py",
-        "migrations",
-        "简历页面"
-      ],
-      "acceptance": [
-        "PDF/DOCX/MD/TXT 解析复用并可核对，旧 DOC/OCR 能力显式识别",
-        "上传未完成处理时不静默使用无简历检索",
-        "当前版本与原文件独立，分析副本可选择脱敏"
-      ],
-      "verification": "复用格式样例，仅增加版本、解析失败和脱敏边界验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-request.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-resolution.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D04a",
       "title": "隔离来源浏览器与能力状态底座",
+      "status": "done",
       "depends_on": [
         "D02"
       ],
-      "status": "done",
-      "scope": [
-        "Electron WebContentsView 来源浏览器",
-        "四平台持久会话分区",
-        "来源能力状态与本地 API",
-        "来源与账号页面"
-      ],
-      "acceptance": [
-        "右侧工作区使用 WebContentsView 打开白名单平台页面，远程页无 Node/preload 权限",
-        "四平台使用各自持久分区，前台人工浏览与后台检索视图分离但复用同平台会话",
-        "不导出 Cookie、不依赖公共 CDP 端口，登录态与列表/详情/字段/分页能力分开记录",
-        "三平台未验证登录时前后端均显示并保持检索禁用；猎聘仅按匿名能力状态开放"
-      ],
-      "verification": "离线会话/导航白名单/门禁契约测试；桌面类型和构建检查；不做真实登录。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04a.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D04b",
       "title": "简历检索词与有预算来源执行契约",
+      "status": "done",
       "depends_on": [
         "D03",
         "D04a"
       ],
-      "status": "done",
-      "scope": [
-        "检索前置用例",
-        "现有连接器适配",
-        "分页预算与继续状态",
-        "11 家官网能力目录"
-      ],
-      "acceptance": [
-        "上传待确认时阻断检索；存在当前已确认简历时强制生成有限关键词且排除基本信息",
-        "后端在调用连接器前强制来源登录/能力门禁，未验证来源不能靠前端参数绕过",
-        "来源结果报告页数/时间预算、覆盖状态和可继续获取状态，现有真实连接器由适配层复用",
-        "11 家招聘官网逐项记录校招/社招、列表、详情、字段、分页和验证状态，未验证保持禁用"
-      ],
-      "verification": "固定简历与假分页适配器验证隐私关键词、待确认阻断、后端门禁、预算和继续状态；现有连接器工厂契约检查。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04b.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D04",
@@ -165,347 +120,198 @@
     {
       "id": "D05",
       "title": "硬过滤、评分模板与稳定分页",
+      "status": "done",
       "depends_on": [
         "D04b"
       ],
-      "status": "done",
-      "scope": [
-        "matching.py",
-        "search_runs 与迁移",
-        "岗位列表与详情"
-      ],
-      "acceptance": [
-        "硬条件三态与薪资策略正确",
-        "权重合计校验并保存规则版本，绑定简历版本",
-        "20 条默认分页，翻页不重复不漏项",
-        "短列表保持右侧详情，窄屏切换而非末尾堆叠"
-      ],
-      "verification": "相关排序/过滤单元用例；一个多页快照集成用例；桌面与窄屏人工检查。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D05.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D06",
       "title": "原页投递与求职记录",
+      "status": "done",
       "depends_on": [
         "D05"
       ],
-      "status": "done",
-      "scope": [
-        "tracking.py",
-        "阅读事件迁移",
-        "右侧浏览器",
-        "求职记录页面"
-      ],
-      "acceptance": [
-        "每条岗位有研究与投递入口",
-        "展示不算阅读，打开原页不算投递成功",
-        "收藏与投递状态可并存、可撤销，旧展示记录不误迁为已读"
-      ],
-      "verification": "一个状态转换集成用例；一次原页跳转人工冒烟，不实际投递。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D06.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D07",
       "title": "简历编辑、模板与导出",
+      "status": "done",
       "depends_on": [
         "D03"
       ],
-      "status": "done",
-      "scope": [
-        "resume_editor",
-        "简历编辑与预览",
-        "导出"
-      ],
-      "acceptance": [
-        "结构化编辑、版本回退与两款单栏模板",
-        "同一内容导出 PDF/DOCX/MD，分页无明显截断",
-        "DOC 转换与扫描 PDF OCR 支持或明确显示缺失依赖及替代路径"
-      ],
-      "verification": "代表性简历每种导出格式检查一次；复用解析测试，新增必要版本回退用例。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D07.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D08",
       "title": "模型连接与统一调用",
+      "status": "done",
       "depends_on": [
         "D02"
       ],
-      "status": "done",
-      "scope": [
-        "models",
-        "模型设置",
-        "本地密钥管理"
-      ],
-      "acceptance": [
-        "服务商、协议、端点、模型 ID 可配置",
-        "三类协议分别适配；密钥不进前端持久化或日志",
-        "连接测试、取消、超时与用量状态可见"
-      ],
-      "verification": "每协议最小契约样例；有配置时做一次短请求，否则保持该连接未验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D08.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-request.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D03-D08-review-resolution.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D09",
       "title": "Prompt 简历修改与逐段采纳",
+      "status": "done",
       "depends_on": [
         "D07",
         "D08"
       ],
-      "status": "done",
-      "scope": [
-        "resume_editor 会话与补丁",
-        "差异视图",
-        "隐私发送边界"
-      ],
-      "acceptance": [
-        "自由 Prompt 可结合项目事实及可选 JD 多轮修改",
-        "补丁有事实依据，可逐段采纳/拒绝，另存新版本",
-        "版本冲突可识别；未知成果标为待补充；脱敏贯穿调用"
-      ],
-      "verification": "一个采纳/撤销流程和版本冲突用例；少量固定事实样例检查编造与隐私泄漏。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09-review-request.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D09-review.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D10",
       "title": "JD 与口碑研究",
+      "status": "done",
       "depends_on": [
         "D06",
         "D08",
         "D09"
       ],
-      "status": "done",
-      "scope": [
-        "research",
-        "岗位研究页面",
-        "证据存储"
-      ],
-      "acceptance": [
-        "JD 准备、项目改写和面试建议关联简历版本",
-        "评价有真实引用链接、日期及团队相关性",
-        "无证据和来源受限状态明确，可用用户提供的摘录并注明"
-      ],
-      "verification": "引用映射契约与少量有/无证据样例；一次已授权来源人工检查。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D11",
       "title": "本地定时检索与通知",
+      "status": "done",
       "depends_on": [
         "D06"
       ],
-      "status": "done",
-      "scope": [
-        "scheduler",
-        "旧 monitor 数据审查与迁移",
-        "定时检索页面",
-        "桌面通知"
-      ],
-      "acceptance": [
-        "任务绑定筛选、简历和评分快照，支持暂停及补跑策略",
-        "重复触发不重复执行，多次错过最多补跑一次",
-        "新增/变化/登录失败分别记录，后台与完全退出行为明确"
-      ],
-      "verification": "可控时钟验证重入、补跑、时区；一次恢复运行人工冒烟，无需真实等待数小时。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D11.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D04c",
       "title": "内嵌会话来源动作桥与分页适配",
+      "status": "done",
       "depends_on": [
         "D04a",
         "D04b"
       ],
-      "status": "done",
-      "scope": [
-        "Electron 后台来源动作桥",
-        "来源同源会话与调用者校验",
-        "猎聘分页适配",
-        "公司官网可用适配器"
-      ],
-      "acceptance": [
-        "BOSS、智联、前程无忧通过各自后台 WebContentsView 的受限固定动作读取列表、详情和分页，复用同源持久会话且不打断前台浏览",
-        "动作桥校验主窗口调用者、来源 ID、HTTPS 主机和结果结构；远程页无 preload/Node 权限，不导出 Cookie、不开放任意脚本或公共 CDP",
-        "登录或能力失效时停止并回写明确门禁状态，不绕过验证码、挑战或风控",
-        "猎聘连接器暴露真实继续游标；11 家官网仅将实际具备列表解析的适配器标为可用，其余保持目录/未验证"
-      ],
-      "verification": "固定动作与调用者边界的 Electron 单测；Python 分页契约与失效门禁集成样例；仅对匿名公开路径做一次必要实测。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04c.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D04d",
       "title": "生产来源实测、官网分级与登录验证闭环",
+      "status": "done",
       "depends_on": [
         "D04c"
       ],
-      "status": "done",
-      "scope": [
-        "猎聘匿名生产检索",
-        "腾讯官网生产适配",
-        "十家公司官网能力分级",
-        "登录来源验证动作与浏览器桥安全"
-      ],
-      "acceptance": [
-        "真实 .app 中验证猎聘跨页和完整原页 JD，不进行登录或投递",
-        "腾讯官网进入发现岗位、筛选、稳定分页和完整 JD，并保留官方原始链接",
-        "其余十家公司按公开列表、需凭据、仅目录或未验证分级，不以首页可打开冒充适配器",
-        "登录来源提供人工触发的两页有界验证，未返回岗位或未完成详情/字段/分页时不虚报能力"
-      ],
-      "verification": "真实生产包匿名只读冒烟；固定桥、同源导航、能力汇总契约测试；不登录、不投递、不绕过风控。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D04d.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D10a",
       "title": "研究证据正文核验与模型事实边界修复",
+      "status": "done",
       "depends_on": [
         "D10"
       ],
-      "status": "done",
-      "scope": [
-        "评价正文核验",
-        "公司/团队/日期相关性",
-        "研究模型发送边界与输出校验"
-      ],
-      "acceptance": [
-        "搜索摘要不得标记为已核验评价；仅成功读取原始正文并核对来源主机与公司时标记正文已核验",
-        "团队和发布日期分别给出已核验、未知或不匹配状态，证据可信度和局限准确可见",
-        "模型只接收必要的脱敏事实和明确不可信材料，输出不能引入未在输入中出现的事实性断言"
-      ],
-      "verification": "离线正文抓取样例覆盖跳转越域、公司不匹配、团队未知和日期缺失；模型载荷/结构边界样例。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10-D11-safety-review.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10a.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D11a",
       "title": "调度冻结快照、崩溃恢复与并发修复",
+      "status": "done",
       "depends_on": [
         "D11"
       ],
-      "status": "done",
-      "scope": [
-        "冻结版本执行链路",
-        "running 崩溃恢复",
-        "并发互斥与通知投递"
-      ],
-      "acceptance": [
-        "每次任务实际使用创建时冻结的筛选、简历和评分规则版本，缺失或失效时明确失败",
-        "断电遗留 running 可在租约过期后恢复为失败并继续后续计划；并发轮询不能重复执行同一任务",
-        "通知只在系统通知成功后确认投递，不支持时保留待处理；完全退出停止轮询和 Python 子进程"
-      ],
-      "verification": "隔离 SQLite 与可控时钟复现冻结规则差异、陈旧 running 恢复、双调度器竞争、通知失败重试和退出。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D10-D11-safety-review.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D11a.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D12a",
       "title": "桌面本地打包与迁移备份恢复前置",
+      "status": "done",
       "depends_on": [
         "D10a",
         "D11a"
       ],
-      "status": "done",
-      "scope": [
-        "本地打包配置",
-        "Python 运行时布局",
-        "数据库迁移前备份恢复"
-      ],
-      "acceptance": [
-        "定义 macOS 本地安装包与内置 Python 服务布局，但不发布、不删除旧 MCP/skill",
-        "生产启动不依赖源码工作目录或 uv，产物排除数据库、简历、密钥和浏览器会话",
-        "迁移前原子备份、迁移失败自动恢复、可验证恢复旧数据"
-      ],
-      "verification": "打包配置检查与本地产物内容审计；隔离数据库的成功迁移和失败恢复样例。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12a.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D12b",
       "title": "本地生产包主流程与打包缺陷修复",
+      "status": "done",
       "depends_on": [
         "D12a",
         "D04d"
       ],
-      "status": "done",
-      "scope": [
-        "实际 macOS .app 冷启动",
-        "合成简历导入、版本、脱敏与导出",
-        "生产来源检索与原页",
-        "包结构和内置 Python 生命周期"
-      ],
-      "acceptance": [
-        "全新隔离用户数据目录启动真实 .app，不依赖源码 Python 调用方式",
-        "合成简历导入确认、版本编辑、脱敏预览和 Markdown 导出通过",
-        "修复框架符号链接、内置可执行文件参数、冷启动超时和导出严格请求体",
-        "包审计验证 Electron Framework 资源、符号链接边界和敏感文件排除"
-      ],
-      "verification": "真实 .app 人工主流程；Electron 契约测试、生产构建、目录包及审计。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12b.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D12c",
       "title": "桌面导航、来源说明与启动状态收尾",
+      "status": "done",
       "depends_on": [
         "D05",
         "D12b"
       ],
-      "status": "done",
-      "scope": [
-        "desktop-v3 匹配规则导航",
-        "猎聘能力说明迁移",
-        "本地服务启动竞态状态"
-      ],
-      "acceptance": [
-        "侧栏匹配规则进入可用规则编辑页并与发现岗位实际检索权重共享，不再显示待接入",
-        "猎聘说明区分历史列表实测、可视原页 JD 与结构化字段状态，不把桌面快照分页称为来源全量分页",
-        "启动期间显示本地服务启动状态，不闪现 desktop API not ready；服务就绪后自动加载 bootstrap"
-      ],
-      "verification": "受影响 renderer/main 类型检查与最小 Electron 测试；来源目录迁移针对性 Python 用例；不操作或重打包当前登录窗口。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D12c.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D12",
@@ -535,640 +341,344 @@
     {
       "id": "D13",
       "title": "灰白工作台重构、研究入口与独立右侧浏览器",
+      "status": "done",
       "depends_on": [
         "D12c"
       ],
-      "status": "done",
-      "scope": [
-        "React 工作台组件",
-        "Electron 原页面板",
-        "研究链接与粘贴 JD",
-        "发现岗位内定时任务"
-      ],
-      "acceptance": [
-        "可搜索多选城市、紧凑筛选及更多条件，保持硬过滤与分页",
-        "研究四模块接真实业务，链接安全校验、受限时粘贴 JD",
-        "已看过以阅读事件筛选，保留收藏投递状态",
-        "定时任务从当前筛选与权重创建冻结快照，无独立侧栏",
-        "侧栏与右侧浏览器可拖动、键盘调整并持久化，窄屏明确切换",
-        "实际隔离 Electron 宽窄屏验证、原生 bounds/导航/关闭证据"
-      ],
-      "verification": "针对过滤、链接安全与布局边界测试；生产构建；隔离 Electron 实际视觉验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D13.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D14",
       "title": "模型预设、本地协议与岗位来源体验收尾",
+      "status": "done",
       "depends_on": [
         "D13"
       ],
-      "status": "done",
-      "scope": [
-        "模型预设与免密钥本地服务",
-        "岗位来源与官网浏览白名单",
-        "品牌图标",
-        "固定独立滚动与浏览器面板开关"
-      ],
-      "acceptance": [
-        "官方文档核实中国主流/OpenAI/Claude/Gemini/本地服务预设，模型ID由用户填写",
-        "本地免密钥可真实选择协议并测试，保留云端密钥边界",
-        "默认10条与独立列表滚动，不带走JD，分页可达",
-        "方框居中j与打包图标统一",
-        "岗位来源中文精简状态，登录与可检索分开，持久会话不主动清除",
-        "11家公司真实登记官网可人工打开且保持搜索门禁",
-        "右上角原页面板开关、收起/恢复/关闭、宽窄屏原生验证",
-        "浏览器可放大为主工作区并还原宽度，语义侧栏图标与独立展开按钮",
-        "登录保存机制与临时/过期会话边界在界面说明"
-      ],
-      "verification": "协议/无密钥边界与白名单契约；原生UI滚动与面板行为；隔离构建图标审计。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D14.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D15",
       "title": "启动提速、来源选择与链接研究简化",
+      "status": "done",
       "depends_on": [
         "D14"
       ],
-      "status": "done",
-      "scope": [
-        "启动与Python打包",
-        "本机来源偏好",
-        "自动解析岗位链接及已看过研究入口"
-      ],
-      "acceptance": [
-        "先显示界面并实测启动前后耗时",
-        "来源勾选持久化并控制发现页选项与检索来源",
-        "岗位链接自动解析标题公司和JD，无额外粘贴字段",
-        "发现及已看过跳转后确认并研究，解析受限真实提示"
-      ],
-      "verification": "针对启动、来源边界及解析契约测试，隔离原生UI验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D15.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D16",
       "title": "四维匹配规则与历史版本兼容",
+      "status": "done",
       "depends_on": [
         "D15"
       ],
-      "status": "done",
-      "scope": [
-        "技能/项目经历/学历/工作经验四维评分",
-        "简历映射与模型契约",
-        "规则快照兼容与真实预览"
-      ],
-      "acceptance": [
-        "默认35/30/15/20，权重总和100",
-        "未知学历及年限不当满足，项目证据区别于技能关键词",
-        "旧规则及定时快照保留原解释，新检索使用新版",
-        "定向四维/缺失/版本测试和真实评分明细空态"
-      ],
-      "verification": "定向后端规则测试、类型构建和原生页面验证",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D16.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D17",
       "title": "原生浏览器多标签与独立导航",
+      "status": "done",
       "depends_on": [
         "D16"
       ],
-      "status": "done",
-      "scope": [
-        "优先修复默认腾讯与浏览器布局：默认窗口右侧同高独立列，窄屏明确切换",
-        "标签新增切换关闭",
-        "独立历史与共享平台会话",
-        "安全新窗口路由与视图生命周期",
-        "按userData单实例锁、重复启动聚焦与包内固定隔离测试目录"
-      ],
-      "acceptance": [
-        "默认1240窗口、侧栏宽度历史偏好、实际原生网页均右侧同高；无目标显示来源空态；区分D15运行包与新包，不覆盖真实会话",
-        "不同URL保留多标签，同URL复用",
-        "标题加载状态、关闭相邻回退、上限和资源清理",
-        "仅活动视图可见，收起恢复保持页面和bounds",
-        "后台检索不影响前台，安全window.open进入标签",
-        "实际Electron验证同来源两页、跨来源、独立后退与收起恢复"
-      ],
-      "verification": "安全边界与原生多view行为验证",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D17.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D18",
       "title": "Terra产品、全栈与AI流程有界审查修复",
+      "status": "done",
       "depends_on": [
         "D17"
       ],
-      "status": "done",
-      "scope": [
-        "现有完整本地产品流程",
-        "数据隐私与生命周期",
-        "事实保真和证据边界",
-        "先复現分级，再修复实际问题"
-      ],
-      "acceptance": [
-        "用户指定gpt-5.6-terra medium且唯一写入者",
-        "检查简历确认到发现/筛选/四维/研究/定向简历/原页/记录/调度",
-        "按风险定向验证，必要原生集成截图",
-        "记录缺陷修复映射、最新版包、未验证及用户依赖并停止写入"
-      ],
-      "verification": "复用定向测试，有界审查；不提交发布/真实投递/未授权付费调用",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D18.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D19",
       "title": "隔离桌面 UI 实走查与一致性优化",
+      "status": "done",
       "depends_on": [
         "D18"
       ],
-      "status": "done",
-      "scope": [
-        "默认与窄窗口逐页实际检查",
-        "工作区、来源、研究、简历、规则、模型与定时任务的层级、密度和状态",
-        "灰白视觉系统的一致性修复",
-        "用户最新澄清：岗位研究保留口碑调查和针对JD修改简历，删除应聘准备；清爽灰白配色",
-        "按 evidence/D19-checklist.md 持续修复并验收，执行模型 gpt-6-astra / low"
-      ],
-      "acceptance": [
-        "记录亲自观察的问题及修复理由",
-        "默认1240与窄窗口代表页面截图",
-        "不遮盖原生浏览器视图，不回退当前导航，测试包保持隔离",
-        "定向构建与实际桌面验收"
-      ],
-      "verification": "隔离预览包逐页观察、代表截图与受影响桌面检查",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D19.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D19-checklist.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D20",
       "title": "本项目开发产物可恢复归档与文件整理",
+      "status": "done",
       "depends_on": [
         "D19"
       ],
-      "status": "done",
-      "scope": [
-        "明确归属JobFindsMe的旧测试包、临时脚本、历史截图及可再生缓存",
-        "有效验收截图目录与文档引用",
-        "保留正式数据、运行包、UI6最新预览、源码配置和依赖"
-      ],
-      "acceptance": [
-        "逐项清单记录原路径、去向、原因与空间占用，不永久删除",
-        "运行进程与路径引用检查后才移动，归属或用途不明项原地保留",
-        "最新UI6包及源码依赖不变，有效证据引用可解析",
-        "HANDOFF和ORCHESTRATION清楚标注当前结论及历史"
-      ],
-      "verification": "显式归档清单、移动前后内容/大小核对、文档链接检查；不运行无关测试。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D20.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D21",
       "title": "岗位操作层级与横向弹出筛选",
+      "status": "done",
       "depends_on": [
         "D20"
       ],
-      "status": "done",
-      "scope": [
-        "复用岗位操作组件：唯一投递主按钮、星标收藏、阅读/投递状态菜单",
-        "按用户BOSS截图调整紧凑横向筛选及弹层，保持灰白和双栏独立滚动"
-      ],
-      "acceptance": [
-        "发现与已看过动作一致，异步禁用/错误反馈，打开不标投递",
-        "菜单键盘可用且不被原生view遮挡，筛选不挤占结果高度",
-        "仅启用真实后端支持字段，有内容宽窄窗验收"
-      ],
-      "verification": "受影响类型构建与隔离实际交互验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D21.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D22",
       "title": "版本化提示词模板与有界模型重排",
+      "status": "done",
       "depends_on": [
         "D21"
       ],
-      "status": "done",
-      "scope": [
-        "模板编辑、模型显式选择、四维高级约束及试评",
-        "提示词版本进入检索和定时快照、历史兼容",
-        "有界模型评分真实影响排序、进度取消失败与规则兜底"
-      ],
-      "acceptance": [
-        "用户修改prompt实际参与模型评分，规则兜底明确说明自由prompt未生效",
-        "无简历不展示误导的0分；隐私副本、JD不可信、结构化输出校验与证据约束保留",
-        "模板/版本/模型评分排序/旧快照兼容定向测试和UI验收，不调用未授权付费模型"
-      ],
-      "verification": "模拟协议的真实评分链路和快照集成测试、隔离UI验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D22.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D23",
       "title": "前台通用网页浏览与后台来源权限分离",
+      "status": "done",
       "depends_on": [
         "D21"
       ],
-      "status": "done",
-      "scope": [
-        "source-browser",
-        "新标签页面",
-        "来源策略测试"
-      ],
-      "acceptance": [
-        "前台普通HTTP/HTTPS与跨站重定向不按来源白名单拦截",
-        "跨站新标签继承会话，未知网站通用分区",
-        "后台提取与检索保持来源门禁；远程无Node/preload/IPC",
-        "阿里官网跳转和普通网站原生验收，不提交申请"
-      ],
-      "verification": "定向策略/标签测试与隔离原生窗口实测",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D23.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D24",
       "title": "紧凑浏览器工具栏与幂等适应宽度",
+      "status": "done",
       "depends_on": [
         "D23"
       ],
-      "status": "done",
-      "scope": [
-        "Workbench toolbar",
-        "source-browser zoom"
-      ],
-      "acceptance": [
-        "工具栏单行紧凑且bounds不遮挡",
-        "适应宽度以100%重新测量，不超过100%且反复点击幂等",
-        "真实腾讯页从120%/100%/较小缩放验证，跨标签及缩放窗口状态独立"
-      ],
-      "verification": "定向缩放测试及原生页面几何/截图",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D24.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D25",
       "title": "左侧筛选弹层不应使原生网页空白",
+      "status": "done",
       "depends_on": [
         "D24"
       ],
-      "status": "done",
-      "scope": [
-        "PopoverButton",
-        "Workbench原生遮挡判断",
-        "页面焦点通知"
-      ],
-      "acceptance": [
-        "非重叠筛选/状态菜单保持原生网页可见与滚动状态",
-        "全局模态或真实重叠才隐藏，关闭恢复当前标签bounds",
-        "逐项筛选、嵌套、Escape、外部点击、标签切换与菜单卸载验证"
-      ],
-      "verification": "几何边界定向测试和隔离真实招聘页原生view验收，不重跑无关后端测试",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D25.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D26",
       "title": "统一灰白配色与原生控件主题",
+      "status": "done",
       "depends_on": [
         "D24"
       ],
-      "status": "done",
-      "scope": [
-        "renderer/theme.css",
-        "renderer/main.tsx",
-        "窗口底色"
-      ],
-      "acceptance": [
-        "统一工作区、浏览器壳层、弹层和提示背景",
-        "固定浅色原生控件与深灰勾选框",
-        "实际窗口检查发现岗位、研究入口及岗位来源"
-      ],
-      "verification": "类型检查/构建、包审计通过；UI10隔离窗口通过原生界面截图检查三个页面。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D26.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D27",
       "title": "浏览器新标签支持搜索引擎和站点限定搜索",
+      "status": "done",
       "depends_on": [
         "D23"
       ],
-      "status": "done",
-      "scope": [
-        "shared/browser-search.ts",
-        "Workbench新标签页"
-      ],
-      "acceptance": [
-        "网站首页、输入网址优先、全网搜索、站点限定搜索四种行为明确",
-        "百度/Bing选择持久化，关键词正确编码，危险网址不转搜索",
-        "单次打开一个目标，网址按目标来源分区，搜索页通用分区",
-        "实际UI四态摘要和搜索URL及浏览返回可用"
-      ],
-      "verification": "纯解析函数定向测试、隔离UI和真实搜索页导航",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D27.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D28",
       "title": "网站与搜索分离并接通顶部统一地址栏",
+      "status": "done",
       "depends_on": [
         "D27"
       ],
-      "status": "done",
-      "scope": [
-        "BrowserStartPage",
-        "BrowserAddressBar",
-        "browser-search解析",
-        "当前标签导航IPC"
-      ],
-      "acceptance": [
-        "打开网站与网页搜索两个明确入口，只有搜索显示Bing/百度/Google",
-        "搜索可选范围保留站点限定，短摘要",
-        "顶部关键词固定Bing，网址直达；编辑不被轮询覆写、失焦恢复、Escape取消",
-        "已有标签同页导航及前后退正常，危险地址拒绝",
-        "隔离真实UI验收，不影响用户窗口/主题/后台来源"
-      ],
-      "verification": "相关纯函数、标签导航单元与真实UI边界验收，最终独立包",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D28.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D29",
       "title": "删除新标签重复网址与搜索范围控件",
+      "status": "done",
       "depends_on": [
         "D28"
       ],
-      "status": "done",
-      "scope": [
-        "BrowserStartPage",
-        "browser-search模式解析",
-        "新标签表单排版"
-      ],
-      "acceptance": [
-        "网站仅选择与打开，无网址输入",
-        "搜索仅关键词引擎和按钮，始终不自动限定网站",
-        "切模式保持独立目的地，旧范围不影响搜索，偏好保存",
-        "默认与窄窗截图通过，顶部地址栏与D25行为保持"
-      ],
-      "verification": "受影响解析测试和隔离UI模式切换、目标URL及布局，不重复无变化外网",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D29.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D30",
       "title": "分栏拖动结束清理与原生网页持续可见",
+      "status": "done",
       "depends_on": [
         "D29"
       ],
-      "status": "done",
-      "scope": [
-        "Splitter拖动生命周期",
-        "Workbench原生可见性",
-        "保留D29登录窗口与会话"
-      ],
-      "acceptance": [
-        "窗口内外释放、丢失capture、Escape、失焦和卸载均清理拖动",
-        "拖动期间原生网页保持可见，结束恢复最新bounds，不reload和重建会话",
-        "公开页面隔离原生验证两个分隔条、窄屏、D25遮挡和D24适宽"
-      ],
-      "verification": "旧包有界复现与新包隔离Electron原生可见性/几何/滚动验证",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D30.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D31a",
       "title": "BOSS自动登录识别与有界采集实现",
+      "status": "done",
       "depends_on": [
         "D30"
       ],
-      "status": "done",
-      "scope": [
-        "固定D29用户目录与BOSS partition，前台/后台共享",
-        "自动读取已加载页面判断登录与列表能力",
-        "单来源共享队列、缓存、滚动去重与有限完整JD",
-        "进度、停止、部分结果与风险暂停"
-      ],
-      "acceptance": [
-        "不以cookies或页面可打开认定登录可检索，不反复联网探测",
-        "离线样例验证城市代码、列表/虚拟列表滚动、无增长、取消和风险停源",
-        "先列表后有限详情，保留完整JD的URL/读取时间与真实性边界",
-        "手动和定时共享有界队列，不绕过验证码、不导出会话"
-      ],
-      "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31a.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D31b",
       "title": "BOSS已登录会话小批量真实验收",
+      "status": "done",
       "depends_on": [
         "D31a"
       ],
-      "status": "done",
-      "scope": [
-        "UI16同D29目录的已登录BOSS会话",
-        "一次小批量真实结果、完整JD及字段质量验收"
-      ],
-      "acceptance": [
-        "真实关键词检索非空或诚实空结果、滚动新增去重、1–2个完整JD",
-        "验证前后台会话一致、停止/暂停和部分结果，不额外反复联网",
-        "不自动关闭旧登录实例；没有真实结果不将D01/D04标done"
-      ],
-      "verification": "对应离线契约与一次有界真实验证；证据区分实际完成和外部依赖。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31a.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D31b.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D37.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D32",
       "title": "检索错误、研究入口、定时弹窗与筛选重置修复",
+      "status": "done",
       "depends_on": [
         "D31a"
       ],
-      "status": "done",
-      "scope": [
-        "结构化中文错误和部分结果",
-        "单一岗位研究动作",
-        "单栏定时检索表单和真实保存",
-        "清空筛选及已有候选本地重筛"
-      ],
-      "acceptance": [
-        "不展示IPC原文或堆栈，单来源失败不清空其他结果",
-        "每日/每周/间隔条件字段、保存校验与启停可用",
-        "重置全部筛选并立即重筛已采集候选，保留关键词和浏览器",
-        "默认/窄窗隔离UI与原生遮挡验证"
-      ],
-      "verification": "后端500/局部失败、筛选状态和保存定向测试及隔离Electron验收",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D32.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D33",
       "title": "口碑调查公开陈述与本地更正",
+      "status": "done",
       "depends_on": [
         "D32"
       ],
-      "status": "done",
-      "scope": [
-        "五类调查方向与来源语境",
-        "无评级的原文并列展示",
-        "免责声明与本地更正记录"
-      ],
-      "acceptance": [
-        "保留口碑调查和针对JD修改简历",
-        "公开用户陈述不事实化，未知和失效明确",
-        "本地更正不外发，跨工作区隔离",
-        "独立新包与定向验证"
-      ],
-      "verification": "来源与更正边界测试、隔离UI验收",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D33.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D34",
       "title": "截图反馈：筛选可访问、规则精简与来源文案",
+      "status": "done",
       "depends_on": [
         "D32"
       ],
-      "status": "done",
-      "scope": [
-        "修复发现页状态提示挤出筛选",
-        "删除规则试算区及闲置状态调用",
-        "猎聘打开登录文案",
-        "研究自动带入完整岗位上下文"
-      ],
-      "acceptance": [
-        "初始/进行中/部分失败/重试后筛选持续可访问",
-        "规则保存与四维保留且无试算UI",
-        "来源登录事实说明不变",
-        "默认和窄窗口有内容验收"
-      ],
-      "verification": "离线真实桌面fixture与类型构建",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D34.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D35",
       "title": "简历对话编辑与按需模板预览",
+      "status": "done",
       "depends_on": [
         "D33",
         "D34"
       ],
-      "status": "done",
-      "scope": [
-        "持久多轮会话、岗位绑定与事实补丁",
-        "左侧对话右侧差异、采纳拒绝撤销新版本",
-        "按需模板预览与版本明确的导出",
-        "口碑移除薪资入口、简化工作强度标签"
-      ],
-      "acceptance": [
-        "缺简历/模型真实引导，无假执行",
-        "多轮历史与未采纳隔离、版本冲突保护",
-        "预览关闭保留状态、导出指定版本",
-        "默认/窄窗独立滚动与原生遮挡验证"
-      ],
-      "verification": "fixture多轮服务/真实桌面交互、补丁版本及导出检查",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D35.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D36",
       "title": "岗位报告持久入口与来源多选筛选精简",
+      "status": "done",
       "depends_on": [
         "D35"
       ],
-      "status": "done",
-      "scope": [
-        "复用报告存储、岗位归属与历史新版本入口",
-        "持久来源多选跨页同步、严格请求集合",
-        "默认缺失保留与薪资交集、JD去重与按钮视觉"
-      ],
-      "acceptance": [
-        "报告重进重启可查看，重研不覆盖且失败如实标识",
-        "未选和空选不请求，来源可用性明确，任务快照不变",
-        "默认和窄窗口有内容验证"
-      ],
-      "verification": "离线契约和隔离桌面fixture；禁止重复真实平台请求",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D36.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D37",
       "title": "20来源方案核查与新增五家公司接入",
+      "status": "done",
       "depends_on": [
         "D36"
       ],
-      "status": "done",
-      "scope": [
-        "核查4平台与16家公司官方入口和能力矩阵",
-        "新增五家公司同一来源目录及安全适配器",
-        "有界公开实测、缓存预算失败状态及证据"
-      ],
-      "acceptance": [
-        "官方入口有依据，不猜ATS租户",
-        "已选集合和历史任务不变，未验证不启用",
-        "真实与离线能力分级、最终隔离包验证",
-        "逐源首选失败后实际 Electron DOM 兜底；真实列表、续页、JD与阻塞分别记录，不能只打开浏览器或用fixture代替"
-      ],
-      "verification": "第一方入口核查、少量公开样本与离线契约；登录受限明确保留",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D37.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D38",
@@ -1199,395 +709,216 @@
     {
       "id": "D39",
       "title": "简历主流程收敛",
+      "status": "done",
       "depends_on": [
         "D36"
       ],
-      "status": "done",
-      "scope": [
-        "简历导入解析校对、确认当前版本、手动维护、版本历史和必要导出",
-        "主流程移除对话补丁、模型选择和针对 JD 改写；历史数据只读保留"
-      ],
-      "acceptance": [
-        "默认与窄窗实际页面无对话工作台",
-        "新导入、编辑另存、历史恢复和导出可用；旧数据保留"
-      ],
-      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D40",
       "title": "口碑调查按兴趣取证",
+      "status": "done",
       "depends_on": [
         "D36"
       ],
-      "status": "done",
-      "scope": [
-        "自定义调查问题优先，快捷方向可选；保留报告历史",
-        "有界公开检索、主体/团队/时间语境核对与证据限制"
-      ],
-      "acceptance": [
-        "自定义问题实际进入查询并保存",
-        "已保存报告默认显示结果；原文链接、限制与未查明项可见"
-      ],
-      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D41",
       "title": "来源登录与自动能力状态",
+      "status": "done",
       "depends_on": [
         "D36"
       ],
-      "status": "done",
-      "scope": [
-        "智联真实登录入口诊断修复",
-        "20 来源能力更新，前台状态自动刷新与有界检索前探测",
-        "统一来源卡片和兜底状态"
-      ],
-      "acceptance": [
-        "自动状态不把登录当检索成功",
-        "首选失败后的同平台浏览器兜底或明确人工限制",
-        "隔离应用默认/窄窗验收"
-      ],
-      "verification": "定向契约、必要有界真实观察和隔离桌面默认/窄窗验收",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D41.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D42",
       "title": "双主题紧凑岗位调研",
+      "status": "done",
       "depends_on": [
         "D40"
       ],
-      "status": "done",
-      "scope": [
-        "双主题紧凑岗位调研"
-      ],
-      "acceptance": [
-        "调研仅公司评价/岗位情况可单选或双选，岗位上下文自动带入，来源自动选取",
-        "请求分别覆盖公司反馈与岗位工作/强度/假期/福利；报告分组、逐项链接、未知与正负证据边界",
-        "旧报告及自定义问题保持可读；合成数据端到端及窄窗验收"
-      ],
-      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D42.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D43",
       "title": "简历版本与研究报告单条删除",
+      "status": "done",
       "depends_on": [
         "D39",
         "D42"
       ],
-      "status": "done",
-      "scope": [
-        "简历版本与研究报告单条删除"
-      ],
-      "acceptance": [
-        "单条明确对象的删除确认，逻辑隐藏并保留被引用快照",
-        "当前或被引用简历拒绝删除，工作区隔离与事务保护",
-        "报告删除后视图和计数刷新，重启仍隐藏；仅合成数据验收"
-      ],
-      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D43.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D44",
       "title": "岗位来源全目录有界检查",
+      "status": "done",
       "depends_on": [
         "D41"
       ],
-      "status": "done",
-      "scope": [
-        "岗位来源全目录有界检查"
-      ],
-      "acceptance": [
-        "检查全部覆盖4平台16公司且与选择和任务快照解耦",
-        "进度、每源状态时间、取消和部分完成；预算及风控停源",
-        "受控契约覆盖全队列，在线仅必要小样本"
-      ],
-      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D44.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D45",
       "title": "发现页来源全选与清空",
+      "status": "done",
       "depends_on": [
         "D36"
       ],
-      "status": "done",
-      "scope": [
-        "发现页来源全选与清空"
-      ],
-      "acceptance": [
-        "弹层全选和清空同步持久化到来源页",
-        "检索仅提交已选且可用来源并提示跳过项",
-        "定向状态测试及默认/窄窗原生验收"
-      ],
-      "verification": "定向离线契约、合成数据端到端与隔离原生界面验收；不做20来源全量实时检索。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D45.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D46",
       "title": "双核心流程界面迭代",
+      "status": "done",
       "depends_on": [
         "D42",
         "D43",
         "D44",
         "D45"
       ],
-      "status": "done",
-      "scope": [
-        "找工作与口碑调查信息架构",
-        "报告与岗位结果优先阅读",
-        "来源及简历辅助流程",
-        "普通及窄窗原生验收"
-      ],
-      "acceptance": [
-        "两条主流程首屏有唯一明确下一步",
-        "有证据与无证据报告均可读且不露内部状态",
-        "有内容岗位普通及约860px窗口可读",
-        "来源和历史能力保留且窄窗可操作"
-      ],
-      "verification": "原生隔离预览 1162×768 与 854×768 合成内容交互/截图；Node 77/77、TypeScript 构建、预览及普通包审计。预览来源检查仅一源真实探测；完成后逐源 20/20。 补验生产 Discovery 非空合成快照12条与长JD：默认独立滚动、窄窗选择保留/弹层、原生无害网页打开返回与缩放恢复；仅补证据，未重包。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/ui/UI34-plan.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/ui/UI34-evidence.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D47",
       "title": "目录归组与已确认废弃分发文件清理",
+      "status": "done",
       "depends_on": [
         "D46"
       ],
-      "status": "done",
-      "scope": [
-        "Python/Electron/renderer 纯路径迁移",
-        "旧插件市场清单退役",
-        "文档、引用、构建与隔离验收"
-      ],
-      "acceptance": [
-        "现有业务与历史读取保持",
-        "迁移映射、删除依据和保留项可查",
-        "Python/Node/TS与隔离包验收"
-      ],
-      "verification": "39 个源码路径迁移；Python 470 项迁移回归经失败项补测覆盖，退役清单测试后保留469项；Node77项、TS构建、32迁移与资源比对、两包审计、隔离原生四页面加载/退出通过；不联网检索。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/STRUCTURE.md",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D47.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D48",
       "title": "标注图来源、规则、简历与口碑界面修复",
+      "status": "done",
       "depends_on": [
         "D47"
       ],
-      "status": "done",
-      "scope": [
-        "来源检查入口与逐卡结果呈现",
-        "匹配规则主界面与受保护历史删除",
-        "简历字段中文与空态",
-        "口碑历史及报告信息层级",
-        "隔离默认与窄窗验收",
-        "简历编辑空格换行及历史移除反馈",
-        "彻底停用定时检索并保留历史数据"
-      ],
-      "acceptance": [
-        "来源检查保留有界进度和必要登录提示",
-        "规则删除保护当前及引用版本，已有计划只保留历史数据",
-        "简历与报告无无意义版本号或空块",
-        "合成数据及原生默认/窄窗验证",
-        "旧计划重启不执行、不补跑，不能新建或恢复，手动匹配仍可用"
-      ],
-      "verification": "定向 Python/Node、TypeScript 构建、隔离新包与合成数据截图；不联网检索",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D48.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D49",
       "title": "历史入口修复与求职主流程收敛",
+      "status": "done",
       "depends_on": [
         "D48"
       ],
-      "status": "done",
-      "scope": [
-        "历史简历和规则逻辑移除并保留引用快照",
-        "移除独立匹配规则页与数字评分呈现",
-        "简历明确偏好、清除当前资料和无简历搜索",
-        "检索结果质量与部分失败保留",
-        "研究证据及保存重开更新复核",
-        "离线合成数据、默认/窄窗主流程和独立包验收"
-      ],
-      "acceptance": [
-        "已引用非当前简历/规则移除后不再出现在普通列表，重启仍隐藏，旧快照可读",
-        "导航与普通流程无权重/评分模式设置，说明基于真实证据且无不透明数字分数",
-        "无简历搜索可用；清除当前资料后重启不再参与搜索，历史快照可读；显式偏好实际参与请求/过滤",
-        "部分来源失败保留成功结果，缺失JD/发布日期/薪资不编造",
-        "报告保存重开更新可追溯，官方描述与个人陈述分开",
-        "定时检索仍彻底停用，独立包与合成数据默认/窄窗验收"
-      ],
-      "verification": "定向迁移/API/搜索/研究回归，离线合成数据，原生默认与窄窗截图、独立打包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D49.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D50",
       "title": "简历驱动检索与证据化岗位研究",
+      "status": "done",
       "depends_on": [
         "D49"
       ],
-      "status": "done",
-      "scope": [
-        "移除求职偏好模块和自动带入",
-        "确认简历支持空关键词有界检索",
-        "公司与岗位研究查询和证据分类扩展",
-        "报告阅读体验与默认窄窗验收"
-      ],
-      "acceptance": [
-        "简历页无偏好模块且旧偏好不自动应用，现有搜索筛选保留",
-        "确认简历空关键词可检索并显示实际词；无简历空关键词明确提示；待确认和清除后不泄露旧事实",
-        "公司经营上市正负反馈强度福利、岗位内容与发展都有真实检索计划和证据或未知状态",
-        "报告按公司到岗位到来源阅读，旧报告可开，合成有证据无证据冲突样本默认与窄窗验收",
-        "定时检索保持停用，独立包审计及本地提交"
-      ],
-      "verification": "定向搜索和研究回归、类型构建、合成样本原生截图、独立包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D50.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D51",
       "title": "对话式岗位研究工作台与项目收尾",
+      "status": "done",
       "depends_on": [
         "D50"
       ],
-      "status": "done",
-      "scope": [
-        "主题芯片与自由问题",
-        "真实追问和证据",
-        "统一历史入口及报告状态",
-        "研究取消与失败保留旧报告",
-        "原生默认窄窗、包与文档验收"
-      ],
-      "acceptance": [
-        "上下文明确，空文字可按默认两主题开始",
-        "自由问题影响真实查询并显示对应证据或明确未知",
-        "报告可返回研究首页、重开、更新、移除，旧报告不丢",
-        "取消失败不覆盖旧报告，来源面板不遮挡正文",
-        "独立包审计、本地提交与真实登录限制记载"
-      ],
-      "verification": "研究 API/前端契约定向测试、原生默认与 820px 合成截图、包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D51.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D52",
       "title": "研究输入框与工作区入口修复",
+      "status": "done",
       "depends_on": [
         "D51"
       ],
-      "status": "done",
-      "scope": [
-        "修复研究输入框焦点与工具栏重叠",
-        "侧栏收敛为工作入口和底部设置",
-        "找工作页内简历维护弹层",
-        "设置内维护来源与模型并保留工作上下文"
-      ],
-      "acceptance": [
-        "研究问题默认、聚焦、长文本及窄窗状态不重叠",
-        "主题与提交按钮清晰紧凑且保留隐私提醒",
-        "简历在找工作弹层维护，关闭后搜索上下文不丢；确认或清除后状态刷新",
-        "设置两面板与来源深链接可达，返回原工作页",
-        "弹层与原生浏览器遮挡及 Escape、焦点通过原生检查",
-        "原生截图、独立包审计与本地提交"
-      ],
-      "verification": "定向类型构建、路由与输入框/简历弹层原生默认和窄窗检查、独立包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D52.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D53",
       "title": "岗位研究响应式三段布局与统一输入",
+      "status": "done",
       "depends_on": [
         "D52"
       ],
-      "status": "done",
-      "scope": [
-        "顶部工作区操作、报告独立滚动和底部输入",
-        "岗位链接与问题统一解析及确认",
-        "侧栏与调试信息收敛",
-        "原生短窗窄窗及独立包验证"
-      ],
-      "acceptance": [
-        "窗口自由调整，不强制 1:1；顶部操作和底部输入可见",
-        "链接与问题合并，确认后保留问题；无链接的已有岗位可直接追问",
-        "无效链接和读取失败不替换岗位或报告",
-        "设置位于侧栏底部，工作页无常驻调试页脚",
-        "原生默认、窄窗、短窗与浏览器分栏验收，独立包审计、本地提交"
-      ],
-      "verification": "TypeScript 构建、输入拆分 2/2、原生默认/短窗/窄窗合成报告与错误路径、浏览器分栏恢复、普通及 QA 包审计；未进行真实登录或付费研究。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D53.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D54",
       "title": "研究工作区收敛与无链接公司提问",
+      "status": "done",
       "depends_on": [
         "D53"
       ],
-      "status": "done",
-      "scope": [
-        "统一报告与输入区宽度及单一滚动容器",
-        "压缩顶部动作和底部输入",
-        "无岗位公司问题证据研究与持久化",
-        "兼容历史岗位报告并完成隔离验收"
-      ],
-      "acceptance": [
-        "窗口自由伸缩，报告与输入对齐，阅读区只有一个可用滚动容器，顶部与发送始终可见",
-        "无链接且明确公司可开始有界公开来源研究；对象不明时澄清且保留问题",
-        "当前岗位纯问题与链接加问题继续沿用正确上下文；失败、取消不覆盖旧报告",
-        "公司问答历史与岗位报告可区分、保存、重开，旧数据迁移安全",
-        "原生默认、窄窗、短窗、浏览器分栏截图及独立包审计，本地提交"
-      ],
-      "verification": "迁移备份和 API 定向测试、前端输入测试、TypeScript 与 Python 构建、隔离原生合成及独立包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D54.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D55",
@@ -1614,190 +945,112 @@
       "evidence": [
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D55.md"
       ],
-      "blocker": null
+      "blocker": "逐项勾选的简历核对界面已由用户要求改为原件展示、后台索引；剩余真实来源验证由D184跟进，不恢复旧界面。",
+      "superseded_by": "D175"
     },
     {
       "id": "D56",
       "title": "清理迁移空目录与旧字节码并更新项目树",
+      "status": "done",
       "depends_on": [
         "D47"
       ],
-      "status": "done",
-      "scope": [
-        "确认无用空目录和旧模块缓存",
-        "实际目录说明与引用核查"
-      ],
-      "acceptance": [
-        "不破坏现有代码入口与历史数据",
-        "明确清理项与保留限制"
-      ],
-      "verification": "移除2个旧字节码和26个空目录；Python入口导入与TypeScript检查通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D56.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D57",
       "title": "来源登录会话跨重启与测试包延续",
+      "status": "done",
       "depends_on": [
         "D23"
       ],
-      "status": "done",
-      "scope": [
-        "猎聘和前程无忧不强制从登录页重开",
-        "应用退出前刷写已使用来源的持久 Cookie",
-        "测试包沿用固定资料目录且 QA 可显式隔离",
-        "确认 16 个公司官网分区与跨重启边界"
-      ],
-      "acceptance": [
-        "同一测试包与后续新版包使用同一用户资料目录",
-        "猎聘和前程无忧打开首页并沿用原分区",
-        "合成持久 Cookie 在隔离原生应用退出重启后仍存在",
-        "不复制或删除现有账号数据；站点过期不误报已登录"
-      ],
-      "verification": "TypeScript 构建、来源浏览器定向测试、隔离原生重启与包审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D57.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D58",
       "title": "整理 GitHub 文件树与历史验收附件",
+      "status": "done",
       "depends_on": [
         "D56"
       ],
-      "status": "done",
-      "scope": [
-        "移出不参与运行与测试的原始验收附件和生成报告",
-        "保留简短验收记录与历史证据可追溯性",
-        "更新目录说明和忽略规则"
-      ],
-      "acceptance": [
-        "源码、迁移、测试和构建配置保留",
-        "文档链接与 README 插图可用",
-        "桌面与 Python 测试通过"
-      ],
-      "verification": "桌面构建、Node 83/83、Python 测试、Skill 同步检查、文档链接与归档哈希审计",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D58.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D59",
       "title": "重写 README 并采用非商业源码许可",
+      "status": "done",
       "depends_on": [
         "D58"
       ],
-      "status": "done",
-      "scope": [
-        "面向读者重写中英文 README 并展示当前界面",
-        "当前版本采用 PolyForm Noncommercial 1.0.0",
-        "保留旧版 MIT 权利说明并同步打包元数据"
-      ],
-      "acceptance": [
-        "README 入口与图片可用、功能边界准确",
-        "官方许可原文完整，非商业与历史 MIT 权利清晰",
-        "构建产物包含两份许可且元数据一致"
-      ],
-      "verification": "Markdown 链接审计、官方许可证原文比对、wheel 构建和元数据检查、Skill 同步检查",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "https://github.com/russeell/jobfindsme/blob/a3a714e17ea73adabd54d36821c46ebc8a924461/docs/desktop/evidence/D59.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D60",
       "title": "收敛重构后文档树并保留历史证据链接",
+      "status": "done",
       "depends_on": [
         "D59"
       ],
-      "status": "done",
-      "scope": [
-        "移除旧重构方案、逐任务证据、原型与旧产品文档",
-        "保留当前状态、结构、任务清单和 README 图片",
-        "将任务证据链接改为固定历史提交"
-      ],
-      "acceptance": [
-        "当前文档无悬空本地链接",
-        "桌面与 Python 功能及打包不受文档清理影响"
-      ],
-      "verification": "Python 483 passed、Node 83 passed、桌面与 wheel 构建通过、ruff/Skill/链接检查通过",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D61",
       "title": "退役旧 CLI/MCP 与分发流程",
+      "status": "done",
       "depends_on": [
         "D60"
       ],
-      "status": "done",
-      "scope": [
-        "移除旧 CLI、MCP、安装器、Skill、旧发布流程及其专属测试",
-        "CI 改为桌面端、Python API 和当前检索评测",
-        "保留旧数据迁移和桌面打包所需发行名"
-      ],
-      "acceptance": [
-        "桌面检索、研究和简历功能测试通过",
-        "wheel 不含旧入口且包含桌面 API 与迁移",
-        "当前文档树无旧功能说明入口"
-      ],
-      "verification": "Python 370 passed、Node 83 passed、桌面构建、ruff 和干净 wheel 清单审计通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D62",
       "title": "Pi 岗位研究对话与模型设置收敛",
+      "status": "done",
       "depends_on": [
         "D61"
       ],
-      "status": "done",
-      "scope": [
-        "固定官方 Pi agent core / pi-ai 版本并保留 MIT 原文",
-        "研究页支持普通对话、受限证据工具、流式取消和工作区历史",
-        "模型设置简化为预设、密钥或本地地址、模型、保存并测试"
-      ],
-      "acceptance": [
-        "密钥只在 Electron 主进程安全存储使用",
-        "原有结构化研究报告可继续读取",
-        "独立测试包启动，约 860px 和默认宽度可用"
-      ],
-      "verification": "Node 83 passed、Python 370 passed、类型与构建通过；本地合成 OpenAI 流式协议和工具循环通过；独立 .app 中模型测试、普通对话与历史恢复通过。真实付费模型未调用。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D63",
       "title": "旧二十来源逐项实测（范围已收束）",
+      "status": "done",
       "depends_on": [
         "D61"
       ],
-      "status": "done",
-      "scope": [
-        "四个平台和十六家官网分别验证列表、网站续页、完整 JD 与字段",
-        "修复可自主修复的来源适配和检查状态",
-        "保留风控、登录及资源失败的真实阻塞"
-      ],
-      "acceptance": [
-        "每一来源有本轮实测证据或明确未测原因",
-        "不把首页可打开、历史状态或检查预算跳过计为成功",
-        "平台验证和限流时停源，继续其他独立来源"
-      ],
-      "verification": "旧二十来源验证范围已由 D66 的四平台产品范围取代。此前逐站结果仅保留为历史证据，不代表当前四平台登录和实时采集验收。公司来源历史记录及旧岗位原始链接保留，专用适配已移除。详见 HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D64",
@@ -1855,126 +1108,68 @@
     {
       "id": "D66",
       "title": "四平台来源、浏览器起始页与助手历史收敛",
+      "status": "done",
       "depends_on": [
         "D62",
         "D65"
       ],
-      "status": "done",
-      "scope": [
-        "四平台登录与登录后检查",
-        "退役十六家企业官网适配",
-        "浏览器收藏起始页",
-        "助手侧栏历史归档恢复删除",
-        "JD 直接分析"
-      ],
-      "acceptance": [
-        "旧来源历史与岗位原始链接保留",
-        "匿名列表不等于登录",
-        "SQLite 为对话最终记录且删除后不从缓存复活",
-        "本地 JD 无公开读取和强制报告"
-      ],
-      "verification": "Python 427 项、Node 172 项、Ruff 和桌面构建通过；隔离 macOS 正常包审计通过，原生 1240×820 检查助手历史位于现有左侧导航及折叠恢复。模拟 Pi 模型核验 research:true 的已存 JD 分析、流式输出、公开读取与报告保存均为零。未使用真实用户登录、真实批量招聘网站或付费模型；四平台真实登录链路仍待用户会话验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D67",
       "title": "助手侧栏与工作区视觉精简",
+      "status": "done",
       "depends_on": [
         "D66"
       ],
-      "status": "done",
-      "scope": [
-        "单行最近对话列表",
-        "低噪归档与报告入口",
-        "白色工作区与轻量输入框",
-        "默认与窄窗原生复验"
-      ],
-      "acceptance": [
-        "现有左栏展示多条可辨识标题",
-        "归档恢复及确认删除入口保留",
-        "正文没有第二个固定侧栏",
-        "默认与窄窗截图可复核"
-      ],
-      "verification": "2026-09-27 Node 172 项、类型检查、构建、包审计与 git diff --check 通过。隔离资料中 6 条本地对话在默认和约 860px 原生窗口单行展示；归档标题、恢复/删除及二次确认可见，侧栏折叠后可恢复。截图见 HANDOFF；未调用付费模型或真实招聘网站。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D68",
       "title": "统一对话侧栏与设置内归档管理",
+      "status": "done",
       "depends_on": [
         "D67"
       ],
-      "status": "done",
-      "scope": [
-        "移除独立求职助手导航",
-        "跨页新对话与最近历史",
-        "设置内归档恢复删除及旧版研究记录",
-        "侧栏贴边滚动与窄窗折叠"
-      ],
-      "acceptance": [
-        "找工作和我的岗位下方均可见最近对话",
-        "从任一页面新建空对话不重复保存",
-        "归档管理保留恢复与删除确认",
-        "历史末项和底部设置在窄窗可用"
-      ],
-      "verification": "2026-09-28 Node 172 项、类型检查、构建、独立 macOS 包审计与 git diff --check 通过。隔离资料的 14 条合成对话在默认和约 860×600 原生窗口检查贴边滚动与末项可见；找工作、我的岗位、设置页的历史/新对话跨页跳转、折叠入口、归档恢复和删除二次确认均在原生应用检查。新对话在首次发送前不新增 SQLite 会话。截图见 HANDOFF；未访问真实招聘网站或付费模型，未更改活跃用户资料。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D69",
       "title": "聊天侧栏单行入口与历史悬停细节",
+      "status": "done",
       "depends_on": [
         "D68"
       ],
-      "status": "done",
-      "scope": [
-        "新聊天单行入口",
-        "移除重复最近对话标题",
-        "历史归档细线悬停图标与提示"
-      ],
-      "acceptance": [
-        "新聊天下方直接接日期和历史",
-        "未悬停标题占满行宽，悬停归档按钮小巧可见",
-        "默认与窄窗布局可用"
-      ],
-      "verification": "2026-09-28 类型检查、构建、Node 172 项和独立 macOS 包审计通过。复用隔离合成资料，在 1240×820 和约 860×600 原生窗口核对紧凑入口、历史末项、选中/悬停圆角背景与归档图标；滚动条按后续标注内收约 5px、缩至 5px 宽并改浅灰，长列表滚到底复验。截图见 HANDOFF。无业务或持久化变更，未访问真实招聘网站或付费模型。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D70",
       "title": "助手忙碌态侧栏对比与设置顺序",
+      "status": "done",
       "depends_on": [
         "D69"
       ],
-      "status": "done",
-      "scope": [
-        "忙碌时历史标题正常对比且归档图标隐藏",
-        "求职助手入口名称与等待提示",
-        "设置归档分类顺序"
-      ],
-      "acceptance": [
-        "生成和保存期间切换保持禁用且状态可解释",
-        "禁用归档不整列显现",
-        "处理完成或停止后入口恢复",
-        "对话归档紧随岗位来源"
-      ],
-      "verification": "2026-09-28 根因确认：通用 button:disabled 的 opacity:.48 覆盖历史标题与归档图标原本的透明度。桌面 Node 172 项、类型检查、构建与独立 macOS 包审计通过。隔离资料及本机免密延迟模拟模型在默认和约 860×600 原生窗口抓取生成中截图；标题清晰、归档图标隐藏、求职助手显示请稍候，停止和完成后按钮恢复。设置分类顺序原生核对。截图见 HANDOFF；未调用付费模型、真实招聘网站或活跃用户资料。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D71",
@@ -2004,189 +1199,172 @@
     {
       "id": "D72",
       "title": "功能验收发现的保存、取消、导航与状态缺陷修复",
+      "status": "done",
       "depends_on": [
         "D70"
       ],
-      "status": "done",
-      "scope": [
-        "长JD草稿与重启恢复",
-        "停止保留安全回复",
-        "运行中返回当前聊天",
-        "侧栏长标题溢出",
-        "来源状态一致性",
-        "关闭网页后的导航错误隔离"
-      ],
-      "acceptance": [
-        "701至12000字草稿可保存并重启恢复",
-        "停止保留普通流式文本且不泄露未核验研究内容",
-        "运行中从其他页可返回和停止",
-        "默认和窄窗无侧栏横向溢出",
-        "未实测来源不宣称已验证",
-        "关闭标签不误报服务异常"
-      ],
-      "verification": "2026-09-28：六项独立修复已提交。Python 430项、Node全套199项及新增浏览器/反馈定向41项、类型检查、构建、Ruff与包审计通过。隔离原生默认1240×820和约860×600验证1031字失败草稿/停止回复重启恢复、生成中跨页返回与停止、长标题截断、来源非实测文案及关闭加载标签无服务误报。701/880/12000字边界为模拟数据库回归，不是全部原生实测。真实智联后台检索仍属于D71。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D87",
       "title": "浏览器开关固定在窗口右上角",
-      "depends_on": [],
       "status": "done",
-      "scope": [
-        "Workbench 浏览器入口及顶栏空间"
+      "depends_on": [],
+      "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json"
       ],
-      "acceptance": [
-        "展开、收起和窄窗口入口位置稳定，不遮挡标签和切换按钮"
-      ],
-      "verification": "正常本地 D87 包原生验证 1240×820 展开/收起及约 890×650 单视图。Node 223 项、类型检查、构建、包审计通过。仅 UI 验证，未重新验证真实检索。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D88",
       "title": "浏览器真实加载状态与标签失败隔离",
+      "status": "done",
       "depends_on": [
         "D87"
       ],
-      "status": "done",
-      "scope": [
-        "前台浏览器 IPC 状态同步",
-        "加载、停止、失败与重试界面",
-        "标签与销毁状态隔离"
+      "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json"
       ],
-      "acceptance": [
-        "慢导航创建后即可同步标签，网页可正常展示",
-        "停止保留标签，失败只影响对应页面并能重试",
-        "失败切回正常页面不残留错误，窄窗口正文可见"
-      ],
-      "verification": "新增基线测试先复现失败；Node 228 项、类型检查、构建、Ruff、包审计通过。D88 正常包原生核对 BOSS/百度首页、停止与恢复、失败页、标签切换、默认及窄窗口；15 秒提示未独立原生计时验收。未重跑 Python、未验收全部网站或招聘检索；未推送发布。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D89",
       "title": "桌面统一色彩与轻量视觉层次",
+      "status": "done",
       "depends_on": [
         "D88"
       ],
-      "status": "done",
-      "scope": [
-        "现有 theme.css 色彩与焦点状态"
+      "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json"
       ],
-      "acceptance": [
-        "主操作、选中态和弱提示颜色一致，默认及窄窗口保持可读"
-      ],
-      "verification": "2026-09-29：正常 D89 本地包原生核对默认/窄窗口及搜索、助手、浏览器起始页。Node 228 项、类型检查、构建、Ruff、包审计通过；四组主要文字对比度超过 4.5。仅 CSS，无网站检索/模型/性能验收；未推送发布。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D91",
       "title": "聊天保存失败后的待恢复版本保护",
       "status": "done",
-      "verification": "Node236和类型检查通过；3项隔离失败/重启恢复/版本确认/归档删除与工作区回归。原生数据库故障注入未验证。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D92",
       "title": "敏感陈述引用关系与来源时间约束",
       "status": "done",
-      "verification": "新增TS2项/Python3项先复现；Node238、研究Python51、类型/构建通过。固定证据验证，无真实模型验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D93",
       "title": "当前本地筛选与续查追加显示一致",
       "status": "done",
-      "verification": "最终Python434/Node240、类型/构建/Ruff通过；临时DB追加后薪资过滤与评分版本、前端每批应用当前过滤回归。无原生/真实平台验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D94",
       "title": "按全部已选平台继续检索与独立游标",
       "status": "done",
-      "verification": "Node243、类型/构建/Ruff/包审计通过；模拟四平台不同游标、选中范围、预算未轮到回归。已打本地D94包含D91-D93；未原生/真实平台续页验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D95",
       "title": "中文README、当前示例截图与GitHub About",
       "status": "done",
-      "verification": "GitHub Markdown渲染及19个本地/外部引用结构检查；两张隔离原生示例截图视觉检查；About读回核验。无网站或模型效果验收。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "README.md",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D96",
       "title": "v0.13.3双平台发行与安装包验收",
       "status": "done",
-      "verification": "本地Python434/Node243/类型构建/Ruff；发布提交跨平台CI与Windows正式包审计及两次启动通过；macOS正式包审计、默认/窄窗及两次隔离原生启动通过。两ZIP与GitHub大小/哈希一致，已发布并附SHA256SUMS。D71及四平台真实续页、模型、严格性能对照仍未验收，不包含本地用户数据。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md",
         "https://github.com/russeell/jobfindsme/releases/tag/v0.13.3"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D97",
       "title": "来源和归档设置页统一布局与轻量操作",
       "status": "done",
-      "verification": "Node243/类型构建/Ruff/正常包审计通过；隔离原生宽/默认/窄窗、日期、恢复与删除取消，正常包重启核对通过。仅React/CSS，无真实来源/模型/Windows原生/Python全套验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D98",
       "title": "检索页统一自然滚动与双列阅读",
       "status": "done",
-      "verification": "Node243/类型构建/Ruff/正常包审计通过；隔离原生35条样例、长JD到底、列表和详情滚动、翻页、50/页、窄窗位置恢复，正常包启动核对。仅React/CSS，未进行真实来源/模型/Python全套/Windows原生验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D99",
       "title": "改善检索详情JD字号与保留原文的分段阅读",
       "status": "done",
-      "verification": "Node245/类型构建/正常包审计通过；隔离原生默认和窄窗密集JD分段、原文内容保持、版本小数与正文末尾核对。只改呈现，不修改保存内容；未进行真实来源/模型/Python全套/Windows原生验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D100",
       "title": "求职助手简历定制、面试准备与深度研究技能",
       "status": "done",
-      "verification": "Node250/类型构建/Ruff/正常包审计通过；本地模拟Agent工具链及隔离正常桌面三入口、切换、草稿、新聊天、取消、模型IPC与三种技能对话落库验证。MIT来源与许可证随包保留。未真实模型质量/Windows原生/窄窗/Python全套验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md",
         "apps/desktop/skills/NOTICE.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D101",
       "title": "求职助手添加菜单、按需普通技能及文件文件夹附件",
       "status": "done",
-      "verification": "Node253/类型构建/相关Python13/Ruff/正常包审计通过；隔离原生菜单、技能不填词与草稿保留、模型位置、文件夹两附件、实际IPC到本地模拟模型及SQLite保存核对。真实输出质量/Windows原生/窄窗/Python全套未验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D102",
       "title": "紧凑技能菜单、图片材料与主题研究边界",
       "status": "done",
-      "verification": "Node255、相关Python49、类型构建、Ruff、正常包审计通过；隔离原生最终菜单、图片多模态传入、read_skill及重启图片恢复核对。真实公开搜索仍Connection refused，真实模型效果/Windows/窄窗/Python全套未验收，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D103",
@@ -2208,10 +1386,11 @@
       "depends_on": [
         "D102"
       ],
-      "verification": "Python457、Node265、类型构建、Ruff、diff检查；无模型与模拟失效模型搜索0调用；固定延迟2/4并发首批128/87ms、总383/228ms，仅离线样例。简历提案显式接受保存、面试状态持久化与技术主题报告验证。真实来源、provider质量、模型效果和原生UI未验收；未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D105",
@@ -2220,28 +1399,31 @@
       "depends_on": [
         "D102"
       ],
-      "verification": "桌面构建与 Node265、研究 Python50、Ruff、diff 和本地包审计通过；隔离原生 D105 验证合并菜单与 macOS 文件/目录同一选择器，正常 D105 App 与后端已启动。短对话底部排布及进行中状态只经代码/构建核对，未用真实模型原生验证。真实研究资料质量仍属 D103。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D126",
       "title": "简化聊天侧栏浮层与归档入口",
       "status": "done",
-      "verification": "桌面 Node 280 项、类型与构建通过；正常 D125 原生核对浮层不推动列表，D126 原生核对移除两个头部图标、历史聊天正常恢复；macOS 包审计通过。分享包已清理，不发布新版本。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D127",
       "title": "求职助手错误分层与进程内密钥复用",
       "status": "done",
-      "verification": "代码回归通过；真实模型技能质量仍属 D103，未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D128",
@@ -2258,32 +1440,25 @@
     {
       "id": "D129",
       "title": "模型设置卡片与钥匙串访问收敛",
+      "status": "done",
       "depends_on": [
         "D128"
       ],
-      "status": "done",
-      "scope": [
-        "桌面模型设置",
-        "系统安全存储访问"
-      ],
-      "acceptance": [
-        "打开模型设置仅加载元数据，不自动触发钥匙串访问",
-        "授权失败不自动反复尝试，主动授权后可重试",
-        "连接卡片与编辑模态窗口在正常及小窗口可用"
-      ],
-      "verification": "Node 290 项、类型与构建、macOS 包审计通过；真实工作区核对反复进入模型设置、编辑/高级选项/Escape与约860×650布局。未执行付费模型请求，技能实际效果仍未验收；无稳定 Developer ID 签名，不能保证更新后不再出现系统授权。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D130",
       "title": "移除归档页旧版研究记录区块",
       "status": "done",
-      "verification": "类型与构建、macOS 包审计通过；真实 D130 核对归档页与列表末尾，旧版区块已移除，本地数据保留。未推送发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D131",
@@ -2292,15 +1467,11 @@
       "depends_on": [
         "D129"
       ],
-      "acceptance": [
-        "模型卡片和编辑窗口提供有确认的删除入口",
-        "移除配置及配对密钥时保留历史会话和草稿，失败恢复原配对",
-        "同服务切换模型ID保留已保存密钥，不增加临时模式"
-      ],
-      "verification": "Python465、Node293、相关Python38、类型/构建、Ruff和macOS包审计通过；真实D131核对删除入口、确认与取消、焦点恢复，未删除用户连接或使用付费模型。稳定签名与系统授权仍未完成。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D132",
@@ -2323,15 +1494,11 @@
       "id": "D133",
       "title": "内置联网检索技能与免Key搜索路由",
       "status": "done",
-      "acceptance": [
-        "联网检索和深度研究加载内部技能，不增加聊天模式或改写输入",
-        "公开搜索可用免Key强发现，搜索候选与原文证据分开，失败共用预算并冷却",
-        "在真实App通过检索、原文和带引用回复的完整链路验收"
-      ],
-      "verification": "桌面回归308、相关Python61、新增边界后Python10及类型/构建/Ruff/macOS包审计通过。正常D133在真实工作区通过Computer Use完成公开研究（8份原文）和普通GitHub检索（3份原文），核对来源片段及可点击引用。修复来源继承、工具预算末轮交付及圆括号引用转换；邮箱/电话/密钥/私人路径不进入查询，受限服务冷却，原文失败保留其他来源。论文站点边界由回归覆盖，未做论文和Windows原生验收；有界片段、大PDF及受限页面仍是阅读限制。真实问答/截图/个人资料不入仓库；未推送或发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
-      ]
+      ],
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D134",
@@ -2354,95 +1521,56 @@
     {
       "id": "D139",
       "title": "聊天并行、稳定追问、消息复制与分支",
-      "depends_on": [],
       "status": "done",
-      "scope": [
-        "按会话管理模型任务与取消",
-        "明确创建分支并保存前缀",
-        "消息复制与稳定追问路由"
-      ],
-      "acceptance": [
-        "检索运行时可使用另一条聊天，单独停止不影响其他任务",
-        "连续追问留在原聊天",
-        "复制可粘贴，分支前缀与原聊天独立并跨重启保留"
-      ],
-      "verification": "D139/D140真实用户环境 computer use：检索进行时另建聊天并生成独立回复；虚构公司连续三轮追问留在同一会话；当前检索可停止且提问保留；复制用户和助手消息后在输入框粘贴一致；从早期回复分支只保留前缀，原聊天6条、分支后续4条；升级重启后关系与历史恢复。Node321、Python476、类型构建、Ruff、macOS包审计通过。取消隔离与超时竞态另由控制器回归覆盖。",
+      "depends_on": [],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D141",
       "title": "消息操作栏与分支选择设计",
+      "status": "done",
       "depends_on": [
         "D139"
       ],
-      "status": "done",
-      "scope": [
-        "消息复制反馈、分流图标与提示",
-        "先选择再创建的分支弹窗"
-      ],
-      "acceptance": [
-        "弹窗不移动对话，取消不创建分支",
-        "聚焦与关闭恢复正确",
-        "显式选择才创建前缀分支，复制仍可粘贴"
-      ],
-      "verification": "D141真实computer use及截图核对：Esc/关闭恢复焦点，显式创建两条消息的前缀分支，复制后系统粘贴一致；类型构建、diff检查和包审计通过，无模型调用。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D142",
       "title": "无JD面试准备与逐题练习连续状态",
+      "status": "done",
       "depends_on": [
         "D141"
       ],
-      "status": "done",
-      "scope": [
-        "准备、练习、答案与复盘意图区分",
-        "JD可选，实际交付问题与点评状态",
-        "开源实现核对及真实本机验收"
-      ],
-      "acceptance": [
-        "仅岗位方向即可获得准备重点，不把建议丢弃",
-        "无JD可进入单题练习并根据回答反馈追问",
-        "准备与方向澄清不误当成已答题"
-      ],
-      "verification": "D142真实computer use：无JD的方向准备、同聊天单题模拟、虚构答案反馈与单一追问三次授权请求通过；325项Node回归、类型构建、diff检查及包审计通过。未测试所有岗位/模型，真实简历未参与。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D143",
       "title": "v0.14.0发布及简洁图文README",
+      "status": "done",
       "depends_on": [
         "D142"
       ],
-      "status": "done",
-      "scope": [
-        "核心特点与示例界面文档",
-        "版本元数据与macOS/Windows安装包",
-        "源代码同步、跨平台CI与GitHub发行"
-      ],
-      "acceptance": [
-        "README突出四平台检索、简历、面试与岗位公司研究",
-        "发布包不包含用户凭据、会话、数据库或简历",
-        "双平台下载、校验和及发行提交对应"
-      ],
-      "verification": "v0.14.0已发布：main和tag对应发行代码；476项Python、325项Node、本地检查及跨平台CI通过。macOS正式包computer use通过，Windows构建/审计/两次启动通过，runner直接附加校验通过；双平台资产及SHA256摘要匹配，无用户数据打包。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md",
         "https://github.com/russeell/jobfindsme/releases/tag/v0.14.0",
         "https://github.com/russeell/jobfindsme/actions/runs/36856104080",
         "https://github.com/russeell/jobfindsme/actions/runs/36856103523",
         "https://github.com/russeell/jobfindsme/actions/runs/36859035456"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D144",
@@ -2451,15 +1579,12 @@
       "depends_on": [
         "D143"
       ],
-      "scope": [
-        "四项特点、两张示例图、下载与三步上手"
-      ],
-      "verification": "核对FuckJob当前README的定位/截图写法，使用本项目原创文案和既有虚构示例图；README从62行精简至39行，保留四平台、三技能、登录限制与模型数据说明。相对链接和图片存在、GitHub Markdown表格/步骤/图片渲染及diff检查通过；仅文档改动，不运行模型、不改安装包、不发布。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "README.md",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D145",
@@ -2468,17 +1593,12 @@
       "depends_on": [
         "D144"
       ],
-      "scope": [
-        "旧开发App、归档和可再生成缓存",
-        "移除个人开发Skill及未引用图片",
-        "同步英文README和目录说明"
-      ],
-      "verification": "清理405项生成物，按文件分配块统计约3.14GiB；保留v0.14.0 App、发行ZIP、开发依赖和用户数据，最新App包审计通过。README/英文README/目录说明链接存在，英文GitHub Markdown渲染及diff检查通过。个人开发Skill退出跟踪并添加忽略，应用Skill、许可证、迁移与测试保留；不发布新版本。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md",
         "docs/desktop/STRUCTURE.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D146",
@@ -2487,18 +1607,13 @@
       "depends_on": [
         "D145"
       ],
-      "scope": [
-        "真实公开岗位截图",
-        "核心收益、内嵌浏览器与三技能介绍",
-        "中英文README同步"
-      ],
-      "verification": "参考Browser Use、Cline及此前FuckJob的产品定位与视觉展示，以原创文案突出四平台一键搜索、原页分栏和三项AI技能。正式v0.14.0 computer use完成公开岗位关键词检索、四平台勾选、选中岗位JD补充及浏览器原页截图；隐藏个人侧栏，没有使用简历/模型或发送消息。两张原生截图目视检查和元数据检查，中英文46行、链接及GitHub Markdown渲染、浏览器窄窗口排版与diff检查通过；旧图移除。不以截图证明所有来源本轮成功或稳定覆盖，不发布新版本。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "README.md",
         "README.en.md",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D147",
@@ -2507,17 +1622,12 @@
       "depends_on": [
         "D146"
       ],
-      "scope": [
-        "虚构简历提案与无JD逐题面试截图",
-        "公开官方原文研究截图",
-        "中英文README三列画廊"
-      ],
-      "verification": "正式v0.14.0代码在临时演示资料目录运行，原生computer use执行：虚构已确认简历生成两项提案但不接受或保存；无JD完成第一题及回答后点评、单题追问；读取两份Playwright官方原文生成引用与缺口。截图来自原生内容捕获，不改造回答，940×728 PNG仅标准色彩配置、无个人元数据；仅截图和文档入库。README本地链接、GitHub渲染与隐私核对，临时资料与密钥清理；不扩大D134功能验收范围、不发布版本。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md",
         "README.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D148",
@@ -2526,16 +1636,11 @@
       "depends_on": [
         "D147"
       ],
-      "scope": [
-        "岗位上下文与三个技能入口",
-        "本地阶段、下一步、日期、备注",
-        "我的岗位筛选与下一步入口"
-      ],
-      "verification": "原生computer use在真实工作区核对已保存岗位/JD与技能入口；虚构资料环境验证进度保存、岗位状态一致、重启恢复和继续上次聊天/草稿。准备卡使用独立滚动dialog，详细依据默认折叠，未把打开原页标为已投递。41项Python、90项相关Node、类型构建与包审计通过；真实AI效果不计通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D149",
@@ -2544,16 +1649,11 @@
       "depends_on": [
         "D148"
       ],
-      "scope": [
-        "岗位ID绑定与工作区校验",
-        "独立简历副本，不覆盖基础简历",
-        "岗位卡审阅、保存与PDF导出"
-      ],
-      "verification": "虚构提案通过原生computer use审阅、接受、保存和原生对话框导出PDF；数据库断言基础版本不变、目标岗位关联正确且已有进度保留，重启恢复成功。提案为离线合成，未把它当作真实模型生成质量验收。回归覆盖跨工作区拒绝、原JD与岗位ID、不改变通用编辑原有规则。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D150",
@@ -2562,16 +1662,11 @@
       "depends_on": [
         "D149"
       ],
-      "scope": [
-        "岗位卡视觉层级、原文与匹配线索折叠",
-        "三技能携带明确公司/岗位及正确ID",
-        "模型超时与用户取消区分"
-      ],
-      "verification": "1000×760原生界面复验准备卡、我的岗位下一步和聊天续接；普通技能选择不填提示词。首次真实DeepSeek请求失败，独立最小公开请求15秒超时；无法据此认定供应商故障，真实回答未通过。模型超时分类及会话取消隔离回归通过，最终构建和本地包审计通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D151",
@@ -2596,16 +1691,11 @@
       "depends_on": [
         "D150"
       ],
-      "scope": [
-        "默认跟进、本地搜索与分批展示",
-        "分类进度、筛选保持与紧凑岗位卡",
-        "原生简历弹窗、单一上传入口与核对流程"
-      ],
-      "verification": "18项相关Node、类型构建及macOS包审计通过；原生computer use验收47条虚构记录的跨批搜索、展开40条、聊天切换保留查询和已结束筛选，虚构简历导入/核对/确认、零选择禁用及重启恢复。真实工作区118条历史保留、默认1条跟进，简历弹窗Escape恢复焦点；未修改真实岗位状态、未调用模型或读取真实简历。解析器与OCR范围不变。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D153",
@@ -2614,17 +1704,11 @@
       "depends_on": [
         "D152"
       ],
-      "scope": [
-        "已有技能聊天优先继续、保留重新开始",
-        "进度默认折叠与真实摘要",
-        "关闭及跳转保护未保存修改、保存成功才继续",
-        "岗位卡减少重复标签与留白"
-      ],
-      "verification": "5项相关Node、类型构建及macOS包审计通过。原生computer use以虚构资料验证未改禁用、Escape保护、继续编辑、放弃不落库、保存后关闭/技能跳转、重启恢复下一步、合成既有聊天续接与重新开始保留历史。旧D152真实用户准备窗口仍打开，未强行切换，D153用户资料目录视觉复验待关闭旧窗口；未调用模型或修改真实记录。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D154",
@@ -2633,16 +1717,11 @@
       "depends_on": [
         "D153"
       ],
-      "scope": [
-        "移除类型筛选弹窗，未读改为直接开关",
-        "交互筛选、预检及续查清除退休条件，保留历史契约",
-        "岗位仅保留在跟进/全部，阶段与独立状态不变"
-      ],
-      "verification": "25项相关Node、类型构建及macOS包审计通过。真实D154用户目录computer use验收未读/清空保留关键词、单城市过滤/收起、平台入口、在跟进1及全部118条、20条分批、投递筛选1条并恢复；准备卡默认折叠及三技能正常。没有主动招聘检索、模型调用或真实岗位状态修改，原检索覆盖限制不变。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D155",
@@ -2651,16 +1730,11 @@
       "depends_on": [
         "D154"
       ],
-      "scope": [
-        "在校生/应届生独立于年限，按来源证据筛选",
-        "不限/全职/兼职，交互筛选不纳入类型未知岗位",
-        "收藏/已投递/全部直接导航，移除总进度筛选"
-      ],
-      "verification": "62项相关Python、27项Node、Ruff、类型构建及最终包审计通过。真实用户App验收工作经验身份/年限切换、工作类型三选、两次公开猎聘检索中未知兼职混入问题修复、清空恢复42候选及应届原文标记筛到1条；收藏/取消回到原状态、已投递1及全部118条/首批20条。未调用模型、读取真实简历或修改投递状态，不宣称其他平台或AI生成质量通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D156",
@@ -2669,216 +1743,141 @@
       "depends_on": [
         "D155"
       ],
-      "scope": [
-        "英文词边界不被空格压缩破坏",
-        "当前可见岗位有界自动补JD、详情请求按岗位隔离",
-        "失败就地恢复、晚到详情不覆盖收藏或投递状态"
-      ],
-      "verification": "49项相关Python、10项Node、Ruff、类型构建与包审计通过。真实App首项/切换/分页自动JD、原页比对、AI Agent词匹配与收藏保留通过；四平台范围取得81条、首批1.3秒，BOSS登录待确认但其余三来源继续。详情失败重试/验证码/超时取消未实测，不扩大D134验收范围。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D157",
       "title": "我的简历固定入口与版本管理",
+      "status": "done",
       "depends_on": [
         "D156"
       ],
-      "status": "done",
-      "scope": [
-        "我的简历固定入口与版本管理",
-        "复用现有本地架构，保留原数据"
-      ],
-      "acceptance": [
-        "相关回归与本地App验证；不发送真实申请"
-      ],
-      "verification": "固定侧栏入口、基础编辑新版本、岗位专属稿、经典/紧凑导出与历史恢复；原生虚构材料验收编辑v3/恢复v4/保留专属v2/PDF及切页保留核对输入。PDF、DOCX导出回归通过。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D158",
       "title": "岗位准备自动复用材料",
+      "status": "done",
       "depends_on": [
         "D157"
       ],
-      "status": "done",
-      "scope": [
-        "岗位准备自动复用材料",
-        "复用现有本地架构，保留原数据"
-      ],
-      "acceptance": [
-        "相关回归与本地App验证；不发送真实申请"
-      ],
-      "verification": "岗位ID与已保存JD复用、缺失JD单次补全、面试读取关联专属简历；API隔离与显式岗位草稿验证通过。本轮未调用模型，未复验联网JD或实际模型使用材料的效果。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D159",
       "title": "辅助投递材料与记录",
+      "status": "done",
       "depends_on": [
         "D158"
       ],
-      "status": "done",
-      "scope": [
-        "首版辅助投递材料、手动原页与本人确认记录",
-        "复用现有本地架构，保留原数据；不自动提交或宣称平台确认"
-      ],
-      "acceptance": [
-        "相关回归与本地App验证；不发送真实申请"
-      ],
-      "verification": "首版辅助投递为选择简历、编辑/复制开场白、导出、保存后打开原页与本人确认记录。虚构材料原生验收关闭保护、原页可见、发送确认与下一步并发合并；历史投递状态与材料版本保留回归通过。平台辅助填入、自动提交及平台实际发送结果核验未实现。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D160",
       "title": "今日待办与面试复习",
+      "status": "done",
       "depends_on": [
         "D159"
       ],
-      "status": "done",
-      "scope": [
-        "今日待办与面试复习",
-        "复用现有本地架构，保留原数据"
-      ],
-      "acceptance": [
-        "相关回归与本地App验证；不发送真实申请"
-      ],
-      "verification": "到期/逾期待办复用原日期与下一步，面试复习使用已完成轮次的真实记录。原生虚构反馈验收入口及练习草稿，不自动发送；日期、去重与中断排除回归通过。未验收新增模型反馈质量。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D161",
       "title": "简历库分区编辑与明确的 AI 修改入口",
+      "status": "done",
       "depends_on": [
         "D160"
       ],
-      "status": "done",
-      "scope": [
-        "简历库分区编辑与明确的 AI 修改入口",
-        "复用现有版本和提案服务，保留用户数据"
-      ],
-      "acceptance": [
-        "相关回归与虚构材料原生 App 验收；区分模型生成质量与界面验收"
-      ],
-      "verification": "D163补完隔离虚构资料原生验收：导入分章核对、编辑切页保留、预览、PDF/Word导出及Word重导入、AI入口、提案接受并保存岗位专属版本、历史恢复和重启持久化。4次真实模型虚构材料调用比较修复前后；最终通用和岗位提案均可审阅，未自动保存。509项Python、344项Node全量通过；最后标题识别修复后42项相关回归通过。正常用户目录最终包启动通过，未修改真实简历。扫描PDF、任意复杂布局和面试实际生成质量不列为本轮通过项。详见HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D162",
       "title": "统一简历提案审阅与本地界面验收",
+      "status": "done",
       "depends_on": [
         "D161"
       ],
-      "status": "done",
-      "scope": [
-        "统一简历提案审阅与本地界面验收",
-        "复用现有版本和提案服务，保留用户数据"
-      ],
-      "acceptance": [
-        "相关回归与虚构材料原生 App 验收；区分模型生成质量与界面验收"
-      ],
-      "verification": "D163补完隔离虚构资料原生验收：导入分章核对、编辑切页保留、预览、PDF/Word导出及Word重导入、AI入口、提案接受并保存岗位专属版本、历史恢复和重启持久化。4次真实模型虚构材料调用比较修复前后；最终通用和岗位提案均可审阅，未自动保存。509项Python、344项Node全量通过；最后标题识别修复后42项相关回归通过。正常用户目录最终包启动通过，未修改真实简历。扫描PDF、任意复杂布局和面试实际生成质量不列为本轮通过项。详见HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D163",
       "title": "简历全流程实测与导入完整性修复",
+      "status": "done",
       "depends_on": [
         "D160"
       ],
-      "status": "done",
-      "scope": [
-        "虚构资料逐步测试导入核对编辑AI提案版本恢复导出及岗位衔接",
-        "修复完整简历保留与分析材料脱敏边界"
-      ],
-      "acceptance": [
-        "真实本地App与相关回归；未验收项如实记录"
-      ],
-      "verification": "D163补完隔离虚构资料原生验收：导入分章核对、编辑切页保留、预览、PDF/Word导出及Word重导入、AI入口、提案接受并保存岗位专属版本、历史恢复和重启持久化。4次真实模型虚构材料调用比较修复前后；最终通用和岗位提案均可审阅，未自动保存。509项Python、344项Node全量通过；最后标题识别修复后42项相关回归通过。正常用户目录最终包启动通过，未修改真实简历。扫描PDF、任意复杂布局和面试实际生成质量不列为本轮通过项。详见HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D164",
       "title": "简历模板与滚动体验及Agent续查修复",
+      "status": "done",
       "depends_on": [
         "D163"
       ],
-      "status": "done",
-      "scope": [
-        "简历校招社招模板与页面滚动",
-        "Agent检索缓存续查与辅助投递开场白"
-      ],
-      "acceptance": [
-        "相关回归与虚构资料原生App验收，真实发送不执行"
-      ],
-      "verification": "18项Python、90项Node、类型构建与包审计通过。原生虚构资料验证滚轮修复、模板/导出、校招AI草稿、招呼语复制与原页打开，JD读取不再锁住窗口。Agent缓存使用本地模拟模型测试；未复验真实检索或投递。自动填写/发送仅完成边界设计，未实现。详见HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D165",
       "title": "连续纸张预览与导出一致的简历工作台",
+      "status": "done",
       "depends_on": [
         "D164"
       ],
-      "status": "done",
-      "scope": [
-        "以实际PDF显示连续A4页面，共用导出排版和模板",
-        "保留就近编辑与版本保护，修复编号章节识别"
-      ],
-      "acceptance": [
-        "虚构资料长简历分页、模板、编辑保存与PDF核对；保留用户原稿"
-      ],
-      "verification": "47项Python、8项Node、类型构建、Ruff及最终包审计通过；虚构长简历原生验收连续PDF两页、模板、实际导出比对、编辑新版本/换行/关闭保护/移动后放弃。修复渲染兼容与打包旧运行时残留后复验；最终窄屏提示样式未单独原生复验。无模型调用和真实简历修改，详见HANDOFF。",
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D166",
       "title": "平台全选、归档批量管理与直接投递材料工作台",
+      "status": "done",
       "depends_on": [
         "D165"
       ],
-      "status": "done",
-      "scope": [
-        "来源全选与归档批量恢复删除",
-        "岗位直接准备投递、常用招呼语与可审阅AI润色"
-      ],
-      "acceptance": [
-        "隔离数据原生验收选择、批量操作、材料入口与润色审阅，不发送真实申请"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null,
-      "verification": "91项Node、87项Python、类型构建、diff和最终macOS包审计通过。隔离原生App验证来源全选、归档批量恢复/删除确认取消、模板持久化/关闭保护、模拟模型建议采用/原文过期保护/停止、复制并打开原页与未投递状态；最终正常工作区启动保留原选择和资料。批量永久删除执行由API与批处理自动测试覆盖。未实现平台自动填写/发送，未宣称真实模型润色质量通过。详见HANDOFF。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D167",
@@ -2887,16 +1886,11 @@
       "depends_on": [
         "D166"
       ],
-      "scope": [
-        "保留原PDF与旧版本，将已确认内容接入富文本编辑器",
-        "格式持久化、Word/PDF导出、局部AI审阅与撤销",
-        "虚构资料原生验收导入编辑保存重启及导出"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null,
-      "verification": "72项Python、16项Node、类型构建、Ruff、diff及最终macOS包审计通过；隔离虚构PDF原生验收导入、富文本编辑、新版本、草稿重载、Word/PDF实际导出与逐页核对、模板同步及重启恢复。本机模拟模型验证选中内容生成/采用/撤销、过期保护和停止；不代表真实模型质量通过。正常工作区D167启动保留原简历状态，未修改真实简历。连续编辑不承诺原PDF无损还原，OCR/复杂版式/Windows原生及中文IME未验收。详见HANDOFF。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D168",
@@ -2905,16 +1899,11 @@
       "depends_on": [
         "D167"
       ],
-      "scope": [
-        "投递材料与记录分离、删除恢复",
-        "隐藏空章节、模板画廊与简洁编辑工具栏",
-        "沿用AI审阅流程并修复短输出预算"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null,
-      "verification": "64项Python、42项Node、类型构建、Ruff、diff和最终macOS包审计通过。原生隔离验收模板/空章节/编辑撤销、模拟模型直接生成与审阅保存新版本、话术采用保存、投递记录删除恢复/重启/关闭保护；三模板Word/PDF内容保留。最终正常工作区启动成功。仅固定模板+AI内容提案，非任意版式生成；真实模型质量与Windows未验收。详见HANDOFF。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D169",
@@ -2923,15 +1912,11 @@
       "depends_on": [
         "D168"
       ],
-      "scope": [
-        "生成、审阅和版本保存不再进入聊天",
-        "岗位与助手入口统一跳转，保留旧提案"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null,
-      "verification": "95 项 Node、类型构建、diff 与最终包审计通过。隔离原生 App 使用虚构简历/本机模拟模型验收基础与岗位专属生成、页内审阅保存、停止/切页取消、失败重试、入口路由、旧提案及草稿保护；会话数不增加。真实模型质量与 Windows 未验收。详见 HANDOFF。"
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D170",
@@ -2940,14 +1925,11 @@
       "depends_on": [
         "D169"
       ],
-      "scope": [
-        "前置真实线索和证据缺口",
-        "待办完成撤销且不改变投递及简历状态"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D171",
@@ -2956,17 +1938,11 @@
       "depends_on": [
         "D170"
       ],
-      "scope": [
-        "测量真实检索速度相关性及失败隔离",
-        "补全JD后重新核对本地匹配",
-        "面试首轮带入已有岗位与对应脱敏简历",
-        "保留近期完整JD及原始来源时间，避免列表刷新覆盖",
-        "明确任选一种语言按技能组核对"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D172",
@@ -2975,15 +1951,11 @@
       "depends_on": [
         "D171"
       ],
-      "scope": [
-        "明确空列表与失败原因，保留部分结果",
-        "相同检索和JD读取合并，取消独立",
-        "猎聘短时会话复用与真实前后测量"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D173",
@@ -2992,16 +1964,11 @@
       "depends_on": [
         "D172"
       ],
-      "scope": [
-        "主页面导航与独立滚动位置",
-        "搜索、岗位、简历、助手和设置视觉层级统一",
-        "简历单一入口与直接导出、技能直接入口",
-        "真实App验证页面衔接、窄屏和弹窗"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D174",
@@ -3010,15 +1977,11 @@
       "depends_on": [
         "D173"
       ],
-      "scope": [
-        "修复项目内技术栈被误判为章节",
-        "保留完整正文并分离匹配标签",
-        "连续文稿核对与隔离原生验收"
-      ],
       "evidence": [
+        "https://github.com/russeell/jobfindsme/blob/fc266518a0ae78986abb6572094ee8dff24f153f/docs/desktop/tasks.json",
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": null
+      "verification": "历史范围与验收见固定任务快照；不作为当前真实来源或模型质量保证。"
     },
     {
       "id": "D175",
@@ -3345,7 +2308,7 @@
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
-      "blocker": "真实BOSS只读预览、macOS隔离确认/停止/重启恢复已通过；用户明确要求仅验收预览、暂不发送，真实附件上传、聊天适配及送达仍未验收。没有发布Release。"
+      "blocker": "代码已随v0.15.4发布为实验功能；真实BOSS只读预览与隔离确认/停止/恢复通过。用户仅授权预览，真实上传、发送和独立送达回执仍未验收。"
     },
     {
       "id": "D193",
@@ -3446,6 +2409,116 @@
         "https://github.com/russeell/jobfindsme/actions/runs/38527780805"
       ],
       "verification": "GitHub连接恢复，主分支/开发分支同步并正式发布v0.15.4 latest；两包同546e80f，包含D195全部修复。主CI及两端各598项Python/437项桌面回归、冻结HTTP/CA、包审计通过；实际打包UI/IPC/冻结Python/SQLite两次启动验证彩色PDF/Word导入编辑、校招模板保存与恢复、一次撤销、紧凑模板未保存草稿退出重启恢复、快捷保存及焦点、Word/PDF样式与章节顺序、旧岗位材料仍用旧校招版本、归档原件两入口原字节导出/取消反馈。首轮模块加载/样本刷新/输入焦点脚本问题修正后整轮通过。发布附件验证再次下载CRC/版本/源码/无用户数据/SHA256；公开两包本机重新下载、CRC/来源提交/版本/修复模块与SHA256一致，macOS再用公开包内冻结API与客户端核对旧校招稿/归档原件/工作区隔离。Mac大文件断点续传完成；本机窗口连接连续超时，额外本机原生界面复验未完成，不冒充已通过。没有招聘访问、付费模型或真实投递；D192未完成真实发送。",
+      "blocker": null
+    },
+    {
+      "id": "D197",
+      "title": "清理停用构建副本与当前文档",
+      "status": "done",
+      "depends_on": [
+        "D196"
+      ],
+      "scope": [
+        "核对运行路径与保护文件后清理旧构建，保留当前ZIP和回退版",
+        "收整当前交接与模块图，保留历史任务ID/证据与真实验收缺口",
+        "移除已无生产引用的旧简历界面"
+      ],
+      "acceptance": [
+        "用户数据库、原始简历、会话与迁移保持不变",
+        "当前文档可直接找到下一步与准确模块入口"
+      ],
+      "verification": "清理14个停用构建（约6.7GiB逻辑文件），保留v0.15.3与已校验v0.15.4ZIP。无运行引用或用户文件；移除2个无引用旧界面。构建/typecheck、任务ID/状态/依赖及文档链接检查通过；迁移未改。",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D198",
+      "title": "统一简历样式与编辑导出反馈",
+      "status": "in_progress",
+      "depends_on": [
+        "D197"
+      ],
+      "scope": [
+        "简历样式归入独立入口，保留现有模板和正文格式",
+        "修复编辑导出取消后旧成功提示残留",
+        "验证正常/窄窗口、草稿恢复和格式导出"
+      ],
+      "acceptance": [
+        "简历外观、模板与正文格式保持一致，页面样式互不覆盖",
+        "取消不误报，实际编辑/恢复/导出通过"
+      ],
+      "verification": "待实现",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D199",
+      "title": "统一岗位与简历材料的读取和预算",
+      "status": "pending",
+      "depends_on": [
+        "D198"
+      ],
+      "scope": [
+        "招呼语和面试使用共用材料选择器，按相关段落选取长材料",
+        "保留准确简历版本、不附简历、工作区与缺失状态",
+        "相关经历位于简历末尾也可进入准备"
+      ],
+      "acceptance": [
+        "不更换已选择版本，不附简历不读取基础简历",
+        "文本有界、事实保持、相关尾部段落被复用"
+      ],
+      "verification": "待实现",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D200",
+      "title": "按业务整理简历材料IPC/API边界",
+      "status": "pending",
+      "depends_on": [
+        "D199"
+      ],
+      "scope": [
+        "共用IPC注册来源校验并抽出简历/材料注册模块",
+        "简历API和请求契约分模块，保留URL与返回结构",
+        "补跨端兼容、非法调用、版本/归档/原件回归"
+      ],
+      "acceptance": [
+        "既有API与IPC兼容，工作区与来源校验不弱化",
+        "当前/旧库、原件、材料、取消与导出保持正确"
+      ],
+      "verification": "待实现",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
+      "blocker": null
+    },
+    {
+      "id": "D201",
+      "title": "整理可重复的发行依赖与验证流程",
+      "status": "pending",
+      "depends_on": [
+        "D200"
+      ],
+      "scope": [
+        "固定发行Python依赖和打包/验收工具版本",
+        "普通推送以CI为主，发行打包按需触发并复用安全缓存",
+        "双平台实际安装包验证本轮重构，不发布新Release"
+      ],
+      "acceptance": [
+        "同一产品提交在两端完整构建审计与实际包测试通过",
+        "缓存不带入用户数据，现有公开包不被替换"
+      ],
+      "verification": "待实现",
+      "evidence": [
+        "docs/desktop/HANDOFF.md"
+      ],
       "blocker": null
     }
   ]
