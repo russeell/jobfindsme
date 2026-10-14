@@ -1,5 +1,9 @@
 # 项目结构
 
+D195：每份简历以`document.attrs.template`保存白名单模板，沿用原文档/版本存储，不新增表或迁移。Tiptap的`setContent`只换内容，`shared/resume-editor-actions.ts`在同一事务显式设置根属性，保证排版与正文一起保存/撤销；草稿恢复、历史恢复与AI保存继承元数据。Python导出默认解析所选版本的模板，临时预览仍可显式覆盖；编辑/材料/附件导出不再硬编码模板。`shared/resume-export.ts`经受限IPC读取准确版本再选择原件或编辑稿导出，已归档原件不因列表缺失而被转换，工作区权限仍由后端检查；两个材料入口仅在保存成功时反馈。
+
+`shared/resume-selection-quality.ts`供main模型返回和`ResumeSelectionAI.tsx`采用前共用，拦截无实质修改、数字/日期变化与部分明确新增事实；允许纠错目的的标点修正。检查为有限确定性保护，不能验证完整语义；原文/建议对照、过期保护、手动编辑和显式采用继续保留。
+
 D193：简历编辑沿用Tiptap与原版本接口；`ResumeWordEditor.tsx`将格式按钮按用途分组、提供专注编辑/保存快捷键与可收起的AI助手。`shared/resume-editor-actions.ts`仅清除选中文字格式和段落对齐，保留章节与列表，单次撤销恢复。`ResumeSelectionAI.tsx`继续负责选区快照、显式生成、过期检查和采用，侧栏开关不写简历。草稿成功/失败与正式保存分开呈现；专注模式沿用浏览器遮挡机制，Popover按编辑区边界定位。参考[Tiptap Simple Editor](https://tiptap.dev/docs/ui-components/templates/simple-editor)、[Reactive Resume富文本编辑](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/rich-text-editor.tsx)与[局部AI](https://github.com/reactive-resume/reactive-resume/blob/main/apps/web/src/features/resume/editor/write/improve.tsx)、[Novel选段AI](https://github.com/steven-tey/novel/blob/main/apps/web/components/tailwind/generative/ai-selector.tsx)的交互思路，独立实现，没有复制代码或新增依赖。
 
 D192：`main/applications/` 为 BOSS 单岗位投递提供独立确认预览与受限执行器，复用已有投递材料和平台分区；没有开放 Agent 的通用外部写权限。简历原件按字节复制，编辑版按准确版本导出 PDF，用文件指纹名称核对上传与实际发送附件。`search/application_attempts.py` 与0045迁移持久化不可变材料快照、执行预留、最低一分钟间隔、阶段和独立回执；重启中断记录为取消或结果待确认，不重试。验证/限流复用既有来源暂停机制；成功重新读取聊天后才核实对应内容，简历核实后才更新已投递标记。原生与真实平台验收状态见 HANDOFF，不以模拟浏览器结果冒充平台成功。
