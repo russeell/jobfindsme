@@ -121,7 +121,10 @@ for(let attempt=0;attempt<2;attempt++){
    const wordVersion=await window.evaluate(async workspace=>(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current),workspaceId);
    assert.ok(JSON.stringify(wordVersion.document).includes('#17324d'));
    assert.ok(JSON.stringify(wordVersion.document).includes('#0f766e'));
-   await window.evaluate(async({workspace,id})=>window.jobfindsme.restoreResumeVersion(workspace,id),{workspace:workspaceId,id:savedResumeId});
+   const restored=await window.evaluate(async({workspace,id})=>window.jobfindsme.restoreResumeVersion(workspace,id),{workspace:workspaceId,id:savedResumeId});
+   assert.notEqual(restored.version_id,savedResumeId,'Restoring history creates a new version without rewriting the old one');
+   assert.ok(JSON.stringify(restored.document).includes('Packaged edit'));
+   savedResumeId=restored.version_id;
    await window.reload();
    await window.getByRole('button',{name:'我的简历',exact:true}).click();
   }
