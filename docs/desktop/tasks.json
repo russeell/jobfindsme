@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D198",
+  "current_task": "D199",
   "tasks": [
     {
       "id": "D01",
@@ -2449,7 +2449,7 @@
         "简历外观、模板与正文格式保持一致，页面样式互不覆盖",
         "取消不误报，实际编辑/恢复/导出通过"
       ],
-      "verification": "待实现",
+      "verification": "代码完成：简历样式归入resume/resume.css，移除32组停用界面样式，保留模板、响应式及专注级联；编辑器新导出清空旧成功提示。构建/typecheck和16项文档/预览回归通过。Mac窗口连接超时；新增双端实际包正常/窄窗与取消断言，最终验收随D201执行，尚未标完成。",
       "evidence": [
         "docs/desktop/HANDOFF.md"
       ],
@@ -2458,7 +2458,7 @@
     {
       "id": "D199",
       "title": "统一岗位与简历材料的读取和预算",
-      "status": "pending",
+      "status": "in_progress",
       "depends_on": [
         "D198"
       ],

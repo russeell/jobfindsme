@@ -78,6 +78,23 @@ async function checkEditor(window){
  assert.ok(await editor.textContent());
  return editor;
 }
+async function checkEditorLayout(app,window){
+ for(const width of [1240,900]){
+  await app.evaluate(({BrowserWindow},width)=>BrowserWindow.getAllWindows()[0].setSize(width,740),width);
+  await window.getByRole('button',{name:'简历助手',exact:true}).click();
+  await window.getByRole('complementary',{name:'简历助手',exact:true}).waitFor({state:'visible'});
+  const layout=await window.evaluate(()=>{
+   const root=document.querySelector('.resume-word-workspace'), toolbar=root.querySelector('.resume-word-toolbar'), content=root.closest('.content');
+   const bounds=root.getBoundingClientRect(),container=content.getBoundingClientRect();
+   return {fits:bounds.left>=container.left&&bounds.right<=container.right+1,overflow:root.scrollWidth-root.clientWidth,toolbar:toolbar.scrollWidth-toolbar.clientWidth,groups:root.querySelectorAll('.resume-format-group').length};
+  });
+  assert.ok(layout.fits&&layout.overflow<=1&&layout.toolbar<=1,`Editor overflow at ${width}: ${JSON.stringify(layout)}`);
+  assert.equal(layout.groups,3);
+  await window.screenshot({path:path.join(output,`resume-editor-${width}.png`)});
+  await window.getByRole('button',{name:'关闭简历助手',exact:true}).click();
+ }
+ await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1240,820));
+}
 async function exportFiles(app,window,prefix){
  for(const [format,label] of [['docx','Word · 继续编辑'],['pdf','PDF · 用于投递']]){
   await app.evaluate(({dialog},filePath)=>{
@@ -87,6 +104,11 @@ async function exportFiles(app,window,prefix){
   await window.getByRole('button',{name:label,exact:true}).click();
   await window.getByText(format==='docx'?'已导出可继续编辑的 Word 文档。':'已导出 PDF。',{exact:true}).waitFor({state:'visible'});
  }
+ // A cancelled second export must clear a previous successful export notice.
+ await app.evaluate(({dialog})=>{dialog.showSaveDialog=async()=>({canceled:true});});
+ await window.getByRole('button',{name:'导出简历',exact:true}).click();
+ await window.getByRole('button',{name:'PDF · 用于投递',exact:true}).click();
+ await window.getByText('已导出 PDF。',{exact:true}).waitFor({state:'hidden'});
 }
 for(let attempt=0;attempt<2;attempt++){
  const app=await electron.launch({executablePath,args:[`--user-data-dir=${profile}`],env:{...process.env,JFM_QA_DIAGNOSTICS:'1'},timeout:90000});
@@ -156,6 +178,7 @@ for(let attempt=0;attempt<2;attempt++){
    assert.deepEqual(Buffer.from(originalSource.content_base64,'base64'),readFileSync(path.join(resumeFolder,'fictional.pdf')));
    await window.getByRole('button',{name:'编辑副本',exact:true}).click();
    const editor=await checkEditor(window);
+   await checkEditorLayout(app,window);
    await editor.locator('p').last().click();
    await window.keyboard.press('End');
    await window.keyboard.type(' Packaged edit');
