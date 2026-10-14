@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D194",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -3374,7 +3374,7 @@
     {
       "id": "D194",
       "title": "发布新版简历编辑与双系统实际包验收",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D193"
       ],
@@ -3389,9 +3389,14 @@
         "发布下载链接并记录证据，不执行真实投递或付费模型"
       ],
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/releases/tag/v0.15.3",
+        "https://github.com/russeell/jobfindsme/actions/runs/38512345041",
+        "https://github.com/russeell/jobfindsme/actions/runs/38512344489",
+        "https://github.com/russeell/jobfindsme/actions/runs/38512344471"
       ],
-      "blocker": null
+      "blocker": null,
+      "verification": "v0.15.3两端同b647666正式发布latest。主CI及macOS/Windows各591项Python、424项桌面回归、包审计/冻结HTTP/CA通过；两端实际包编辑、分组工具栏、清除格式一次撤销、专注背景隔离、未保存退出重启草稿恢复、快捷保存保留焦点、Word/PDF导出样式及原件不变通过。macOS本机最终载荷原生窗口、真实保存框与文件样式/文字/1页预览追加验收通过。首轮脚本用错恢复版本ID已修正并完成整轮复验。附件经云端验证上传及发布后重新下载CRC/功能/版本/源码/无用户资料/SHA256通过，两条公开下载HTTP200。没有真实投递或付费模型；D192仍未完成真实发送验收。"
     }
   ]
 }
