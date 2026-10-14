@@ -1,8 +1,16 @@
-import type {PreparationStage,TrackedJob} from './contracts';
+import type {ApplicationRecord,PreparationStage,TrackedJob} from './contracts';
 
 export type RecordsFilter='following'|'saved'|'applied'|'all';
 export type RecordsSort='recent'|'next';
 export const recordsPageSize=20;
+export function applicationResults(workspaceId:string,records:Array<ApplicationRecord&{deleted_at?:string|null}>):Map<string,ApplicationRecord['status']>{
+  const result=new Map<string,ApplicationRecord['status']>();
+  for(const row of [...records].sort((a,b)=>b.updated_at.localeCompare(a.updated_at))){
+    if(row.workspace_id!==workspaceId||row.deleted_at||!['contacted','resume_sent','uncertain'].includes(row.status)||result.has(row.job_id))continue;
+    result.set(row.job_id,row.status);
+  }
+  return result;
+}
 
 export function recordStage(item:TrackedJob):PreparationStage|undefined {
   const stage=item.preparation?.stage;

@@ -24,6 +24,6 @@ export async function applicationFile(api:Pick<DesktopApiClient,'getResumeVersio
     if(!bytes.length||bytes.length>20*1024*1024||extension==='pdf'&&bytes.subarray(0,5).toString()!=='%PDF-'||extension==='docx'&&bytes.subarray(0,2).toString()!=='PK')throw Error('简历文件无效或超过 BOSS 的 20 MB 限制。');
     const hash=createHash('sha256').update(bytes).digest('hex'),name=`简历-${hash.slice(0,16)}.${extension}`,destination=path.join(folder,name);
     await writeFile(destination,bytes,{mode:0o600});
-    return {path:destination,name,originalName,hash,label:version.original_file?'所选原始简历':`所选编辑简历 · ${new Date(version.created_at).toLocaleDateString()}`,dispose};
+    return {path:destination,name,originalName,hash,label:version.original_file?'所选原始简历':`所选编辑简历 · ${new Date(version.created_at).toLocaleDateString('zh-CN')}`,dispose};
   }catch(error){await dispose();throw error;}
 }

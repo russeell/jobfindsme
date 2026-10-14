@@ -1,8 +1,8 @@
 import {dueJobs,localDay} from "../../../shared/job-follow-up";
 import {useEffect,useRef,useState} from 'react';
-import type {BootstrapData,SearchResultItem,TrackedJob,NextActionInput} from '../../../shared/contracts';
+import type {BootstrapData,SearchResultItem,TrackedJob,NextActionInput,ApplicationRecord} from '../../../shared/contracts';
 import {preparationStages} from '../../../shared/job-preparation';
-import {matchesRecordFilter,recordStage,recordsPageSize,selectRecords,type RecordsFilter,type RecordsSort} from '../../../shared/records-view';
+import {applicationResults,matchesRecordFilter,recordStage,recordsPageSize,selectRecords,type RecordsFilter,type RecordsSort} from '../../../shared/records-view';
 import {isAllowedSourceUrl,sourceBrowserSpecs,type SourceBrowserId} from '../../../shared/source-browser-policy';
 import {userError} from '../../../shared/user-errors';
 import {JobActions} from '../search/JobActions';
@@ -15,6 +15,7 @@ const tabs:Array<[RecordsFilter,string]>=[['all','全部'],['saved','收藏'],['
 type Props={active:boolean;data?:BootstrapData;onPrepare(job:SearchResultItem['job'],apply?:boolean,view?:'materials'|'records'):void;onDiscover():void};
 export function RecordsPage({active,data,onPrepare,onDiscover}:Props){
   const [items,setItems]=useState<TrackedJob[]>([]);
+  const [applications,setApplications]=useState<ApplicationRecord[]>([]);
   const [loaded,setLoaded]=useState(false);
   const [loadError,setLoadError]=useState('');
   const [reloadNonce,setReloadNonce]=useState(0);
@@ -24,6 +25,7 @@ export function RecordsPage({active,data,onPrepare,onDiscover}:Props){
   const [limit,setLimit]=useState(recordsPageSize);
   const workspaceId=data?.workspaces[0]?.workspace_id;
   const openBrowser=useOriginalBrowser();
+  const results=applicationResults(workspaceId||'',applications);
   const selected=selectRecords(items,filter,query,'',sort);
   const [today,setToday]=useState(localDay),[showAllTodos,setShowAllTodos]=useState(false);
   const [actionBusy,setActionBusy]=useState(false),[actionError,setActionError]=useState('');
@@ -50,10 +52,10 @@ export function RecordsPage({active,data,onPrepare,onDiscover}:Props){
 
   const upcoming=selectRecords(items,'following','','','next').find(item=>item.preparation?.next_action);
   useEffect(()=>setLimit(recordsPageSize),[filter,query,sort]);
-  useEffect(()=>{setItems([]);setLoaded(false);setQuery('');setFilter('all');},[workspaceId]);
+  useEffect(()=>{setItems([]);setApplications([]);setLoaded(false);setQuery('');setFilter('all');},[workspaceId]);
   useEffect(()=>{
     if(!workspaceId||!active)return;let cancelled=false,sequence=0;
-    const load=()=>{const request=++sequence;setLoadError('');void window.jobfindsme!.listJobTracking(workspaceId).then(rows=>{if(!cancelled&&request===sequence){setItems(rows);setLoaded(true);}}).catch(error=>{if(!cancelled&&request===sequence)setLoadError(userError(error).message);});};
+    const load=()=>{const request=++sequence;setLoadError('');void Promise.all([window.jobfindsme!.listJobTracking(workspaceId),window.jobfindsme!.listApplicationRecords(workspaceId)]).then(([rows,records])=>{if(!cancelled&&request===sequence){setItems(rows);setApplications(records);setLoaded(true);}}).catch(error=>{if(!cancelled&&request===sequence)setLoadError(userError(error).message);});};
     load();window.addEventListener('jfm:job-updated',load);
     return()=>{cancelled=true;window.removeEventListener('jfm:job-updated',load);};
   },[workspaceId,active,reloadNonce]);
@@ -79,10 +81,10 @@ export function RecordsPage({active,data,onPrepare,onDiscover}:Props){
     </div>
     {loadError&&<p className="records-load-error" role="alert">{loadError} <button type="button" onClick={()=>setReloadNonce(value=>value+1)}>重新读取</button></p>}
     {!loaded?<p className="records-loading" role="status">{loadError?'已有记录保留在本机，可重试读取。':'正在读取本地岗位…'}</p>:selected.length?<>
-      <div className="records-table-wrap"><table className="records-table"><thead><tr><th scope="col">岗位 / 公司</th><th scope="col">薪资</th><th scope="col">地点 / 来源</th><th scope="col">进度</th><th scope="col">操作</th></tr></thead><tbody>{selected.slice(0,limit).map(item=>{const status=recordStage(item),applied=matchesRecordFilter(item,'applied');return <tr key={item.job.job_id}>
-        <td className="record-main"><button type="button" className="record-title" onClick={()=>onPrepare(item.job,false,applied?'records':'materials')}>{item.job.title}</button><span className="record-company">{item.job.company}</span><span className="record-narrow-stage">{status?preparationStages[status]:item.tracking.read?'已查看':'未查看'}</span>
+      <div className="records-table-wrap"><table className="records-table"><thead><tr><th scope="col">岗位 / 公司</th><th scope="col">薪资</th><th scope="col">地点 / 来源</th><th scope="col">进度</th><th scope="col">操作</th></tr></thead><tbody>{selected.slice(0,limit).map(item=>{const status=recordStage(item),applied=matchesRecordFilter(item,'applied'),result=results.get(item.job.job_id),hasResult=applied||!!result,statusLabel=(!status||status==='considering')&&!applied&&result?(result==='uncertain'?'待核对':'已沟通'):status?preparationStages[status]:item.tracking.read?'已查看':'未查看';return <tr key={item.job.job_id}>
+        <td className="record-main"><button type="button" className="record-title" onClick={()=>onPrepare(item.job,false,hasResult?'records':'materials')}>{item.job.title}</button><span className="record-company">{item.job.company}</span><span className="record-narrow-stage">{statusLabel}</span>
         {status!=='closed'?<button type="button" className={`record-next-action${item.preparation?.next_action?' has-action':''}`} disabled={actionBusy} aria-label={`${item.preparation?.next_action?'编辑':'安排'}下一步：${item.job.title}`} onClick={()=>editAction(item)}><Icon name="calendar"/><span>{item.preparation?.next_action||'安排下一步'}</span>{item.preparation?.due_date&&<time dateTime={item.preparation.due_date}>{item.preparation.due_date}</time>}</button>:null}
-        </td><td className="record-pay">{formatSalary(item.job)}</td><td className="record-location">{item.job.locations.join(' / ')||'地点未知'}<small>{item.job.source.source_name}</small></td><td><span className={`record-stage ${status||'none'}`}>{status?preparationStages[status]:item.tracking.read?'已查看':'未查看'}</span></td><td className="record-actions-cell"><JobActions applicationComplete={applied} onApply={()=>onPrepare(item.job,true,applied?'records':'materials')} compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job,false,applied?'records':'materials')} onError={message=>setActionError(message?userError(message).message:'')}/></td>
+        </td><td className="record-pay">{formatSalary(item.job)}</td><td className="record-location">{item.job.locations.join(' / ')||'地点未知'}<small>{item.job.source.source_name}</small></td><td><span className={`record-stage ${status||'none'}`}>{statusLabel}</span></td><td className="record-actions-cell"><JobActions applicationComplete={hasResult} applicationLabel={!applied&&result?(result==='uncertain'?'核对结果':'沟通记录'):undefined} onApply={()=>onPrepare(item.job,true,hasResult?'records':'materials')} compact tracking={item.tracking} onTrack={(event,enabled)=>update(item,event,enabled)} onOpen={()=>update(item,'apply_opened')} onResearch={()=>onPrepare(item.job,false,hasResult?'records':'materials')} onError={message=>setActionError(message?userError(message).message:'')}/></td>
       </tr>;})}</tbody></table></div>
       <div className="records-pagination"><span>显示 {Math.min(limit,selected.length)} / {selected.length} 条岗位</span>{limit<selected.length&&<button type="button" onClick={()=>setLimit(value=>value+recordsPageSize)}>再显示 {Math.min(recordsPageSize,selected.length-limit)} 条</button>}</div>
     </>:<div className="records-empty"><Icon name="records"/><h2>{query?'没有匹配的岗位':filter==='saved'?'还没有收藏岗位':filter==='applied'?'还没有已投递岗位':'这里还没有岗位'}</h2><p>{query?'试试其他关键词，或清空筛选。':filter==='saved'?'点击岗位上的星标，喜欢的机会就会留在这里。':filter==='applied'?'投递后在岗位上标记，不会把打开原页当作已投递。':'历史记录会保留，收藏和投递状态分别记录。'}</p><div>{query?<button type="button" onClick={clearFilters}>清空筛选</button>:<><button type="button" onClick={onDiscover}>去找工作 →</button>{filter!=='all'&&items.length>0&&<button type="button" onClick={()=>setFilter('all')}>查看全部岗位</button>}</>}</div></div>}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {followsRecord,matchesRecordFilter,selectRecords,recordStage} from '../dist-electron/shared/records-view.js';
+import {applicationResults,followsRecord,matchesRecordFilter,selectRecords,recordStage} from '../dist-electron/shared/records-view.js';
 const row=(id,tracking={},preparation)=>({job:{job_id:id,title:'Python 工程师',company:'示例公司',locations:['上海'],source:{source_name:'测试来源',fetched_at:'2026-10-01T08:00:00Z'}},tracking:{read:true,saved:false,applied:false,...tracking},preparation});
 
 test('following excludes casual browsing and closed opportunities without losing history',()=>{
@@ -43,4 +43,17 @@ test('legacy applied flags supersede stale considering without regressing later 
  assert.equal(recordStage(row('legacy',{applied:true},{stage:'considering'})),'applied');
  for(const stage of ['interview','offer','closed'])assert.equal(recordStage(row(stage,{applied:true},{stage})),stage);
  assert.equal(recordStage(row('new',{}, {stage:'considering'})),'considering');
+});
+test('application entrances use only confirmed local results in the current workspace',()=>{
+ const result=applicationResults('ws',[
+  {workspace_id:'ws',job_id:'contacted',status:'contacted',updated_at:'2026-10-01'},
+  {workspace_id:'ws',job_id:'contacted',status:'prepared',updated_at:'2026-10-03'},
+  {workspace_id:'ws',job_id:'uncertain',status:'uncertain',updated_at:'2026-10-03'},
+  {workspace_id:'ws',job_id:'uncertain',status:'contacted',updated_at:'2026-10-01'},
+  {workspace_id:'ws',job_id:'opened',status:'opened',updated_at:'2026-10-03'},
+  {workspace_id:'other',job_id:'foreign',status:'resume_sent',updated_at:'2026-10-03'},
+  {workspace_id:'ws',job_id:'deleted',status:'contacted',updated_at:'2026-10-03',deleted_at:'2026-10-04'},
+ ]);
+ assert.deepEqual([...result],[['uncertain','uncertain'],['contacted','contacted']]);
+ assert.equal(matchesRecordFilter(row('contacted'),'applied'),false);
 });
