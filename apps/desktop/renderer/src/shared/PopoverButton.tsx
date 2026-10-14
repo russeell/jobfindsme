@@ -8,7 +8,7 @@ export function PopoverButton({label,title,children,chosen=false,disabled=false,
   const [position,setPosition]=useState({left:12,top:80,width});
   const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLDivElement>(null);
   const id=useId(),parent=useContext(ParentPopover);
-  const boundary=trigger.current?.closest(".work-content") ?? parent?.boundary ?? null;
+  const boundary=trigger.current?.closest("[data-popover-boundary],.work-content") ?? parent?.boundary ?? null;
   const close=(restoreFocus=true)=>{setOpen(false);if(restoreFocus)trigger.current?.focus();};
 
   useLayoutEffect(()=>{
@@ -19,7 +19,7 @@ export function PopoverButton({label,title,children,chosen=false,disabled=false,
       if(!anchor?.isConnected)return close(false);
       const r=anchor.getBoundingClientRect();
       if(!r.width||!r.height)return close(false);
-      const scope=(anchor.closest(".work-content") ?? parent?.boundary)?.getBoundingClientRect();
+      const scope=(anchor.closest("[data-popover-boundary],.work-content") ?? parent?.boundary)?.getBoundingClientRect();
       const leftEdge=Math.max(12,(scope?.left ?? 0)+12),rightEdge=Math.min(innerWidth-12,(scope?.right ?? innerWidth)-12);
       const panelWidth=Math.min(width,Math.max(0,rightEdge-leftEdge));
       const next={width:panelWidth,left:Math.max(leftEdge,Math.min(r.left,rightEdge-panelWidth)),top:Math.max(12,Math.min(r.bottom+6,innerHeight-(panel.current?.offsetHeight ?? 260)-12))};

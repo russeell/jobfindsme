@@ -974,6 +974,48 @@ button {transition:background-color .12s,border-color .12s,color .12s}
 .resume-word-format .resume-font-size select,.resume-word-format .resume-text-align {margin-left:0;padding:4px 6px;font-size:11px;min-height:28px}
 .resume-word-format .resume-text-align {max-width:100px}
 .resume-word-format .popover-trigger {border:0;font-weight:600;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:5px}
+
+/* Resume writing keeps common tools together and AI beside the document. */
+.resume-word-workspace{container-type:inline-size}
+.resume-word-toolbar .resume-assistant-toggle{display:inline-flex;align-items:center;gap:5px}
+.resume-word-toolbar .resume-focus-toggle{padding:6px;display:grid;place-items:center;background:transparent;border-color:transparent}
+.resume-word-toolbar .resume-focus-toggle:hover{background:#f0f3f7}
+.resume-word-status.has-draft{color:#886b3c}
+.resume-word-format{gap:8px;row-gap:6px}
+.resume-format-group{display:flex;gap:2px;align-items:center;padding-right:8px;border-right:1px solid #e6eaf0}
+.resume-word-format button{display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.resume-word-format button[aria-label]{position:relative}
+.resume-word-format .popover-trigger{text-decoration:none}
+.resume-color-indicator{display:inline-block;border-bottom:3px solid;padding:0 2px;line-height:1.25}
+.resume-word-format .resume-selection-trigger{font-size:11px;color:#315f9d}
+.resume-word-format .resume-sections-toggle{white-space:nowrap;margin-left:auto}
+.resume-editor-body{min-width:0;display:grid;grid-template-columns:minmax(0,1fr);align-items:start}
+.assistant-open .resume-editor-body{grid-template-columns:minmax(0,1fr) 300px}
+.resume-editor-assistant{position:sticky;top:calc(var(--document-toolbar-height,54px) + var(--document-format-height,40px) - 16px);background:#fff;border-left:1px solid #e2e7ee;max-height:calc(100vh - var(--document-toolbar-height,54px) - var(--document-format-height,40px) - 30px);overflow:auto;min-width:0}
+.resume-editor-assistant>header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #edf0f4;position:sticky;top:0;background:#fff;z-index:1}
+.resume-editor-assistant>header strong{display:inline-flex;align-items:center;gap:6px;font-size:13px}
+.resume-editor-assistant>header button{border:0;background:transparent;font-size:20px;padding:0 4px;color:#7b8797}
+.resume-assistant-home{padding:14px 16px}
+.resume-assistant-home p,.resume-assistant-home small{font-size:12px;line-height:1.7;color:#7b8797}
+.resume-assistant-home p{margin:0 0 14px}
+.resume-assistant-home>button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;width:100%;margin:10px 0;padding:14px;text-align:left;background:#f8fafd;border:1px solid #e7edf5}
+.resume-assistant-home>button strong{font-size:13px;color:#344860}
+.resume-assistant-home>button span{font-size:11px;color:#7b8797;line-height:1.6}
+.resume-assistant-home>button:disabled{opacity:.55}
+.resume-assistant-home .resume-assistant-privacy{margin:18px 0 0;padding-top:12px;border-top:1px solid #edf0f4;font-size:11px}
+.resume-editor-assistant .resume-selection-ai{margin:0;padding:14px 16px;border:0;border-radius:0;background:#fff}
+.resume-editor-assistant .resume-selection-ai header strong{font-size:12px}
+.resume-editor-assistant .resume-selection-ai select{width:100%;max-width:none}
+.resume-editor-assistant .resume-selection-ai .button-row{gap:8px}
+.resume-editor-assistant .resume-selection-ai .button-row>button{font-size:12px;padding:7px 10px}
+.resume-editor-assistant .resume-selection-ai blockquote{margin:12px 0;background:#f7f9fc;border-radius:0 5px 5px 0;font-size:12px}
+.resume-editor-assistant .resume-selection-ai textarea{font-size:12px;min-height:160px}
+.resume-word-workspace.is-focused{position:fixed;inset:12px;z-index:20;overflow:auto;border-radius:12px;box-shadow:0 12px 60px #172b462e;max-width:none;scrollbar-gutter:stable}
+.resume-word-workspace.is-focused .resume-word-toolbar{top:0}
+.resume-word-workspace.is-focused .resume-word-format{top:var(--document-toolbar-height,54px)}
+.resume-word-workspace.is-focused .resume-editor-assistant{top:calc(var(--document-toolbar-height,54px) + var(--document-format-height,40px));max-height:calc(100vh - var(--document-toolbar-height,54px) - var(--document-format-height,40px) - 30px)}
+.resume-word-workspace.is-focused .resume-paper-toolbar{top:var(--document-toolbar-height,54px)}
+@container(max-width:850px){.assistant-open .resume-editor-body{grid-template-columns:minmax(0,1fr)}.resume-editor-assistant{position:static;grid-row:1;border-left:0;border-bottom:1px solid #e2e7ee;max-height:55vh}.resume-assistant-home{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.resume-assistant-home p,.resume-assistant-home small{grid-column:1/-1}.resume-assistant-home>button{margin:4px 0 8px}.resume-editor-assistant .resume-selection-ai{padding:12px 16px}.resume-editor-assistant .resume-selection-ai textarea{min-height:100px}}
 .resume-color-palette {display:flex;gap:9px;flex-wrap:wrap;padding:8px}
 .resume-color-palette button:not(.resume-color-reset) {width:26px;height:26px;min-width:26px;border:2px solid white;border-radius:50%;box-shadow:0 0 0 1px #d5dce5}
 .resume-color-palette button[aria-pressed=true] {outline:2px solid #3478db;outline-offset:2px}

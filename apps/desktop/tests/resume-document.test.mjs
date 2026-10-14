@@ -13,6 +13,28 @@ test('lists, blank paragraphs and hard breaks produce the same plain facts as ex
 });
 import {Editor,getSchema} from '@tiptap/core';
 import {resumeEditorExtensions} from '../dist-electron/shared/resume-editor-schema.js';
+import {clearResumeTextFormatting} from '../dist-electron/shared/resume-editor-actions.js';
+import {history} from '@tiptap/pm/history';
+test('clear formatting only affects selected text and paragraph alignment, with one undo preserving facts and structure',()=>{
+ const doc=resumeDocument(content),skills=doc.content.find(s=>s.attrs.section==='skills');
+ skills.attrs.headingColor='#17324d';skills.attrs.headingSize=16;
+ skills.content[0].attrs={textAlign:'center'};
+ skills.content[0].content[0].marks=[{type:'bold'},{type:'textStyle',attrs:{color:'#0f766e',fontSize:14}}];
+ const editor=new Editor({element:null,extensions:resumeEditorExtensions,content:doc});
+ // A headless editor has no mounted-view plugins; attach the real history
+ // plugin to exercise the same undo transaction used by the native editor.
+ editor.view.updateState(editor.state.reconfigure({plugins:[history()]}));
+ let position;editor.state.doc.descendants((node,pos)=>{if(node.isText&&node.text==='Python')position=pos;});
+ editor.commands.setTextSelection({from:position,to:position+2});const before=editor.getJSON();
+ assert.equal(clearResumeTextFormatting(editor),true);
+ assert.equal(editor.state.doc.rangeHasMark(position,position+2,editor.schema.marks.bold),false);
+ assert.equal(editor.state.doc.rangeHasMark(position,position+2,editor.schema.marks.textStyle),false);
+ assert.equal(editor.state.doc.rangeHasMark(position+2,position+6,editor.schema.marks.bold),true);
+ const after=editor.getJSON().content.find(s=>s.attrs.section==='skills');
+ assert.equal(after.content[0].attrs.textAlign,null);assert.equal(after.attrs.headingColor,'#17324d');
+ assert.equal(editor.getJSON().content.length,5);assert.deepEqual(resumeDocumentContent(editor.getJSON()),content);
+ assert.equal(editor.commands.undo(),true);assert.deepEqual(editor.getJSON(),before);editor.destroy();
+});
 test('document schema restores serialized drafts, applies local replacements and preserves empty sections',()=>{
  const editor=new Editor({element:null,extensions:resumeEditorExtensions,content:resumeDocument(content)});
  const original=editor.getJSON();editor.commands.setTextSelection({from:2,to:4});

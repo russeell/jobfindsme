@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
 const shapes: Record<string, ReactNode> = {
+ undo:<><path d="M3 9h10a7 7 0 0 1 0 14M3 9l5-5M3 9l5 5" transform="translate(0 -2)"/></>,
+ redo:<><path d="M21 9H11a7 7 0 0 0 0 14M21 9l-5-5M21 9l-5 5" transform="translate(0 -2)"/></>,
+ clearFormat:<><path d="M4 4h14M11 4l-4 14M3 20h9m4-7 5 5m0-5-5 5"/></>,
+ bulletList:<><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/><path d="M9 6h12M9 12h12M9 18h12"/></>,
+ orderedList:<><path d="M3 4h1v5M3 12h2l-2 3h2M3 18h2v3H3M9 6h12M9 12h12M9 18h12"/></>,
+ sparkles:<><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5ZM20 2v4m-2-2h4"/></>,
  calendar:<><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2m4 0h2M8 18h2"/></>,
  pin:<><path d="m15 3 6 6-3 1-3 5v3l-9-9h3l5-3 1-3ZM9 15l-6 6"/></>,
  check:<><path d="m5 12 4 4L19 6"/></>,
