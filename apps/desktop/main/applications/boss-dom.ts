@@ -1,11 +1,12 @@
+import {bossClientCompanyDom} from '../sources/boss-company';
 export type BossTarget={jobId:string;title:string;company:string;account?:string;chatUrl?:string;fileName?:string|null;message?:string};
 export type BossSnapshot={url:string;gate:string|null;jobId:string;title:string;company:string;account:string;recruiter:string;chatUrl:string;contactable:boolean;alreadyContacted:boolean;contactEstablished:boolean;chatReady:boolean;targetMatched:boolean;messageCount:number;resumeCount:number;uploaded:boolean;resumeReady:boolean;uploadSelector:string|null;inputText:string;action?:string};
 export type BossOperation='snapshot'|'open_upload'|'close_upload'|'contact'|'fill_message'|'send_message'|'open_resume'|'select_resume'|'send_resume';
-export function bossApplicationScript(operation:BossOperation,target:BossTarget):string{return `(${bossApplicationDom.toString()})(${JSON.stringify(operation)},${JSON.stringify(target)})`;}
+export function bossApplicationScript(operation:BossOperation,target:BossTarget):string{return `(${bossApplicationDom.toString()})(${JSON.stringify(operation)},${JSON.stringify(target)},${bossClientCompanyDom.toString()})`;}
 
 // All writes are fixed operations scoped to a verified job/dialog/conversation.
 // Never search the whole page for generic "确定" or let an Agent choose selectors.
-export function bossApplicationDom(operation:BossOperation,target:BossTarget):BossSnapshot{
+export function bossApplicationDom(operation:BossOperation,target:BossTarget,readClient:typeof bossClientCompanyDom):BossSnapshot{
   const text=(e:Element|null)=>((e as HTMLElement|null)?.innerText||e?.textContent||'').trim();
   const normalize=(s:string)=>s.replace(/\s+/g,'').normalize('NFKC');
   const visible=(e:Element|null):e is HTMLElement=>!!e&&(e as HTMLElement).getBoundingClientRect().width>0&&(e as HTMLElement).getBoundingClientRect().height>0&&getComputedStyle(e).visibility!=='hidden';
@@ -15,7 +16,7 @@ export function bossApplicationDom(operation:BossOperation,target:BossTarget):Bo
   const jobId=(value:string)=>{try{return new URL(value,location.origin).pathname.match(/^\/job_detail\/([\w-]+)\.html$/)?.[1]||'';}catch{return '';}};
   const banner=all(document,'.job-banner')[0];
   const title=banner?pick(banner,'.job-name h1,.name h1,h1'):'';
-  const client=text(banner||null).split(/\n/).find(line=>/^客户公司\s*[:：]/.test(line.trim()))?.replace(/^\s*客户公司\s*[:：]\s*/,'').trim();
+  const client=readClient(banner||null);
   const company=client||pick(document,'.sider-company .company-info a[href*="/gongsi/"],.sider-company .company-name,.job-company-name');
   const account=pick(document,'a[href^="/web/geek/recommend"],a[href^="https://www.zhipin.com/web/geek/recommend"],.user-nav .user-name,.nav-user .user-name');
   const overlays=all(document,'.dialog-container,.dialog-wrap,.boss-popup,.verify-dialog,.geetest_panel,.toast,.message-toast');

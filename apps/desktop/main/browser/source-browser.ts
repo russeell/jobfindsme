@@ -359,6 +359,10 @@ export class SourceBrowserManager {
     if(this.tabs.length>=MAX_BROWSER_TABS)throw Error('浏览器标签已满，请关闭不需要的标签');
     const tab=this.createForegroundTab('boss',url,undefined,false);tab.owner=owner;
     const wc=tab.view.webContents;
+    // The confirmation dialog keeps this owned page unattached. Give it a real
+    // desktop viewport so responsive navigation and account controls can render.
+    tab.view.setBounds({x:0,y:0,width:1240,height:900});
+    wc.setBackgroundThrottling(false);
     let pinned:BossTarget|undefined;
     const valid=()=>!wc.isDestroyed()&&this.tabs.includes(tab)&&isAllowedSourceUrl('boss',wc.getURL())&&new URL(wc.getURL()).hostname==='www.zhipin.com';
     // Only the chat destination observed on this job's own button can replace this tab.

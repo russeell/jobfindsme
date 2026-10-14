@@ -1,3 +1,4 @@
+import {bossClientCompanyDom} from './boss-company';
 export type BossJob = { title:string; company:string; location:string; salary:string; url:string };
 export type BossPage = { authenticated:boolean; loginRequired:boolean; blocked:string|null; readable:boolean; empty:boolean; ended:boolean; jobs:BossJob[]; detail?:{title:string;company:string;location?:string;salary?:string;description:string;url:string} };
 const cities:Record<string,string>={北京:'101010100',上海:'101020100',重庆:'101040100',广州:'101280100',深圳:'101280600',杭州:'101210100',南京:'101190100',苏州:'101190400',武汉:'101200100',成都:'101270100',西安:'101110100'};
@@ -13,8 +14,8 @@ export function canonicalBossJob(value:string):string|null {
 }
 // Runs only in a project-owned BOSS WebContentsView. Reads the already-loaded DOM;
 // never accesses cookies, storage, private network endpoints or recruiter identities.
-export function bossPageScript() { return `(${readBossPage.toString()})()`; }
-function readBossPage():BossPage {
+export function bossPageScript() { return `(${readBossPage.toString()})(${bossClientCompanyDom.toString()})`; }
+function readBossPage(readClient:typeof bossClientCompanyDom):BossPage {
   const visible=(e:Element)=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width>0&&r.height>0&&s.display!=='none'&&s.visibility!=='hidden';};
   const text=(e:Element|null)=>((e as HTMLElement)?.innerText||e?.textContent||'').trim();
   const pick=(e:Element,selectors:string)=>Array.from(e.querySelectorAll(selectors)).filter(visible).map(text).find(Boolean)||'';
@@ -49,7 +50,7 @@ function readBossPage():BossPage {
   // Headhunter jobs identify the client in the job header. A recruiter's
   // agency or a company mentioned inside the JD is not the hiring company.
   const banner=document.querySelector('.job-banner');
-  const clientCompany=(banner&&visible(banner)?text(banner):'').split(/\r?\n/).map(line=>line.trim()).find(line=>/^客户公司\s*[：:]/.test(line))?.replace(/^客户公司\s*[：:]\s*/,'').trim();
+  const clientCompany=banner&&visible(banner)?readClient(banner):'';
   const company=clientCompany||pick(document.body,'.sider-company .company-info a[href*="/gongsi/"],.company-info .company-name,.job-company-name,.sider-company a[href*="/gongsi/"]');
   const detailLocation=pick(document.body,'.job-banner .text-city,.job-banner a[href*="/city/"],.job-banner .job-area,.job-banner .text-desc a');
   const detailSalary=pick(document.body,'.job-banner .salary,.job-detail-header .salary');

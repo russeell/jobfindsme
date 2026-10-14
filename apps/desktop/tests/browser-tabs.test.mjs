@@ -28,6 +28,18 @@ const {SourceBrowserManager}=module.exports;
 function setup(onBossPage,onSourcePage){const w=new EventEmitter();w.children=[];w.contentView={addChildView:v=>w.children.push(v),removeChildView:v=>{w.children=w.children.filter(x=>x!==v);}};w.getContentSize=()=>[1240,800];w.isDestroyed=()=>false;return {w,m:new SourceBrowserManager(w,onBossPage,onSourcePage)};}
 const bounds={x:650,y:100,width:590,height:700};
 const a='https://www.liepin.com/job/1.shtml';const b='https://www.liepin.com/job/2.shtml';
+test('owned application preview has a desktop viewport before navigation without taking over a user tab',async()=>{
+ const {m,w}=setup();const created=[];
+ FakeView.onCreate=view=>{created.push(view);view.webContents.setBackgroundThrottling=value=>{view.throttling=value;};
+  const load=view.webContents.loadURL;view.webContents.loadURL=async url=>{if(url.includes('/job_detail/'))assert.deepEqual(view.bounds,{x:0,y:0,width:1240,height:900});await load(url);};
+ };
+ try{
+  await m.show('liepin',bounds,a);const active=m.state().activeTabId,visible=w.children[0];
+  const page=await m.applicationPage('application:fictional','https://www.zhipin.com/job_detail/fictional.html');
+  assert.equal(created.at(-1).throttling,false);assert.equal(m.state().activeTabId,active);assert.equal(w.children[0],visible);
+  page.dispose(false);assert.equal(created.at(-1).webContents.isDestroyed(),true);assert.equal(m.state().tabs.length,1);
+ }finally{FakeView.onCreate=undefined;m.destroy();}
+});
 test('source buttons reopen public homepages without forcing sign-in pages',async()=>{
  const {m}=setup();
  await m.show('liepin',bounds);assert.equal(m.state().url,'https://www.liepin.com/');
