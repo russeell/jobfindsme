@@ -12,6 +12,15 @@ pagination or full job descriptions can be extracted. Never automatically apply
 for jobs or use paid model calls without explicit user authorization. Preserve
 user sessions, local data and every database migration.
 
+Do not upload local personal information. Resumes (including redacted extracts),
+account identifiers, chats, drafts, databases, credentials, cookies, browser
+profiles, and private logs/screenshots must stay local. Earlier model or platform
+permissions do not authorize new transmissions of these materials. Use fictional
+fixtures for CI, external model tests and shared evidence. Review staged changes
+and package contents before any authorized upload; upload only reviewed source,
+public assets and verified packages containing no user data. Preserve local
+originals and sessions rather than deleting them to make an upload pass.
+
 Work on `codex/desktop-refactor` unless the user chooses another branch. Keep
 independent fixes small, run checks appropriate to the affected code, and commit
 each verified fix. Fetch and merge the current remote main before integrating;

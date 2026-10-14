@@ -44,6 +44,14 @@ model, API contracts, and SQLite services before introducing a new subsystem.
 Keep personal development skills, build output, and test artifacts out of Git;
 application skills and required third-party license notices must remain.
 
+Local personal information must stay local: resumes and extracted content,
+account identifiers, conversations, drafts, databases, credentials, cookies,
+browser profiles, and private logs/screenshots. Use fictional fixtures for CI,
+external model tests and shared evidence. Review the staged diff before an
+authorized push; do not upload personal material to reproduce a bug. Redaction
+alone is not permission to transmit a user's information. Preserve original
+files and sessions; do not delete them to satisfy a packaging check.
+
 ## What a good change delivers
 
 | Area | Required behavior |
@@ -114,8 +122,9 @@ coverage; a cached result is not a new live test. Keep current findings in the
 handoff/task list instead of creating another historical evidence directory.
 
 Do not submit real applications during testing. Paid model calls and external
-transmission of private material need explicit user authorization. Use fictional
-or properly redacted fixtures; never commit personal resumes, phone numbers,
+transmission of private material need explicit user authorization for that
+specific transmission; a standing no-upload instruction takes precedence over
+earlier permissions. Use fictional fixtures; never commit personal resumes, phone numbers,
 email addresses, databases, API keys, browser profiles, or raw authenticated logs.
 
 ## Changes and releases
@@ -139,6 +148,14 @@ on-demand package workflows are separate. Cache downloaded dependencies only,
 never a user profile or a previously frozen application. A tag builds artifacts;
 it does not publish a Release. Test both hosts at the exact same commit before
 using the separately authorized attachment/publishing workflows.
+
+Both package audits run the same privacy check before artifacts can be shared.
+SQLite files and sidecars, browser storage, credential files and resume documents
+are rejected; required licenses, application skills and named dependency resources
+are allowed. Package links must resolve within the bundle. CI uploads only the
+named ZIP and checksum after the complete verification succeeds, never wildcard
+logs or screenshots. These checks supplement review; they cannot detect private
+content deliberately disguised as application code or a permitted public asset.
 
 The project is licensed under [MIT](LICENSE). Contributions remain yours; by
 submitting a contribution for inclusion, you agree to license it under MIT.
