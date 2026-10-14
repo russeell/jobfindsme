@@ -1,0 +1,3 @@
+# Release tools only; application and test roots come from pyproject.toml.
+pyinstaller==6.22.3
+setuptools==84.0.0

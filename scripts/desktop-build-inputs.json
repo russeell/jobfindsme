@@ -1,0 +1,12 @@
+{
+  "python": {
+    "directories": ["src/jobfindsme"],
+    "extensions": [".py", ".sql", ".md", ".json", ".js"],
+    "files": ["pyproject.toml", "requirements/release.txt", "scripts/jobfindsme_api.spec", "scripts/freeze_desktop_api.py", "scripts/desktop-build-inputs.json"]
+  },
+  "desktop": {
+    "directories": ["apps/desktop/main", "apps/desktop/preload", "apps/desktop/shared", "apps/desktop/renderer", "apps/desktop/public", "apps/desktop/skills", "apps/desktop/scripts"],
+    "extensions": [".ts", ".tsx", ".mts", ".mjs", ".css", ".html", ".svg", ".json", ".png", ".jpg", ".icns", ".txt", ".md"],
+    "files": ["apps/desktop/package.json", "apps/desktop/package-lock.json", "apps/desktop/build-info.json", "apps/desktop/tsconfig.json", "apps/desktop/tsconfig.electron.json", "apps/desktop/vite.config.mts", "scripts/desktop-build-inputs.json"]
+  }
+}

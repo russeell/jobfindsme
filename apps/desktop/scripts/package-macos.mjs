@@ -1,5 +1,6 @@
 import {writeEditorLicenses} from "./editor-licenses.mjs";
 import {copyRuntimeDependencies} from "./runtime-dependencies.mjs";
+import {packageProvenance} from './build-provenance.mjs';
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -35,6 +36,7 @@ if (!existsSync(pythonRuntime)) {
     "build scripts/jobfindsme_api.spec with PyInstaller first",
   );
 }
+const provenance=packageProvenance(desktopRoot,pythonRuntime);
 
 rmSync(output, { recursive: true, force: true });
 mkdirSync(path.dirname(output), { recursive: true });
@@ -69,7 +71,7 @@ cpSync(path.join(desktopRoot,"node_modules/pdfjs-dist/LICENSE"),path.join(resour
 writeEditorLicenses(desktopRoot,path.join(resources,"third-party/EDITOR_LICENSES.txt"));
 writeFileSync(
   path.join(appRoot, "package.json"),
-  JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, sourceCommit, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildLabel, previewUserData, qa, main: "dist-electron/main/index.js" }),
+  JSON.stringify({ name: "jobfindsme-desktop", version: JSON.parse(readFileSync(path.join(desktopRoot,"package.json"),"utf8")).version, sourceCommit, ...provenance, releaseTag:previewBuild?undefined:buildInfo.label, jobfindsmePreview:previewBuild, build:buildLabel, previewUserData, qa, main: "dist-electron/main/index.js" }),
 );
 mkdirSync(path.join(resources, "python"), { recursive: true });
 cpSync(pythonRuntime, path.join(resources, "python/jobfindsme-api"), { recursive:true, verbatimSymlinks:true });

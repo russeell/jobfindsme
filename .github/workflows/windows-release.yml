@@ -2,9 +2,12 @@ name: Windows desktop package
 on:
   workflow_dispatch:
   push:
-    branches: [codex/desktop-refactor]
+    tags: ["v*"]
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   windows:
     runs-on: windows-latest
@@ -15,26 +18,39 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements/release.txt
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: python -m pip install -e ".[dev]" pyinstaller
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+      - name: Install hashed release dependencies
+        run: python -m pip install --require-hashes -r requirements/release.txt
+      - run: python -m pip install --no-deps --no-build-isolation -e .
       - run: python -m pytest
+      - name: Cache upstream Electron archive
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/electron-cache
+          key: electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('apps/desktop/package-lock.json') }}
       - run: npm ci
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
         working-directory: apps/desktop
       - name: Install Electron binary explicitly
         run: node node_modules/electron/install.js
+        env:
+          ELECTRON_CACHE: ${{ runner.temp }}/electron-cache
         working-directory: apps/desktop
       - run: npm run build
         working-directory: apps/desktop
       - run: npm test
         working-directory: apps/desktop
-      - run: python -m PyInstaller --clean --noconfirm --distpath apps/desktop/runtime/python --workpath build/jobfindsme-api scripts/jobfindsme_api.spec
+      - run: python scripts/freeze_desktop_api.py
       - run: node scripts/package-windows.mjs
         working-directory: apps/desktop
       - run: node scripts/audit-windows-package.mjs
-        working-directory: apps/desktop
-      - run: npm install --no-save --package-lock=false playwright
         working-directory: apps/desktop
       - run: node scripts/smoke-desktop.mjs
         working-directory: apps/desktop

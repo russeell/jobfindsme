@@ -66,8 +66,11 @@ for (const stale of ["source-browser", "source-browser-policy", "api-client", "p
 console.log("package audit passed");
 
 const manifest=JSON.parse(readManifest(path.join(appRoot,'Contents/Resources/app/package.json'),'utf8'));
+const expected=packageProvenance(path.resolve('.'),path.join(appRoot,'Contents/Resources/python/jobfindsme-api'));
+if(JSON.stringify(manifest.dependencyLocks)!==JSON.stringify(expected.dependencyLocks)||JSON.stringify(manifest.sourceInputs)!==JSON.stringify(expected.sourceInputs))throw Error('Package dependency/source fingerprints do not match the build');
 if(!/^[a-f0-9]{40}$/.test(manifest.sourceCommit)||manifest.sourceCommit!==execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim())throw Error('Package source commit does not match checkout');
 if(!manifest.jobfindsmePreview&&(!manifest.build.includes('+local.')&&(manifest.build!==`v${manifest.version}`||manifest.releaseTag!==manifest.build||manifest.qa)))throw Error('Invalid release version or QA configuration');
 const runtime=JSON.parse(execFileSync(path.join(appRoot,'Contents/Resources/python/jobfindsme-api/jobfindsme-api'),['--check-runtime'],{encoding:'utf8',timeout:30000}));
 if(runtime.curl_http!=='ok'||runtime.ca_bundle!=='ok')throw Error('Packaged HTTP runtime failed');
 console.log('Frozen HTTP request and CA bundle passed');
+import {packageProvenance} from './build-provenance.mjs';

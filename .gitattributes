@@ -1,2 +1,4 @@
-# Archived unified diffs preserve the single-space prefix on empty context lines.
-docs/desktop/evidence/*.diff whitespace=-blank-at-eol
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.icns binary

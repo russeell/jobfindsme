@@ -129,5 +129,16 @@ that commit and version inside the package, pass the frozen-runtime audit, and
 include SHA256 checksums. Verify the actual macOS/Windows artifacts contain no
 user or test data. Publishing a release is a separate, explicitly authorized step.
 
+Use the [reproducible packaging instructions](docs/desktop/README.md#可重复打包与实际包验收).
+Release Python 3.13 uses the hashed `requirements/release.txt`; install the project
+with `--no-deps --no-build-isolation` after installing that lock. Node and package
+smoke tooling use `npm ci`; do not install unpinned test tools during release.
+The freeze wrapper and desktop build record source/dependency fingerprints, and
+packaging refuses stale or uncommitted production inputs. Ordinary CI and
+on-demand package workflows are separate. Cache downloaded dependencies only,
+never a user profile or a previously frozen application. A tag builds artifacts;
+it does not publish a Release. Test both hosts at the exact same commit before
+using the separately authorized attachment/publishing workflows.
+
 The project is licensed under [MIT](LICENSE). Contributions remain yours; by
 submitting a contribution for inclusion, you agree to license it under MIT.

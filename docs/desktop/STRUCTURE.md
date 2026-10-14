@@ -62,7 +62,7 @@ BOSS 单岗位确认投递是实验功能，真实只读预览已验证，真实
 
 ## 构建与历史
 
-Node 使用 `apps/desktop/package-lock.json`。Python 由 PyInstaller 冻结；`scripts/package-*.mjs` 写入来源提交并收集许可证，`audit-*-package.mjs` 拒绝数据库/会话/验收材料。`smoke-desktop.mjs` 在隔离虚构资料中验证真实 UI → IPC → 冻结 API → SQLite 和两次启动；只替换文件选择框返回路径，不使用真实账号或付费模型。
+Node和Playwright使用 `apps/desktop/package-lock.json`，发行Python使用带SHA256的`requirements/release.txt`；`freeze_desktop_api.py`核对依赖并记录代码指纹。桌面构建也记录来源指纹，打包拒绝过期载荷。普通推送运行CI，包按需dispatch或tag构建；缓存仅下载依赖，不缓存用户资料、冻结后端或应用。Python 由 PyInstaller 冻结；`scripts/package-*.mjs` 写入来源提交并收集许可证，`audit-*-package.mjs` 拒绝数据库/会话/验收材料。`smoke-desktop.mjs` 在隔离虚构资料中验证真实 UI → IPC → 冻结 API → SQLite 和两次启动；只替换文件选择框返回路径，不使用真实账号或付费模型。
 
 `apps/desktop/release/` 是忽略的本机产物目录，只保留当前 ZIP 和最近回退包；新验收应用与资料放系统临时目录。Windows ZIP 必须完整解压；两端当前未签名，Windows ARM 不在发行范围。发行包必须来自同一已验证提交，公开发布另行授权。
 

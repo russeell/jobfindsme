@@ -75,5 +75,5 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [dependency-groups]
 dev = [
-    "pyinstaller>=6.22.3",
+    "pyinstaller==6.22.3",
 ]

@@ -4,8 +4,8 @@
   "version": "0.15.4",
   "main": "dist-electron/main/index.js",
   "scripts": {
-    "build": "npm run typecheck && vite build && npm run clean:electron && tsc -p tsconfig.electron.json",
-    "build:python-runtime": "PYINSTALLER_CONFIG_DIR=/private/tmp/jobfindsme-pyinstaller ../../.venv/bin/python -m PyInstaller --clean --noconfirm --distpath runtime/python --workpath ../../build/jobfindsme-api ../../scripts/jobfindsme_api.spec",
+    "build": "npm run typecheck && vite build && npm run clean:electron && tsc -p tsconfig.electron.json && node scripts/build-provenance.mjs --record",
+    "build:python-runtime": "PYINSTALLER_CONFIG_DIR=/private/tmp/jobfindsme-pyinstaller ../../.venv/bin/python ../../scripts/freeze_desktop_api.py",
     "dev": "vite",
     "start": "electron .",
     "pack:mac:dir": "npm run build && node scripts/package-macos.mjs",
@@ -22,18 +22,19 @@
     "@tiptap/pm": "3.31.4",
     "@tiptap/react": "3.31.4",
     "@tiptap/starter-kit": "3.31.4",
-    "@vitejs/plugin-react": "latest",
-    "electron": "latest",
+    "@vitejs/plugin-react": "6.1.1",
+    "electron": "44.4.2",
     "pdfjs-dist": "6.4.299",
-    "react": "latest",
-    "react-dom": "latest",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "typebox": "1.3.27",
-    "vite": "latest"
+    "vite": "8.3.0"
   },
   "devDependencies": {
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "typescript": "latest"
+    "@types/node": "26.6.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "playwright": "1.64.0",
+    "typescript": "7.0.2"
   }
 }
