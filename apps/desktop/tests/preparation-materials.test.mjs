@@ -21,4 +21,7 @@ test('selection uses whole technical terms and preserves source order for select
  const result=selectMaterialText(text,'Java',100);
  assert.ok(result.text.startsWith(java));assert.ok(!result.text.includes('JavaScript'));assert.ok(result.text.endsWith('Java 数据验证，91% 准确率。'));
  const unicode=selectMaterialText('😀'.repeat(20),'',5);assert.equal(unicode.text,'😀😀');
+ assert.equal(selectMaterialText(text,'Java.',100).text,result.text,'Sentence punctuation cannot hide a related tail');
+ const emoji=selectMaterialText('😀'.repeat(200)+'Java services.','Java.',101);
+ assert.ok(emoji.text.includes('Java'));assert.ok(!/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(emoji.text));
 });

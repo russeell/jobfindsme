@@ -8,7 +8,7 @@ const generic = new Set(['the','and','with','for','you','your','this','that','ha
 function terms(query:string):Array<[string,number]>{
  const values=new Map<string,number>();
  for(const word of query.normalize('NFKC').toLowerCase().match(/[a-z][a-z0-9+#.-]{1,63}|[\u4e00-\u9fff]{2,}/g)||[]){
-  if(/^[a-z]/.test(word)){if(!generic.has(word))values.set(word,3);}
+  if(/^[a-z]/.test(word)){const term=word.replace(/[.-]+$/,'');if(term&&!generic.has(term))values.set(term,3);}
   else for(let i=0;i<word.length-1;i++){
    const term=word.slice(i,i+2);if(!generic.has(term))values.set(term,1);
   }
@@ -38,7 +38,14 @@ function splitEntry(value:string,budget:number):string[]{
  // their short original heading so an isolated achievement keeps its identity.
  return value.split(/\n+|(?<=[。！？])|(?<=[.!?;])\s+/u).filter(part=>part.trim()).flatMap(part=>{
   const chunks:string[]=[];const size=Math.max(1,budget-prefix.length);
-  for(let offset=0;offset<part.length;offset+=size)chunks.push((offset||!heading.includes(part)?prefix:'')+part.slice(offset,offset+size));
+  for(let offset=0;offset<part.length;){
+   const rest=part.slice(offset);let piece=boundedPrefix(rest,size);
+   if(/[a-z0-9]/i.test(piece.slice(-1))&&/[a-z0-9]/i.test(rest[piece.length]||'')){
+    const start=piece.search(/[a-z0-9+#.-]+$/i);if(start>0)piece=piece.slice(0,start);
+   }
+   if(piece)chunks.push((offset||!heading.includes(part)?prefix:'')+piece);
+   offset+=piece.length||2;
+  }
   return chunks;
  });
 }
