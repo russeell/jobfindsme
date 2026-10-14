@@ -4,6 +4,12 @@ import {readFile,writeFile,access} from 'node:fs/promises';
 import {BossApplicationController} from '../dist-electron/main/applications/boss-application.js';
 import {applicationFile} from '../dist-electron/main/applications/material-file.js';
 
+test('original attachment with no retained source is rejected without conversion',async()=>{
+ let converted=false;
+ await assert.rejects(applicationFile({async getResumeVersion(){return {original_file:true};},async exportResume(){converted=true;}},'ws','original'),/原文件不可用/);
+ assert.equal(converted,false);
+});
+
 function fixture({attachment=false,gateAt='',failAt='',cancelAt='',reloadFails=false,onStep=()=>{}}={}){
  const url='https://www.zhipin.com/job_detail/fictional.html',message='您好，我有真实的 Python 工程实践，想了解示例岗位。';
  const draft={workspace_id:'ws',job_id:'job',record_id:'draft',resume_version_id:attachment?'old-version':null,message,status:'prepared',updated_at:'saved'};

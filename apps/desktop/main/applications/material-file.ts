@@ -11,7 +11,8 @@ export async function applicationFile(api:Pick<DesktopApiClient,'getResumeVersio
   const dispose=()=>rm(folder,{recursive:true,force:true});
   try{
     let bytes:Buffer,extension='pdf',originalName:string|null=null;
-    if(version.original_file&&version.source_document_id){
+    if(version.original_file){
+      if(!version.source_document_id)throw Error('所选简历的原文件不可用，请在我的简历中重新导入。');
       const source=await api.resumeSource({workspace_id:workspaceId,document_id:version.source_document_id});
       originalName=source.file_name;extension=path.extname(source.file_name).slice(1).toLowerCase();
       if(!['pdf','docx'].includes(extension))throw Error('本次所选原件不是 PDF 或 Word，请在我的简历中导出后使用。');

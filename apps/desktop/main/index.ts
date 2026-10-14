@@ -590,6 +590,11 @@ ipcMain.handle("desktop:list-resume-versions", (_event, workspaceId: string) => 
   if (!apiClient) throw new Error("desktop API is not ready");
   return apiClient.listResumeVersions(workspaceId);
 });
+ipcMain.handle("desktop:get-resume-version", (event, workspaceId: string, versionId: string) => {
+  if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
+  if(typeof workspaceId!=='string'||!workspaceId||typeof versionId!=='string'||!versionId)throw Error("invalid resume version");
+  return apiClient.getResumeVersion(workspaceId,versionId);
+});
 ipcMain.handle("desktop:hide-resume-version", (event, workspaceId:string, versionId:string) => {
   if(event.sender!==mainWindow?.webContents||!apiClient)throw Error("unauthorized caller");
   return apiClient.hideResumeVersion(workspaceId,versionId);

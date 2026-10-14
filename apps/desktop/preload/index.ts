@@ -57,6 +57,7 @@ const bridge: DesktopBridge = Object.freeze({
   abandonResume: (workspaceId, profileId) => ipcRenderer.invoke("desktop:abandon-resume", workspaceId, profileId),
   previewAnalysisCopy: (input) => ipcRenderer.invoke("desktop:analysis-preview", input),
   listResumeVersions: (workspaceId) => ipcRenderer.invoke("desktop:list-resume-versions", workspaceId),
+  getResumeVersion: (workspaceId, versionId) => ipcRenderer.invoke("desktop:get-resume-version", workspaceId, versionId),
   hideResumeVersion: (workspaceId, versionId) => ipcRenderer.invoke("desktop:hide-resume-version", workspaceId, versionId),
   saveResumeVersion: (input) => ipcRenderer.invoke("desktop:save-resume-version", input),
   restoreResumeVersion: (workspaceId, versionId) => ipcRenderer.invoke("desktop:restore-resume-version", workspaceId, versionId),

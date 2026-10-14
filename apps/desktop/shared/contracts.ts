@@ -96,6 +96,7 @@ export type DesktopBridge = {
   abandonResume(workspaceId: string, profileId: string): Promise<ResumeState>;
   previewAnalysisCopy(input: AnalysisPreviewInput): Promise<AnalysisPreview>;
   listResumeVersions(workspaceId: string): Promise<ResumeVersion[]>;
+  getResumeVersion(workspaceId: string, versionId: string): Promise<ResumeVersion>;
   hideResumeVersion(workspaceId:string,versionId:string):Promise<void>;
   saveResumeVersion(input: ResumeEditInput): Promise<ResumeVersion>;
   restoreResumeVersion(workspaceId: string, versionId: string): Promise<ResumeVersion>;
