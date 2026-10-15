@@ -102,7 +102,7 @@ let researchWorkspaceId: string | undefined;
 const chatRuns=new ResearchRunController();
 let isQuitting = false;
 const installedRoot=app.isPackaged&&!previewBuild&&['darwin','win32'].includes(process.platform)
-  ?realpathSync(process.platform==='darwin'?path.resolve(process.execPath,'../../..'):path.dirname(process.execPath)):undefined;
+  ?realpathSync.native(process.platform==='darwin'?path.resolve(process.execPath,'../../..'):path.dirname(process.execPath)):undefined;
 const updateTag=String(packageInfo.releaseTag??`v${packageInfo.version}`);
 const updater=new DesktopUpdater({currentTag:updateTag,platform:process.platform,arch:process.arch,
  cache:path.join(app.getPath('userData'),'updates'),target:installedRoot,
@@ -938,7 +938,7 @@ handle('desktop:download-update',()=>updater.download());
 handle('desktop:cancel-update',()=>updater.cancel());
 handle('desktop:install-update',()=>updater.install());
 handle('desktop:update-startup-ready',async()=>{
- if(!serviceStatus.connected)return;
+ if(!serviceStatus.connected||!process.env.JFM_UPDATE_MANIFEST)return;
  await acknowledgeUpdateStartup(process.env.JFM_UPDATE_MANIFEST,installedRoot,updateTag);
  const timer=setTimeout(()=>void updater.restore(),2500);timer.unref();
 });

@@ -11,6 +11,7 @@ import type {UpdateResult,UpdateState} from '../../shared/update-contracts';
 
 type Options={currentTag:string;platform:string;arch:string;cache:string;target?:string;runtime?:string;restartArgs?:string[];request?:typeof fetch;onState(state:UpdateState):void;beforeQuit():Promise<void>;quit():void};
 type Transaction={schema:1;id:string;job:string;platform:string;target:string;version:string;currentVersion:string;sha256:string;token:string;parentPid:number;restartArgs:string[]};
+async function sameRealPath(left:string,right:string):Promise<boolean>{return path.relative(await realpath(left),await realpath(right))==='';}
 
 export function safeDownloadUrl(value:string):boolean{
  try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&['github.com','release-assets.githubusercontent.com','objects.githubusercontent.com'].includes(url.hostname);}catch{return false;}
@@ -68,12 +69,14 @@ export class DesktopUpdater{
   }).catch(error=>{if(!busy)this.set({phase:'error',message:error instanceof Error?error.message:'暂时无法检查更新。'});throw error;}).finally(()=>{this.checkFlight=undefined;});return this.checkFlight;
  }
  async restore():Promise<void>{
+  if(this.flight||this.getState().phase==='installing')return;
   try{
    const active=JSON.parse(await readFile(path.join(this.options.cache,'active.json'),'utf8'));
    if(!/^[a-f0-9-]{36}$/.test(active.id))return;
    const job=path.join(this.options.cache,active.id),transaction=JSON.parse(await readFile(path.join(job,'request.json'),'utf8')) as Transaction;
    const state=JSON.parse(await readFile(path.join(job,'state.json'),'utf8'));
-   if(transaction.job!==await realpath(job)||transaction.id!==active.id||transaction.target!==this.options.target)return;
+   if(transaction.id!==active.id||!this.options.target||!await sameRealPath(transaction.job,job)||!await sameRealPath(transaction.target,this.options.target))return;
+   if(this.flight||this.getState().phase==='installing')return;
    if(state.phase==='ready'&&transaction.currentVersion===this.options.currentTag){this.transaction=transaction;this.set({phase:'ready',tag:transaction.version,message:'更新已下载，重启前将再次校验。'});}
    if(state.phase==='installed'&&transaction.version===this.options.currentTag)this.set({phase:'installed',tag:transaction.version,transactionId:transaction.id,message:'更新成功，本地资料与登录会话已保留。'});
    if(state.phase==='rolled_back')this.set({phase:'rolled_back',tag:transaction.version,transactionId:transaction.id,message:'新版启动失败，已恢复旧程序。本地资料仍保留，可重新下载或手动安装。'});
@@ -138,7 +141,7 @@ export async function acknowledgeUpdateStartup(manifestPath:string|undefined,ins
  if(!manifestPath||!installedRoot)return;
  try{
   const request=JSON.parse(await readFile(manifestPath,'utf8')) as Transaction;
-  if(request.version!==tag||request.target!==installedRoot||request.job!==await realpath(path.dirname(manifestPath))||!/^([a-f0-9]{64})$/.test(request.token))return;
+  if(request.version!==tag||!await sameRealPath(request.target,installedRoot)||!await sameRealPath(request.job,path.dirname(manifestPath))||!/^([a-f0-9]{64})$/.test(request.token))return;
   await writeFile(path.join(request.job,'health.json'),JSON.stringify({id:request.id,token:request.token,version:tag,pid:process.pid}),{mode:0o600});
  }finally{delete process.env.JFM_UPDATE_MANIFEST;}
 }

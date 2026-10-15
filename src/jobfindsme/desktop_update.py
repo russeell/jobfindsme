@@ -56,7 +56,9 @@ def load_transaction(file: Path) -> dict:
         or not re.fullmatch(r"v\d+\.\d+\.\d+", request.get("currentVersion", ""))
         or not re.fullmatch(r"[a-f0-9]{64}", request.get("sha256", ""))
         or not re.fullmatch(r"[a-f0-9]{64}", request.get("token", ""))
-        or request.get("job") != str(job)
+        or not isinstance(request.get("job"), str)
+        or not Path(request["job"]).is_absolute()
+        or Path(request["job"]).resolve() != job
         or not isinstance(request.get("parentPid"), int)
         or request["parentPid"] < 2
         or not isinstance(request.get("restartArgs", []), list)
