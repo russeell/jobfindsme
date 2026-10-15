@@ -75,8 +75,8 @@ export class DesktopUpdater{
    const state=JSON.parse(await readFile(path.join(job,'state.json'),'utf8'));
    if(transaction.job!==await realpath(job)||transaction.id!==active.id||transaction.target!==this.options.target)return;
    if(state.phase==='ready'&&transaction.currentVersion===this.options.currentTag){this.transaction=transaction;this.set({phase:'ready',tag:transaction.version,message:'更新已下载，重启前将再次校验。'});}
-   if(state.phase==='installed'&&transaction.version===this.options.currentTag)this.set({phase:'installed',tag:transaction.version,message:'更新成功，本地资料与登录会话已保留。'});
-   if(state.phase==='rolled_back')this.set({phase:'rolled_back',tag:transaction.version,message:'新版启动失败，已恢复旧程序。本地资料仍保留，可重新下载或手动安装。'});
+   if(state.phase==='installed'&&transaction.version===this.options.currentTag)this.set({phase:'installed',tag:transaction.version,transactionId:transaction.id,message:'更新成功，本地资料与登录会话已保留。'});
+   if(state.phase==='rolled_back')this.set({phase:'rolled_back',tag:transaction.version,transactionId:transaction.id,message:'新版启动失败，已恢复旧程序。本地资料仍保留，可重新下载或手动安装。'});
   }catch{/* Missing/partial records are never trusted as ready. */}
  }
  download():Promise<UpdateState>{

@@ -110,7 +110,15 @@ def test_prepare_keeps_existing_install_and_user_materials(tmp_path, platform):
 def test_unsafe_zip_paths_do_not_write_outside_staging(tmp_path, name):
     archive = tmp_path / "unsafe.zip"
     with zipfile.ZipFile(archive, "w") as bundle:
-        bundle.writestr(name, b"fictional")
+        # ZipInfo normalizes backslashes while writing on Windows. Construct
+        # the actual malformed central/local header instead of a safe path.
+        bundle.writestr(name.replace("\\", "^"), b"fictional")
+    if "\\" in name:
+        archive.write_bytes(
+            archive.read_bytes().replace(
+                name.replace("\\", "^").encode(), name.encode()
+            )
+        )
     staging = tmp_path / "staging"
     staging.mkdir()
     with pytest.raises(ValueError):
@@ -160,18 +168,20 @@ def test_running_parent_never_gets_replaced_and_only_one_guardian(tmp_path):
 @pytest.mark.skipif(
     os.name == "nt", reason="Actual Windows executable covered by package smoke"
 )
-@pytest.mark.parametrize("healthy", [True, False])
+@pytest.mark.parametrize("healthy", ["ready", "crash", "wrong_receipt"])
 def test_real_child_startup_success_or_failure_rolls_back(
     tmp_path, monkeypatch, healthy
 ):
     code = f"#!{sys.executable}\n"
-    if healthy:
+    if healthy != "crash":
         code += (
             "import json,os,pathlib,time\n"
             "p=pathlib.Path(os.environ['JFM_UPDATE_MANIFEST']);r=json.loads(p.read_text())\n"
             "(p.parent/'health.json').write_text(json.dumps(dict(id=r['id'],token=r['token'],version=r['version'],pid=os.getpid())))\n"
             "time.sleep(10)\n"
         )
+        if healthy == "wrong_receipt":
+            code = code.replace("token=r['token']", "token='incorrect-token'")
     else:
         code += "raise SystemExit(1)\n"
     request = transaction(tmp_path, executable=code.encode())
@@ -183,12 +193,13 @@ def test_real_child_startup_success_or_failure_rolls_back(
     )
     old_exe.chmod(0o755)
     monkeypatch.setattr(updater, "process_alive", lambda pid: False)
-    updater.install(request, health_timeout=5)
+    updater.install(request, health_timeout=4)
     state = updater.read_json(request["job_path"] / "state.json")["phase"]
-    assert state == ("installed" if healthy else "rolled_back")
-    if healthy:
+    assert state == ("installed" if healthy == "ready" else "rolled_back")
+    if healthy == "ready":
         receipt = updater.read_json(request["job_path"] / "health.json")
         os.kill(receipt["pid"], signal.SIGTERM)
+        os.waitpid(receipt["pid"], 0)
         assert (
             updater.app_manifest(request["target_path"], "darwin")["version"] == "2.0.0"
         )
@@ -205,12 +216,19 @@ def test_real_child_startup_success_or_failure_rolls_back(
         )
 
 
-def test_failure_between_renames_restores_old_program(tmp_path, monkeypatch):
+@pytest.mark.parametrize("failure_point", ["old", "new"])
+def test_failure_between_renames_restores_old_program(
+    tmp_path, monkeypatch, failure_point
+):
     request = transaction(tmp_path, "win32")
     real_rename = updater.rename_retry
 
     def fail_new(source, target):
-        if source.parent == request["staging_path"] and source.name == "JobFindsMe":
+        if (
+            failure_point == "new"
+            and source.parent == request["staging_path"]
+            and source.name == "JobFindsMe"
+        ) or (failure_point == "old" and source == request["target_path"]):
             raise PermissionError("fictional file lock")
         real_rename(source, target)
 

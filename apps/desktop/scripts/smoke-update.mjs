@@ -18,16 +18,17 @@ const executable=mac?'Contents/MacOS/JobFindsMe':'JobFindsMe.exe';
 const archive=path.join(output,mac?'mac-arm64.zip':'windows-x64.zip');
 const root=path.join(process.env.RUNNER_TEMP,'jfm-update-native');await mkdir(root,{recursive:true});
 const broken=path.join(root,'broken.zip');
+const fixtureContext=JSON.parse(await readFile(path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-fixture-context.json`),'utf8'));
 const result=spawnSync('python',[path.resolve('../../scripts/desktop_update_smoke.py'),archive,broken],{encoding:'utf8'});assert.equal(result.status,0,result.stderr);
 async function until(read,accept,timeout=180_000){const deadline=Date.now()+timeout;let last;while(Date.now()<deadline){try{last=await read();if(accept(last))return last;}catch{}await delay(200);}throw Error(`Native update timed out: ${JSON.stringify(last)}`);}
 function stopOwned(pid){if(!Number.isSafeInteger(pid)||pid<2)return;if(mac){try{process.kill(-pid,'SIGTERM');}catch{}}else spawnSync('taskkill.exe',['/PID',String(pid),'/T','/F'],{stdio:'ignore'});}
 async function readRecord(profile,name){const pointer=JSON.parse(await readFile(path.join(profile,'updates/active.json'),'utf8'));return JSON.parse(await readFile(path.join(profile,'updates',pointer.id,name),'utf8'));}
 
 for(const scenario of ['success','startup-failure']){
- const folder=path.join(root,`${scenario} 安装 with 'quotes'`),installed=path.join(folder,mac?'JobFindsMe.app':'JobFindsMe'),profile=path.join(root,`profile-${scenario}`);
+ const folder=path.join(root,`${scenario} 安装 with 'quotes'`),installed=path.join(folder,mac?'JobFindsMe.app':'JobFindsMe'),profile=path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-smoke`);
  await mkdir(folder,{recursive:true});await cp(source,installed,{recursive:true,verbatimSymlinks:true});
- // This source profile was created by smoke-desktop.mjs using fictional files.
- await cp(path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-smoke`),profile,{recursive:true,verbatimSymlinks:true});
+ // Keep the fictional profile at its original path, exactly as a real update
+ // does. Relocating a copied database invalidates its managed original paths.
  const manifestPath=path.join(installed,resources,'app/package.json');const originalManifest=JSON.parse(await readFile(manifestPath,'utf8'));
  await writeFile(manifestPath,JSON.stringify({...originalManifest,version:'0.0.1',build:'v0.0.1',releaseTag:'v0.0.1'}));
  const zip=scenario==='success'?archive:broken,bytes=await readFile(zip),sha256=createHash('sha256').update(bytes).digest('hex');
@@ -36,13 +37,13 @@ for(const scenario of ['success','startup-failure']){
   app=await electron.launch({executablePath:path.join(installed,executable),args:[`--user-data-dir=${profile}`],timeout:90_000});window=await app.firstWindow();window.setDefaultTimeout(180_000);await window.getByRole('button',{name:'我的简历',exact:true}).waitFor({state:'visible'});
   await window.getByRole('button',{name:'我的简历',exact:true}).click();const editor=window.getByRole('textbox',{name:'简历文档编辑器',exact:true});await editor.waitFor({state:'visible'});
   await editor.locator('p').last().click();await window.keyboard.press('End');await window.keyboard.type(' Kept across native update');
-  const before=await window.evaluate(async()=>{
+  const before=await window.evaluate(async context=>{
    localStorage.setItem('jfm.update.last-check:v0.15.4',String(Date.now()));
    const bootstrap=await window.jobfindsme.getBootstrap(),workspace=bootstrap.workspaces[0].workspace_id;
    const version=(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current);
-   const original=await window.jobfindsme.resumeSource({workspace_id:workspace,document_id:version.source_document_id});
-   return {workspace,version:version.version_id,source:original.content_base64,draft:localStorage.getItem(`jfm.resume.document-draft.${workspace}.${version.version_id}`)};
-  });assert.ok(before.draft.includes('Kept across native update'));
+   const original=await window.jobfindsme.resumeSource({workspace_id:workspace,document_id:context.originalDocumentId});
+   return {workspace,version:version.version_id,document:context.originalDocumentId,source:original.content_base64,draft:localStorage.getItem(`jfm.resume.document-draft.${workspace}.${version.version_id}`)};
+  },fixtureContext);assert.ok(before.draft.includes('Kept across native update'));
   await app.evaluate(async({session})=>{await session.defaultSession.cookies.set({url:'https://example.test',name:'fictional-update-session',value:'kept',expirationDate:Date.now()/1000+3600,secure:true});});
   await app.evaluate(async(_electron,{zip,sha256,size,name,tag})=>{
    const fs=await import('node:fs'),stream=await import('node:stream');const originalFetch=globalThis.fetch;globalThis.updateSlow=true;
@@ -77,7 +78,7 @@ for(const scenario of ['success','startup-failure']){
   app=await electron.launch({executablePath:path.join(installed,executable),args:[`--user-data-dir=${profile}`],timeout:90_000});closed=false;
   window=await app.firstWindow();window.setDefaultTimeout(90_000);await window.getByRole('button',{name:'我的简历',exact:true}).click();await window.getByRole('textbox',{name:'简历文档编辑器',exact:true}).waitFor();
   assert.ok((await window.getByRole('textbox',{name:'简历文档编辑器',exact:true}).textContent()).includes('Kept across native update'));
-  const after=await window.evaluate(async before=>({draft:localStorage.getItem(`jfm.resume.document-draft.${before.workspace}.${before.version}`),source:(await window.jobfindsme.resumeSource({workspace_id:before.workspace,document_id:(await window.jobfindsme.getResumeVersion(before.workspace,before.version)).source_document_id})).content_base64}),before);
+  const after=await window.evaluate(async before=>({draft:localStorage.getItem(`jfm.resume.document-draft.${before.workspace}.${before.version}`),source:(await window.jobfindsme.resumeSource({workspace_id:before.workspace,document_id:before.document})).content_base64}),before);
   assert.equal(after.source,before.source);assert.equal(after.draft,before.draft);
   const cookies=await app.evaluate(({session})=>session.defaultSession.cookies.get({url:'https://example.test'}));assert.equal(cookies.find(cookie=>cookie.name==='fictional-update-session')?.value,'kept');
   await window.getByRole('button',{name:/^设置/}).click();await window.getByRole('button',{name:'版本更新',exact:true}).click();
@@ -85,6 +86,6 @@ for(const scenario of ['success','startup-failure']){
   console.log(`${process.platform}: real packaged update ${scenario}, cancel/progress/restart, resume bytes/draft/cookie preserved`);
  }finally{
   if(app&&!closed)await app.close().catch(()=>{});stopOwned(spawnedPid);stopOwned(guardianPid);
-  await rm(folder,{recursive:true,force:true,maxRetries:10,retryDelay:500});await rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:500});
+  await rm(folder,{recursive:true,force:true,maxRetries:10,retryDelay:500});
  }
 }

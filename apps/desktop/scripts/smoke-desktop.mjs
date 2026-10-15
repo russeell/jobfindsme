@@ -2,7 +2,7 @@ import {_electron as electron} from 'playwright';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {mkdirSync,readFileSync} from 'node:fs';
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {setTimeout as delay} from 'node:timers/promises';
 const mac=process.platform==='darwin';
@@ -284,3 +284,4 @@ for(let attempt=0;attempt<2;attempt++){
   throw error;
  }finally{await app.close();}
 }
+writeFileSync(path.join(process.env.RUNNER_TEMP,`jfm-${process.platform}-fixture-context.json`),JSON.stringify({workspaceId,originalDocumentId:originalSource.document_id}));

@@ -15,6 +15,7 @@ import { Workbench, useOriginalBrowser } from "./shared/Workbench";
 import {sourceStatusRows,mergeSourceChecks,sourceCheckFailureOutcome} from "../../shared/source-presentation";
 import { FormEvent, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import buildInfo from "../../build-info.json";
+import type {UpdateState} from '../../shared/update-contracts';
 
 import type {
   BootstrapData, SourceCheckResult,
@@ -44,6 +45,9 @@ export function App() {
   useLayoutEffect(()=>{const node=contentRef.current;if(node)node.scrollTop=scrollPositions.current.get(routeKey)??0;},[routeKey]);
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
   const [availableUpdate,setAvailableUpdate]=useState<{tag:string;message:string}>();
+  const [updateOutcome,setUpdateOutcome]=useState<UpdateState>();
+  useEffect(()=>{if(!window.jobfindsme)return;let active=true;const apply=(value:UpdateState)=>{if(active&&['installed','rolled_back'].includes(value.phase)&&value.transactionId&&localStorage.getItem(`jfm.update.outcome-seen:${value.transactionId}`)!=='1')setUpdateOutcome(value);};const unsubscribe=window.jobfindsme!.onUpdateState(apply);void window.jobfindsme!.updateState().then(apply).catch(()=>{});return()=>{active=false;unsubscribe();};},[]);
+  function dismissUpdateOutcome(){if(updateOutcome?.transactionId)localStorage.setItem(`jfm.update.outcome-seen:${updateOutcome.transactionId}`,'1');setUpdateOutcome(undefined);}
   useEffect(()=>{
     const key=`jfm.update.last-check:${buildInfo.label}`;
     const last=Number(localStorage.getItem(key)||0);
@@ -121,6 +125,7 @@ export function App() {
   </>}>
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"岗位管理",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
+      {updateOutcome&&page!=='settings'&&<div className="update-notice" role={updateOutcome.phase==='rolled_back'?'alert':'status'}><span>{updateOutcome.message}</span><button onClick={()=>openSettings('about')}>查看更新</button><button aria-label="关闭更新结果" onClick={dismissUpdateOutcome}>关闭</button></div>}
       {error&&<div className="operation-notice" role="alert"><span>{userError(error).message}</span>{userError(error).action==='source'?<button onClick={()=>{setError(undefined);openSettings('sources');}}>查看来源</button>:userError(error).message.includes('本地服务')&&<button disabled={checkingService} onClick={()=>void checkService()}>{checkingService?'正在检查…':'检查服务'}</button>}<button aria-label="关闭操作提示" onClick={()=>setError(undefined)}>×</button></div>}
       <div className="discovery-mount" hidden={page!=="discover"}><Discovery onOpenResume={()=>setPage("resume")} active={page==="discover"} suggestedIntent={suggestedSearch} onResearch={openPreparation} data={data} selectedSources={chosenSources} onSelectSource={chooseSource} onSelectAllSources={chooseAllSources} reports={reports}/></div>
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onEditResume={openResume} preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>

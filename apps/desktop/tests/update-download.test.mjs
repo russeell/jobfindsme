@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {mkdtempSync,readFileSync,existsSync,rmSync,writeFileSync,mkdirSync} from 'node:fs';
+import {randomUUID} from 'node:crypto';
+import {mkdtempSync,realpathSync,readFileSync,existsSync,rmSync,writeFileSync,mkdirSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {releaseUpdate} from '../dist-electron/main/updates.js';
@@ -57,4 +58,14 @@ test('concurrent download clicks coalesce and preparation failure never exits th
  const updater=new DesktopUpdater({currentTag:'v1.0.0',platform:'darwin',arch:'arm64',target,runtime,cache,onState:()=>{},beforeQuit:async()=>{},quit:()=>quits++,request:async url=>{requests++;return String(url).includes('/releases/latest')?Response.json({tag_name:'v2.0.0',assets:[{name:asset.name,size:asset.size,digest:`sha256:${digest}`}]}):reply();}});
  const one=updater.download(),two=updater.download();assert.equal(one,two);await one;
  assert.equal(requests,2);assert.equal(quits,0);assert.equal(updater.getState().phase,'error');assert.equal(readFileSync(path.join(target,'original'),'utf8'),'fictional');
+}));
+
+test('restart reports a rollback without exposing the private transaction to the renderer',()=>temporary(async dir=>{
+ const id=randomUUID(),cache=path.join(dir,'updates'),job=path.join(cache,id),target=path.join(dir,'fictional-private-install');mkdirSync(job,{recursive:true});
+ writeFileSync(path.join(cache,'active.json'),JSON.stringify({id}));
+ writeFileSync(path.join(job,'request.json'),JSON.stringify({id,job:realpathSync(job),target,version:'v2.0.0',currentVersion:'v1.0.0',token:'fictional-private-token'}));
+ writeFileSync(path.join(job,'state.json'),JSON.stringify({phase:'rolled_back'}));
+ const updater=new DesktopUpdater({currentTag:'v1.0.0',platform:'darwin',arch:'arm64',cache,target,onState:()=>{},beforeQuit:async()=>{},quit:()=>assert.fail('Must not restart while reading an outcome')});
+ await updater.restore();assert.equal(updater.getState().phase,'rolled_back');assert.equal(updater.getState().transactionId,id);
+ assert(!JSON.stringify(updater.getState()).includes('fictional-private'));
 }));
