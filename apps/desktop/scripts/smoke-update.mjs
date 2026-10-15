@@ -46,7 +46,7 @@ for(const scenario of ['success','startup-failure']){
   },fixtureContext);assert.ok(before.draft.includes('Kept across native update'));
   await app.evaluate(async({session})=>{await session.defaultSession.cookies.set({url:'https://example.test',name:'fictional-update-session',value:'kept',expirationDate:Date.now()/1000+3600,secure:true});});
   await app.evaluate(async(_electron,{zip,sha256,size,name,tag})=>{
-   const fs=await import('node:fs'),stream=await import('node:stream');const originalFetch=globalThis.fetch;globalThis.updateSlow=true;
+   const fs=process.getBuiltinModule('fs'),stream=process.getBuiltinModule('stream');const originalFetch=globalThis.fetch;globalThis.updateSlow=true;
    globalThis.fetch=async(url,options)=>{
     if(String(url)==='https://api.github.com/repos/russeell/jobfindsme/releases/latest')return Response.json({tag_name:tag,assets:[{name,size,digest:`sha256:${sha256}`}]});
     if(String(url)===`https://github.com/russeell/jobfindsme/releases/download/${tag}/${name}`){
@@ -62,13 +62,17 @@ for(const scenario of ['success','startup-failure']){
   await window.getByRole('button',{name:'岗位来源',exact:true}).click();await window.getByRole('button',{name:'版本更新',exact:true}).click();await window.getByRole('progressbar',{name:'更新下载进度'}).waitFor({state:'visible'});
   await window.getByRole('button',{name:'取消下载',exact:true}).click();await window.getByText('下载已取消，当前程序未更改。',{exact:true}).waitFor();
   assert.equal(JSON.parse(await readFile(manifestPath,'utf8')).version,'0.0.1');
+  console.log(`${process.platform}/${scenario}: real progress, navigation and cancellation passed`);
   await app.evaluate(()=>{globalThis.updateSlow=false;});
   await window.getByRole('button',{name:'重新下载',exact:true}).click();await window.getByRole('button',{name:'重启并安装',exact:true}).waitFor({state:'visible'});
   const progress=await window.evaluate(()=>window.updateProgress);assert.ok(progress.length>1);assert.ok(progress.at(-1)===bytes.length);
   const request=await readRecord(profile,'request.json');const state=await readRecord(profile,'state.json');assert.equal(state.phase,'ready');
+  console.log(`${process.platform}/${scenario}: actual ZIP and copied frozen runtime prepared`);
   const close=new Promise(resolve=>app.once('close',()=>{closed=true;resolve();}));
-  await window.getByRole('button',{name:'重启并安装',exact:true}).click();await close;
+  await window.getByRole('button',{name:'重启并安装',exact:true}).click();
+  const installing=window.getByRole('dialog',{name:'正在准备重启更新',exact:true});await installing.waitFor({state:'visible'});await window.keyboard.press('Escape');assert.equal(await installing.evaluate(node=>node.open),true);await close;
   const completed=await until(()=>readRecord(profile,'state.json'),state=>['installed','rolled_back'].includes(state.phase));
+  console.log(`${process.platform}/${scenario}: guardian outcome ${completed.phase}`);
   guardianPid=completed.guardian_pid;spawnedPid=scenario==='success'?(await readRecord(profile,'health.json')).pid:completed.pid;
   assert.equal(completed.phase,scenario==='success'?'installed':'rolled_back');
   assert.equal(JSON.parse(await readFile(manifestPath,'utf8')).version,scenario==='success'?originalManifest.version:'0.0.1');

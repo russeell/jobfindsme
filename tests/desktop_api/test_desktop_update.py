@@ -103,6 +103,7 @@ def test_prepare_keeps_existing_install_and_user_materials(tmp_path, platform):
         "JobFindsMe/../../outside",
         "JobFindsMe/drive:C",
         "JobFindsMe/back\\slash",
+        "JobFindsMe/null\0suffix",
         "JobFindsMe/CON.txt",
         "JobFindsMe/file. ",
     ],
@@ -112,11 +113,11 @@ def test_unsafe_zip_paths_do_not_write_outside_staging(tmp_path, name):
     with zipfile.ZipFile(archive, "w") as bundle:
         # ZipInfo normalizes backslashes while writing on Windows. Construct
         # the actual malformed central/local header instead of a safe path.
-        bundle.writestr(name.replace("\\", "^"), b"fictional")
-    if "\\" in name:
+        bundle.writestr(name.replace("\\", "^").replace("\0", "~"), b"fictional")
+    if "\\" in name or "\0" in name:
         archive.write_bytes(
             archive.read_bytes().replace(
-                name.replace("\\", "^").encode(), name.encode()
+                name.replace("\\", "^").replace("\0", "~").encode(), name.encode()
             )
         )
     staging = tmp_path / "staging"

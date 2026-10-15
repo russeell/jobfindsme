@@ -119,7 +119,9 @@ def extract_archive(archive: Path, destination: Path, platform: str) -> Path:
             raise ValueError("Too many update files")
         total = 0
         for item in bundle.infolist():
-            name = item.filename
+            # ZipInfo normalizes Windows separators and truncates at NUL.
+            # Check the original header before trusting the normalized path.
+            name = item.orig_filename
             parts = tuple(name.rstrip("/").split("/"))
             if (
                 not parts

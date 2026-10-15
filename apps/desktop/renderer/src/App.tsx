@@ -46,7 +46,9 @@ export function App() {
   function openSettings(tab:SettingsTab){setSettingsTab(tab);setPage("settings");}
   const [availableUpdate,setAvailableUpdate]=useState<{tag:string;message:string}>();
   const [updateOutcome,setUpdateOutcome]=useState<UpdateState>();
-  useEffect(()=>{if(!window.jobfindsme)return;let active=true;const apply=(value:UpdateState)=>{if(active&&['installed','rolled_back'].includes(value.phase)&&value.transactionId&&localStorage.getItem(`jfm.update.outcome-seen:${value.transactionId}`)!=='1')setUpdateOutcome(value);};const unsubscribe=window.jobfindsme!.onUpdateState(apply);void window.jobfindsme!.updateState().then(apply).catch(()=>{});return()=>{active=false;unsubscribe();};},[]);
+  const [updateInstalling,setUpdateInstalling]=useState(false),updateDialog=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const dialog=updateDialog.current;if(!dialog)return;if(updateInstalling&&!dialog.open){dialog.showModal();dialog.focus();}else if(!updateInstalling&&dialog.open)dialog.close();},[updateInstalling]);
+  useEffect(()=>{if(!window.jobfindsme)return;let active=true;const apply=(value:UpdateState)=>{if(!active)return;setUpdateInstalling(value.phase==='installing');if(['installed','rolled_back'].includes(value.phase)&&value.transactionId&&localStorage.getItem(`jfm.update.outcome-seen:${value.transactionId}`)!=='1')setUpdateOutcome(value);};const unsubscribe=window.jobfindsme!.onUpdateState(apply);void window.jobfindsme!.updateState().then(apply).catch(()=>{});return()=>{active=false;unsubscribe();};},[]);
   function dismissUpdateOutcome(){if(updateOutcome?.transactionId)localStorage.setItem(`jfm.update.outcome-seen:${updateOutcome.transactionId}`,'1');setUpdateOutcome(undefined);}
   useEffect(()=>{
     const key=`jfm.update.last-check:${buildInfo.label}`;
@@ -134,6 +136,7 @@ export function App() {
       {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage checks={sourceChecks} onChecks={rows=>setSourceChecks(current=>mergeSourceChecks(current,rows))} onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage/>}</div></section>}
     </div></section>
     {preparationJob&&data?.workspaces[0]&&<JobPreparation initialApplicationView={applicationView} initialApplicationOpen={preparationApply} key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
+    <dialog ref={updateDialog} className="update-install-dialog" aria-label="正在准备重启更新" tabIndex={-1} onCancel={event=>event.preventDefault()}><strong>正在准备重启更新</strong><p role="status">正在再次校验程序并保存本机状态，请稍候。应用将自动重新打开。</p></dialog>
   </Workbench>;
 }
 
