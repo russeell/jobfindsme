@@ -42,7 +42,10 @@ jobs:
           assert build['head_sha'] == release['targetCommitish'], 'Package and release commits differ'
           folder = pathlib.Path(os.environ['RUNNER_TEMP']) / 'verified-release'
           gh('run', 'download', run, '--name', artifact, '--dir', str(folder))
-          package = folder / ('mac-arm64.zip' if mac else 'JobFindsMe-windows-x64.zip')
+          package = folder / asset
+          if not package.exists() and not mac:
+              package = folder / 'JobFindsMe-windows-x64.zip'  # Older verified runs.
+          assert package.is_file(), 'Verified desktop ZIP is missing'
           with zipfile.ZipFile(package) as archive:
               assert archive.testzip() is None
               names = archive.namelist()
@@ -58,7 +61,8 @@ jobs:
               assert info['version'] == tag[1:] and info['build'] == tag and info['releaseTag'] == tag
               assert info['sourceCommit'] == build['head_sha'], 'Embedded source commit differs'
               assert not info.get('qa') and not info.get('jobfindsmePreview')
-          digest = hashlib.file_digest(package.open('rb'), 'sha256').hexdigest()
+          with package.open('rb') as stream:
+              digest = hashlib.file_digest(stream, 'sha256').hexdigest()
           existing = next((item for item in release['assets'] if item['name'] == asset), None)
           if existing:
               assert existing['state'] == 'uploaded' and existing['digest'] == 'sha256:' + digest

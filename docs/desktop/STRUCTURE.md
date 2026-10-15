@@ -14,6 +14,7 @@ jobfindsme/
 │   └── scripts/        打包、审计、真实安装包隔离验收
 ├── src/jobfindsme/
 │   ├── desktop_api/    本地认证 HTTP 接口
+│   ├── desktop_update.py ZIP安全解包、独立安装与启动失败回退
 │   ├── sources/        来源目录、能力状态与准入
 │   ├── connectors/     来源连接与 HTTP 列表适配
 │   ├── search/         检索、排序、岗位准备、材料与执行记录
@@ -39,6 +40,7 @@ jobfindsme/
 | 面试与研究 | `main/research/pi-research-agent.mts`、`interview-materials.ts`、`public-retrieval.ts`、`original-reader.ts` | `research/`；预算、取消与引用检查，缺失材料明确说明 |
 | BOSS 确认投递 | `main/applications/` | `search/application_attempts.py`；独立受限执行、快照、低频、去重及分别核验消息/附件 |
 | 密钥与服务 | `main/security/secure-secret-store.ts`、`main/backend/python-service.ts`、`api-client.ts` | `desktop_api/app.py`；只监听本机并认证，密钥不进入日志/包/仓库 |
+| 应用内更新 | `renderer/src/settings/UpdatesPage.tsx`、`main/updates.ts`、`main/updates/update-manager.ts` | `desktop_update.py`由复制的冻结运行时执行；匿名GET、SHA256、暂存/备份、启动回执与回退，不移动或上传资料目录 |
 
 `main/index.ts`、`renderer/src/App.tsx` 和 `desktop_api/app.py` 负责组装。`main/ipc/register.ts`统一所有主窗口顶层frame调用来源检查，`ipc/resumes.ts`与`ipc/preparation.ts`注册简历和岗位材料；原preload名称保留。Python`desktop_api/resumes.py`与`schemas/resumes.py`独立维护16条简历路由和请求/响应，认证和原路径不变。TS简历契约在`shared/resume-contracts.ts`，由原`contracts.ts`兼容导出。新增逻辑优先放在对应业务模块，保持已有 IPC 名称、HTTP 路径与返回形状兼容。
 

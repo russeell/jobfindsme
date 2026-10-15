@@ -8,7 +8,7 @@
     "blocked",
     "done"
   ],
-  "current_task": "D203",
+  "current_task": null,
   "tasks": [
     {
       "id": "D01",
@@ -2549,7 +2549,7 @@
     {
       "id": "D203",
       "title": "macOS与Windows单击下载、校验、重启安装与失败回退",
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [
         "D202"
       ],
@@ -2565,9 +2565,12 @@
         "简历、草稿、会话数据保留且没有外传",
         "macOS和Windows均有实际进程/文件操作证据，模拟不能冒充原生兼容"
       ],
-      "verification": "实现中。",
+      "verification": "产品提交e7d0e8c07c37a18705c4663df13dda4f358cafea已同步main/开发分支。主CI38673869851、macOS包38673151566、Windows包38673154686全成功。每端459项桌面；Mac617项Python，Win613通过/4项POSIX专用跳过。真实包UI/IPC/冻结安装进程/文件替换/自动重启、启动失败90秒超时回退，以及原件/草稿/虚构Cookie保留通过；仅发行GET响应替换为runner实际ZIP。隐私/来源指纹/冻结HTTP/CA与原有简历导出回归通过。11项更新桌面与18项安装器定向检查；ZIP原始头、Windows短路径、恢复并发状态及重启输入保护修复完成。真实公开两端GET链路各读1378字节后停止，未安装到正常应用；无个人资料上传或模型/招聘访问。发布附件文件名兼容3组虚构资产离线通过，无发布。旧版须手动升级一次；未签名、目录须可写；回退仅程序不还原DB，断电/强杀恢复未宣称验收。",
       "evidence": [
-        "docs/desktop/HANDOFF.md"
+        "docs/desktop/HANDOFF.md",
+        "https://github.com/russeell/jobfindsme/actions/runs/38673869851",
+        "https://github.com/russeell/jobfindsme/actions/runs/38673151566",
+        "https://github.com/russeell/jobfindsme/actions/runs/38673154686"
       ],
       "blocker": null
     }
