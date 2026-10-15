@@ -38,12 +38,12 @@ for(const scenario of ['success','startup-failure']){
   await window.getByRole('button',{name:'我的简历',exact:true}).click();const editor=window.getByRole('textbox',{name:'简历文档编辑器',exact:true});await editor.waitFor({state:'visible'});
   await editor.locator('p').last().click();await window.keyboard.press('End');await window.keyboard.type(' Kept across native update');
   const before=await window.evaluate(async context=>{
-   localStorage.setItem('jfm.update.last-check:v0.15.4',String(Date.now()));
+   localStorage.setItem(`jfm.update.last-check:${context.buildLabel}`,String(Date.now()));
    const bootstrap=await window.jobfindsme.getBootstrap(),workspace=bootstrap.workspaces[0].workspace_id;
    const version=(await window.jobfindsme.listResumeVersions(workspace)).find(row=>row.is_current);
    const original=await window.jobfindsme.resumeSource({workspace_id:workspace,document_id:context.originalDocumentId});
    return {workspace,version:version.version_id,document:context.originalDocumentId,source:original.content_base64,draft:localStorage.getItem(`jfm.resume.document-draft.${workspace}.${version.version_id}`)};
-  },fixtureContext);assert.ok(before.draft.includes('Kept across native update'));
+  },{...fixtureContext,buildLabel:originalManifest.build});assert.ok(before.draft.includes('Kept across native update'));
   await app.evaluate(async({session})=>{await session.defaultSession.cookies.set({url:'https://example.test',name:'fictional-update-session',value:'kept',expirationDate:Date.now()/1000+3600,secure:true});});
   await app.evaluate(async(_electron,{zip,sha256,size,name,tag})=>{
    const fs=process.getBuiltinModule('fs'),stream=process.getBuiltinModule('stream');const originalFetch=globalThis.fetch;globalThis.updateSlow=true;
