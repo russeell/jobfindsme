@@ -10,6 +10,7 @@ import {userError} from "../../../shared/user-errors";
 import {Icon} from "../shared/Icon";
 import {resumeContentChanged,resumeSections,resumeReviewCounts,moveResumeEntry,resumeImprovementDraft} from "../../../shared/resume-library";
 import {ResumeImproveDialog,ResumeModal,ResumePreview} from "./ResumeDialogs";
+import type {UpdateDraftEvent} from '../settings/UpdatesPage';
 
 
 
@@ -34,6 +35,7 @@ export function ResumePage({onChanged,embedded=false,active=true,onPrepare,openR
   const [improve,setImprove]=useState(false),[review,setReview]=useState<PromptSession>();
   const [improveJob,setImproveJob]=useState<SearchResultItem["job"]>();
   const [generating,setGenerating]=useState(false),[generationMessage,setGenerationMessage]=useState('');
+  useEffect(()=>{const flush=(event:Event)=>{if(editing||generating||reviewBusy||improve)(event as UpdateDraftEvent).detail.pending.push(Promise.reject(Error('请先完成或关闭简历编辑/AI 修改，再重启更新；当前内容仍保留。')));};window.addEventListener('jfm:before-update',flush);return()=>window.removeEventListener('jfm:before-update',flush);},[editing,generating,reviewBusy,improve]);
   const generation=useRef<string|undefined>(undefined);
   const openedRequest=useRef<number|undefined>(undefined);
   const reviewAnchor=useRef<HTMLElement>(null);

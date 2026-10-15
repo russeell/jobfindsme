@@ -1,10 +1,12 @@
-export type UpdateResult = {status:"available"|"current"|"unpublished";tag?:string;message:string};
+import type {UpdateResult} from '../shared/update-contracts';
+export type {UpdateResult} from '../shared/update-contracts';
+export type ReleaseAsset={name:string;url:string;size:number;sha256:string};
 export const releasesUrl="https://github.com/russeell/jobfindsme/releases";
-function version(tag:string):number[]|undefined{
+export function version(tag:string):number[]|undefined{
   const match=/^v?(\d+)\.(\d+)\.(\d+)$/.exec(tag);
   return match?.slice(1).map(Number);
 }
-function isNewer(latest:string,current:string):boolean{
+export function isNewer(latest:string,current:string):boolean{
   const next=version(latest)!,installed=version(current)!;
   for(let i=0;i<3;i++){if(next[i]!==installed[i])return next[i]>installed[i];}
   return false;
@@ -14,15 +16,18 @@ function compatibleAsset(name:string,platform:string,arch:string):boolean{
   if(platform==="win32")return arch==="x64"?/^windows-x64\.zip$/i.test(name):/^windows-arm64\.zip$/i.test(name);
   return false;
 }
-export async function checkForUpdates(currentTag:string,platform:string,request:typeof fetch=fetch,arch=process.arch):Promise<UpdateResult>{
-  const response=await request("https://api.github.com/repos/russeell/jobfindsme/releases/latest",{headers:{Accept:"application/vnd.github+json"},signal:AbortSignal.timeout(10000),redirect:"error"});
-  if(response.status===404)return {status:"unpublished",message:"尚无正式发布版本。仓库代码更新不等于可安装的桌面更新。"};
+export async function releaseUpdate(currentTag:string,platform:string,request:typeof fetch=fetch,arch:string=process.arch):Promise<{result:UpdateResult;asset?:ReleaseAsset}>{
+  const response=await request("https://api.github.com/repos/russeell/jobfindsme/releases/latest",{headers:{Accept:"application/vnd.github+json"},credentials:'omit',signal:AbortSignal.timeout(10000),redirect:"error"});
+  if(response.status===404)return {result:{status:"unpublished",message:"尚无正式发布版本。仓库代码更新不等于可安装的桌面更新。"}};
   if(!response.ok)throw Error(response.status===403||response.status===429?"检查更新受到服务限流，请稍后重试。":"无法连接版本服务，请稍后重试。");
-  const release=await response.json() as {tag_name?:string;draft?:boolean;prerelease?:boolean;assets?:{name:string}[]};
+  const release=await response.json() as {tag_name?:string;draft?:boolean;prerelease?:boolean;assets?:{name:string;size?:number;digest?:string}[]};
   if(!release.tag_name||release.draft||release.prerelease)throw Error("版本服务返回了无效的正式版本信息。");
-  const compatible=(release.assets??[]).some(asset=>compatibleAsset(asset.name,platform,arch));
-  if(!compatible)return {status:"unpublished",tag:release.tag_name,message:"找到发布记录，但尚无适用于当前系统的桌面安装包。"};
+  const compatible=(release.assets??[]).find(asset=>typeof asset.name==='string'&&compatibleAsset(asset.name,platform,arch));
+  if(!compatible)return {result:{status:"unpublished",tag:release.tag_name,message:"找到发布记录，但尚无适用于当前系统的桌面安装包。"}};
   if(!version(release.tag_name)||!version(currentTag))throw Error("无法比较当前版本与正式版本，请到发布页核对。");
-  if(!isNewer(release.tag_name,currentTag))return {status:"current",tag:release.tag_name,message:"当前版本已是最新，或比最新正式版更新。"};
-  return {status:"available",tag:release.tag_name,message:"发现新版本。请查看发布说明，再从发布页下载安装。"};
+  if(!isNewer(release.tag_name,currentTag))return {result:{status:"current",tag:release.tag_name,message:"当前版本已是最新，或比最新正式版更新。"}};
+  const checksum=/^sha256:([a-f0-9]{64})$/.exec(compatible.digest||'')?.[1];
+  const safe=!!checksum&&Number.isSafeInteger(compatible.size)&&compatible.size!>0&&compatible.size!<=1_000_000_000;
+  return {result:{status:'available',tag:release.tag_name,canInstall:safe,message:safe?'可下载更新，完成校验后重启安装。':'此版本缺少完整校验信息，请从发布页手动安装。'},asset:safe?{name:compatible.name,size:compatible.size!,sha256:checksum!,url:`https://github.com/russeell/jobfindsme/releases/download/${release.tag_name}/${compatible.name}`}:undefined};
 }
+export async function checkForUpdates(currentTag:string,platform:string,request:typeof fetch=fetch,arch:string=process.arch):Promise<UpdateResult>{return (await releaseUpdate(currentTag,platform,request,arch)).result;}

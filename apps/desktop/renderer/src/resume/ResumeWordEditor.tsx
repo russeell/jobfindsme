@@ -12,6 +12,7 @@ import {ResumeDocument} from './ResumeDocument';
 import {ResumeSelectionAI} from './ResumeSelectionAI';
 import {Icon} from '../shared/Icon';
 import {clearResumeTextFormatting,setResumeEditorDocument} from '../../../shared/resume-editor-actions';
+import type {UpdateDraftEvent} from '../settings/UpdatesPage';
 
 
 export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize,onImprove}:{workspaceId:string;version:ResumeVersion;onSaved():Promise<void>;onDirty(dirty:boolean):void;onOrganize():void;onImprove?:(instruction?:string)=>void}){
@@ -46,6 +47,10 @@ export function ResumeWordEditor({workspaceId,version,onSaved,onDirty,onOrganize
  });
  const state=useEditorState({editor,selector:({editor})=>editor&&!editor.isDestroyed?{textStyle:editor.getAttributes('textStyle'),align:editor.getAttributes('paragraph').textAlign||'left',bold:editor.isActive('bold'),italic:editor.isActive('italic'),underline:editor.isActive('underline'),bullet:editor.isActive('bulletList'),ordered:editor.isActive('orderedList'),undo:editor.can().undo(),redo:editor.can().redo(),characters:editor.state.doc.textContent.replace(/\s/g,'').length,selection:{empty:editor.state.selection.empty,from:editor.state.selection.from,to:editor.state.selection.to}}:null});
  const stale=base.version_id!==version.version_id;
+ useEffect(()=>{const flush=(event:Event)=>{(event as UpdateDraftEvent).detail.pending.push(Promise.resolve().then(()=>{
+   if(busy)throw Error('简历正在保存或导出，请完成后再重启更新。');
+   if(editor&&!editor.isDestroyed&&resumeDocumentFingerprint(editor.getJSON())!==initial.current){try{localStorage.setItem(cacheKey(baseId.current),JSON.stringify(editor.getJSON()));}catch{throw Error('本机简历草稿未能保存，请先导出或保存简历再更新。');}}
+ }));};window.addEventListener('jfm:before-update',flush);return()=>window.removeEventListener('jfm:before-update',flush);},[editor,busy]);
  useEffect(()=>{if(!editor||editor.isDestroyed)return;const changed=resumeDocumentFingerprint(editor.getJSON())!==initial.current;setDirty(changed);onDirty(changed);if(loaded.restored&&changed)setNotice('已恢复本机未保存的草稿。');if(loaded.error)setError(loaded.error);},[editor]);
  useEffect(()=>{if(!editor||editor.isDestroyed||!stale||dirty||busy||version.version_number<base.version_number)return;const next=resumeDocumentTemplate(version.document)||loaded.savedTemplate;setBase(version);setTemplate(next);setResumeEditorDocument(editor,resumeDocument(version.content,version.document,next),false);initial.current=resumeDocumentFingerprint(editor.getJSON());},[version.version_id,editor,dirty,busy]);
  useEffect(()=>{if(editor&&!editor.isDestroyed)editor.setEditable(!busy,false);},[busy,editor]);

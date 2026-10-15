@@ -7,6 +7,7 @@ import type {ResearchReport} from "../../shared/contracts";
 import {userError} from "../../shared/user-errors";
 import { Icon } from "./shared/Icon";
 import { ModelsPage } from "./settings/ModelsPage";
+import {UpdatesPage} from './settings/UpdatesPage';
 import { ResearchPage } from "./research/ResearchPage";
 import { sourceBrowserSpecs, isAllowedSourceUrl, type SourceBrowserId } from "../../shared/source-browser-policy";
 import { Discovery } from "./search/Discovery";
@@ -92,7 +93,7 @@ export function App() {
       loadingBootstrap = true;
       try {
         const value = await window.jobfindsme!.getBootstrap();
-        if (!cancelled) { setData(value); setServiceStatus({ connected: true }); setFailure(previous=>previous?.route==="*"?undefined:previous); }
+        if (!cancelled) { setData(value); setServiceStatus({ connected: true }); setFailure(previous=>previous?.route==="*"?undefined:previous);requestAnimationFrame(()=>{void window.jobfindsme!.confirmUpdateStartup().catch(()=>{});}); }
       } catch (bootstrapError) {
         const message = messageOf(bootstrapError);
         if (!cancelled && !message.includes("desktop API is not ready")) setFailure({message,route:"*"});
@@ -116,7 +117,7 @@ export function App() {
     <div className="nav-group"><nav aria-label="工作区">{navItems.map(([label,target])=><button key={target} className={page===target?"active":""} disabled={!serviceStatus.connected} title={label} aria-label={label} aria-current={page===target?"page":undefined} onClick={()=>setPage(target)}><span className="nav-icon"><Icon name={target}/></span><span className="nav-label">{label}</span></button>)}
     <button className={`sidebar-new-chat${page==="research"?" active":""}`} aria-current={page==="research"?"page":undefined} type="button" disabled={!serviceStatus.connected} title="求职助手" aria-label="求职助手" onClick={()=>setPage("research")}><span className="nav-icon"><Icon name="newChat"/></span><span className="nav-label">求职助手</span>{researchBusy&&<span className="sidebar-chat-busy" aria-hidden="true">进行中</span>}</button></nav></div>
     <div id="research-sidebar-history" className="sidebar-history-slot"/>
-    <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} disabled={!serviceStatus.connected} title="设置" aria-label={availableUpdate?"设置，有新版本":"设置"} aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(availableUpdate?"about":settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span>{availableUpdate&&<span className="update-indicator" aria-hidden="true"/>}</button></div>
+    <div className="sidebar-bottom"><button className={page==="settings"?"sidebar-settings active":"sidebar-settings"} title="设置" aria-label={availableUpdate?"设置，有新版本":"设置"} aria-current={page==="settings"?"page":undefined} onClick={()=>openSettings(availableUpdate?"about":settingsTab)}><span className="nav-icon"><Icon name="settings"/></span><span className="nav-label">设置</span>{availableUpdate&&<span className="update-indicator" aria-hidden="true"/>}</button></div>
   </>}>
     <section className="main"><header className={page==="settings"?"topbar settings-topbar":"topbar"}>{page==="settings"?<nav className="settings-tabs" aria-label="设置分类">{settingsItems.map(([label,tab])=><button key={tab} type="button" className={settingsTab===tab?"active":""} aria-current={settingsTab===tab?"page":undefined} onClick={()=>setSettingsTab(tab)}>{label}</button>)}</nav>:<span className="workspace-name" title={data?.workspaces[0]?.name||"本地工作区"}><strong>{{discover:"找工作",records:"岗位管理",resume:"我的简历",research:"求职助手"}[page as WorkPage]}</strong><span className="workspace-divider" aria-hidden="true">/</span>{data?.workspaces[0]?.name||"本地工作区"}</span>}<div className="topbar-actions"><div id="research-topbar-actions" className="research-topbar-actions"/>{page==="research"&&<button className="new-conversation-button" onClick={openNewChat}><Icon name="newChat"/>新建对话</button>}</div></header><div ref={contentRef} onScroll={event=>scrollPositions.current.set(routeKey,event.currentTarget.scrollTop)} className={page==="research"?"content research-content":page==="resume"?"content resume-content":"content"}>
       {availableUpdate&&page!=="settings"&&<div className="update-notice" role="status"><span>JobFindsMe {availableUpdate.tag} 已发布</span><button type="button" onClick={()=>openSettings("about")}>查看更新</button><button type="button" aria-label="不再提示此版本" onClick={dismissUpdate}>暂不提示</button></div>}
@@ -125,7 +126,7 @@ export function App() {
       <div className="research-mount" hidden={page!=="research"}><ResearchPage onEditResume={openResume} preparationRequest={preparationRequest} selectedSources={chosenSources} onReports={setReports} onBusyChange={setResearchBusy} active={page==="research"} archiveVisible={page==="settings"&&settingsTab==="archive"} newChatNonce={newChatNonce} onOpenChat={()=>{setResearchTarget(undefined);setPage("research");}} data={data} target={researchTarget} onSearchJobs={query=>{setSuggestedSearch({query,nonce:Date.now()});setPage("discover");}} onError={setError}/></div>
       <div hidden={page!=="records"}><RecordsPage active={page==="records"} data={data} onPrepare={openPreparation} onDiscover={()=>setPage("discover")}/></div>
       <div hidden={page!=="resume"}><ResumePage active={page==="resume"} onPrepare={openPreparation} openRequest={resumeRequest}/></div>
-      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage checks={sourceChecks} onChecks={rows=>setSourceChecks(current=>mergeSourceChecks(current,rows))} onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage availableUpdate={availableUpdate}/>}</div></section>}
+      {page==="settings"&&<section className="settings-page"><div className="settings-panel">{settingsTab==="sources"?<SourcesPage checks={sourceChecks} onChecks={rows=>setSourceChecks(current=>mergeSourceChecks(current,rows))} onSelectAll={chooseAllSources} selected={chosenSources} onSelect={chooseSource} data={data} onRefresh={setData} onError={setError}/>:settingsTab==="models"?<ModelsPage workspaceId={data?.workspaces[0]?.workspace_id} onError={setError}/>:settingsTab==="archive"?<div id="research-archive-settings"/>:<UpdatesPage/>}</div></section>}
     </div></section>
     {preparationJob&&data?.workspaces[0]&&<JobPreparation initialApplicationView={applicationView} initialApplicationOpen={preparationApply} key={preparationJob.job_id} workspaceId={data.workspaces[0].workspace_id} job={preparationJob} onClose={()=>setPreparationJob(undefined)} onStart={startPreparation}/>}
   </Workbench>;
@@ -201,10 +202,3 @@ function SourcesPage({ checks, onChecks, data, selected, onSelect, onSelectAll, 
 
 
 function messageOf(reason: unknown): string { return reason instanceof Error ? reason.message : "本地服务不可用"; }
-
-function UpdatesPage({availableUpdate}:{availableUpdate?:{tag:string;message:string}}){
- const [busy,setBusy]=useState(false);
- const [result,setResult]=useState<{message:string;tag?:string}|undefined>(availableUpdate);
- async function check(){setBusy(true);setResult(undefined);try{setResult(await window.jobfindsme!.checkForUpdates());}catch(error){setResult({message:messageOf(error)});}finally{setBusy(false);}}
- return <section className="section updates-page"><h2>关于与更新</h2><p>当前版本：{buildInfo.label.split("+")[0]}</p><p>检查 GitHub 正式发布的桌面版本。下载安装不会在后台自动执行。</p><div className="button-row"><button className="primary-button" disabled={busy} onClick={()=>void check()}>{busy?"正在检查…":"检查更新"}</button><button onClick={()=>void window.jobfindsme!.openReleases().catch(error=>setResult({message:messageOf(error)}))}>查看发布与下载</button></div>{result&&<p role="status">{result.tag&&`发布版本：${result.tag} · `}{result.message}</p>}<details><summary>构建信息</summary><p>{buildInfo.label}</p></details></section>;
-}

@@ -2,6 +2,7 @@ import type {AnalysisPreview, AnalysisPreviewInput, ResumeConfirmation, ResumeCo
 export type {AnalysisPreview, AnalysisPreviewInput, ResumeConfirmation, ResumeContent, ResumeDocumentNode, ResumeDraft, ResumeEditInput, ResumeExport, ResumeExportInput, ResumeFact, ResumeSource, ResumeSourceInput, ResumeState, ResumeVersion} from "./resume-contracts";
 import type {ChatAttachment,ChatAttachmentSelection} from "./chat-attachments";
 import type {AssistantSkillId} from "./assistant-skills";
+import type {UpdateResult,UpdateState} from './update-contracts';
 export type MatchingRuleInput = {workspace_id:string;name:string;prompt:string;template_id:string;mode:"local"|"model";connection_id?:string|null;candidate_limit:number;weights:MatchingWeights};
 export type MatchingRule = MatchingRuleInput & {rule_version_id:string;created_at:string;model_snapshot?:{model_id:string;endpoint:string;protocol:string;credential_ref?:string|null;auth_mode:string}};
 export type MatchingRuleState = {templates:Array<{id:string;name:string;prompt:string}>;active_rule_id:string|null;versions:MatchingRule[]};
@@ -42,7 +43,13 @@ export type BootstrapData = {
 };
 
 export type DesktopBridge = {
-  checkForUpdates():Promise<{status:"available"|"current"|"unpublished";tag?:string;message:string}>;
+  checkForUpdates():Promise<UpdateResult>;
+  updateState():Promise<UpdateState>;
+  downloadUpdate():Promise<UpdateState>;
+  cancelUpdate():Promise<UpdateState>;
+  installUpdate():Promise<UpdateState>;
+  confirmUpdateStartup():Promise<void>;
+  onUpdateState(listener:(state:UpdateState)=>void):()=>void;
   openReleases():Promise<void>;
   matchingRules(workspaceId:string):Promise<MatchingRuleState>;
   saveMatchingRule(input:MatchingRuleInput):Promise<MatchingRule>;

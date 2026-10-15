@@ -19,6 +19,7 @@ import {Icon} from "../shared/Icon";
 import {ReputationEvidence} from "./ReputationEvidence";
 import {MessageContent} from "./MessageContent";
 import {getCurrentModel,setCurrentModel} from "../settings/current-model";
+import type {UpdateDraftEvent} from '../settings/UpdatesPage';
 import {acceptsResearchDelta,branchChat,beginChat,retryChatAttachments,failChat,finishChat,finishJobSearchChat,fromStoredResearchChat,researchChatsForRecovery,pendingResearchChats,stageResearchChat,acknowledgeResearchChat,removeResearchChatRecovery,mergeResearchChats,loadResearchChats,migrateResearchChats,reportIdsByTurn,saveResearchChats,saveResearchChatWithRetry,stopChat,toStoredResearchChat,type ActiveResearchRequest,type SavedResearchChat} from "../../../shared/research-chat-history";
 
 type Job=SearchResultItem["job"];
@@ -114,7 +115,10 @@ export function ResearchPage({onEditResume,preparationRequest,selectedSources,ac
   const saveRevision=useRef(0);
   const [savePending,setSavePending]=useState(false);
   const savedChats=useRef(new Map<string,string>());
+  const restoredUpdateDraft=useRef<string|undefined>(undefined);
   const [busy,setBusy]=useState<"link"|"prepare"|"history"|null>(null);
+  useEffect(()=>{if(!workspaceId||loadedWorkspace!==workspaceId||restoredUpdateDraft.current===workspaceId)return;restoredUpdateDraft.current=workspaceId;try{const key=`jfm.update.composer.${workspaceId}`,text=localStorage.getItem(key);if(!text)return;const draft=JSON.parse(text);if(typeof draft.text!=='string'||!Array.isArray(draft.attachments))return;const chat=chats.find(row=>row.id===draft.chatId);if(chat)selectHistoryChat(chat);setQuestion(draft.text);setAttachments(draft.attachments);if(isAssistantSkillId(draft.skillId))setSkillId(draft.skillId);if(draft.job)setJob(draft.job);if(Array.isArray(draft.otherDrafts))draftsRef.current=new Map(draft.otherDrafts);localStorage.removeItem(key);}catch{setMessage('更新前的输入草稿未能自动恢复，本机副本仍保留。');}},[workspaceId,loadedWorkspace]);
+  useEffect(()=>{const flush=(event:Event)=>{(event as UpdateDraftEvent).detail.pending.push((async()=>{if(busy||attachmentBusy||requestsRef.current.size)throw Error('求职助手仍在处理内容，请完成或停止后再重启更新。');if(!workspaceId)return;try{localStorage.setItem(`jfm.update.composer.${workspaceId}`,JSON.stringify({text:question,attachments,skillId,job,chatId,otherDrafts:[...draftsRef.current]}));}catch{throw Error('求职助手输入草稿未能保存，请先保留内容后再更新。');}await saveQueue.current;})());};window.addEventListener('jfm:before-update',flush);return()=>window.removeEventListener('jfm:before-update',flush);},[workspaceId,question,attachments,skillId,job,chatId,busy,attachmentBusy]);
   useEffect(()=>onBusyChange(runningCount>0||!!busy||savePending||attachmentBusy),[runningCount,busy,savePending,attachmentBusy,onBusyChange]);
   const [message,setMessage]=useState("");
   const sequence=useRef(0);

@@ -3,6 +3,12 @@ import type { DesktopBridge } from "../shared/contracts";
 
 const bridge: DesktopBridge = Object.freeze({
   checkForUpdates:()=>ipcRenderer.invoke("desktop:check-updates"),
+  updateState:()=>ipcRenderer.invoke('desktop:update-state'),
+  downloadUpdate:()=>ipcRenderer.invoke('desktop:download-update'),
+  cancelUpdate:()=>ipcRenderer.invoke('desktop:cancel-update'),
+  installUpdate:()=>ipcRenderer.invoke('desktop:install-update'),
+  confirmUpdateStartup:()=>ipcRenderer.invoke('desktop:update-startup-ready'),
+  onUpdateState:listener=>{const handler=(_event:unknown,state:import('../shared/update-contracts').UpdateState)=>listener(state);ipcRenderer.on('desktop:update-state',handler);return()=>ipcRenderer.removeListener('desktop:update-state',handler);},
   openReleases:()=>ipcRenderer.invoke("desktop:open-releases"),
   matchingRules: workspaceId => ipcRenderer.invoke("desktop:matching-rules",workspaceId),
   saveMatchingRule: input => ipcRenderer.invoke("desktop:save-matching-rule",input),

@@ -100,6 +100,8 @@ Record the outcome to see which resume and message you used, for which company a
 
 This README describes current source functionality. Downloaded builds follow their [release notes](https://github.com/russeell/jobfindsme/releases/latest). Packages are unsigned / unnotarized; first-launch instructions, exact source commits and SHA256 checksums are provided on the release page.
 
+**In-app updates**: download from Settings → Version Update, follow progress or cancel, then choose **Restart and install** after verification. Installation or startup failure restores the previous application; local resumes, drafts and sign-in sessions are retained. Updates do not upload personal information. The installation directory must be writable; privileges are not elevated automatically. Older builds require one manual installation of a build containing the updater. Check release notes for availability in downloaded packages.
+
 <details>
 <summary><strong>Before you start</strong></summary>
 

@@ -20,6 +20,10 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    if sys.argv[1:2] == ["--desktop-update"]:
+        from jobfindsme.desktop_update import main as update_main
+
+        return update_main(sys.argv[2:])
     if sys.argv[1:] == ["--check-runtime"]:
         from jobfindsme.desktop_api.runtime_check import check_runtime
 

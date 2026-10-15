@@ -8,9 +8,10 @@ import type {GreetingPolishInput} from "../shared/contracts";
 import {createPublicRetrieval} from "./research/public-retrieval";
 import {collectChatAttachments} from "./research/chat-attachments";
 import {foregroundZhilianVerification} from "./sources/source-actions";
-import {checkForUpdates,releasesUrl} from "./updates";
+import {releasesUrl} from "./updates";
+import {DesktopUpdater,acknowledgeUpdateStartup} from './updates/update-manager';
 import {normalizeDiscoveryFilters} from "../shared/discovery-filters";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync,realpathSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 
@@ -100,6 +101,17 @@ let researchRequestId: string | undefined;
 let researchWorkspaceId: string | undefined;
 const chatRuns=new ResearchRunController();
 let isQuitting = false;
+const installedRoot=app.isPackaged&&!previewBuild&&['darwin','win32'].includes(process.platform)
+  ?realpathSync(process.platform==='darwin'?path.resolve(process.execPath,'../../..'):path.dirname(process.execPath)):undefined;
+const updateTag=String(packageInfo.releaseTag??`v${packageInfo.version}`);
+const updater=new DesktopUpdater({currentTag:updateTag,platform:process.platform,arch:process.arch,
+ cache:path.join(app.getPath('userData'),'updates'),target:installedRoot,
+ runtime:installedRoot?path.join(process.resourcesPath,'python/jobfindsme-api'):undefined,
+ restartArgs:app.commandLine.hasSwitch('user-data-dir')?[`--user-data-dir=${app.getPath('userData')}`]:[],
+ onState:state=>{if(mainWindow&&!mainWindow.isDestroyed())mainWindow.webContents.send('desktop:update-state',state);},
+ beforeQuit:async()=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('窗口已关闭，请重新打开后更新。');mainWindow.webContents.session.flushStorageData();await mainWindow.webContents.session.cookies.flushStore();await sourceBrowserManager?.flushSessions();},
+ quit:()=>{app.quit();},
+});
 
 function shutdownAndExit(): Promise<void> {
   if (shutdownPromise) return shutdownPromise;
@@ -883,6 +895,7 @@ app.whenReady().then(async () => {
   if(!ownsInstance)return;
   try {
     await createWindow();
+    await updater.restore();
     if (shutdownPromise) return;
     apiClient = await pythonService.start();
     if (shutdownPromise) return;
@@ -918,7 +931,16 @@ process.once("SIGTERM", () => app.quit());
 
 handle("desktop:check-updates",event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");
- return checkForUpdates(String(packageInfo.releaseTag??`v${packageInfo.version}`),process.platform);
+ return updater.check();
+});
+handle('desktop:update-state',()=>updater.getState());
+handle('desktop:download-update',()=>updater.download());
+handle('desktop:cancel-update',()=>updater.cancel());
+handle('desktop:install-update',()=>updater.install());
+handle('desktop:update-startup-ready',async()=>{
+ if(!serviceStatus.connected)return;
+ await acknowledgeUpdateStartup(process.env.JFM_UPDATE_MANIFEST,installedRoot,updateTag);
+ const timer=setTimeout(()=>void updater.restore(),2500);timer.unref();
 });
 handle("desktop:open-releases",async event=>{
  if(event.sender!==mainWindow?.webContents)throw Error("unauthorized caller");

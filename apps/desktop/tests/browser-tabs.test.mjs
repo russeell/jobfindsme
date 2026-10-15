@@ -47,11 +47,12 @@ test('source buttons reopen public homepages without forcing sign-in pages',asyn
  m.destroy();
 });
 test('shutdown flushes each opened persistent source session once',async()=>{
- const sessions=new Map(),flushed=[];
+ const sessions=new Map(),flushed=[],storageFlushed=[];
  FakeView.onCreate=view=>{
   const partition=view.options.webPreferences.partition;
   if(!sessions.has(partition)){
    const session=new EventEmitter();session.cookies={flushStore:async()=>{flushed.push(partition);}};
+   session.flushStorageData=()=>storageFlushed.push(partition);
    session.setPermissionCheckHandler=()=>{};session.setPermissionRequestHandler=()=>{};
    session.webRequest={onBeforeRequest:()=>{}};sessions.set(partition,session);
   }
@@ -62,6 +63,7 @@ test('shutdown flushes each opened persistent source session once',async()=>{
   await m.show('liepin',bounds);await m.show('liepin',bounds,'https://www.liepin.com/job/1');
   await m.show('wuyou',bounds);await m.flushSessions();
   assert.deepEqual(flushed.sort(),['persist:jobfindsme-source-liepin','persist:jobfindsme-source-wuyou']);
+  assert.deepEqual(storageFlushed.sort(),flushed);
  }finally{FakeView.onCreate=undefined;m.destroy();}
 });
 test('zoom is bounded and restored per tab; fit width reads the document without rewriting it',async()=>{const {w,m}=setup();await m.show('liepin',bounds,a);const one=m.state().activeTabId;await m.command('fit-width');assert.equal(m.state().zoom,.5);await m.show('liepin',bounds,b);assert.equal(m.state().zoom,1);await m.command('zoom-in');assert.equal(m.state().zoom,1.1);m.selectTab(one);assert.equal(w.children[0].webContents.getZoomFactor(),.5);for(let i=0;i<10;i++)await m.command('zoom-out');assert.equal(m.state().zoom,.3);await m.command('zoom-reset');assert.equal(m.state().zoom,1);m.destroy();});

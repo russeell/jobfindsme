@@ -56,12 +56,16 @@ jobs:
         working-directory: apps/desktop
       - shell: pwsh
         run: |
-          Compress-Archive -Path apps/desktop/release/windows/JobFindsMe -DestinationPath apps/desktop/release/windows/JobFindsMe-windows-x64.zip
-          Get-FileHash apps/desktop/release/windows/JobFindsMe-windows-x64.zip -Algorithm SHA256 | Format-List | Out-File apps/desktop/release/windows/SHA256.txt
+          Compress-Archive -Path apps/desktop/release/windows/JobFindsMe -DestinationPath apps/desktop/release/windows/windows-x64.zip
+          $hash = (Get-FileHash apps/desktop/release/windows/windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+          "$hash  windows-x64.zip" | Set-Content -Encoding utf8 apps/desktop/release/windows/SHA256.txt
+      - name: Native update, rollback and local data preservation
+        run: node scripts/smoke-update.mjs
+        working-directory: apps/desktop
       - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: JobFindsMe-windows-x64
           path: |
-            apps/desktop/release/windows/JobFindsMe-windows-x64.zip
+            apps/desktop/release/windows/windows-x64.zip
             apps/desktop/release/windows/SHA256.txt

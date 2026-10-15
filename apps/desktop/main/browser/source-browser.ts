@@ -662,7 +662,7 @@ return ` [source_stage=${stage}; ready=${safeState}; visibility=${safeVisibility
   }
 
   async flushSessions(): Promise<void> {
-    await Promise.all([...this.downloadHandlers.keys()].map(session=>session.cookies.flushStore()));
+    await Promise.all([...this.downloadHandlers.keys()].map(async session=>{session.flushStorageData();await session.cookies.flushStore();}));
   }
 
   private createView(sourceId: ForegroundBrowserId, foreground=false, popupOptions?:Electron.BrowserWindowConstructorOptions): WebContentsView {
